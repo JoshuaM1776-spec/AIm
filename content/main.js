@@ -3,56 +3,58 @@
 // ---------------- time tracking ----------------
 // Time counts while a video plays (even in a background tab or the miniplayer) or while
 // you're looking at YouTube. The background credits real elapsed time, so several open
-// tabs never count the same moment twice.
+// tabs never count the same moment twice, and decides when a limit runs out.
 const TICK = 10;
 const tickTimer = setInterval(async () => {
   if (!chrome.runtime?.id) return shutDown();
   if (!$("#wp-chip")) renderChip(); // YouTube re-renders the top bar sometimes
+  // Grace is over: pause the video and apply the limit (once; the daily-total stop stays all day).
+  if (stop?.videoId && stop.videoId === currentId && !holding && Date.now() >= stop.graceEndsAt) return endGrace();
   const id = currentId;
   const v = id ? getVideoEl() : miniplayerVideo();
   const playing = !!v && !v.paused && !holding && (!id || cleared.has(id));
   const looking = document.visibilityState === "visible" && document.hasFocus();
   if (!playing && !looking) return;
-  const sessionRunning = !!session && !session.paused && !session.timeUp;
-  const r = await send({ type: "tick", seconds: TICK, sessionRunning });
-  if (!r) return;
-  session = r.session;
-  renderChip();
-  if (r.reminder) showReminder(r.reminder);
-  if (session?.timeUp && !timeUpShown) showTimeUp();
+  const video = playing && id && currentInfo?.id === id ? { id, title: currentInfo.title, channel: currentInfo.channel } : null;
+  react(await send({ type: "tick", seconds: TICK, video }));
 }, TICK * 1000);
 
+// Apply a new status and respond to what changed: a limit running out, a break ending,
+// a purpose set or finished from the popup or another tab.
+function react(r) {
+  if (!r) return;
+  const before = { purpose, brk, stop, total: status.totalReached };
+  applyStatus(r);
+  renderChip();
+  const newStop = stop && stop.at !== before.stop?.at;
+  const breakEnded = before.brk && !brk;
+  const purposeEnded = before.purpose && !purpose && !endingHere;
+  const changed = (before.brk?.id !== brk?.id) || (before.purpose?.id !== purpose?.id) ||
+    (before.purpose?.suspended !== purpose?.suspended) || (before.purpose?.timeUp !== purpose?.timeUp) ||
+    (before.purpose?.text !== purpose?.text) || before.total !== status.totalReached;
+  if (breakEnded && !newStop) toast(purpose ? `Break's over. Back to: ${purpose.text}` : "Your break is over.");
+  if (changed || newStop) route();
+  if (!currentId) return;
+  if (newStop && graced(currentId)) return showGraceNotice();
+  // The video on screen may no longer be allowed, or a card may be waiting on a decision
+  // that was just made elsewhere: check it again.
+  if (newStop || breakEnded || purposeEnded || (changed && (holding || playerCard))) regate(currentId);
+}
+
 // Keep in sync with changes made from the popup, settings or another tab.
+let syncTimer = null;
 chrome.storage.onChanged.addListener((ch, area) => {
   if (area !== "local" || !alive) return;
-  if (ch.session) {
-    const ended = ch.session.oldValue && !ch.session.newValue;
-    session = ch.session.newValue || null;
-    if (!session?.timeUp) timeUpShown = false;
-    // Time added or session resumed from another tab or the popup: lift this tab's hold too.
-    const lifted = (notice?.dataset.kind === "timeup" && session && !session.timeUp) ||
-      (notice?.dataset.kind === "paused" && session && !session.paused);
-    if (lifted) {
-      closeNotice();
-      if (currentInfo && holding) evaluateVideo(currentInfo);
-    }
-    renderChip();
-    if (ended && !endingHere && videoIdFromUrl()) { hold(); location.href = "https://www.youtube.com/"; }
-    if (location.pathname === "/") renderHome();
-    if (location.pathname === "/results") renderResultsBar();
-  }
-  if (ch.settings) {
-    const homeChanged = (ch.settings.newValue?.homeCard !== false) !== settings.homeCard;
-    settings = { ...settings, ...(ch.settings.newValue || {}) };
-    if (homeChanged) route();
-  }
   if (ch.avoid) { settings.avoid = ch.avoid.newValue || {}; applyHidden(); }
   if (ch.apiKey) settings.hasKey = !!(ch.apiKey.newValue || "").trim();
+  if (!(ch.purpose || ch.brk || ch.stop || ch.settings)) return;
+  // Several keys change together; read the whole status once they've settled.
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(async () => react(await send({ type: "status" })), 50);
 });
 
 // ---------------- navigation ----------------
 function route() {
-  if (session?.timeUp && !timeUpShown) showTimeUp();
   if (location.pathname === "/") renderHome(); else removeHome();
   if (location.pathname === "/results") onSearch(new URL(location.href).searchParams.get("search_query") || "");
   else $("#wp-results-bar")?.remove();
@@ -70,6 +72,7 @@ function onNavigate() {
   currentInfo = null;
   clearRecLabels();
   closeModal();
+  closePlayerCard();
   if (notice && !notice.dataset.keep) closeNotice();
   if (!id) { holding = false; return; }
   if (cleared.has(id)) {
@@ -82,9 +85,7 @@ function onNavigate() {
 }
 
 async function init() {
-  const r = await send({ type: "session-get" });
-  session = r?.session || null;
-  settings = (await send({ type: "settings" })) || settings;
+  applyStatus(await send({ type: "status" }));
   renderChip();
   showReflection();
   hideObserver.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["href"] });

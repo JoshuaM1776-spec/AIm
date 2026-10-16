@@ -12,8 +12,8 @@ const aimEarly = (() => {
   // Hide the homepage feed (see html.wp-boot in content.css) unless Aim won't replace it.
   root.classList.add("wp-boot");
   const showFeed = () => root.classList.remove("wp-boot");
-  chrome.storage.local.get(["settings", "session"])
-    .then(({ settings, session }) => { if (settings?.homeCard === false || session?.mode === "explore") showFeed(); })
+  chrome.storage.local.get(["settings", "brk"])
+    .then(({ settings, brk }) => { if (settings?.homeCard === false || brk) showFeed(); })
     .catch(showFeed);
 
   // The gate in gate.js holds videos from here on.

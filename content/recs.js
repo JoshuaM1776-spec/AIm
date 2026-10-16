@@ -8,13 +8,14 @@ function clearRecLabel(n) {
 function clearRecLabels() { for (const n of $$("[data-wp-rec]")) clearRecLabel(n); }
 
 async function labelRecommendations() {
-  if (!session || session.mode !== "focus" || session.paused || !settings.hasKey || settings.recMode === "off") return;
+  const p = activePurpose();
+  if (!p || brk || !settings.hasKey || settings.recMode === "off") return;
   // YouTube reuses sidebar elements for new videos, so a label only counts for the title it was given to.
   const items = sidebarItems().filter(i => i.node.dataset.wpRecTitle !== i.title);
   if (!items.length) return;
-  const purposeAtStart = session.purpose;
+  const purposeAtStart = p.text;
   const labels = (await send({ type: "label-recs", purpose: purposeAtStart, titles: items.map(i => i.title) }))?.labels;
-  if (!Array.isArray(labels) || !session || session.purpose !== purposeAtStart) return;
+  if (!Array.isArray(labels) || activePurpose()?.text !== purposeAtStart) return;
   const TEXT = { match: "Matches your purpose", related: "Related perspective", off: "Off purpose" };
   items.forEach((it, i) => {
     const lab = labels[i];

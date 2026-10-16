@@ -20,12 +20,17 @@ async function setSetting(key, value) {
 async function render() {
   const st = await send({ type: "state" });
   if (!st) return;
-  const S = st.settings;
+  const S = st.settings, t = st.today || { purpose: 0, leisure: 0, other: 0 };
   $("homeCard").checked = S.homeCard;
+  for (const k of ["leisureMin", "graceMin", "totalMin", "purposeLimitMin"]) {
+    const sel = $(k);
+    if (![...sel.options].some(o => o.value === String(S[k]))) sel.append(new Option(`${S[k]} minutes`, S[k]));
+    sel.value = String(S[k]);
+  }
   $("recMode").value = S.recMode;
-  $("hold").checked = S.hold;
-  if (document.activeElement !== $("reminderMin")) $("reminderMin").value = S.reminderMin || "";
-  $("today").textContent = `A heads-up once a day after this many minutes on YouTube. Nothing is blocked. Today so far: ${Math.floor(st.todaySec / 60)} min.`;
+  const m = s => Math.floor(s / 60);
+  $("leisureNote").textContent = `Breaks share this allowance. When it's used up, breaks are done for the day. Used today: ${m(t.leisure)} min.`;
+  $("today").textContent = `Today so far: ${m(t.purpose)} min on purpose, ${m(t.leisure)} min on breaks, ${m(t.purpose + t.leisure + t.other)} min on YouTube in all.`;
   if (document.activeElement !== $("key")) $("key").value = st.apiKey;
   if (document.activeElement !== $("model")) $("model").value = st.model;
 
@@ -45,10 +50,7 @@ async function render() {
     name.className = "what";
     name.textContent = c.name || key;
     const sel = document.createElement("select");
-    for (const [value, label] of [["hide", "Hide"], ["warn", "Warn"], ["", "Remove"]]) {
-      const o = new Option(label, value, false, value === c.action);
-      sel.append(o);
-    }
+    for (const [value, label] of [["hide", "Hide"], ["warn", "Warn"], ["", "Remove"]]) sel.append(new Option(label, value, false, value === c.action));
     sel.onchange = async () => {
       const r = await send({ type: "avoid", key, name: c.name, action: sel.value || null });
       toast(r?.result === "applied" ? (sel.value ? "Saved." : `Removed ${c.name || key}.`) : "Couldn't save that.");
@@ -60,12 +62,8 @@ async function render() {
 }
 
 $("homeCard").onchange = () => setSetting("homeCard", $("homeCard").checked);
+for (const k of ["leisureMin", "graceMin", "totalMin", "purposeLimitMin"]) $(k).onchange = () => setSetting(k, parseInt($(k).value, 10));
 $("recMode").onchange = () => setSetting("recMode", $("recMode").value);
-$("hold").onchange = () => setSetting("hold", $("hold").checked);
-$("reminderMin").onchange = () => {
-  const v = Math.max(0, Math.min(1440, parseInt($("reminderMin").value, 10) || 0));
-  setSetting("reminderMin", v);
-};
 $("saveKey").onclick = async () => {
   const r = await send({ type: "ai-key", apiKey: $("key").value, model: $("model").value });
   toast(r?.result === "applied" ? "Saved." : "Couldn't save that.");

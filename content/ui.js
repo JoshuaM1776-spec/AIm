@@ -43,6 +43,47 @@ function chips(values, selected, fmt) {
   render();
   return { row, get: () => value };
 }
+// ---------------- player card ----------------
+// Decisions about the video on screen appear over the player itself, not as a page-wide
+// dialog: the rest of YouTube stays usable around it.
+function closePlayerCard() { playerCard?.remove(); playerCard = null; }
+function showPlayerCard(...content) {
+  closePlayerCard();
+  closeModal();
+  const host = playerHost();
+  playerCard = el("div", { class: "wp wp-player-card" + (host ? "" : " wp-player-card-floating") },
+    el("div", { class: "wp-pc-inner", role: "dialog", "aria-label": "Aim" }, ...content));
+  (host || document.body).append(playerCard);
+  return playerCard;
+}
+
+// Chips for starting a break: 15 / 30 / 60 minutes, plus "Just this video" when on one.
+// Disabled, with the reason, when today's leisure time is used up.
+function breakChips(onPick, { oneVideoId = null } = {}) {
+  const used = leisureUsedUp();
+  const left = status.leisureLeftMin;
+  const row = el("div", { class: "wp-chips" },
+    oneVideoId ? el("button", { class: "wp-chip", disabled: used, onclick: () => onPick({ oneVideoId }) }, "Just this video") : null,
+    ...BREAK_CHOICES.map(m => el("button", { class: "wp-chip", disabled: used || (left !== null && left < m && m !== BREAK_CHOICES[0]), onclick: () => onPick({ minutes: m }) }, minLabel(m))));
+  const note = el("div", { class: "wp-muted" }, used ? "Today's leisure time is used up. It resets at midnight."
+    : left !== null ? `${left} min of leisure time left today.` : "");
+  return el("div", { class: "wp-break-pick" }, row, note);
+}
+
+// Start a break; afterwards, re-check the video on screen under the new state.
+async function takeBreak(choice) {
+  const r = await send({ type: "break-start", ...choice });
+  if (!r || r.result !== "applied") return toast(r?.message || "Couldn't start a break.");
+  closeDropdown();
+  closeModal();
+  applyStatus(await send({ type: "status" }));
+  renderChip();
+  route();
+  if (r.capped) toast(`Break set to ${r.capped} min: what's left of today's leisure time.`);
+  else toast(choice.oneVideoId ? "Enjoy the video." : `Break: ${choice.minutes} minutes.`);
+  if (currentId) regate(currentId);
+}
+
 // ---------------- notices (bottom bar, YouTube-toast style) ----------------
 function closeNotice() { notice?.remove(); notice = null; }
 function showNotice(content, { dismissible = true } = {}) {

@@ -10,6 +10,7 @@ const YT = {
   homePrimary: 'ytd-browse[page-subtype="home"] #primary',
   resultsList: "ytd-search ytd-section-list-renderer",
   mainVideo: "video.html5-main-video",
+  player: ["#movie_player", "#shorts-player"],  // where Aim's per-video card sits
   miniplayerVideo: "ytd-miniplayer video",
   watchFlexy: "ytd-watch-flexy",             // carries the current video's ID in its video-id attribute
   watchTitle: "h1.ytd-watch-metadata yt-formatted-string",
@@ -55,6 +56,7 @@ const mastheadCenter = () => $(YT.mastheadCenter);
 const homeHost = () => $(YT.homePrimary) || $(YT.homeBrowse);
 const resultsAnchor = () => $(YT.resultsList);
 const channelLink = () => first(YT.videoChannelLink);
+const playerHost = () => first(YT.player);
 
 // ---------------- the video on screen ----------------
 // YouTube swaps videos without reloading, so for a moment the page can still show the

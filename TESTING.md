@@ -23,120 +23,90 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 ### 1. Install, upgrade and settings
 
 - [ ] Extension loads with no errors on the card.
-- [ ] Service worker console: `chrome.storage.local.get("schemaVersion")` returns `{ schemaVersion: 2 }`.
-- [ ] **Upgrade from Waypoint:** with Waypoint 0.5 data in place (same folder, then reload), check:
-  - Strict becomes "Hold me to my time limits" turned on.
-  - The total daily cap becomes the daily reminder.
-  - Blocked channels become Hidden.
-  - A running Quick answer becomes Focus.
-  - Saved videos and history are kept.
-- [ ] Popup opens and shows "No session running", saved videos, time on YouTube today, and recent sessions.
-- [ ] Settings page renders Homepage, Recommendations, Time, Channels and AI check. Every change saves instantly with a "Saved." toast.
-- [ ] Every visible label says **Aim**. No mentions of strictness, leisure, Quick answer or 24-hour delays anywhere.
+- [ ] Service worker console: `chrome.storage.local.get("schemaVersion")` returns `{ schemaVersion: 3 }`.
+- [ ] **Upgrade from 0.9** (same folder, then reload):
+  - a running Focus session becomes your purpose, without its timer;
+  - an Explore session becomes a break;
+  - history, saved videos and channels are kept.
+- [ ] Popup shows the current purpose or break, Saved for later, Today (on purpose / breaks / all YouTube) and Recent.
+- [ ] Settings shows only "Replace the homepage feed" and "Daily leisure time", plus a collapsed **Advanced** section. Every change saves instantly.
+- [ ] No mentions of Focus/Explore modes, pausing a session, strictness or the daily reminder anywhere.
 
-### 2. Homepage
+### 2. Homepage and design
 
-- [ ] youtube.com shows the "What brings you here?" card instead of the feed. The placeholder example rotates.
+- [ ] youtube.com shows "What brings you here?" with YouTube's own search-box style, and "Just browsing? Take a break" with 15m / 30m / 1h and the leisure time left.
 - [ ] Hard-refresh the homepage a few times: the feed never flashes before the card appears.
-- [ ] With Settings → Homepage → "Leave the homepage alone", the feed appears normally on refresh (no blank delay).
-- [ ] The Aim button (mark + "Start a session") sits just right of YouTube's search box and mic on a wide window. It looks like YouTube's Create button.
-- [ ] Narrow the window below 1200px: the button moves next to Create. Below about 860px it shows only the mark (and the time during a session).
-- [ ] Switching YouTube's theme (Settings → Appearance) restyles everything Aim shows to match, with no teal or other accent color anywhere.
-- [ ] The homepage card's search box looks like YouTube's own search box.
-- [ ] Escape and clicking outside close Aim's menu and ordinary dialogs. They do **not** close the start prompt on a video or a channel warning.
-- [ ] Settings → Homepage → "Leave the homepage alone" brings the feed back right away, in an open YouTube tab too.
+- [ ] With "Replace the homepage feed" off, the feed appears normally on refresh, right away in an open tab too.
+- [ ] The indicator (mark + "Set a purpose") sits just right of YouTube's search box on a wide window, and next to Create below 1200px. Below about 860px it shows only the mark.
+- [ ] YouTube's theme (Settings → Appearance) restyles everything Aim shows. No accent colors.
+- [ ] Escape and clicking outside close Aim's menu and dialogs. The card on the video player stays until you choose.
 
-### 3. Watching without a session
+### 3. Two states: a purpose or a break
 
-- [ ] With no session, open a video. It's held, and the prompt shows "Up next: …" with **Not now**.
-- [ ] Paste a video URL into the address bar and load it fresh: no sound or playback before the prompt appears.
-- [ ] **Not now** plays the video. Opening more videos in the same tab doesn't ask again.
-- [ ] A new tab asks again.
+- [ ] With neither, open a video from a pasted link. It stays paused and a card **on the player** (not over the whole page) asks "What brings you here?", with a purpose field and Just this video / 15m / 30m / 1h.
+- [ ] **Just this video** plays it. The indicator shows "Break · 1 video". When the video ends, or you open another one, the break is over and the card returns.
+- [ ] **15m** starts a break: the homepage feed comes back and videos play freely. The indicator counts down.
+- [ ] Typing a purpose on the card plays the video under that purpose.
 
-### 4. Focus session
+### 4. Purpose
 
-- [ ] Top bar → Start a session → Focus. A purpose shorter than 4 characters is rejected.
-- [ ] Enter a purpose, pick 15m, start. The pill shows "Focus · 15 min".
-- [ ] The dropdown shows:
-  - the purpose, and the time remaining with a bar;
-  - with a key, a "Suggested path" with 3 links;
-  - Got what I came for, Change purpose, Add 15 minutes, Pause, Save, Hide or warn about this channel, End session.
-- [ ] A matching video plays. With a key, a related one may show "Counts toward your purpose".
-- [ ] With a key, open a clearly unrelated video. It stays paused and shows "This video looks different from your current purpose".
-  - [ ] **Stay focused** goes back.
-  - [ ] **Save for later** saves it, then goes back. It appears in the popup.
-  - [ ] **Change purpose** opens the pivot dialog; confirming plays the video.
-- [ ] **Move between several videos quickly.** With a key, check the drift check judges the video on screen, not the previous one. This uses the stale-details fix.
-- [ ] Typing in Aim's text fields doesn't trigger YouTube shortcuts (try `k`, `f`, `/`).
-- [ ] Watch for about 1 minute. The remaining time goes down, and keyboard focus on the top-bar button isn't lost every 10 s.
+- [ ] Search with no purpose: your search becomes the purpose, with no time limit. The results bar shows it with Edit and **Done**.
+- [ ] Homepage card with a key: a conversational query may offer "Suggested search". The purpose stays as typed either way.
+- [ ] Further searches stay under the purpose (indicator menu → "Searches toward this purpose").
+- [ ] The indicator menu shows: your purpose (click to change it), "No time limit · Set one", Take a break, Done, Change purpose, Save, Hide or warn.
+- [ ] With a key: an unrelated video shows "Not part of your purpose" on the player, with Back to my purpose / Change purpose / Save for later and break options. An unrelated search shows a notice with Back / Change purpose.
+- [ ] Change purpose keeps your searches, videos and time limit (see Recent in the popup after Done).
 
-### 5. Pivot
+### 5. Breaks during a purpose
 
-- [ ] Dropdown → Change purpose → new purpose, "Keep my remaining time". The toast confirms and the remaining time is unchanged.
-- [ ] Pivot again with "Set a new time limit" → 30m. Remaining becomes about 30 min.
-- [ ] With "Hold me to my time limits" on, pivoting with a longer limit asks for a reason.
-- [ ] After time is up, the pivot dialog starts on "Set a new time limit".
-- [ ] End the session: the reflection shows "Path: A → B → C".
+- [ ] Menu → Take a break → 15m. The indicator shows "Break", the menu says "Your purpose is waiting".
+- [ ] **Back to my purpose** ends the break; the indicator shows the purpose again.
+- [ ] Let a break run out while **no** video plays: the purpose resumes and a toast says the break is over.
+- [ ] Let a break run out **while a video plays**: a notice says "Your break is over. Finish this video…". When the video ends (or after the grace period, 15 min by default), the video is paused and checked against your purpose.
+- [ ] To skip waiting, run this in the service worker console during a break:
+      `chrome.storage.local.get("brk").then(({brk}) => chrome.storage.local.set({brk: {...brk, usedSec: brk.durationMin * 60 - 5}}))`
 
-### 6. Pause, time up, add time, end
+### 6. Limits
 
-- [ ] Pause from the dropdown while on a video. The video stops and "Your session is paused" appears. It stays paused if you press play.
-- [ ] **Pause, then immediately do something else** (open another video). Pause must not undo itself within the next 10 s.
-- [ ] Resume: the video plays again.
-- [ ] Time up: start a 15m Focus. To skip the wait, run this in the service worker console:
-      `chrome.storage.local.get("session").then(({session}) => chrome.storage.local.set({session: {...session, usedSec: 890}}))`.
-      Within about 20 s, "Your time is up" appears and the video is held.
-  - [ ] **Add 15 minutes** with hold off: instant. With "Hold me to my time limits" on: asks for a reason.
-  - [ ] **End session** lands on the homepage with "Session complete" and Yes / Partly / No.
-- [ ] "Got what I came for" ends the session with a "Glad you found it." toast.
-- [ ] Rate a session: the popup's "Recent sessions" shows it with the rating.
+- [ ] **Daily leisure time** (Settings, default 1 hour): breaks are capped to what's left. When it's used up, the break chips are disabled with "Today's leisure time is used up". It resets at midnight.
+- [ ] **Purpose time limit**: menu → Set one → 15m. When it runs out, a card on the player says "Time's up" with Done / Add 15 minutes / a break.
+- [ ] **Daily YouTube limit** (Advanced): when reached, every video shows "That's today's YouTube time" and the homepage says so too. Nothing extends it until midnight.
+- [ ] **Finish the current video** (Advanced): set "Stop right away" and let a break run out mid-video. The video pauses immediately.
 
-### 7. Explore
+### 7. Done
 
-- [ ] Start → "Just exploring" → 15m. The pill shows "Explore" and the homepage feed comes back.
-- [ ] Unrelated videos play with no drift prompt.
-- [ ] Dropdown → Add 15 minutes adds 15.
-- [ ] Dropdown → Change to Focus → enter a purpose. The session becomes Focus, even with a new time limit.
+- [ ] Menu → **Done** (or the results bar or homepage Done button) lands on the homepage and asks once: "Did you find what you needed?" Yes / Partly / No.
+- [ ] Recent in the popup shows the purpose (with its pivots), minutes, number of videos and your answer.
 
-### 8. Search
+### 8. Timer accuracy
 
-- [ ] With no session, search from YouTube's search box. A **15-minute Focus** session starts with the search as its purpose. The results bar shows "Focus · 15 min left", Edit, and "Got my answer".
-- [ ] Homepage card with a key: a conversational query ("how do i make my bread less dense") may offer "Suggested search". Both buttons search, and the purpose stays as typed.
-- [ ] With a key, in Focus: search for something unrelated. "This search looks different from your purpose" appears. **Stay focused** goes back.
+- [ ] **Two YouTube windows side by side**, both visible, for 2 minutes. Today's time grows by about 2 minutes, not 4.
+- [ ] **A video in a background tab** keeps counting while it plays.
+- [ ] Miniplayer: start a video, open the miniplayer, browse. Time keeps counting.
 
-### 9. Timer accuracy
+### 9. Channels
 
-- [ ] **Two YouTube windows side by side**, both visible, for 2 minutes. The session uses about 2 minutes, not 4.
-- [ ] **Focus video in a background tab**: play it, switch to another tab for 1 minute. The session time still goes down.
-- [ ] Miniplayer: start a video, open the miniplayer, browse the homepage. Time on YouTube keeps counting.
+- [ ] On a video: menu → Hide or warn about this channel → **Hide channel**. The toast confirms and the video keeps playing.
+- [ ] That channel's videos disappear from the homepage feed (during a break), search results and the sidebar.
+- [ ] Opening one of its videos directly shows "You chose to hide …" on the player, with Go back / Continue.
+- [ ] **Warn me** on another channel: its videos ask before playing unless you have a purpose.
+- [ ] Settings → Advanced lists both. Switching Hide/Warn or removing takes effect immediately.
 
-### 10. Daily reminder
+### 10. Recommendations (key required, until step C)
 
-- [ ] Settings → Daily reminder after 1 minute. After about a minute on YouTube, "You've spent 1 minutes on YouTube today" appears once. Nothing is blocked.
-- [ ] It doesn't appear again that day.
+- [ ] With a purpose on a watch page, sidebar videos get "Matches your purpose" / "Related perspective" / "Off purpose" labels after a few seconds.
+- [ ] Moving to another video clears old labels. No label sits on the wrong video.
 
-### 11. Channels
+### 11. Sync and reload
 
-- [ ] On a video: dropdown → Hide or warn about this channel → **Hide channel**. The toast confirms and the video keeps playing.
-- [ ] That channel's videos disappear from the homepage feed (turn the homepage card off to see it), search results and the sidebar.
-- [ ] Opening one of its videos directly asks "You chose to hide …" with **Watch anyway** / **Go back**, even in Focus.
-- [ ] **Warn me** on another channel: its videos ask before playing outside Focus, and play directly during Focus.
-- [ ] Settings lists both. Switching Hide/Warn or removing takes effect immediately.
-
-### 12. Recommendations (key required)
-
-- [ ] In Focus on a watch page, after a few seconds sidebar videos get "Matches your purpose" / "Related perspective" / "Off purpose" labels. Off-purpose ones are dimmed.
-- [ ] **Move to another video:** old labels disappear and new ones arrive for the new sidebar. No label sits on the wrong video.
-- [ ] Settings → Recommendations → Hide: off-purpose ones disappear on the next video.
-
-### 13. Sync and reload
-
-- [ ] Ending the session from the popup while a YouTube tab is on a video sends that tab to the homepage.
-- [ ] Two YouTube tabs: starting, pausing or adding time in one updates the other within about 10 s. A time-up or paused notice in the other tab clears by itself.
-- [ ] Reload the extension from `chrome://extensions` with a YouTube tab open. Aim's button disappears from that tab, videos play normally, and the tab console shows no repeating errors. Refreshing the tab brings Aim back.
+- [ ] Done from the popup while a YouTube tab is on a video: that tab shows the "What brings you here?" card on the player within a few seconds.
+- [ ] Two YouTube tabs: starting a break or setting a purpose in one updates the other's indicator, and a card waiting on the other tab's player clears if the new state allows its video.
+- [ ] Reload the extension from `chrome://extensions` with a YouTube tab open. Aim's indicator disappears from that tab, videos play normally, and the tab console shows no repeating errors. Refreshing the tab brings Aim back.
 
 ## Known issues (not regressions)
 
-- Purpose checks need your own Claude API key until the hosted backend (Phase 4).
+- Purpose checks, sidebar labels and the search suggestion still need your own Claude API key. Step C replaces them with checks that need no AI.
+- Shorts and autoplay aren't handled yet (step B).
 - Hiding channels depends on the channel link in each video tile. Tiles that only link the channel by ID, not by @handle, may not be matched.
 - Miniplayer time counting relies on YouTube's `ytd-miniplayer` element and needs checking on real YouTube.
+- The logo still has the red play triangle in the center (replaced in step D).

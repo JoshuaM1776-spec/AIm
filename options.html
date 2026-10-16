@@ -48,6 +48,12 @@
   .btn:hover { opacity: .85; }
   .stack { display: grid; gap: 12px; }
   .empty { color: var(--muted); }
+  details { border-top: 1px solid var(--divider); }
+  summary { cursor: pointer; padding: 20px 0; font-size: 16px; font-weight: 500; list-style: none; display: flex; align-items: center; gap: 8px; }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: "›"; display: inline-block; width: 12px; transition: transform .15s; color: var(--muted); }
+  details[open] summary::before { transform: rotate(90deg); }
+  details section { padding-top: 16px; }
   a { color: var(--link); text-decoration: none; } a:hover { text-decoration: underline; }
   #toast { position: fixed; left: 12px; bottom: 12px; background: var(--text); color: var(--bg); border-radius: 8px; padding: 14px 16px; max-width: 90vw; display: none; box-shadow: 0 4px 32px rgba(0,0,0,.1); }
 </style>
@@ -58,51 +64,74 @@
     <img class="logo for-light" src="icons/48.png" alt=""><img class="logo for-dark" src="icons/light/48.png" alt="">
     <h1>Aim</h1>
   </header>
-  <p class="lede">Stay focused when you can. Pivot when you choose. Explore when you intend to.</p>
+  <p class="lede">Stay on purpose. Change direction when you choose. Take a break when you want one.</p>
 
   <section>
-    <h2>YouTube</h2>
     <div class="row">
-      <div class="what"><b>Replace the homepage feed</b><span>Show "What brings you here?" instead. The feed still shows during Explore sessions.</span></div>
+      <div class="what"><b>Replace the homepage feed</b><span>Show "What brings you here?" instead. The feed comes back during breaks.</span></div>
       <label class="switch"><input type="checkbox" id="homeCard" aria-label="Replace the homepage feed"><i></i></label>
     </div>
     <div class="row">
-      <div class="what"><b>Recommendations during Focus</b><span>What to do with sidebar videos that don't match your purpose.</span></div>
-      <select id="recMode" aria-label="Recommendations during Focus">
-        <option value="mark">Mark and dim them</option>
-        <option value="hide">Hide them</option>
-        <option value="off">Leave them alone</option>
+      <div class="what"><b>Daily leisure time</b><span id="leisureNote">Breaks share this allowance. When it's used up, breaks are done for the day.</span></div>
+      <select id="leisureMin" aria-label="Daily leisure time">
+        <option value="15">15 minutes</option><option value="30">30 minutes</option><option value="45">45 minutes</option>
+        <option value="60">1 hour</option><option value="90">1.5 hours</option><option value="120">2 hours</option>
+        <option value="180">3 hours</option><option value="0">No limit</option>
       </select>
     </div>
   </section>
 
-  <section>
-    <h2>Time</h2>
-    <div class="row">
-      <div class="what"><b>Hold me to my time limits</b><span>When a session's time runs out, adding more takes a short written reason.</span></div>
-      <label class="switch"><input type="checkbox" id="hold" aria-label="Hold me to my time limits"><i></i></label>
-    </div>
-    <div class="row">
-      <div class="what"><b>Daily reminder</b><span id="today">A heads-up once a day after this many minutes on YouTube. Nothing is blocked. Leave empty to turn it off.</span></div>
-      <input type="number" min="0" max="1440" step="5" id="reminderMin" placeholder="Off" aria-label="Daily reminder in minutes">
-    </div>
-  </section>
+  <details id="advanced">
+    <summary>Advanced</summary>
 
-  <section>
-    <h2>Hidden and warned channels</h2>
-    <p class="note">Add a channel from Aim's menu while watching it. Hide removes its videos from your homepage, search results and sidebar. Warn asks before you watch it outside a Focus session.</p>
-    <div id="avoid"></div>
-  </section>
+    <section>
+      <h2>Time</h2>
+      <div class="row">
+        <div class="what"><b>Finish the current video</b><span>When time runs out mid-video, let it finish for up to this long before Aim pauses it.</span></div>
+        <select id="graceMin" aria-label="Grace period">
+          <option value="0">Stop right away</option><option value="5">Up to 5 min</option><option value="10">Up to 10 min</option>
+          <option value="15">Up to 15 min</option><option value="30">Up to 30 min</option>
+        </select>
+      </div>
+      <div class="row">
+        <div class="what"><b>Daily YouTube limit</b><span>All YouTube time, purposes included. A hard stop until midnight.</span></div>
+        <select id="totalMin" aria-label="Daily YouTube limit">
+          <option value="0">Off</option><option value="60">1 hour</option><option value="90">1.5 hours</option><option value="120">2 hours</option>
+          <option value="180">3 hours</option><option value="240">4 hours</option><option value="360">6 hours</option>
+        </select>
+      </div>
+      <div class="row">
+        <div class="what"><b>Time limit for new purposes</b><span>Purposes have no limit unless you set one. You can always change it from Aim's menu.</span></div>
+        <select id="purposeLimitMin" aria-label="Time limit for new purposes">
+          <option value="0">None</option><option value="15">15 minutes</option><option value="30">30 minutes</option>
+          <option value="45">45 minutes</option><option value="60">1 hour</option>
+        </select>
+      </div>
+      <div class="row"><div class="what"><span id="today"></span></div></div>
+    </section>
 
-  <section>
-    <h2>AI check</h2>
-    <p class="note">For now, purpose checks use your own Claude API key (get one at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>), stored only in this browser. Without one, sessions and timers still work.</p>
-    <div class="stack">
-      <input id="key" type="password" placeholder="Claude API key (sk-ant-…)" aria-label="Claude API key">
-      <input id="model" type="text" placeholder="Model (default: claude-haiku-5-5)" aria-label="Model">
-      <div><button class="btn" id="saveKey">Save</button></div>
-    </div>
-  </section>
+    <section>
+      <h2>Hidden and warned channels</h2>
+      <p class="note">Add a channel from Aim's menu while watching it. Hide removes its videos from your homepage, search results and sidebar. Warn asks before you watch it outside a purpose.</p>
+      <div id="avoid"></div>
+    </section>
+
+    <section>
+      <h2>AI check (temporary)</h2>
+      <p class="note">Until the next update, purpose checks and recommendation labels use your own Claude API key, stored only in this browser. Aim will stop needing a key.</p>
+      <div class="row">
+        <div class="what"><b>Recommendations during a purpose</b><span>What to do with sidebar videos that don't match your purpose.</span></div>
+        <select id="recMode" aria-label="Recommendations during a purpose">
+          <option value="mark">Mark and dim them</option><option value="hide">Hide them</option><option value="off">Leave them alone</option>
+        </select>
+      </div>
+      <div class="stack">
+        <input id="key" type="password" placeholder="Claude API key (sk-ant-…)" aria-label="Claude API key">
+        <input id="model" type="text" placeholder="Model (default: claude-haiku-5-5)" aria-label="Model">
+        <div><button class="btn" id="saveKey">Save</button></div>
+      </div>
+    </section>
+  </details>
 </main>
 <div id="toast" role="status"></div>
 <script src="options.js"></script>

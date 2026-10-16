@@ -4,13 +4,13 @@
 function openChannelWarning(info, action) {
   hold();
   const name = info.channel || "this channel";
-  openModal(el("div", { class: "wp-dialog", role: "dialog", "aria-modal": "true" },
+  showPlayerCard(
     el("div", { class: "wp-dialog-brand" }, icon("logo"), "Aim"),
     el("div", { class: "wp-title" }, action === "hide" ? `You chose to hide ${name}.` : `You asked to be warned about ${name}.`),
     el("div", { class: "wp-muted" }, "Change this anytime in Aim's settings."),
-    el("div", { class: "wp-actions" },
-      el("button", { class: "wp-btn wp-btn-text", onclick: () => { overridden.add(info.id); closeModal(); continueAfterRules(info); } }, "Watch anyway"),
-      el("button", { class: "wp-btn wp-btn-primary", onclick: goBack }, "Go back"))), { dismiss: null });
+    el("div", { class: "wp-actions wp-actions-start" },
+      el("button", { class: "wp-btn wp-btn-primary", onclick: goBack }, "Go back"),
+      el("button", { class: "wp-btn wp-btn-text", onclick: () => { overridden.add(info.id); closePlayerCard(); continueAfterRules(info); } }, "Continue")));
 }
 
 // Optional channel rule, set from the dropdown while watching.
@@ -27,7 +27,7 @@ function openAvoidDialog() {
   };
   openModal(el("div", { class: "wp-dialog", role: "dialog", "aria-modal": "true" },
     el("div", { class: "wp-title" }, `Hide or warn about ${info.channel || "this channel"}?`),
-    el("p", { class: "wp-muted" }, "Hide: its videos disappear from your homepage, search results and sidebar, and opening one asks first. Warn: Aim asks before you watch it outside a Focus session. Undo either in settings."),
+    el("p", { class: "wp-muted" }, "Hide: its videos disappear from your homepage, search results and sidebar, and opening one asks first. Warn: Aim asks before you watch it outside a purpose. Undo either in settings."),
     el("div", { class: "wp-actions" },
       el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Cancel"),
       el("button", { class: "wp-btn wp-btn-tonal", onclick: pick("warn") }, "Warn me"),

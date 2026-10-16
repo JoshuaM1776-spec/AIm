@@ -83,13 +83,6 @@ Only say better when the improvement is meaningful (adds the right technical ter
   catch { return { better: false }; }
 }
 
-// ---- Starter path for a new purpose ----
-async function suggestPath(purpose) {
-  const system = `Suggest three YouTube videos to search for that build toward someone's purpose: the basics underneath it, the core of it, and a common mistake or deeper angle.
-Reply with ONLY JSON: [{"label": "short video idea", "query": "specific youtube search query"}, ...] (exactly 3).`;
-  try { return { items: (await askClaude(system, `Purpose: ${purpose}`, 300)) || [] }; } catch { return { items: [] }; }
-}
-
 // ---- Label sidebar recommendations against the purpose ----
 async function labelRecs(purpose, titles) {
   const system = `Label each YouTube video title against someone's purpose.
@@ -103,31 +96,31 @@ Reply with ONLY a JSON array of the same length, each item one of: "match" (serv
 
 // What the popup and settings page show.
 async function fullState() {
-  const d = await chrome.storage.local.get(["session", "saved", "sessions", "usage", "avoid", "apiKey", "model"]);
-  return {
-    session: d.session || null, saved: d.saved || [], sessions: d.sessions || [], avoid: d.avoid || {},
-    todaySec: (d.usage || {})[todayKey()] || 0, settings: await getSettings(),
-    apiKey: d.apiKey || "", model: d.model || ""
-  };
+  const d = await chrome.storage.local.get(["saved", "history", "avoid", "apiKey", "model"]);
+  return { ...(await getStatus()), saved: d.saved || [], history: d.history || [], avoid: d.avoid || {}, apiKey: d.apiKey || "", model: d.model || "" };
 }
 
 // What a YouTube tab needs to know.
-async function tabSettings() {
+async function tabState() {
   const { apiKey = "", avoid = {} } = await chrome.storage.local.get(["apiKey", "avoid"]);
-  return { ...(await getSettings()), hasKey: !!apiKey.trim(), avoid };
+  const status = await getStatus();
+  return { ...status, settings: { ...status.settings, hasKey: !!apiKey.trim(), avoid } };
 }
 
 // Changes to stored data run one at a time (see serial in store.js). AI calls don't wait in that line.
 const writes = {
-  "tick": m => recordTick(Math.min(30, Math.max(0, Number(m.seconds) || 0)), !!m.sessionRunning),
-  "session-start": m => startSession(m),
-  "session-patch": m => patchSession(m.patch || {}),
-  "session-extend": m => extendSession(m.minutes, m.reason || ""),
-  "session-pivot": m => pivotSession(m.purpose, m.budgetMin ?? null, m.reason || ""),
-  "session-end": m => endSession(m.outcome),
-  "session-rate": m => rateLastSession(m.outcome),
-  "session-add-search": m => addSearch(m.query),
-  "session-refine": m => refinePurpose(m.purpose),
+  "tick": m => recordTick(Math.min(30, Math.max(0, Number(m.seconds) || 0)), m.video?.id ? m.video : null),
+  "purpose-start": m => startPurpose({ text: m.text, search: m.search, limitMin: m.limitMin }),
+  "purpose-pivot": m => pivotPurpose(m.text, m.limitMin),
+  "purpose-limit": m => setPurposeLimit({ minutes: m.minutes, add: m.add }),
+  "purpose-refine": m => refinePurpose(m.text),
+  "purpose-search": m => addSearch(m.query),
+  "purpose-done": m => finishPurpose(m.outcome),
+  "purpose-rate": m => ratePurpose(m.id, m.outcome),
+  "break-start": m => startBreak({ minutes: m.minutes, oneVideoId: m.oneVideoId }),
+  "break-extend": m => extendBreak(m.minutes),
+  "break-end": () => endBreak(),
+  "stop-clear": () => clearStop(),
   "reflection-clear": () => chrome.storage.local.remove("reflection").then(() => ({ result: "applied" })),
   "avoid": m => setAvoid(m.key, m.name, m.action),
   "save": m => saveForLater(m.video || {}),
@@ -161,13 +154,11 @@ async function setToolbarTheme(dark) {
 
 const reads = {
   "theme": m => setToolbarTheme(!!m.dark),
-  "session-get": async () => ({ session: await getSession() }),
-  "settings": () => tabSettings(),
+  "status": () => tabState(),
   "state": () => fullState(),
   "classify": m => classify(m.purpose, m.video, m.search),
   "search-fit": m => searchFit(m.purpose, m.query),
   "improve-search": m => improveSearch(m.purpose),
-  "suggest-path": m => suggestPath(m.purpose),
   "label-recs": m => labelRecs(m.purpose, m.titles)
 };
 

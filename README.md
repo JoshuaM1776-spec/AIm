@@ -1,6 +1,6 @@
 # Aim
 
-Use YouTube on purpose without blocking what's useful. Aim adds Focus and Explore sessions, purpose checks, intentional pivots and session timers, styled to feel like part of YouTube.
+Use YouTube on purpose without blocking what's useful. Your search becomes your purpose, Aim keeps you on it, and breaks are a deliberate choice with a daily allowance, all styled to feel like part of YouTube.
 
 Chrome extension, Manifest V3, no build step.
 
@@ -14,14 +14,14 @@ Chrome extension, Manifest V3, no build step.
 |---|---|
 | `manifest.json` | Extension manifest |
 | `background.js` | Service worker. **The only writer of stored data**: the popup, settings page and YouTube tabs send it messages. Also makes the Claude API calls. |
-| `store.js` | Data and session logic, loaded only by the service worker: sessions, timer, settings, channels, migrations. Changes run one at a time through `serial()`. |
+| `store.js` | Purposes, breaks, limits, time tracking, settings, channels and migrations, loaded only by the service worker. Changes run one at a time through `serial()`. |
 | `content/` | Everything on youtube.com, loaded in the order listed in `manifest.json`. The files share one scope in the extension's isolated world. |
 | `content/early.js` | Runs at document_start: hides the homepage feed and holds videos until the rest of Aim has loaded, so nothing flashes. |
 | `content/core.js` | Shared state, messaging to the background, the `el()` DOM helper, icons |
 | `content/youtube.js` | **Every YouTube selector and page reader.** When YouTube changes its markup, fix it here (plus the feed rules in `content.css`). |
 | `content/ui.js` | Menus, dialogs, notices, toasts |
-| `content/gate.js` | Holds each new video, checks channel rules and purpose, then lets it play |
-| `content/session.js` | Top-bar button and menu, start / pivot / add-time dialogs, pause, time up, ending, reflection |
+| `content/gate.js` | Holds each new video and decides: plays on a break, is checked against a purpose, or shows the choice card on the player |
+| `content/session.js` | The indicator and its menu, set / change purpose, time limit, Done and the reflection |
 | `content/home.js`, `search.js`, `recs.js`, `channels.js` | Homepage card, search results, sidebar labels, hidden/warned channels |
 | `content/main.js` | Timer ticks, sync with other tabs, navigation, startup. Loads last. |
 | `content/content.css` | Styles for all of the above |
@@ -31,11 +31,14 @@ Chrome extension, Manifest V3, no build step.
 
 ## Product rules
 
-- **Two modes.** Focus (a purpose and a time) and Explore (just a time). Searching with no session starts a 15-minute Focus session.
-- **The session timer is the main limit.** Time counts while a video plays or while you're looking at YouTube. Several open tabs never count the same moment twice.
-- **Hold me to my time limits** (optional): adding time takes a short written reason.
-- **Daily reminder** (optional): one heads-up a day after N minutes on YouTube. Nothing is blocked.
-- **Channels** (optional): Hide removes a channel from feeds, results and the sidebar. Warn asks before you watch it outside Focus.
+- **Two states, nothing in between.** A **purpose** (why you're on YouTube right now) or a **break** (free browsing). With neither, Aim asks before a video plays: set a purpose, or take a break (15 / 30 / 60 min, or just this video).
+- **Your search becomes your purpose.** Later searches stay under it. Changing purpose is deliberate and keeps your searches, videos and time limit.
+- **Purposes have no time limit** unless you set one. **Done** ends a purpose and asks once whether you found what you needed.
+- **Breaks** share a **daily leisure allowance** (default 1 hour), a hard stop. A purpose waits during a break and resumes after it.
+- **Optional daily YouTube limit**, also a hard stop until midnight.
+- **When time runs out mid-video**, that video may finish within the grace period (default 15 min, adjustable 0 to 30).
+- Time counts while a video plays or while you're looking at YouTube. Several open tabs never count the same moment twice.
+- **Channels** (optional): Hide removes a channel from feeds, results and the sidebar. Warn asks before you watch it outside a purpose.
 
 ## Design
 

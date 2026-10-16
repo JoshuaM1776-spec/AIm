@@ -153,6 +153,26 @@ html[dark] .wp {
 .wp .wp-link { color: var(--wp-link); }
 .wp-link:hover { text-decoration: underline; }
 
+/* ---------- the card over the video player ---------- */
+.wp-player-card {
+  position: absolute; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center;
+  padding: 16px; background: rgba(0, 0, 0, 0.75); animation: wp-in .15s ease-out;
+}
+.wp-player-card-floating { position: fixed; z-index: 2400; background: rgba(0, 0, 0, 0.5); }
+.wp-pc-inner {
+  width: min(460px, 100%); max-height: 100%; overflow: auto; background: var(--wp-raised); color: var(--wp-text);
+  border-radius: 12px; box-shadow: var(--wp-shadow); padding: 20px; display: flex; flex-direction: column; gap: 10px;
+  font-size: 14px; line-height: 20px; text-align: left; cursor: default;
+}
+.wp-pc-inner .wp-title { font-size: 18px; line-height: 26px; }
+.wp-row { display: flex; gap: 8px; align-items: center; }
+.wp-row .wp-input { flex: 1; min-width: 0; padding: 8px 12px; }
+.wp-actions-start { justify-content: flex-start; margin-top: 4px; }
+.wp-break-pick { display: flex; flex-direction: column; gap: 6px; }
+.wp-chip:disabled, .wp-chip:disabled:hover { opacity: .45; cursor: default; background: var(--wp-tonal); }
+.wp-menu-first { border-top: 0; }
+.wp-home-break-label { margin-top: 12px; }
+
 /* ---------- notices (bottom of the page) and toasts (YouTube snackbar) ---------- */
 .wp-notice {
   position: fixed; z-index: 2350; left: 50%; bottom: 24px; transform: translateX(-50%);

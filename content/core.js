@@ -3,16 +3,18 @@
 // extension's isolated world, which the page itself can't see.
 
 // ---------------- state ----------------
-let session = null;          // current Focus/Explore session (from storage)
-let settings = { recMode: "mark", hasKey: false, homeCard: true, hold: false, reminderMin: 0, avoid: {} };
+// Mirrors of what the background stores (see store.js): a purpose, a break, or neither.
+let purpose = null;          // { text, searches, videos, limitMin, usedSec, timeUp, suspended (during a break) }
+let brk = null;              // { durationMin (null for one video), usedSec, oneVideoId }
+let stop = null;             // a limit that ran out: { kind, videoId (may finish), graceEndsAt }
+let status = { today: null, leisureLeftMin: null, totalReached: false };
+let settings = { recMode: "mark", hasKey: false, homeCard: true, leisureMin: 60, graceMin: 15, avoid: {} };
 let currentId = null;        // video on screen
 let currentInfo = null;
-let notNow = false;          // "Not now" on the start prompt: don't ask again in this tab
 let holding = false;         // keep the video paused until cleared
 const cleared = new Set();   // videos cleared to play in this tab
 const overridden = new Set();// videos from a hidden/warned channel you chose to watch anyway
-let timeUpShown = false;
-let modal = null, notice = null, dropdown = null;
+let modal = null, notice = null, dropdown = null, playerCard = null;
 let endingHere = false;      // this tab ended the session (vs. the popup or another tab)
 let alive = true;            // false once the extension is reloaded or updated under this tab
 
@@ -49,7 +51,7 @@ function shutDown() {
   holding = false;
   early.done();
   early.showFeed();
-  for (const n of $$("#wp-chip, #wp-home, #wp-results-bar, .wp-notice, .wp-scrim, .wp-dropdown")) n.remove();
+  for (const n of $$("#wp-chip, #wp-home, #wp-results-bar, .wp-notice, .wp-scrim, .wp-dropdown, .wp-player-card")) n.remove();
   document.documentElement.classList.remove("wp-home");
 }
 
@@ -99,6 +101,25 @@ function svgIcon(name) {
 const icon = name => el("span", { class: "wp-icon" }, svgIcon(name));
 
 const fmtMin = sec => `${Math.max(0, Math.ceil(sec / 60))} min`;
-const remaining = s => (s ? Math.max(0, s.budgetMin * 60 - s.usedSec) : 0);
+
+// The purpose in effect right now (a purpose waits, suspended, while you're on a break).
+const activePurpose = () => (purpose && !purpose.suspended ? purpose : null);
+// Seconds left, or null when there's no limit.
+const purposeLeft = p => (p?.limitMin ? Math.max(0, p.limitMin * 60 - p.usedSec) : null);
+const breakLeft = b => (b?.durationMin ? Math.max(0, b.durationMin * 60 - b.usedSec) : null);
+// The video playing when a limit ran out may finish, within the grace period.
+const graced = id => !!(stop && id && stop.videoId === id && Date.now() < stop.graceEndsAt);
+const leisureUsedUp = () => status.leisureLeftMin !== null && status.leisureLeftMin < 1;
+
+// Take in a status reply from the background (see getStatus in store.js).
+function applyStatus(r) {
+  if (!r) return;
+  purpose = r.purpose || null;
+  brk = r.brk || null;
+  stop = r.stop || null;
+  status = { today: r.today, leisureLeftMin: r.leisureLeftMin, totalReached: !!r.totalReached };
+  if (r.settings) settings = { ...settings, ...r.settings };
+}
 
 const minLabel = m => (m >= 60 ? `${m / 60}h` : `${m}m`);
+const BREAK_CHOICES = [15, 30, 60];
