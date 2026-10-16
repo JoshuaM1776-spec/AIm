@@ -2,7 +2,7 @@
 
 // ---------------- homepage: "What brings you here?" ----------------
 // Example purposes on the card: one tap fills the search box.
-const EXAMPLES = ["Learn cabinetmaking", "Understand the Roman Republic", "Fix my truck", "Improve my photography"];
+const EXAMPLES = ["Study for my biology exam", "Learn cabinetmaking", "Understand the Roman Republic", "Fix my truck"];
 
 function removeHome() {
   early.showFeed();
@@ -67,6 +67,7 @@ async function renderHome() {
     card.append(
       brandLine(),
       el("h1", { class: "wp-home-title" }, "What brings you here?"),
+      el("div", { class: "wp-muted wp-home-lede" }, `Whether you're preparing for an exam, learning a new skill, or finding a quick answer, ${BRAND} helps you stay focused on what you came to YouTube to accomplish.`),
       el("div", { class: "wp-home-search" }, input, findBtn),
       hint,
       el("div", { class: "wp-label" }, "Examples"),

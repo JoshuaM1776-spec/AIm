@@ -6,8 +6,10 @@ Everything the Chrome Web Store submission form asks for, ready to paste. Items 
 
 **Name:** Aim (from `manifest.json`)
 
-**Summary** (132 characters max, currently 127):
-> Watch YouTube with intention. Your search becomes your Target, Aim keeps you on it, and breaks are a choice with a daily limit.
+**Summary** (132 characters max, currently 115):
+> Study on YouTube without getting distracted. Your search becomes your Target, and Aim helps you stay focused on it.
+
+**Rule for this listing:** describe only what works in the submitted build. Don't mention AI study sessions, TeachBack or Aim Plus until they ship (Chrome Web Store policy requires an accurate listing).
 
 **Category:** Productivity → Workflow & Planning
 
@@ -15,7 +17,7 @@ Everything the Chrome Web Store submission form asks for, ready to paste. Items 
 
 **Description:**
 
-> Aim helps you get what you came to YouTube for, without blocking what's useful about it.
+> Want to study on YouTube without getting distracted? You came to YouTube for a reason. Aim helps you accomplish it, whether you're preparing for an exam, learning a new skill or finding a quick answer, without blocking what's useful about YouTube.
 >
 > **Your search becomes your Target.** Search YouTube as usual. Aim remembers why you're there, keeps later searches on the same Target, and asks only when a search seems to head somewhere new.
 >

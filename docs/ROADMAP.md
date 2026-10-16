@@ -50,12 +50,33 @@ No gamification: no points, streaks or badges. This already matches Aim Free.
 - **Aim stays compatible** with ad blockers people install separately.
 - Ad blocking isn't on the roadmap. It may be evaluated separately later.
 
+## Development order (approved)
+
+1. **Aim Free:** the focused YouTube experience. Native searches, Targets, fewer distractions, Take a break, student-focused copy. *Built; real-YouTube testing pending.*
+2. **Aim Plus, study sessions:** short-term objectives, study guidance, video selection, and TeachBack. Transcript-dependent features wait for the legal review.
+3. **Aim Plus, learning paths:** a persistent curriculum over many sessions, with progress and personalization.
+4. **Aim Homeschool:** a separate platform, outside the extension (see HOMESCHOOL.md).
+
+Validate study sessions with real students before investing heavily in learning paths.
+
+### Decisions from the six questions
+
+| Question | Decision |
+|---|---|
+| Study sessions before learning paths? | **Yes.** Build the shared foundation now: learning objectives and assessment records that learning paths will reuse. Not the learning-path interface. |
+| Students' own YouTube searches instead of the Search API? | **Yes, to start.** It isn't a permanent rule: learning paths may need the Data API for specific objectives. Reading the results a user's own page shows them isn't permission to scrape, so whatever Aim sends to its server is part of the legal review. |
+| Who sees Plus offers? | **Contextual offers, never during a video:** see Offers below. |
+| Legal review before transcript features? | **Yes, a prelaunch dependency.** Qualified counsel reviews the actual implementation (transcript access, storage, AI processing, YouTube terms). A review isn't a guarantee of permission. Until then, use the student's own notes, uploads and other authorized material. |
+| Student-focused copy now? | **Yes. Done in 0.16.0** (see Marketing). |
+| Homeschool teaser? | **Website only.** Nothing about homeschool goes in the extension. |
+
 ## Status
 
 | Step | What | State |
 |---|---|---|
 | 0–3, A–D | **Aim Free.** Purpose from search, word check, allowed list, breaks with a daily leisure allowance, grace period, distractions hidden, Done and reflection, popup with a week view, Advanced settings | Built and tested against mock pages. **Real-YouTube run of TESTING.md still needed.** |
 | — | **Target wording** in every Aim Free screen (0.15.0) | Done, tests updated |
+| — | **Student-focused copy:** store summary, description, homepage line and example (0.16.0) | Done |
 | E | **Plus backend foundation.** Accounts with an emailed code, plans, AI endpoint with per-user limits, Settings sign-in | Built and tested locally. Needs a Supabase project to go live. |
 
 ## The three learning experiences share one flow
@@ -77,10 +98,19 @@ Purpose (search box, as today)
 
 - **The purpose stays the root of everything.** A study session or learning path is a *plan attached to a purpose*, not a separate mode. Breaks, the leisure allowance, the allowed list, distraction hiding and Done all keep working unchanged.
   - A plan's videos simply join the purpose's allowed list.
-- **Offers:**
-  - Only signed-in Plus users see them. Aim Free shows no upsell beyond one quiet line in Settings.
-  - The offer appears once per purpose, is easy to dismiss, and never blocks the video.
-  - When to offer: a cheap AI classification of the purpose text (quick / study / long-term), with a word-based fallback ("exam", "study for", "learn", "certificate", "course").
+- **Offers depend on who's using Aim:**
+
+  | User | What they see |
+  |---|---|
+  | Signed out | Aim Free with no account asked for. Sign-in is offered only when they start something that needs an account. |
+  | Free account | An occasional invitation to Plus, only when they ask for a study capability (for example "Organize a study session?" on a clearly study-shaped Target). |
+  | Plus | The feature itself, offered directly, with no upgrade pitch. |
+
+- **Rules for every offer:**
+  - It never interrupts a video someone is watching for their Target.
+  - It shows at most once per Target and is easy to dismiss.
+  - It never makes Aim Free feel like an advertisement.
+- **When to offer:** at first, a word-based check of the Target ("exam", "study for", "learn", "certificate", "course"). For signed-in users, a cheap AI classification later.
 
 ## Revised Plus roadmap
 
@@ -93,11 +123,11 @@ Study sessions come **before** learning paths. They're smaller, they serve the s
 - **Data model on the server** (see Decisions): learners, plans, plan items, concepts, progress events.
 - Account deletion and data export from Settings.
 
-### TB — TeachBack MVP (approved, Addendum 02)
+### F2 — Study sessions, with TeachBack
 
-Right after F1, because it's self-contained: it needs only a Target (or a topic typed in) and works before study sessions or learning paths exist. See [TeachBack](#teachback) below.
+**TeachBack's text MVP is the first deliverable of this stage.** It needs only a Target (or a typed topic), so it can ship and gather feedback before the rest of study sessions. See [TeachBack](#teachback).
 
-### F2 — Study sessions
+**Shared foundation built here** and reused by F3: `objectives` (per plan or standalone Target), `assessments` and `assessment_turns`, and progress events.
 
 - Objective, plus optional topics, plus an **optional upload**: study guide, syllabus, notes, reading (PDF, DOCX, text, pasted text).
 - **Ordered video list:**
@@ -140,8 +170,8 @@ Conversational assessment for Aim Plus: AI "students" ask questions, and the lea
 
 ### Status
 
-- **Approved.** It's waiting on the original TeachBack prototype's source, so its mechanics and interaction patterns can be reused (Phase A).
-- **Nothing is built yet.** It depends on F1 (the Plus shell and the learner and progress tables).
+- **Approved.** Phase A (reviewing the prototype) is done; see [Prototype review](#prototype-review-phase-a).
+- **Nothing is built yet.** It's the first deliverable of F2 and depends on F1 (the Plus shell and the learner and progress tables).
 
 ### Proposed architecture (smallest maintainable)
 
@@ -186,7 +216,7 @@ Conversational assessment for Aim Plus: AI "students" ask questions, and the lea
 - The instructor's help is recorded with `source: instructor`.
 
 **AI students:**
-- Four questioning styles (Curious, Skeptic, Connector, Practical) that the server rotates. The user never picks them.
+- The prototype's five students, with Addendum 02's styles mapped onto them (see the prototype review). The server rotates them; the user never picks.
 - They're short and plain, not theatrical.
 
 **Rules during an assessment:**
@@ -217,6 +247,39 @@ Conversational assessment for Aim Plus: AI "students" ask questions, and the lea
 | D | Voice input (Web Speech API on the TeachBack page), refined student styles, history, and a full "teach the class" format |
 
 Homeschool use (a Thursday check before Friday's project, and parent review) is future work; see HOMESCHOOL.md.
+
+### Prototype review (Phase A)
+
+The prototype (`TeachBack.html`) is a complete single-page app: learn-by-teaching classes with a planner, AI students, voice, grading and report cards. It runs inside Claude's own artifact environment (`window.claude.use("sample")`) and keeps everything in `localStorage`.
+
+**Carry over (the substance):**
+
+| Prototype piece | In Aim |
+|---|---|
+| **Questions-only mode**, and the **director** pattern: one AI call per turn returns the student's reaction (with a follow-up when an answer was vague or wrong), the next question, which goals are now covered, and whether it's ready to wrap | This *is* adaptive questioning. It becomes the `teachback-turn` server task, with goals as objectives |
+| **Five students tied to skills:** Milo (Curious → clarity), Reese (Skeptic → evidence), Grant (Stickler → precision), Ivy (What-if → reasoning and application), Sam (states a common misconception to see whether it's corrected) | Kept. Addendum 02's styles map onto them: Curious = Milo, Skeptic = Reese, Practical = Ivy. Connector becomes the prototype's `connection` question kind |
+| **Question kinds:** question, follow-up, misconception, connection, pattern | Kept. Each is evidence for a specific dimension |
+| **Content types** shaping the questions: concepts, events (causes and patterns rather than dates, which fits Precedent), procedures (steps, limits, failure cases; fits safety-critical subjects), texts, language | Kept as an objective-set property |
+| **Skills with "untested" when no question targeted them** | Becomes **Not assessed**, as Addendum 02 requires |
+| **Grading rules:** don't flag reasonable simplifications; an uncorrected misconception counts heavily; "I don't know, let me check" followed by a right answer beats bluffing | Kept in the `teachback-finish` instructions |
+| **Gaps,** each with an explanation and a search query, and **fact flags** with an "I think I was right" re-check | Gaps become review links. A gap's search query starts a new Target on YouTube |
+| **Research break** (limited, and recorded on the question) | Becomes **"Give me a hint"**: limited, and recorded as assistance |
+| **Retry:** the same students re-ask what was missed, plus new questions; unresolved gaps come back in the next session | Kept. This is "Try again", and gaps resurface at the next checkpoint |
+| **Voice:** Web Speech recognition (push to talk, or open mic), a different synthesized voice per student, "let me check" detection | Phase D, on the TeachBack page |
+| **Study planner:** chunks with goals and named sources, each with a YouTube search query | The seed of study sessions and learning paths (F2 and F3). Its source queries open as Targets |
+
+**Change for Aim:**
+
+- **Prompts move to the server task registry.** The extension never calls an AI directly and holds no key. State moves from `localStorage` to server tables keyed by `learner_id`.
+- **No single 0–100 score** and no pass mark at 70. The model's numeric scores become evidence. The status of each objective is derived in code (see Honest results).
+- **Drop for Aim:** the multiple-choice warm-up (the addendum says no multiple choice), roster setup and the gradual class ramp-up (users don't configure students), class reminders and schedules, interests and suggestions, the pace multiplier, and the delivery/filler-word and say-it-back language drills (possibly Phase D).
+- **The full teach-a-lesson format** stays a future option (Phase D).
+- **The interface is rebuilt in Aim's design** (DOM-built and theme-aware), not ported. The prototype builds its HTML from template strings with an `esc()` helper; Aim builds everything with `el()`.
+
+**Costs, measured against the prototype's shape:**
+
+- **One model call per answer** (the director), plus one to start and one to finish. That fits Aim's limits: a 15-turn session is about 17 calls.
+- The prototype sends up to 9,000 characters of transcript per turn. The server keeps a running summary of evidence instead, to bound the tokens per turn.
 
 ## Decisions needed now (to avoid rework)
 
@@ -253,12 +316,13 @@ What the user sees is derived from the events: "viewed" is never shown as "learn
   - The server extracts their text; there are size and page caps.
   - Deleting an upload deletes the extracted text too.
 
-### 5. Finding videos without the YouTube Data API
+### 5. Finding videos: the student's own searches first
 
 The Data API allows about **100 searches a day for the whole app** (10,000 quota units, 100 per search). That rules it out for curation at any scale.
 
-- **Recommendation:** curate from searches run in the user's own YouTube tab, which Aim already captures, plus oEmbed. This also keeps the server from fetching YouTube pages, which YouTube's terms forbid.
-- Apply for a Data API quota extension later, only for things that need it.
+- **Start with the student's own searches,** which Aim already sees in their tab, plus oEmbed. This also keeps the server from fetching YouTube pages, which YouTube's terms forbid.
+- **Not a permanent rule.** Learning paths that need a video for one specific objective may need the Data API, with a quota extension.
+- **Reading the results a user's own page shows them isn't permission to scrape.** What Aim sends to its server about those results goes through the same legal review as transcripts.
 
 ### 6. What the instructor knows about a video
 
@@ -266,7 +330,8 @@ The Data API allows about **100 searches a day for the whole app** (10,000 quota
 - **Transcripts:**
   - the official caption API covers only videos you own or that allow contributions;
   - reading the transcript from the page is a grey area under YouTube's terms.
-- **Recommendation:** build F2 to work from metadata, chapters and the study guide. Add transcript use only as an opt-in, after a lawyer's review.
+- **Decision:** the legal review is a **prelaunch dependency** for anything that retrieves, stores or processes transcripts. Qualified counsel reviews the specific implementation; a review isn't a guarantee of permission.
+- **Until then,** F2 and TeachBack work from metadata, chapters, the student's own notes and uploads, and other authorized material.
   - Addendum §4.6 ("summary or transcript" in homeschool lesson review) depends on the same review.
 
 ### 7. AI endpoint growth
@@ -307,8 +372,11 @@ The Data API allows about **100 searches a day for the whole app** (10,000 quota
   - "You came to YouTube to learn. Stay on track."
   - "Make more of YouTube."
   - "Watch with intention."
-- **Low-cost changes, proposed for approval:**
-  - Store summary: "Study on YouTube without getting distracted. Your search becomes your Target, and Aim keeps you on it." (112 characters)
-  - Homepage example chips: add a study example (for example "Study for my biology exam") and keep the general ones.
-  - The landing page waits until approved.
-- **Homeschool teaser:** on the future website only, not in the extension. A teaser inside Aim Free would break the no-advertising rule.
+- The landing page waits until approved.
+- **Homeschool teaser:** on the future website only, not in the extension. The website can introduce Aim Plus and Aim Homeschool, including the parent dashboard. The extension's message stays: *You came to YouTube for a reason. Aim helps you accomplish it.*
+- **Done in 0.16.0:**
+  - **Store summary:** "Study on YouTube without getting distracted. Your search becomes your Target, and Aim helps you stay focused on it."
+  - **Store description** opens with the student hook.
+  - **Homepage line:** "Whether you're preparing for an exam, learning a new skill, or finding a quick answer, Aim helps you stay focused on what you came to YouTube to accomplish."
+  - **Homepage example:** "Study for my biology exam".
+- **The listing describes only what works.** AI study sessions, TeachBack and Plus aren't mentioned until they ship.

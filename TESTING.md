@@ -102,7 +102,7 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 
 ### 9. Step D details
 
-- [ ] Homepage card: example chips (Learn cabinetmaking…) fill the search box when tapped.
+- [ ] Homepage card: the line under "What brings you here?" reads "Whether you're preparing for an exam…", and the example chips (Study for my biology exam, Learn cabinetmaking…) fill the search box when tapped.
 - [ ] Break chips everywhere include **Custom**: it becomes a minutes box with Start break.
 - [ ] During a timed break the indicator counts down by the second ("Break 14:59 left") with an × that ends the break.
 - [ ] When a break runs out with nothing playing: a "Break time is up" card offers Back on Target (or Set Target) and Extend break (15 min) while leisure time is left.

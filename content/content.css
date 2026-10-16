@@ -283,6 +283,7 @@ html.wp-boot ytd-browse[page-subtype="home"] ytd-feed-filter-chip-bar-renderer {
 .wp-home-go:hover { background: var(--wp-tonal-hover); }
 .wp-home-go:disabled { opacity: .6; cursor: progress; }
 .wp-home-hint { margin: -8px 0 0 16px; font-size: 13px; }
+.wp-home-lede { margin: -8px 0 0; font-size: 14px; line-height: 20px; max-width: 560px; }
 .wp-home-alt { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
 
 /* ---------- search results bar ---------- */
