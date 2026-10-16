@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root { --bg:#fff; --surface:#f2f2f2; --text:#0f0f0f; --muted:#606060; --border:rgba(0,0,0,.1); --accent:#1f7a6d; --danger:#cc0000; --bar:#e5e5e5; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#212121; --surface:#303030; --text:#f1f1f1; --muted:#aaa; --border:rgba(255,255,255,.1); --accent:#4fc0ae; --danger:#ff6b62; --bar:#3f3f3f; }
+  }
+  body { width: 340px; margin: 0; padding: 14px 16px 12px; background: var(--bg); color: var(--text); font: 13px/1.45 Roboto, Arial, sans-serif; }
+  .brand { display:flex; align-items:center; gap:6px; font-weight:500; font-size:15px; margin-bottom:12px; }
+  h2 { font-size: 12px; font-weight: 500; color: var(--muted); margin: 14px 0 6px; }
+  .card { background: var(--surface); border-radius: 10px; padding: 10px 12px; }
+  .strong { font-weight: 500; font-size: 14px; }
+  .muted { color: var(--muted); font-size: 12px; }
+  .bar { height:4px; background:var(--bar); border-radius:2px; overflow:hidden; margin:6px 0 2px; }
+  .bar i { display:block; height:100%; background:var(--accent); }
+  .bar i.over { background: var(--danger); }
+  .row { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .item { padding: 7px 0; border-top: 1px solid var(--border); }
+  .item:first-child { border-top: 0; }
+  a { color: var(--text); text-decoration: none; } a:hover { color: var(--accent); }
+  .x { background:none; border:0; color:var(--muted); cursor:pointer; font-size:16px; padding:0 4px; }
+  .btn { background: var(--text); color: var(--bg); border: 0; border-radius: 16px; height: 30px; padding: 0 14px; font: 500 13px Roboto, Arial, sans-serif; cursor: pointer; }
+  .btn.ghost { background: none; color: var(--danger); padding: 0 6px; }
+  .foot { display:flex; justify-content:space-between; margin-top:14px; }
+  .foot a { color: var(--muted); font-size: 12px; cursor: pointer; }
+  .tag { font-size: 11px; color: var(--muted); }
+</style>
+</head>
+<body>
+  <div class="brand">
+    <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 5.5l2.4 6.5L12 18.5 9.6 12z" fill="currentColor"/></svg>
+    Waypoint
+  </div>
+  <div id="session"></div>
+  <h2>Saved for later</h2>
+  <div class="card" id="saved"></div>
+  <h2>Today</h2>
+  <div id="buckets"></div>
+  <h2>Recent sessions</h2>
+  <div class="card" id="history"></div>
+  <div class="foot"><a id="clear">Clear history</a><a id="settings">Settings</a></div>
+  <script src="store.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
