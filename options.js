@@ -17,11 +17,14 @@ async function setSetting(key, value) {
   render();
 }
 
+const TOGGLES = ["hideShorts", "hideRecs", "hideFeeds", "noAutoplay"];
+
 async function render() {
   const st = await send({ type: "state" });
   if (!st) return;
   const S = st.settings, t = st.today || { purpose: 0, leisure: 0, other: 0 };
   $("homeCard").checked = S.homeCard;
+  for (const k of TOGGLES) $(k).checked = S[k] !== false;
   for (const k of ["leisureMin", "graceMin", "totalMin", "purposeLimitMin"]) {
     const sel = $(k);
     if (![...sel.options].some(o => o.value === String(S[k]))) sel.append(new Option(`${S[k]} minutes`, S[k]));
@@ -62,6 +65,8 @@ async function render() {
 }
 
 $("homeCard").onchange = () => setSetting("homeCard", $("homeCard").checked);
+for (const k of TOGGLES) $(k).onchange = () => setSetting(k, $(k).checked);
+if (location.hash === "#advanced") { $("advanced").open = true; $("advanced").scrollIntoView(); }
 for (const k of ["leisureMin", "graceMin", "totalMin", "purposeLimitMin"]) $(k).onchange = () => setSetting(k, parseInt($(k).value, 10));
 $("recMode").onchange = () => setSetting("recMode", $("recMode").value);
 $("saveKey").onclick = async () => {

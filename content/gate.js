@@ -84,6 +84,7 @@ async function continueAfterRules(info) {
   const p = activePurpose();
   if (!p) return showChoiceCard(info);
   if (p.timeUp) return showTimeUpCard();
+  if (isShortsPage() && settings.hideShorts !== false) return showShortsCard();
   evaluateVideo(info);
 }
 

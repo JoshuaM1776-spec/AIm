@@ -153,6 +153,7 @@ async function setToolbarTheme(dark) {
 }
 
 const reads = {
+  "open-options": m => chrome.tabs.create({ url: chrome.runtime.getURL("options.html" + (m.section === "advanced" ? "#advanced" : "")) }).then(() => ({ result: "applied" })),
   "theme": m => setToolbarTheme(!!m.dark),
   "status": () => tabState(),
   "state": () => fullState(),

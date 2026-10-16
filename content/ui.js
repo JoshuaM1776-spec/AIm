@@ -78,6 +78,7 @@ async function takeBreak(choice) {
   closeModal();
   applyStatus(await send({ type: "status" }));
   renderChip();
+  syncFocus();
   route();
   if (r.capped) toast(`Break set to ${r.capped} min: what's left of today's leisure time.`);
   else toast(choice.oneVideoId ? "Enjoy the video." : `Break: ${choice.minutes} minutes.`);

@@ -51,8 +51,8 @@ function shutDown() {
   holding = false;
   early.done();
   early.showFeed();
-  for (const n of $$("#wp-chip, #wp-home, #wp-results-bar, .wp-notice, .wp-scrim, .wp-dropdown, .wp-player-card")) n.remove();
-  document.documentElement.classList.remove("wp-home");
+  for (const n of $$("#wp-chip, #wp-home, #wp-feed-note, #wp-results-bar, .wp-notice, .wp-scrim, .wp-dropdown, .wp-player-card")) n.remove();
+  document.documentElement.classList.remove("wp-home", "wp-focus", "wp-hide-shorts", "wp-hide-recs", "wp-hide-feeds");
 }
 
 // Icons are built with DOM calls rather than HTML strings, so YouTube's Trusted Types

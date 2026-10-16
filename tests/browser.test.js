@@ -7,8 +7,16 @@ const path = require("path"), fs = require("fs"), os = require("os");
 const EXT = path.join(__dirname, "..");
 
 const page = (body, title = "YouTube") => `<!doctype html><html><head><title>${title}</title></head><body>
-<ytd-masthead><div id="end"></div></ytd-masthead>${body}
+<ytd-masthead><div id="end"></div></ytd-masthead>
+<ytd-guide-entry-renderer id="guideShorts"><a title="Shorts" href="/shorts/">Shorts</a></ytd-guide-entry-renderer>
+${body}
 <script>
+  // YouTube's autoplay toggle: a button whose inner element carries aria-checked.
+  document.addEventListener("click", e => {
+    const b = e.target.closest(".ytp-button");
+    const t = b && b.querySelector(".ytp-autonav-toggle-button");
+    if (t) t.setAttribute("aria-checked", String(t.getAttribute("aria-checked") !== "true"));
+  });
   // Mimic YouTube's in-app navigation event.
   window.ytNav = url => {
     history.pushState({}, "", url);
@@ -26,13 +34,23 @@ const WATCH = id => page(`<ytd-watch-flexy video-id="${id}">
   <ytd-watch-metadata><h1 class="ytd-watch-metadata"><yt-formatted-string>Video ${id}</yt-formatted-string></h1>
   <div id="owner"><div id="channel-name"><a href="/@chan${id}">Chan ${id}</a></div></div>
   <div id="description-inline-expander">About ${id}</div></ytd-watch-metadata>
-  <div id="movie_player"><video class="html5-main-video" src="data:video/mp4;base64," muted></video></div>
+  <div id="movie_player"><video class="html5-main-video" src="data:video/mp4;base64," muted></video>
+    <div class="ytp-ce-element">end screen card</div>
+    <button class="ytp-button"><div class="ytp-autonav-toggle-button" aria-checked="true"></div></button></div>
+  <div id="secondary"><div id="related"><ytd-compact-video-renderer><a href="/watch?v=rel1">Related one</a></ytd-compact-video-renderer></div></div>
 </ytd-watch-flexy>`, `Video ${id} - YouTube`);
+const SHORTS = id => page(`<div id="shorts-player"><video class="html5-main-video"></video></div>
+  <ytd-reel-player-overlay-renderer><div id="channel-name"><a href="/@short${id}">Short ${id}</a></div></ytd-reel-player-overlay-renderer>`);
+const SUBS = page(`<ytd-browse page-subtype="subscriptions"><ytd-rich-grid-renderer id="subsGrid">subs</ytd-rich-grid-renderer></ytd-browse>`);
 const HOME = page(`<ytd-browse page-subtype="home"><div id="primary"><ytd-rich-grid-renderer>
   <ytd-rich-item-renderer id="i1"><a href="/watch?v=v1">One</a><a href="/@hideme">Hide Me</a></ytd-rich-item-renderer>
   <ytd-rich-item-renderer id="i2"><a href="/watch?v=v2">Two</a><a href="/@keepme">Keep Me</a></ytd-rich-item-renderer>
 </ytd-rich-grid-renderer></div></ytd-browse>`);
-const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>results</ytd-section-list-renderer></div></ytd-search>`);
+const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
+  <ytd-reel-shelf-renderer id="shortsShelf">Shorts shelf</ytd-reel-shelf-renderer>
+  <ytd-video-renderer id="shortItem"><a href="/shorts/s9">A short</a></ytd-video-renderer>
+  <ytd-video-renderer id="normalItem"><a href="/watch?v=n1">A video</a></ytd-video-renderer>
+</ytd-section-list-renderer></div></ytd-search>`);
 
 (async () => {
   const userData = fs.mkdtempSync(path.join(os.tmpdir(), "aim-"));
@@ -47,7 +65,8 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>results</ytd-s
       const id = new URL(u.searchParams.get("url")).searchParams.get("v");
       return route.fulfill({ contentType: "application/json", body: JSON.stringify({ title: `Video ${id}`, author_name: `Chan ${id}`, author_url: `https://www.youtube.com/@chan${id}` }) });
     }
-    const body = u.pathname === "/watch" ? WATCH(u.searchParams.get("v")) : u.pathname === "/results" ? RESULTS : HOME;
+    const body = u.pathname === "/watch" ? WATCH(u.searchParams.get("v")) : u.pathname === "/results" ? RESULTS
+      : u.pathname.startsWith("/shorts/") ? SHORTS(u.pathname.split("/")[2]) : u.pathname === "/feed/subscriptions" ? SUBS : HOME;
     // Same Trusted Types policy YouTube sends, so string-to-HTML writes would fail here too.
     route.fulfill({ contentType: "text/html", body, headers: { "content-security-policy": "require-trusted-types-for 'script'" } });
   });
@@ -113,12 +132,16 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>results</ytd-s
   st = await store();
   step("setting a purpose from the card plays the video", st.purpose?.text === "Learn how sourdough starters work" && st.purpose.limitMin === null && !(await p.$(".wp-player-card")));
   step("indicator shows the purpose", (await text("#wp-chip")).includes("Learn how sourdough"));
+  step("with a purpose: sidebar recommendations and end screens hidden", (await p.isHidden("#related")) && (await p.isHidden(".ytp-ce-element")));
+  step("with a purpose: autoplay switched off", (await p.getAttribute(".ytp-autonav-toggle-button", "aria-checked")) === "false" &&
+    (await p.evaluate(() => localStorage.getItem("aim-autoplay-restore"))) === "1");
+  step("with a purpose: Shorts link hidden", await p.isHidden("#guideShorts"));
 
   // ---------- the menu ----------
   await p.click("#wp-chip .wp-pill");
   let menu = await text(".wp-dropdown");
-  step("menu: purpose, no time limit, break choices, Done, Change purpose",
-    ["Your purpose", "No time limit", "Take a break", "Done", "Change purpose", "Save this video", "Hide or warn"].every(t => menu.includes(t)) &&
+  step("menu: purpose, no time limit, what's hidden, break choices, Done, Change purpose",
+    ["Your purpose", "No time limit", "Shorts, recommendations and feeds hidden · autoplay off", "Adjust", "Take a break", "Done", "Change purpose", "Save this video", "Hide or warn"].every(t => menu.includes(t)) &&
     !/Pause|Explore|Add 15/.test(menu), menu.slice(0, 200));
 
   // ---------- take a break and come back ----------
@@ -126,6 +149,8 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>results</ytd-s
   await p.waitForTimeout(600);
   st = await store();
   step("a break from the menu keeps the purpose waiting", st.brk?.durationMin === 15 && st.purpose?.suspended === true);
+  step("on a break: recommendations, Shorts and autoplay are back", (await p.isVisible("#related")) && (await p.isVisible("#guideShorts")) &&
+    (await p.getAttribute(".ytp-autonav-toggle-button", "aria-checked")) === "true");
   await p.click("#wp-chip .wp-pill");
   menu = await text(".wp-dropdown");
   step("break menu offers going back to the purpose", menu.includes("Back to my purpose") && menu.includes("Your purpose is waiting"));
@@ -178,6 +203,13 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>results</ytd-s
   st = await store();
   step("a search with no purpose becomes the purpose (no time limit)", st.purpose?.text === "how to fix a leaky faucet" && st.purpose.limitMin === null && st.purpose.searches[0].q === "how to fix a leaky faucet");
   step("results bar shows the purpose and Done", (await text("#wp-results-bar")).includes("how to fix a leaky faucet") && (await text("#wp-results-bar")).includes("Done"));
+  step("in results: Shorts shelf and Shorts hidden, videos shown", (await p.isHidden("#shortsShelf")) && (await p.isHidden("#shortItem")) && (await p.isVisible("#normalItem")));
+  await p.goto("https://www.youtube.com/shorts/s9");
+  await p.waitForSelector("#shorts-player .wp-player-card", { timeout: 6000 });
+  step("opening a Short during a purpose asks first", (await text(".wp-player-card")).includes("Shorts are hidden while you're on purpose"));
+  await p.goto("https://www.youtube.com/feed/subscriptions");
+  await p.waitForSelector("#wp-feed-note", { timeout: 6000 });
+  step("subscriptions feed replaced by a note during a purpose", (await p.isHidden("#subsGrid")) && (await text("#wp-feed-note")).includes("Feeds are hidden while you're on purpose"));
   await sw.evaluate(() => finishPurpose(null));
 
   // ---------- leisure used up ----------
@@ -220,11 +252,14 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>results</ytd-s
   await opt.selectOption("#graceMin", "5");
   await opt.selectOption("#totalMin", "240");
   await opt.selectOption("#avoid select", "warn");
+  await opt.uncheck("#hideShorts");
   await opt.check("#homeCard");
   await opt.waitForTimeout(600);
   st = await store();
   step("settings save through the background", st.settings.leisureMin === 90 && st.settings.graceMin === 5 && st.settings.totalMin === 240 &&
-    st.settings.homeCard === true && st.avoid["/@hideme"].action === "warn", JSON.stringify(st.settings));
+    st.settings.homeCard === true && st.settings.hideShorts === false && st.avoid["/@hideme"].action === "warn", JSON.stringify(st.settings));
+  await p.waitForTimeout(300);
+  step("turning a distraction switch off applies to open tabs", !(await p.evaluate(() => document.documentElement.classList.contains("wp-hide-shorts"))));
 
   // Extension reload: the orphaned tab must go quiet instead of throwing.
   const before = errors.length;

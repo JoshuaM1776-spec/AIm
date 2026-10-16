@@ -9,12 +9,18 @@ const aimEarly = (() => {
   const onPlay = e => { if (holding && onVideoPage() && e.target.tagName === "VIDEO") e.target.pause(); };
   document.addEventListener("play", onPlay, true);
 
-  // Hide the homepage feed (see html.wp-boot in content.css) unless Aim won't replace it.
-  root.classList.add("wp-boot");
+  // Hide the homepage feed (see html.wp-boot in content.css) unless Aim won't replace it,
+  // and hide Shorts, recommendations and feeds unless you're on a break (see focus.js).
+  const FOCUS = { hideShorts: "wp-hide-shorts", hideRecs: "wp-hide-recs", hideFeeds: "wp-hide-feeds" };
+  root.classList.add("wp-boot", "wp-focus", ...Object.values(FOCUS));
   const showFeed = () => root.classList.remove("wp-boot");
   chrome.storage.local.get(["settings", "brk"])
-    .then(({ settings, brk }) => { if (settings?.homeCard === false || brk) showFeed(); })
-    .catch(showFeed);
+    .then(({ settings = {}, brk }) => {
+      if (settings.homeCard === false || brk) showFeed();
+      if (brk) root.classList.remove("wp-focus");
+      for (const [k, cls] of Object.entries(FOCUS)) if (settings[k] === false) root.classList.remove(cls);
+    })
+    .catch(() => { showFeed(); root.classList.remove("wp-focus"); });
 
   // The gate in gate.js holds videos from here on.
   const done = () => {

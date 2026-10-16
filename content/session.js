@@ -82,7 +82,7 @@ function purposeMenu() {
   const searches = p.searches.length > 1 ? el("div", { class: "wp-menu-block" },
     el("div", { class: "wp-label" }, "Searches toward this purpose"),
     el("div", { class: "wp-muted" }, p.searches.slice(-4).map(s => s.q).join(" · "))) : null;
-  return [head, time, searches, breakBlock(), el("div", { class: "wp-menu-items" },
+  return [head, time, searches, focusBlock(), breakBlock(), el("div", { class: "wp-menu-items" },
     menuItem("check2", "Done", () => finishPurpose()),
     menuItem("pivot", "Change purpose", () => openPivotDialog()),
     left !== null ? menuItem("clock", "Change time limit", openLimitDialog) : null,
@@ -109,6 +109,7 @@ function idleMenu() {
     el("div", { class: "wp-strong" }, status.totalReached ? "That's today's YouTube time" : "What brings you here?"),
     el("div", { class: "wp-muted" }, status.totalReached ? "Your daily limit resets at midnight." : "Set a purpose, or take a break.")),
     status.totalReached ? null : el("div", { class: "wp-menu-items" }, menuItem("pivot", "Set a purpose", () => openStartDialog())),
+    status.totalReached ? null : focusBlock(),
     status.totalReached ? null : breakBlock()].filter(Boolean);
 }
 

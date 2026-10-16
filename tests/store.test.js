@@ -30,6 +30,8 @@ function makeEnv(initial = {}) {
 }
 const VIDEO = { id: "abc123", title: "Feeding a sourdough starter", channel: "Bread Co" };
 const fresh = () => makeEnv({ schemaVersion: 3 });
+const DEFAULTS = { homeCard: true, recMode: "mark", leisureMin: 60, graceMin: 15, totalMin: 0, purposeLimitMin: 0,
+  hideShorts: true, hideRecs: true, hideFeeds: true, noAutoplay: true };
 
 const tests = [];
 const test = (name, fn) => tests.push([name, fn]);
@@ -48,7 +50,7 @@ test("migrates Waypoint 0.5 data all the way to v3", async () => {
   await env.run("migrateStorage()");
   const d = env.local;
   assert.strictEqual(d.schemaVersion, 3);
-  assert.deepStrictEqual(d.settings, { homeCard: false, recMode: "hide", leisureMin: 60, graceMin: 15, totalMin: 0, purposeLimitMin: 0 });
+  assert.deepStrictEqual(d.settings, { ...DEFAULTS, homeCard: false, recMode: "hide" });
   assert.deepStrictEqual(d.avoid, { "/@loud": { name: "Loud", action: "hide" } });
   assert.deepStrictEqual(d.usage, { "2026-10-15": { purpose: 1800, leisure: 0, other: 0 } });
   assert.strictEqual(d.purpose.text, "fix faucet");
@@ -81,7 +83,7 @@ test("fresh install gets defaults", async () => {
   const env = makeEnv({});
   await env.run("migrateStorage()");
   assert.strictEqual(env.local.schemaVersion, 3);
-  assert.deepStrictEqual(env.local.settings, { homeCard: true, recMode: "mark", leisureMin: 60, graceMin: 15, totalMin: 0, purposeLimitMin: 0 });
+  assert.deepStrictEqual(env.local.settings, DEFAULTS);
 });
 
 // ---------- purpose ----------
@@ -290,6 +292,8 @@ test("settings are validated", async () => {
   assert.strictEqual((await env.run(`setSetting("leisureMin", 90)`)).result, "applied");
   assert.strictEqual((await env.run(`setSetting("recMode", "nuke")`)).result, "error");
   assert.strictEqual((await env.run(`setSetting("apiKey", "x")`)).result, "error");
+  assert.strictEqual((await env.run(`setSetting("hideShorts", false)`)).result, "applied");
+  assert.strictEqual((await env.run(`setSetting("noAutoplay", "yes")`)).result, "error");
 });
 
 test("channel paths are normalized", async () => {

@@ -13,7 +13,11 @@
 // When one runs out mid-video, that video may finish within the grace period (default 15 min).
 
 const SCHEMA_VERSION = 3;
-const DEFAULT_SETTINGS = { homeCard: true, recMode: "mark", leisureMin: 60, graceMin: 15, totalMin: 0, purposeLimitMin: 0 };
+const DEFAULT_SETTINGS = {
+  homeCard: true, recMode: "mark", leisureMin: 60, graceMin: 15, totalMin: 0, purposeLimitMin: 0,
+  // Distractions, reduced whenever you're not on a break (see content.css and content/focus.js).
+  hideShorts: true, hideRecs: true, hideFeeds: true, noAutoplay: true
+};
 const GRACE_CHOICES = [0, 5, 10, 15, 30];
 const minutesSetting = max => v => Number.isInteger(v) && v >= 0 && v <= max;
 const SETTING_RULES = {
@@ -22,7 +26,11 @@ const SETTING_RULES = {
   leisureMin: minutesSetting(24 * 60),   // 0 = no daily allowance
   graceMin: v => GRACE_CHOICES.includes(v),
   totalMin: minutesSetting(24 * 60),     // 0 = no daily total
-  purposeLimitMin: minutesSetting(600)   // 0 = purposes have no time limit unless you set one
+  purposeLimitMin: minutesSetting(600),  // 0 = purposes have no time limit unless you set one
+  hideShorts: v => typeof v === "boolean",
+  hideRecs: v => typeof v === "boolean",
+  hideFeeds: v => typeof v === "boolean",
+  noAutoplay: v => typeof v === "boolean"
 };
 
 // ---------- write queue ----------

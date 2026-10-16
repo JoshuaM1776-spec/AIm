@@ -73,18 +73,30 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] **Daily YouTube limit** (Advanced): when reached, every video shows "That's today's YouTube time" and the homepage says so too. Nothing extends it until midnight.
 - [ ] **Finish the current video** (Advanced): set "Stop right away" and let a break run out mid-video. The video pauses immediately.
 
-### 7. Done
+### 7. Distractions (whenever you're not on a break)
+
+- [ ] With a purpose, or before choosing: no Shorts shelves on the homepage feed (during a break you'll see them), search results or channel pages, and no Shorts link in the left menu or mini menu.
+- [ ] On a watch page: no recommendations in the sidebar or below the video on narrow windows, and no end-screen cards or suggestions when the video ends.
+- [ ] YouTube's autoplay switch (in the player controls) is off. Take a break: it turns back on, and the sidebar and Shorts return. End the break: off again.
+- [ ] If autoplay was already off before Aim, it stays off during breaks.
+- [ ] A Short opened from a link during a purpose shows "Shorts are hidden while you're on purpose" on the player.
+- [ ] Subscriptions and Trending show "Feeds are hidden…" with break options instead of the feed.
+- [ ] The indicator menu says what's hidden, and **Adjust** opens Settings → Advanced → Distractions. Each switch there takes effect in open tabs right away.
+- [ ] Hard-refresh a search results page: Shorts never flash before disappearing.
+- [ ] Playlists in the sidebar (opened from a playlist) and live chat still show during a purpose.
+
+### 8. Done
 
 - [ ] Menu → **Done** (or the results bar or homepage Done button) lands on the homepage and asks once: "Did you find what you needed?" Yes / Partly / No.
 - [ ] Recent in the popup shows the purpose (with its pivots), minutes, number of videos and your answer.
 
-### 8. Timer accuracy
+### 9. Timer accuracy
 
 - [ ] **Two YouTube windows side by side**, both visible, for 2 minutes. Today's time grows by about 2 minutes, not 4.
 - [ ] **A video in a background tab** keeps counting while it plays.
 - [ ] Miniplayer: start a video, open the miniplayer, browse. Time keeps counting.
 
-### 9. Channels
+### 10. Channels
 
 - [ ] On a video: menu → Hide or warn about this channel → **Hide channel**. The toast confirms and the video keeps playing.
 - [ ] That channel's videos disappear from the homepage feed (during a break), search results and the sidebar.
@@ -92,12 +104,12 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] **Warn me** on another channel: its videos ask before playing unless you have a purpose.
 - [ ] Settings → Advanced lists both. Switching Hide/Warn or removing takes effect immediately.
 
-### 10. Recommendations (key required, until step C)
+### 11. Recommendations (key required, until step C)
 
 - [ ] With a purpose on a watch page, sidebar videos get "Matches your purpose" / "Related perspective" / "Off purpose" labels after a few seconds.
 - [ ] Moving to another video clears old labels. No label sits on the wrong video.
 
-### 11. Sync and reload
+### 12. Sync and reload
 
 - [ ] Done from the popup while a YouTube tab is on a video: that tab shows the "What brings you here?" card on the player within a few seconds.
 - [ ] Two YouTube tabs: starting a break or setting a purpose in one updates the other's indicator, and a card waiting on the other tab's player clears if the new state allows its video.
@@ -106,7 +118,8 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 ## Known issues (not regressions)
 
 - Purpose checks, sidebar labels and the search suggestion still need your own Claude API key. Step C replaces them with checks that need no AI.
-- Shorts and autoplay aren't handled yet (step B).
+- Hiding the Shorts menu link matches YouTube's English label ("Shorts") as well as its link; other languages rely on the link alone.
+- Aim changes YouTube's own autoplay switch. If Aim is removed during a purpose, autoplay stays off until you switch it back on.
 - Hiding channels depends on the channel link in each video tile. Tiles that only link the channel by ID, not by @handle, may not be matched.
 - Miniplayer time counting relies on YouTube's `ytd-miniplayer` element and needs checking on real YouTube.
 - The logo still has the red play triangle in the center (replaced in step D).

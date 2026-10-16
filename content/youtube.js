@@ -11,6 +11,10 @@ const YT = {
   resultsList: "ytd-search ytd-section-list-renderer",
   mainVideo: "video.html5-main-video",
   player: ["#movie_player", "#shorts-player"],  // where Aim's per-video card sits
+  autoplayToggle: ".ytp-autonav-toggle-button",  // aria-checked="true" when YouTube's autoplay is on
+  // Feed pages (by ytd-browse page-subtype) that are hidden when you're not on a break.
+  // The CSS rules for Shorts, recommendations and these feeds are in content.css.
+  feedSubtypes: ["subscriptions", "trending"],
   miniplayerVideo: "ytd-miniplayer video",
   watchFlexy: "ytd-watch-flexy",             // carries the current video's ID in its video-id attribute
   watchTitle: "h1.ytd-watch-metadata yt-formatted-string",
@@ -57,6 +61,12 @@ const homeHost = () => $(YT.homePrimary) || $(YT.homeBrowse);
 const resultsAnchor = () => $(YT.resultsList);
 const channelLink = () => first(YT.videoChannelLink);
 const playerHost = () => first(YT.player);
+const autoplayToggle = () => $(YT.autoplayToggle);
+const isShortsPage = () => location.pathname.startsWith("/shorts/");
+const feedBrowse = () => {
+  for (const t of YT.feedSubtypes) { const n = $(`ytd-browse[page-subtype="${t}"]:not([hidden])`); if (n) return n; }
+  return null;
+};
 
 // ---------------- the video on screen ----------------
 // YouTube swaps videos without reloading, so for a moment the page can still show the

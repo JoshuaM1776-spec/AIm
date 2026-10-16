@@ -8,6 +8,7 @@ const TICK = 10;
 const tickTimer = setInterval(async () => {
   if (!chrome.runtime?.id) return shutDown();
   if (!$("#wp-chip")) renderChip(); // YouTube re-renders the top bar sometimes
+  syncFocus(); // the player (and its autoplay toggle) or a feed may have appeared since
   // Grace is over: pause the video and apply the limit (once; the daily-total stop stays all day).
   if (stop?.videoId && stop.videoId === currentId && !holding && Date.now() >= stop.graceEndsAt) return endGrace();
   const id = currentId;
@@ -26,6 +27,7 @@ function react(r) {
   const before = { purpose, brk, stop, total: status.totalReached };
   applyStatus(r);
   renderChip();
+  syncFocus();
   const newStop = stop && stop.at !== before.stop?.at;
   const breakEnded = before.brk && !brk;
   const purposeEnded = before.purpose && !purpose && !endingHere;
@@ -67,6 +69,7 @@ function onNavigate() {
   closeDropdown();
   route();
   applyHidden();
+  syncFocus();
   if (id === currentId) return;
   currentId = id;
   currentInfo = null;
@@ -87,6 +90,7 @@ function onNavigate() {
 async function init() {
   applyStatus(await send({ type: "status" }));
   renderChip();
+  syncFocus();
   showReflection();
   hideObserver.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["href"] });
   window.addEventListener(YT.navigateEvent, onNavigate);

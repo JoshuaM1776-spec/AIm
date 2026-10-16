@@ -22,6 +22,7 @@ Chrome extension, Manifest V3, no build step.
 | `content/ui.js` | Menus, dialogs, notices, toasts |
 | `content/gate.js` | Holds each new video and decides: plays on a break, is checked against a purpose, or shows the choice card on the player |
 | `content/session.js` | The indicator and its menu, set / change purpose, time limit, Done and the reflection |
+| `content/focus.js` | Fewer distractions when you're not on a break: page classes for the CSS, YouTube's autoplay switch, the feed note, the Shorts card |
 | `content/home.js`, `search.js`, `recs.js`, `channels.js` | Homepage card, search results, sidebar labels, hidden/warned channels |
 | `content/main.js` | Timer ticks, sync with other tabs, navigation, startup. Loads last. |
 | `content/content.css` | Styles for all of the above |
@@ -38,6 +39,7 @@ Chrome extension, Manifest V3, no build step.
 - **Optional daily YouTube limit**, also a hard stop until midnight.
 - **When time runs out mid-video**, that video may finish within the grace period (default 15 min, adjustable 0 to 30).
 - Time counts while a video plays or while you're looking at YouTube. Several open tabs never count the same moment twice.
+- **Fewer distractions whenever you're not on a break:** Shorts, recommendations and end screens, the subscriptions and trending feeds are hidden, and YouTube's autoplay is switched off (and back on during breaks). Each can be turned off under Advanced.
 - **Channels** (optional): Hide removes a channel from feeds, results and the sidebar. Warn asks before you watch it outside a purpose.
 
 ## Design
