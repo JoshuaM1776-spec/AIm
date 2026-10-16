@@ -69,5 +69,5 @@ Don't show YouTube's logo prominently in screenshots or promos, and don't make t
 - [ ] Run `TESTING.md` on real YouTube (light and dark, wide and narrow windows).
 - [ ] Confirm the logo (`icons/`, see README → Rebranding). The name is Aim.
 - [ ] Fill in the contact email in `PRIVACY.md` and publish it.
-- [ ] Build the zip without `tests/`: `git archive --format=zip -o aim.zip HEAD ':!tests' ':!supabase'`.
+- [ ] Build the zip without `tests/`: `git archive --format=zip -o aim.zip HEAD ':!tests' ':!supabase' ':!docs'`.
 - [ ] Developer account: one-time $5 registration fee, and verify a contact email.

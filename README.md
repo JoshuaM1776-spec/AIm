@@ -81,3 +81,4 @@ See [TESTING.md](TESTING.md).
 
 - [PRIVACY.md](PRIVACY.md): what Aim stores (all of it locally) and why, plus the optional Aim Plus account.
 - [STORE_LISTING.md](STORE_LISTING.md): the Chrome Web Store listing, ready to paste, and what's still needed before submitting.
+- [docs/ROADMAP.md](docs/ROADMAP.md): status, the Aim Plus plan and the decisions behind it. [docs/HOMESCHOOL.md](docs/HOMESCHOOL.md): the future homeschool product (not in scope yet).
