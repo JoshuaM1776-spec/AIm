@@ -8,6 +8,16 @@
 //                    (Focus, Quick answers) is unrestricted unless the total cap is set.
 //   Channel rules  — optional: channels to Avoid (warn or block). Purpose decides everything else.
 
+// Bump when stored data changes shape, and add a step to migrateStorage().
+const SCHEMA_VERSION = 1;
+
+async function migrateStorage() {
+  const { schemaVersion = 0 } = await chrome.storage.local.get("schemaVersion");
+  if (schemaVersion >= SCHEMA_VERSION) return;
+  // 0 → 1: Waypoint 0.5.0 data carries over unchanged; this just starts versioning it.
+  await chrome.storage.local.set({ schemaVersion: SCHEMA_VERSION });
+}
+
 const DELAY_MS = 24 * 60 * 60 * 1000;
 const LEVELS = ["lenient", "balanced", "strict"];
 const DEFAULT_LIMITS = { leisureMin: 60, leisureStart: 0, leisureEnd: 24, totalMin: 0 };

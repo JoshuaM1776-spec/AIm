@@ -3,6 +3,9 @@
 
 importScripts("store.js");
 
+// Fires on first install and on every update or reload of the extension.
+chrome.runtime.onInstalled.addListener(() => migrateStorage());
+
 const DEFAULT_MODEL = "claude-haiku-5-5";
 
 async function getAISettings() {
