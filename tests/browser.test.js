@@ -300,8 +300,10 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await pop.goto(`chrome-extension://${extId}/popup.html`);
   await pop.waitForTimeout(500);
   const popText = (await pop.textContent("body")).replace(/\s+/g, " ");
-  const optText = await (async () => { const o = await ctx.newPage(); await o.goto(`chrome-extension://${extId}/options.html`); await o.waitForTimeout(400); const t = await o.textContent("body"); await o.close(); return t; })();
+  const [optText, plusHidden] = await (async () => { const o = await ctx.newPage(); await o.goto(`chrome-extension://${extId}/options.html`); await o.waitForTimeout(400);
+    const t = await o.textContent("body"), h = await o.$eval("#plus", n => n.hidden && !n.querySelector("input")); await o.close(); return [t, h]; })();
   step("no AI, no API key anywhere in settings", !/API key|Claude|AI check/i.test(optText));
+  step("no Aim Plus section while config.js is empty", plusHidden);
   step("popup shows the purpose with quick controls, the week, today and history",
     ["Current purpose", "learn to sharpen a chisel", "Take a break", "Change purpose", "Done", "This week", "purposes done", "On purpose", "Breaks", "Found it"].every(t => popText.includes(t)), popText.slice(0, 200));
   await pop.click('button:has-text("Done")');

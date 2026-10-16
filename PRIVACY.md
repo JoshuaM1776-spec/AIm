@@ -1,8 +1,8 @@
 # Aim — Privacy Policy
 
-_Last updated: October 2026. Applies to the Aim Chrome extension (Aim Free)._
+_Last updated: October 2026. Applies to the Aim Chrome extension._
 
-**The short version:** everything Aim knows stays in your browser. Aim has no account, no server, no analytics and no AI. Nothing you do is sent to the developer or anyone else.
+**The short version:** everything Aim knows stays in your browser. Aim Free has no account, no server, no analytics and no AI. Nothing you do is sent to the developer or anyone else. An optional Aim Plus account, if you choose to create one, is described [below](#aim-plus-accounts-optional).
 
 ## What Aim stores, and where
 
@@ -40,11 +40,27 @@ Aim switches YouTube's own autoplay setting off while you're not on a break, and
 
 ## Children
 
-Aim collects no personal information from anyone, including children.
+Aim Free collects no personal information from anyone, including children. Aim Plus accounts are for people aged 13 and over (or the minimum age in their country); a parent can create one for their household.
+
+## Aim Plus accounts (optional)
+
+<!-- Publish this section only in a build whose config.js names Aim's server. A build with an empty
+     config.js has no account features, and the sections above describe it completely. -->
+
+Signing in is optional, and Aim Free works the same without it. If you sign in under Settings → Aim Plus:
+
+- **Your email address** is sent to Aim's account service (Supabase, our hosting provider) to email you a sign-in code and to identify your account. We don't use it for marketing.
+- **Your account** stores your email, your plan (Free or Plus) and when it was created.
+- **AI use** (Aim Plus only): when you use an AI feature, Aim sends what that feature needs (for example the topic you want to learn) to Aim's server, which sends it to Anthropic's Claude API to produce the answer. The server records the time, the feature, the model and the amount of text processed, to apply fair-use limits. Under Anthropic's commercial terms, this content isn't used to train their models.
+- **Your purposes, searches, watch history and settings stay in your browser** as described above. They aren't uploaded unless a future feature asks you first.
+- The sign-in session is kept in the extension's own storage on your computer, not readable by web pages.
+- **Signing out** ends the session on this computer and on the server. To delete your account and everything stored with it, email us (below).
+
+Aim Plus data is processed by Supabase (account service and database) and Anthropic (AI), each under their own privacy terms.
 
 ## Changes
 
-If Aim ever adds features that send data anywhere (for example a future paid version with accounts), this policy will be updated before that happens, and those features will be opt-in.
+If Aim adds features that send data anywhere else, this policy will be updated before that happens, and those features will be opt-in.
 
 ## Contact
 

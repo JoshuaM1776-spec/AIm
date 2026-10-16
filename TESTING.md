@@ -7,7 +7,11 @@ Run all three before and after every phase. A change is safe to keep when everyt
 ```sh
 node tests/store.test.js      # data layer: migrations, timer, write queue, settings (no dependencies)
 node tests/browser.test.js    # loads the extension in Chromium on a fake youtube.com (needs Playwright)
+node --experimental-strip-types tests/ai.test.mjs     # Aim Plus AI endpoint logic (no dependencies)
+node --experimental-strip-types tests/plus.test.mjs   # Aim Plus sign-in in Chromium against a local stand-in server (needs Playwright)
 ```
+
+The database test needs a throwaway Postgres; see [supabase/README.md](supabase/README.md#tests).
 
 The browser test checks Aim's own wiring: the top-bar button, prompts, pause and resume, time-up, channel hiding, popup, settings and extension reload. It uses a stand-in page, so it can't tell you whether YouTube changed its page structure. That's what the manual checklist below is for.
 
@@ -120,7 +124,17 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] **Warn me** on another channel: its videos ask before playing unless you have a purpose.
 - [ ] Settings → Advanced lists both. Switching Hide/Warn or removing takes effect immediately.
 
-### 12. Sync and reload
+### 12. Aim Plus (only with a Supabase project; see supabase/README.md)
+
+- [ ] With `config.js` empty: Settings has no Aim Plus section, and the service worker's Network panel shows no requests to Supabase.
+- [ ] With `config.js` filled in: Settings → Aim Plus → enter your email → **Send code**. The email arrives with a 6-digit code (check the template shows `{{ .Token }}`).
+- [ ] A wrong code says "That code didn't work". The right code signs in and shows "Plan: Aim Free".
+- [ ] Set the plan to plus in SQL, reload Settings: "AI use, last 24 hours" appears. **Check connection** says "Connected" and a row appears in `ai_usage`.
+- [ ] Close Chrome and reopen it after more than an hour: Settings still shows you signed in (the session refreshes).
+- [ ] **Sign out** returns to the email form. Signing in again works.
+- [ ] YouTube behaves exactly as without an account.
+
+### 13. Sync and reload
 
 - [ ] Done from the popup while a YouTube tab is on a video: that tab shows the "What brings you here?" card on the player within a few seconds.
 - [ ] Two YouTube tabs: starting a break or setting a purpose in one updates the other's indicator, and a card waiting on the other tab's player clears if the new state allows its video.

@@ -1,7 +1,8 @@
 // Aim — background service worker: the single writer for stored data (see store.js).
-// Aim Free uses no AI and talks to no server.
+// Aim Free uses no AI and talks to no server. Aim Plus (plus.js) talks to Aim's server only
+// after the user signs in, and only when config.js names a server.
 
-importScripts("store.js");
+importScripts("store.js", "config.js", "plus.js");
 
 // Fires on first install and on every update or reload of the extension.
 chrome.runtime.onInstalled.addListener(() => serial(ensureMigrated));
@@ -72,6 +73,14 @@ const reads = {
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id || !msg) return;
+  // Account messages come only from Aim's own pages, never from YouTube tabs.
+  const p = plusHandlers[msg.type];
+  if (p) {
+    if (!sender.url?.startsWith(chrome.runtime.getURL(""))) return;
+    if (msg.type !== "plus-status" && !plusConfigured()) { sendResponse({ error: "Aim Plus isn't available yet." }); return; }
+    p(msg).then(res => sendResponse(res ?? null), e => sendResponse({ error: String(e.message || e) }));
+    return true;
+  }
   const w = writes[msg.type], r = reads[msg.type];
   if (!w && !r) return;
   // Make sure stored data is current before anything reads or changes it.

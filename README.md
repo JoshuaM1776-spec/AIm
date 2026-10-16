@@ -8,6 +8,8 @@ Chrome extension, Manifest V3, no build step.
 
 `chrome://extensions` → Developer mode → **Load unpacked** → this folder. Nothing to set up: Aim Free uses no AI, needs no account or key, and talks to no server. Everything stays in your browser.
 
+**Aim Plus** (in progress) adds an optional account and AI through Aim's own server. It stays switched off until `config.js` names that server; see [supabase/README.md](supabase/README.md).
+
 ## How it fits together
 
 | File | Role |
@@ -30,6 +32,9 @@ Chrome extension, Manifest V3, no build step.
 | `content/content.css` | Styles for all of the above |
 | `popup.html/js` | Toolbar popup |
 | `options.html/js` | Settings page |
+| `config.js`, `plus.js` | Aim Plus in the service worker: where the server is (empty = Free only), sign-in with an emailed code, calling Aim's AI endpoint. Only Aim's own pages can use it, never YouTube tabs. |
+| `options-plus.js` | The Aim Plus section of Settings (hidden until `config.js` is filled in) |
+| `supabase/` | The Aim Plus server: database tables and the AI endpoint. Not part of the extension package. |
 | `tests/` | Automated tests (see TESTING.md) |
 
 ## Product rules
@@ -57,7 +62,7 @@ Aim should look like part of YouTube, not a separate product:
 
 ## Rebranding
 
-The name isn't final, so it lives in one place:
+The name is Aim. It lives in one place, so it's easy to change if it ever has to:
 
 - **Name and descriptions:** `name`, `description` and `action.default_title` in `manifest.json`. The YouTube pages, popup and settings page all read the name from there.
 - **Icons:** `icons/16|32|48|128.png` (dark mark, for light toolbars) and `icons/light/` (light mark, for dark toolbars). The source drawing is `icons/mark.svg`.
@@ -66,7 +71,7 @@ The name isn't final, so it lives in one place:
 
 ## Stored data
 
-Everything lives in `chrome.storage.local`. `schemaVersion` records the data format. When it changes, bump `SCHEMA_VERSION` in `store.js`, add a step to `migrateStorage()`, and add a test to `tests/store.test.js`.
+Everything lives in `chrome.storage.local`, except the Aim Plus sign-in session, which `plus.js` keeps in the service worker's IndexedDB so YouTube tabs can't read it. `schemaVersion` records the data format. When it changes, bump `SCHEMA_VERSION` in `store.js`, add a step to `migrateStorage()`, and add a test to `tests/store.test.js`.
 
 ## Testing
 
@@ -74,5 +79,5 @@ See [TESTING.md](TESTING.md).
 
 ## Privacy and release
 
-- [PRIVACY.md](PRIVACY.md): what Aim stores (all of it locally) and why.
+- [PRIVACY.md](PRIVACY.md): what Aim stores (all of it locally) and why, plus the optional Aim Plus account.
 - [STORE_LISTING.md](STORE_LISTING.md): the Chrome Web Store listing, ready to paste, and what's still needed before submitting.

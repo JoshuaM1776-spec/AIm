@@ -55,6 +55,14 @@
   details[open] summary::before { transform: rotate(90deg); }
   details section { padding-top: 16px; }
   a { color: var(--link); text-decoration: none; } a:hover { text-decoration: underline; }
+  .form { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
+  .form input { flex: 1 1 220px; min-width: 0; }
+  .form input.code { flex: 0 1 160px; letter-spacing: 2px; }
+  .btn.tonal { background: var(--tonal); color: var(--text); }
+  .btn.tonal:hover { background: var(--tonal-hover); opacity: 1; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .msg { color: var(--muted); margin: 12px 0 0; min-height: 0; }
+  .msg:empty { display: none; }
   #toast { position: fixed; left: 12px; bottom: 12px; background: var(--text); color: var(--bg); border-radius: 8px; padding: 14px 16px; max-width: 90vw; display: none; box-shadow: 0 4px 32px rgba(0,0,0,.1); }
 </style>
 </head>
@@ -79,6 +87,13 @@
         <option value="180">3 hours</option><option value="0">No limit</option>
       </select>
     </div>
+  </section>
+
+  <!-- Shown only when config.js names Aim's server (see plus.js). -->
+  <section id="plus" hidden>
+    <h2>Aim Plus</h2>
+    <div id="plusBody"></div>
+    <p class="msg" id="plusMsg" role="status"></p>
   </section>
 
   <details id="advanced">
@@ -141,5 +156,6 @@
 </main>
 <div id="toast" role="status"></div>
 <script src="options.js"></script>
+<script src="options-plus.js"></script>
 </body>
 </html>

@@ -4,7 +4,7 @@ Everything the Chrome Web Store submission form asks for, ready to paste. Items 
 
 ## Product details
 
-**Name:** Aim (from `manifest.json`; branding not final)
+**Name:** Aim (from `manifest.json`)
 
 **Summary** (132 characters max, currently 122):
 > Use YouTube on purpose. Your search becomes your purpose, Aim keeps you on it, and breaks are a choice with a daily limit.
@@ -55,17 +55,19 @@ Don't show YouTube's logo prominently in screenshots or promos, and don't make t
 
 **Remote code:** No, Aim does not use remote code. All code is in the package.
 
-**Data usage:** Aim does not collect or transmit any user data. In the form, leave every data category unchecked. Under Chrome Web Store definitions, "collection" means transmitting off the device, and Aim's data stays in local extension storage. Certify the three disclosures:
+**Data usage** (for a build with an empty `config.js`, i.e. Aim Free only): Aim does not collect or transmit any user data. In the form, leave every data category unchecked. Under Chrome Web Store definitions, "collection" means transmitting off the device, and Aim's data stays in local extension storage. Certify the three disclosures:
 - not sold to third parties;
 - not used or transferred for purposes unrelated to the single purpose;
 - not used or transferred to determine creditworthiness or for lending.
+
+**When Aim Plus ships** (a build with `config.js` filled in), the answers change: tick **Personally identifiable information** (email address, for sign-in) and **Authentication information** (the sign-in session), keep the three certifications, mention the account in the description, and update "Private by design" to say Aim Free needs no account. Also add the Supabase project's host to the single-purpose and permission notes if Chrome asks.
 
 **Privacy policy URL:** **TODO.** Publish `PRIVACY.md` at a public URL, for example the GitHub repo once it's connected, or a simple web page, and fill in the contact email first.
 
 ## Before submitting
 
 - [ ] Run `TESTING.md` on real YouTube (light and dark, wide and narrow windows).
-- [ ] Decide the final name and logo. Both live in `manifest.json` and `icons/` (see README → Rebranding).
+- [ ] Confirm the logo (`icons/`, see README → Rebranding). The name is Aim.
 - [ ] Fill in the contact email in `PRIVACY.md` and publish it.
-- [ ] Build the zip without `tests/`: `git archive --format=zip -o aim.zip HEAD ':!tests'`.
+- [ ] Build the zip without `tests/`: `git archive --format=zip -o aim.zip HEAD ':!tests' ':!supabase'`.
 - [ ] Developer account: one-time $5 registration fee, and verify a contact email.
