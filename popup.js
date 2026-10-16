@@ -1,4 +1,4 @@
-// Aim — toolbar popup
+// Aim — toolbar popup. Reads and changes data through the background worker.
 
 function el(tag, attrs = {}, ...kids) {
   const n = document.createElement(tag);
@@ -12,24 +12,15 @@ function el(tag, attrs = {}, ...kids) {
   return n;
 }
 const mins = sec => Math.max(0, Math.ceil(sec / 60));
+const send = msg => chrome.runtime.sendMessage(msg).catch(() => null);
 
-async function renderSession() {
-  const s = await getSession();
+function renderSession(s) {
   const box = document.getElementById("session");
   box.replaceChildren();
   if (!s) {
     box.append(el("div", { class: "card" },
       el("div", { class: "strong" }, "No session running"),
       el("div", { class: "muted" }, "Start one from the Aim button in YouTube's top bar.")));
-    return;
-  }
-  if (s.mode === "quick") {
-    box.append(el("div", { class: "card" },
-      el("div", { class: "tag" }, "Quick answer"),
-      el("div", { class: "strong" }, s.purpose),
-      el("div", { class: "row" },
-        el("span", { class: "muted" }, `${Math.round(s.usedSec / 60)} min so far${s.searches?.length > 1 ? ` · ${s.searches.length} searches` : ""}`),
-        el("button", { class: "btn", onclick: async () => { await endSession("yes"); render(); } }, "Got my answer"))));
     return;
   }
   const left = Math.max(0, s.budgetMin * 60 - s.usedSec);
@@ -40,11 +31,10 @@ async function renderSession() {
     el("div", { class: "bar" }, el("i", { style: `width:${pct}%`, class: left === 0 ? "over" : null })),
     el("div", { class: "row" },
       el("span", { class: "muted" }, `${mins(left)} min left${s.pivots ? ` · ${s.pivots} pivot${s.pivots > 1 ? "s" : ""}` : ""}`),
-      el("button", { class: "btn ghost", onclick: async () => { await endSession(null); render(); } }, "End session"))));
+      el("button", { class: "btn ghost", onclick: async () => { await send({ type: "session-end", outcome: null }); render(); } }, "End session"))));
 }
 
-async function renderSaved() {
-  const { saved = [] } = await chrome.storage.local.get("saved");
+function renderSaved(saved) {
   const box = document.getElementById("saved");
   box.replaceChildren();
   if (!saved.length) { box.append(el("div", { class: "muted" }, "Nothing saved. When a video deserves your attention, just not right now, save it here.")); return; }
@@ -52,30 +42,19 @@ async function renderSaved() {
     box.append(el("div", { class: "item row" },
       el("a", { href: `https://www.youtube.com/watch?v=${encodeURIComponent(v.id)}`, target: "_blank" },
         el("div", {}, v.title), el("div", { class: "muted" }, v.channel)),
-      el("button", { class: "x", title: "Remove", onclick: async () => { await removeSaved(v.id); renderSaved(); } }, "×")));
+      el("button", { class: "x", title: "Remove", onclick: async () => { await send({ type: "saved-remove", id: v.id }); render(); } }, "×")));
   }
 }
 
-async function renderBuckets() {
-  const state = await loadState();
-  const L = state.limits;
-  const wrap = document.getElementById("buckets");
-  wrap.replaceChildren();
-  const line = (label, used, cap) => {
-    wrap.append(el("div", { class: "row" }, el("span", {}, label), el("span", { class: "muted" }, cap ? `${used} / ${cap} min` : `${used} min`)));
-    if (cap) wrap.append(el("div", { class: "bar" },
-      el("i", { style: `width:${Math.min(100, (used / cap) * 100)}%`, class: used >= cap ? "over" : null })));
-  };
-  const m = k => Math.floor(usedSec(state, k) / 60);
-  line("Leisure", m("leisure"), L.leisureMin);
-  line("Purposeful", m("purposeful"), 0);
-  if (L.totalMin) line("All YouTube", m("total"), L.totalMin);
-  wrap.append(el("div", { class: "muted", style: "margin-top:4px" },
-    `Mode: ${state.level}${state.pending.length ? ` · ${state.pending.length} change(s) waiting` : ""}`));
+function renderToday(todaySec, reminderMin) {
+  const wrap = document.getElementById("today");
+  const used = Math.floor(todaySec / 60);
+  wrap.replaceChildren(el("div", { class: "row" },
+    el("span", {}, "Time on YouTube"),
+    el("span", { class: "muted" }, reminderMin ? `${used} min · reminder at ${reminderMin}` : `${used} min`)));
 }
 
-async function renderHistory() {
-  const { sessions = [] } = await chrome.storage.local.get("sessions");
+function renderHistory(sessions) {
   const box = document.getElementById("history");
   box.replaceChildren();
   const recent = sessions.slice(-4).reverse();
@@ -89,11 +68,19 @@ async function renderHistory() {
   }
 }
 
-function render() { renderSession(); renderSaved(); renderBuckets(); renderHistory(); }
+async function render() {
+  const st = await send({ type: "state" });
+  if (!st) return;
+  renderSession(st.session);
+  renderSaved(st.saved);
+  renderToday(st.todaySec, st.settings.reminderMin);
+  renderHistory(st.sessions);
+}
 
 document.getElementById("settings").addEventListener("click", () => chrome.runtime.openOptionsPage());
 document.getElementById("clear").addEventListener("click", async () => {
-  await chrome.storage.local.set({ log: [], sessions: [] });
+  if (!confirm("Clear your session history?")) return;
+  await send({ type: "history-clear" });
   render();
 });
 render();

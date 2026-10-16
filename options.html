@@ -10,45 +10,24 @@
   .note { color: var(--muted); font-size: 14px; margin: 0 0 12px; }
   section { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
   input, select { background: var(--deep); color: var(--text); border: 1px solid #343a45; border-radius: 8px; padding: 7px 9px; font: inherit; font-size: 14px; }
+  input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--gold); margin: 2px 0 0; flex: none; }
+  input[type=number] { width: 90px; }
   button { padding: 8px 16px; border-radius: 999px; border: 1px solid transparent; background: var(--gold); color: var(--bg); font-weight: 700; cursor: pointer; font-size: 14px; }
-  button.ghost { background: transparent; color: var(--text); border-color: #3a404b; }
-  .levels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .level { text-align: left; background: var(--deep); color: var(--text); border: 1px solid var(--line); border-radius: 12px; padding: 12px; font-weight: 400; }
-  .level b { display: block; font-size: 15px; margin-bottom: 2px; } .level span { font-size: 13px; color: var(--muted); }
-  .level.current { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
-  .bucket { display: grid; grid-template-columns: 1.2fr .8fr 1.4fr auto; gap: 10px; align-items: end; padding: 12px 0; border-top: 1px solid var(--line); }
-  .bucket:first-of-type { border-top: 0; padding-top: 0; }
-  .bucket label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
-  .bucket input[type=text], .bucket input[type=number] { width: 100%; box-sizing: border-box; }
-  .flags { grid-column: 1 / -1; display: flex; gap: 18px; font-size: 14px; color: var(--muted); }
-  .hours { display: flex; gap: 6px; align-items: center; }
   .row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
   .row:first-child { border-top: 0; }
-  .pending .when { color: var(--gold); font-size: 13px; } .pending .why { color: var(--muted); font-size: 13px; font-style: italic; }
+  .check { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+  .check b { display: block; font-weight: 600; }
+  .check span { color: var(--muted); font-size: 13px; }
+  .inline { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--muted); margin-top: 16px; }
   #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--gold); border-radius: 10px; padding: 12px 16px; max-width: 90vw; display: none; }
   .empty { color: var(--muted); font-size: 14px; }
+  .today { margin-top: 10px; font-size: 13px; color: var(--muted); }
   a { color: var(--gold); }
-  .limits { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-  .limits label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
-  .limits input[type=number] { width: 80px; }
-  .inline { display: flex; gap: 6px; align-items: center; font-size: 14px; color: var(--muted); }
-  .sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
-  .today { margin-top: 14px; font-size: 13px; color: var(--muted); }
-  @media (max-width: 600px) { .levels, .limits { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
   <h1>Aim</h1>
   <p class="note">Stay focused when you can. Pivot when you choose. Explore when you intend to.</p>
-  <p class="note">Tightening takes effect right away. Loosening needs a reason, goes one step at a time, waits 24 hours, and is locked while you're over a limit.</p>
-
-  <h2>Strictness</h2>
-  <section>
-    <div class="levels" id="levels"></div>
-  </section>
-
-  <h2>Waiting to take effect</h2>
-  <section id="pending"></section>
 
   <h2>Homepage</h2>
   <section>
@@ -59,7 +38,7 @@
     </select>
   </section>
 
-  <h2>Recommendations in Focus mode</h2>
+  <h2>Recommendations in Focus sessions</h2>
   <section>
     <p class="note">How Aim treats sidebar videos that don't match your current purpose.</p>
     <select id="recMode">
@@ -69,30 +48,28 @@
     </select>
   </section>
 
-  <h2>Daily limits</h2>
+  <h2>Time</h2>
   <section>
-    <p class="note">Sessions decide how long you watch right now. These decide how much YouTube fits in a whole day, across every session.</p>
-    <div class="limits">
-      <div><label>Leisure allowance</label><div class="inline"><input type="number" min="0" id="leisureMin"> <span>min/day</span></div>
-        <div class="sub">Explore sessions and watching without a session. 0 = no limit.</div></div>
-      <div><label>Leisure hours</label><div class="inline"><select id="leisureStart"></select> to <select id="leisureEnd"></select></div>
-        <div class="sub">When leisure watching is allowed.</div></div>
-      <div><label>All YouTube</label><div class="inline"><input type="number" min="0" id="totalMin"> <span>min/day</span></div>
-        <div class="sub">Optional cap that includes Focus and quick answers. 0 = no cap.</div></div>
+    <label class="check">
+      <input type="checkbox" id="hold">
+      <div><b>Hold me to my time limits</b>
+        <span>When a session's time runs out, adding more takes a short written reason.</span></div>
+    </label>
+    <div class="inline">
+      Daily reminder after <input type="number" min="0" max="1440" step="5" id="reminderMin"> minutes on YouTube
     </div>
     <div class="today" id="today"></div>
-    <button id="saveLimits" style="margin-top:14px">Save limits</button>
   </section>
 
-  <h2>Avoided channels</h2>
+  <h2>Hidden and warned channels</h2>
   <section>
-    <p class="note">Optional. Add a channel from Aim's menu while watching it. Warn asks before you watch (outside Focus); Block closes it.</p>
+    <p class="note">Add a channel from Aim's menu while watching it. Hide removes its videos from your homepage, search results and sidebar. Warn asks before you watch it outside a Focus session.</p>
     <div id="avoid"></div>
   </section>
 
   <h2>AI check</h2>
   <section>
-    <p class="note">Uses your own Claude API key (get one at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>), stored only in this browser. Without one, your goals are still logged.</p>
+    <p class="note">For now, purpose checks use your own Claude API key (get one at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>), stored only in this browser. Without one, sessions and timers still work.</p>
     <div style="display:grid;gap:10px">
       <input id="key" type="password" placeholder="Claude API key (sk-ant-…)">
       <input id="model" placeholder="Model (default: claude-haiku-5-5)">
@@ -101,7 +78,6 @@
   </section>
 
   <div id="toast"></div>
-  <script src="store.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

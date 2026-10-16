@@ -219,3 +219,6 @@ html[dark] .wp-results-bar .wp-seg-btn.on { background: #0f0f0f; }
 .wp-results-bar .wp-btn { display: inline-flex; align-items: center; gap: 6px; }
 .wp-link { background: none; border: 0; padding: 0; color: var(--wp-accent); font: 500 12px "Roboto", Arial, sans-serif; cursor: pointer; }
 .wp-link:hover { text-decoration: underline; }
+
+/* ---------- hidden channels ---------- */
+[data-wp-hidden] { display: none !important; }

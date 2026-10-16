@@ -1,10 +1,19 @@
 // Aim — background service worker
-// AI checks (purpose fit, starter path, recommendation labels), rules, and the watch log.
+// The single writer for stored data, plus AI checks (purpose fit, starter path, recommendation labels).
 
 importScripts("store.js");
 
 // Fires on first install and on every update or reload of the extension.
-chrome.runtime.onInstalled.addListener(() => migrateStorage());
+chrome.runtime.onInstalled.addListener(() => serial(ensureMigrated));
+
+// Also checked before the first message after the worker starts, in case an update
+// left a YouTube tab talking to the new worker before onInstalled finished.
+let migrated = false;
+async function ensureMigrated() {
+  if (migrated) return;
+  await migrateStorage();
+  migrated = true;
+}
 
 const DEFAULT_MODEL = "claude-haiku-5-5";
 
@@ -35,11 +44,11 @@ async function askClaude(system, user, maxTokens = 500) {
 }
 
 // ---- Does this video fit the current purpose? ----
-const fitCache = new Map();
-
+// Cached in session storage so answers survive the service worker going idle.
 async function classify(purpose, video, search) {
-  const key = purpose + "|" + video.id;
-  if (fitCache.has(key)) return fitCache.get(key);
+  const key = "fit:" + purpose + "|" + video.id;
+  const hit = (await chrome.storage.session.get(key))[key];
+  if (hit) return hit;
   const system = `Someone is in a focus session on YouTube with a stated purpose. Decide how a video relates to it.
 Reply with ONLY JSON: {"verdict": "on_path" | "refinement" | "different", "note": "under 12 words"}
 - on_path: directly serves the purpose.
@@ -48,8 +57,9 @@ Reply with ONLY JSON: {"verdict": "on_path" | "refinement" | "different", "note"
 Be generous with refinement; only say different when it clearly wanders.`;
   const user = `Purpose: ${purpose}${search ? `\nCurrent search: ${search}` : ""}\nVideo title: ${video.title}\nChannel: ${video.channel}\nDescription: ${(video.description || "").slice(0, 800)}`;
   try {
-    const r = (await askClaude(system, user, 120)) || { verdict: "unknown", note: "" };
-    fitCache.set(key, r);
+    const r = await askClaude(system, user, 120);
+    if (!r || !["on_path", "refinement", "different"].includes(r.verdict)) return { verdict: "unknown", note: "" };
+    await chrome.storage.session.set({ [key]: r });
     return r;
   } catch (e) {
     return { verdict: "unknown", note: String(e.message || e) };
@@ -77,7 +87,7 @@ Only say better when the improvement is meaningful (adds the right technical ter
 async function suggestPath(purpose) {
   const system = `Suggest three YouTube videos to search for that build toward someone's purpose: the basics underneath it, the core of it, and a common mistake or deeper angle.
 Reply with ONLY JSON: [{"label": "short video idea", "query": "specific youtube search query"}, ...] (exactly 3).`;
-  try { return (await askClaude(system, `Purpose: ${purpose}`, 300)) || []; } catch { return []; }
+  try { return { items: (await askClaude(system, `Purpose: ${purpose}`, 300)) || [] }; } catch { return { items: [] }; }
 }
 
 // ---- Label sidebar recommendations against the purpose ----
@@ -87,70 +97,77 @@ Reply with ONLY a JSON array of the same length, each item one of: "match" (serv
   const user = `Purpose: ${purpose}\nTitles:\n${titles.map((t, i) => `${i + 1}. ${t}`).join("\n")}`;
   try {
     const r = await askClaude(system, user, 300);
-    return Array.isArray(r) && r.length === titles.length ? r : null;
-  } catch { return null; }
+    return { labels: Array.isArray(r) && r.length === titles.length ? r : null };
+  } catch { return { labels: null }; }
 }
 
-async function logEntry(entry) {
-  const { log = [] } = await chrome.storage.local.get("log");
-  log.push({ time: Date.now(), ...entry });
-  await chrome.storage.local.set({ log: log.slice(-500) });
-}
-
-// Channel rules + daily limits for whatever is about to be watched.
-// kind: "leisure" (Explore, or no session) | "purposeful" (Focus, Quick answer)
-async function checkWatch(channelKey, kind) {
-  const state = await loadState();
+// What the popup and settings page show.
+async function fullState() {
+  const d = await chrome.storage.local.get(["session", "saved", "sessions", "usage", "avoid", "apiKey", "model"]);
   return {
-    level: state.level,
-    avoid: state.avoid[channelKey] || null,
-    daily: checkDaily(state, kind),
-    leisureLeft: leisureLeftMin(state),
-    limits: state.limits
+    session: d.session || null, saved: d.saved || [], sessions: d.sessions || [], avoid: d.avoid || {},
+    todaySec: (d.usage || {})[todayKey()] || 0, settings: await getSettings(),
+    apiKey: d.apiKey || "", model: d.model || ""
   };
 }
 
-const handlers = {
-  "check": m => checkWatch(m.channelKey, m.kind),
-  "avoid": m => requestAvoid(m.key, m.name, m.action, m.reason || ""),
-  "tick": async m => {
-    if (m.kind) await addUsage(m.kind, m.seconds);
-    const session = m.sessionActive ? await addSessionTime(m.seconds) : await getSession();
-    const state = await loadState();
-    return { level: state.level, session, daily: m.kind ? checkDaily(state, m.kind) : { status: "ok" } };
-  },
-  "override": m => logEntry({ kind: "override", reason: m.reason || "", videoId: m.video.id, title: m.video.title, rule: m.status }),
-  "log": m => logEntry(m.entry),
-  "session-get": async () => ({ session: await getSession(), level: (await loadState()).level }),
-  "session-start": async m => {
-    const s = await startSession(m);
-    await logEntry({ kind: "session-start", mode: s.mode, purpose: s.purpose, budgetMin: s.budgetMin });
-    return s;
-  },
-  "session-patch": m => patchSession(m.patch),
+// What a YouTube tab needs to know.
+async function tabSettings() {
+  const { apiKey = "", avoid = {} } = await chrome.storage.local.get(["apiKey", "avoid"]);
+  return { ...(await getSettings()), hasKey: !!apiKey.trim(), avoid };
+}
+
+// Changes to stored data run one at a time (see serial in store.js). AI calls don't wait in that line.
+const writes = {
+  "tick": m => recordTick(Math.min(30, Math.max(0, Number(m.seconds) || 0)), !!m.sessionRunning),
+  "session-start": m => startSession(m),
+  "session-patch": m => patchSession(m.patch || {}),
   "session-extend": m => extendSession(m.minutes, m.reason || ""),
   "session-pivot": m => pivotSession(m.purpose, m.budgetMin ?? null, m.reason || ""),
   "session-end": m => endSession(m.outcome),
   "session-rate": m => rateLastSession(m.outcome),
+  "session-add-search": m => addSearch(m.query),
+  "session-refine": m => refinePurpose(m.purpose),
+  "reflection-clear": () => chrome.storage.local.remove("reflection").then(() => ({ result: "applied" })),
+  "avoid": m => setAvoid(m.key, m.name, m.action),
+  "save": m => saveForLater(m.video || {}),
+  "saved-remove": m => removeSaved(m.id),
+  "history-clear": () => clearHistory(),
+  // The purpose typed on the homepage card, handed to the results page it searches.
+  "pending-purpose": async m => {
+    await chrome.storage.session.set({ pendingPurpose: { purpose: clip(m.purpose, 300), query: clip(m.query, 200), at: Date.now() } });
+    return { result: "applied" };
+  },
+  "pending-purpose-take": async m => {
+    const { pendingPurpose: p } = await chrome.storage.session.get("pendingPurpose");
+    await chrome.storage.session.remove("pendingPurpose");
+    return p && p.query === clip(m.query, 200) && Date.now() - p.at < 120000 ? { purpose: p.purpose } : null;
+  },
+  "setting": m => setSetting(m.key, m.value),
+  "ai-key": async m => {
+    await chrome.storage.local.set({ apiKey: clip(m.apiKey, 300), model: clip(m.model, 100) });
+    return { result: "applied" };
+  }
+};
+
+const reads = {
+  "session-get": async () => ({ session: await getSession() }),
+  "settings": () => tabSettings(),
+  "state": () => fullState(),
   "classify": m => classify(m.purpose, m.video, m.search),
   "search-fit": m => searchFit(m.purpose, m.query),
   "improve-search": m => improveSearch(m.purpose),
-  "session-add-search": m => addSearch(m.query),
-  "session-refine": m => refinePurpose(m.purpose),
-  "session-to-focus": m => convertToFocus(m.budgetMin),
   "suggest-path": m => suggestPath(m.purpose),
-  "label-recs": m => labelRecs(m.purpose, m.titles),
-  "save": m => saveForLater(m.video),
-  "settings": async () => {
-    const { recMode = "mark", apiKey = "", homeCard = true } = await chrome.storage.local.get(["recMode", "apiKey", "homeCard"]);
-    return { recMode, hasKey: !!apiKey.trim(), homeCard };
-  },
-  "open-options": async () => { chrome.runtime.openOptionsPage(); }
+  "label-recs": m => labelRecs(m.purpose, m.titles)
 };
 
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  const h = handlers[msg.type];
-  if (!h) return;
-  Promise.resolve(h(msg)).then(sendResponse, e => sendResponse({ error: String(e.message || e) }));
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (sender.id !== chrome.runtime.id || !msg) return;
+  const w = writes[msg.type], r = reads[msg.type];
+  if (!w && !r) return;
+  // Make sure stored data is current before anything reads or changes it.
+  const run = w ? serial(async () => { await ensureMigrated(); return w(msg); })
+    : serial(ensureMigrated).then(() => r(msg));
+  run.then(res => sendResponse(res ?? null), e => sendResponse({ error: String(e.message || e) }));
   return true;
 });

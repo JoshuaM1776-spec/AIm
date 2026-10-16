@@ -4,22 +4,49 @@
 (() => {
   // ---------------- state ----------------
   let session = null;          // current Focus/Explore session (from storage)
-  let level = "balanced";
-  let settings = { recMode: "mark", hasKey: false, homeCard: true };
+  let settings = { recMode: "mark", hasKey: false, homeCard: true, hold: false, reminderMin: 0, avoid: {} };
   let currentId = null;        // video on screen
   let currentInfo = null;
-  const skipped = new Set();   // videos watched without a session (counts as leisure)
+  let notNow = false;          // "Not now" on the start prompt: don't ask again in this tab
   let holding = false;         // keep the video paused until cleared
   const cleared = new Set();   // videos cleared to play in this tab
-  const overridden = new Set();// videos where a rule was knowingly broken
+  const overridden = new Set();// videos from a hidden/warned channel you chose to watch anyway
   let timeUpShown = false;
   let modal = null, notice = null, dropdown = null;
   let endingHere = false;      // this tab ended the session (vs. the popup or another tab)
+  let alive = true;            // false once the extension is reloaded or updated under this tab
 
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
-  const send = msg => new Promise(res => chrome.runtime.sendMessage(msg, r => res(r)));
   const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  // Resolves to the reply, or null if the background failed or the extension went away.
+  function send(msg) {
+    if (!alive) return Promise.resolve(null);
+    return new Promise(res => {
+      try {
+        chrome.runtime.sendMessage(msg, r => {
+          if (chrome.runtime.lastError || !r || r.error) return res(null);
+          res(r);
+        });
+      } catch {
+        shutDown();
+        res(null);
+      }
+    });
+  }
+
+  // After an extension update or reload this copy of the script is orphaned: take its UI
+  // down and stop holding videos, instead of throwing errors until the tab is refreshed.
+  function shutDown() {
+    if (!alive) return;
+    alive = false;
+    clearInterval(tickTimer);
+    hideObserver.disconnect();
+    holding = false;
+    for (const n of $$("#wp-chip, #wp-home, #wp-results-bar, .wp-notice, .wp-scrim, .wp-dropdown")) n.remove();
+    document.documentElement.classList.remove("wp-home");
+  }
 
   const ICON = {
     logo: `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 5.5l2.4 6.5L12 18.5 9.6 12z" fill="currentColor"/></svg>`,
@@ -52,9 +79,6 @@
   }
   const icon = name => el("span", { class: "wp-icon", html: ICON[name] });
 
-  // Purpose decides what kind of time this is: Focus and Quick answers are purposeful,
-  // Explore and watching without a session are leisure.
-  const watchKind = () => (session && session.mode !== "explore" ? "purposeful" : "leisure");
   const fmtMin = sec => `${Math.max(0, Math.ceil(sec / 60))} min`;
   const remaining = s => (s ? Math.max(0, s.budgetMin * 60 - s.usedSec) : 0);
 
@@ -89,19 +113,56 @@
       $("ytd-reel-player-overlay-renderer #channel-name a") || $("yt-reel-channel-bar-view-model a");
   }
 
+  // "/@name/videos" and "/@name" are the same channel. (Same rule as channelPath in store.js.)
+  function channelPath(p) {
+    let path = String(p || "");
+    try { path = decodeURIComponent(path); } catch {}
+    const m = path.match(/^\/(@[^/?#]+|channel\/[^/?#]+|c\/[^/?#]+|user\/[^/?#]+)/);
+    return m ? "/" + m[1] : path;
+  }
+  const squash = s => (s || "").replace(/\s+/g, " ").trim();
+
+  // YouTube swaps videos without reloading, so for a moment the page can still show the
+  // previous video's details. oEmbed gives the right title and channel for this ID, and the
+  // description is only read once the page has caught up to the same video.
   async function readVideoInfo(id) {
-    for (let i = 0; i < 25 && !channelLink(); i++) await sleep(200);
-    const link = channelLink();
-    const channel = link?.textContent?.trim() || "";
-    let channelKey = channel;
-    try { if (link?.href) channelKey = new URL(link.href).pathname; } catch {}
-    const title =
-      $("h1.ytd-watch-metadata yt-formatted-string")?.textContent?.trim() ||
-      document.title.replace(/ - YouTube$/, "").trim();
-    const description =
-      $("ytd-watch-metadata #description-inline-expander")?.innerText?.trim() ||
-      $('meta[name="description"]')?.content || "";
-    return { id, title, channel, channelKey, description };
+    const info = { id, title: "", channel: "", channelKey: "", description: "" };
+    try {
+      const r = await fetch("/oembed?format=json&url=" + encodeURIComponent("https://www.youtube.com/watch?v=" + id));
+      if (r.ok) {
+        const o = await r.json();
+        info.title = squash(o.title);
+        info.channel = squash(o.author_name);
+        try { info.channelKey = channelPath(new URL(o.author_url).pathname); } catch {}
+      }
+    } catch {}
+    const isWatch = location.pathname === "/watch";
+    for (let i = 0; i < 15 && currentId === id; i++) {
+      const pageTitle = squash($("h1.ytd-watch-metadata yt-formatted-string")?.textContent);
+      const caughtUp = isWatch
+        ? $("ytd-watch-flexy")?.getAttribute("video-id") === id && !!pageTitle && (!info.title || pageTitle === info.title)
+        : !!channelLink();
+      if (caughtUp) {
+        const link = channelLink();
+        info.title ||= pageTitle;
+        info.channel ||= squash(link?.textContent);
+        if (!info.channelKey) try { info.channelKey = channelPath(new URL(link.href).pathname); } catch {}
+        if (isWatch) info.description = $("ytd-watch-metadata #description-inline-expander")?.innerText?.trim() || "";
+        break;
+      }
+      await sleep(200);
+    }
+    info.title ||= document.title.replace(/ - YouTube$/, "").trim();
+    info.channelKey ||= info.channel;
+    return info;
+  }
+
+  // The hide/warn entry for a channel, if you set one.
+  function avoidFor(key) {
+    key = channelPath(key);
+    if (!key) return null;
+    for (const [k, c] of Object.entries(settings.avoid || {})) if (channelPath(k) === key) return c;
+    return null;
   }
 
   // ---------------- top-bar chip + dropdown ----------------
@@ -113,18 +174,22 @@
       chip = el("div", { id: "wp-chip", class: "wp" });
       host.prepend(chip);
     }
+    // Only rebuild when something visible changed, so keyboard focus survives the timer.
+    const sig = session ? `${session.mode}|${session.paused}|${fmtMin(remaining(session))}` : "none";
+    if (chip.dataset.sig === sig) return;
+    chip.dataset.sig = sig;
     chip.replaceChildren();
     const brand = el("span", { class: "wp-brand" }, icon("logo"), el("span", { class: "wp-brand-name" }, "Aim"));
     if (!session) {
       chip.append(brand, el("button", { class: "wp-pill wp-pill-solid", onclick: () => openStartDialog(null) }, "Start a session"));
       return;
     }
-    const label = session.paused ? "Paused" : { focus: "Focus", explore: "Explore", quick: "Quick answer" }[session.mode];
+    const label = session.paused ? "Paused" : session.mode === "explore" ? "Explore" : "Focus";
     const pill = el("button", {
       class: `wp-pill wp-pill-${session.paused ? "paused" : session.mode}`,
       "aria-haspopup": "menu",
       onclick: e => { e.stopPropagation(); dropdown ? closeDropdown() : openDropdown(); }
-    }, el("span", {}, label), session.mode !== "quick" ? el("span", { class: "wp-pill-time" }, fmtMin(remaining(session))) : null, icon("chevron"));
+    }, el("span", {}, label), el("span", { class: "wp-pill-time" }, fmtMin(remaining(session))), icon("chevron"));
     chip.append(brand, pill);
   }
 
@@ -141,12 +206,11 @@
     const pill = $("#wp-chip .wp-pill");
     const r = pill.getBoundingClientRect();
     const pct = Math.min(100, (remaining(session) / (session.budgetMin * 60)) * 100);
-    const isQuick = session.mode === "quick";
-    const isFocus = session.mode === "focus" || isQuick;
+    const isFocus = session.mode === "focus";
 
     const head = el("button", { class: "wp-menu-head", onclick: () => { closeDropdown(); openPivotDialog(); } },
       el("div", {},
-        el("div", { class: "wp-label" }, isQuick ? "Quick answer" : isFocus ? "Current purpose" : "Explore session"),
+        el("div", { class: "wp-label" }, isFocus ? "Current purpose" : "Explore session"),
         el("div", { class: "wp-strong" }, isFocus ? session.purpose : `Exploring · ${session.budgetMin} minutes`)),
       icon("right"));
 
@@ -156,24 +220,21 @@
       el("div", { class: "wp-bar" }, el("i", { style: `width:${pct}%` })));
 
     const items = el("div", { class: "wp-menu-items" });
-    if (isQuick) items.append(
-      menuItem("check2", "Got my answer", gotMyAnswer),
-      menuItem("clock", "Turn into a Focus session", openConvertDialog),
-      menuItem("pivot", "Change purpose", openPivotDialog));
-    else if (isFocus) items.append(menuItem("pivot", "Change purpose", openPivotDialog));
-    else items.append(
-      menuItem("clock", "Extend time", () => openExtendDialog(), { hint: level === "strict" ? "(requires reason)" : null }),
-      menuItem("pivot", "Change to Focus", openPivotDialog));
+    const extendItem = menuItem("clock", "Add 15 minutes", () => openExtendDialog(), { hint: settings.hold ? "(asks for a reason)" : null });
+    if (isFocus) items.append(
+      menuItem("check2", "Got what I came for", gotMyAnswer),
+      menuItem("pivot", "Change purpose", openPivotDialog),
+      extendItem);
+    else items.append(extendItem, menuItem("pivot", "Change to Focus", openPivotDialog));
     items.append(session.paused
       ? menuItem("play", "Resume session", resumeSession)
       : menuItem("pause", "Pause session", async () => { await updateSession({ paused: true }); if (videoIdFromUrl()) showPaused(); }));
     if (currentId && currentInfo) items.append(
       menuItem("save", "Save this video for later", () => saveCurrent(false)),
-      menuItem("avoid", "Avoid this channel", openAvoidDialog));
+      menuItem("avoid", "Hide or warn about this channel", openAvoidDialog));
     items.append(menuItem("end", "End session", finishSession, { danger: true }));
 
-    dropdown = el("div", { class: "wp wp-dropdown", role: "menu", onclick: e => e.stopPropagation() }, head);
-    if (!isQuick) dropdown.append(time);
+    dropdown = el("div", { class: "wp wp-dropdown", role: "menu", onclick: e => e.stopPropagation() }, head, time);
     if (session.searches?.length > 1) dropdown.append(el("div", { class: "wp-menu-block" },
       el("div", { class: "wp-label" }, "Searches toward this purpose"),
       el("div", { class: "wp-muted" }, session.searches.slice(-4).join(" · "))));
@@ -198,10 +259,10 @@
     if (!list) {
       const loading = el("div", { class: "wp-muted" }, "Finding a path…");
       container.append(loading);
-      list = await send({ type: "suggest-path", purpose: session.purpose });
+      list = (await send({ type: "suggest-path", purpose: session.purpose }))?.items;
       loading.remove();
-      if (Array.isArray(list) && list.length) {
-        session = await send({ type: "session-patch", patch: { suggestions: { purpose: session.purpose, items: list } } });
+      if (Array.isArray(list) && list.length && session) {
+        session = (await send({ type: "session-patch", patch: { suggestions: { purpose: session.purpose, items: list } } })) || session;
       }
     }
     if (!Array.isArray(list) || !list.length) { container.append(el("div", { class: "wp-muted" }, "No suggestions right now.")); return; }
@@ -211,7 +272,7 @@
   }
 
   async function updateSession(patch) {
-    session = await send({ type: "session-patch", patch });
+    session = (await send({ type: "session-patch", patch })) || session;
     renderChip();
   }
 
@@ -250,17 +311,6 @@
     const err = el("div", { class: "wp-error" });
     const purposeBlock = el("div", {}, el("label", { class: "wp-q" }, "What do you want to accomplish?"), purpose);
     const exploreNote = el("p", { class: "wp-muted", hidden: true }, "No purpose needed. Aim just keeps time.");
-    // Explore draws from today's leisure allowance.
-    let leisure = null;
-    send({ type: "check", channelKey: "", kind: "leisure" }).then(c => {
-      leisure = c;
-      if (!c) return;
-      exploreNote.textContent = c.daily.status !== "ok"
-        ? `${c.daily.message} Focus sessions are still open.`
-        : c.leisureLeft === Infinity || c.limits.leisureMin === 0
-          ? "No purpose needed. Aim just keeps time."
-          : `No purpose needed. You have ${c.leisureLeft} minutes of leisure left today.`;
-    });
 
     const modeRow = el("div", { class: "wp-seg" });
     const renderMode = () => {
@@ -275,13 +325,9 @@
     const start = async () => {
       const p = purpose.value.trim();
       if (mode === "focus" && p.length < 4) { err.textContent = "Write what you want to accomplish."; return; }
-      let budgetMin = time.get();
-      if (mode === "explore" && leisure) {
-        if (leisure.daily.status !== "ok") { err.textContent = leisure.daily.message; return; }
-        if (leisure.limits.leisureMin > 0 || leisure.limits.totalMin > 0) budgetMin = Math.min(budgetMin, leisure.leisureLeft);
-        if (budgetMin < time.get()) toast(`Capped at ${budgetMin} minutes: what's left of today's leisure`);
-      }
-      session = await send({ type: "session-start", mode, purpose: mode === "focus" ? p : "", budgetMin });
+      const started = await send({ type: "session-start", mode, purpose: mode === "focus" ? p : "", budgetMin: time.get() });
+      if (!started) { err.textContent = "Couldn't start the session. Try again."; return; }
+      session = started;
       timeUpShown = false;
       closeModal();
       renderChip();
@@ -290,23 +336,13 @@
     keepKeys(purpose, start);
 
     const actions = el("div", { class: "wp-actions" });
-    // Skipping the session: one click in Lenient, a typed reason in Balanced, not offered in Strict.
-    const skipReason = el("textarea", { class: "wp-input", rows: "2", placeholder: "Why watch without a session?", hidden: true });
-    keepKeys(skipReason);
-    if (info && level !== "strict") {
-      const skip = el("button", { class: "wp-btn wp-btn-text", onclick: () => {
-        if (level === "balanced") {
-          if (skipReason.hidden) { skipReason.hidden = false; skipReason.focus(); skip.textContent = "Skip with this reason"; return; }
-          if (skipReason.value.trim().length < 10) { err.textContent = "Write a real reason (a short sentence)."; return; }
-        }
-        send({ type: "log", entry: { kind: "no-session", videoId: info.id, title: info.title, reason: skipReason.value.trim() } });
-        skipped.add(info.id);
-        closeModal();
-        send({ type: "check", channelKey: info.channelKey, kind: "leisure" }).then(c => continueAfterRules(info, c));
-      } }, "Watch without a session");
-      actions.append(skip);
-    }
-    if (!info) actions.append(el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Cancel"));
+    // A nudge, not a gate: "Not now" plays the video and stops asking in this tab.
+    if (info) actions.append(el("button", { class: "wp-btn wp-btn-text", onclick: () => {
+      notNow = true;
+      closeModal();
+      continueAfterRules(info);
+    } }, "Not now"));
+    else actions.append(el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Cancel"));
     actions.append(el("button", { class: "wp-btn wp-btn-primary", onclick: start }, "Start session"));
 
     openModal(el("div", { class: "wp-dialog", role: "dialog", "aria-modal": "true" },
@@ -314,7 +350,7 @@
       info ? el("div", { class: "wp-muted wp-ellipsis" }, `Up next: ${info.title}`) : null,
       modeRow, purposeBlock, exploreNote,
       el("label", { class: "wp-q wp-q-sm" }, "How much time do you want to spend?"), time.row,
-      skipReason, err, actions));
+      err, actions));
     setTimeout(() => purpose.focus(), 50);
   }
 
@@ -325,9 +361,9 @@
     const remainingMin = Math.ceil(remaining(session) / 60);
     const purpose = el("textarea", { class: "wp-input", rows: "2", placeholder: "e.g. Understand soil conditions first" });
     purpose.value = prefill;
-    let keep = true;
+    let keep = remainingMin > 0; // with no time left, keeping it would end the session on the spot
     const time = chips([15, 30, 45, 60], 30, minLabel);
-    const reason = el("textarea", { class: "wp-input", rows: "2", placeholder: "Why add time? (Strict mode)" });
+    const reason = el("textarea", { class: "wp-input", rows: "2", placeholder: "Why add time?" });
     const err = el("div", { class: "wp-error" });
     const timeBox = el("div", {});
     const renderTime = () => {
@@ -335,13 +371,14 @@
         el("label", { class: "wp-radio" }, el("input", { type: "radio", name: "wp-t", checked: keep, onchange: () => { keep = true; renderTime(); } }), "Keep my remaining time"),
         el("label", { class: "wp-radio" }, el("input", { type: "radio", name: "wp-t", checked: !keep, onchange: () => { keep = false; renderTime(); } }), "Set a new time limit"),
         !keep ? time.row : null,
-        !keep && level === "strict" ? reason : null].filter(Boolean));
+        !keep && settings.hold ? reason : null].filter(Boolean));
     };
     renderTime();
     keepKeys(purpose); keepKeys(reason);
 
     const confirm = async () => {
       const r = await send({ type: "session-pivot", purpose: purpose.value, budgetMin: keep ? null : time.get(), reason: reason.value });
+      if (!r) { err.textContent = "Couldn't change the purpose. Try again."; return; }
       if (r.result === "error") { err.textContent = r.message; return; }
       session = r.session;
       timeUpShown = false;
@@ -364,15 +401,15 @@
     setTimeout(() => purpose.focus(), 50);
   }
 
-  // Extend time (Explore, or from the time-up notice)
+  // Add time (from the dropdown, or the time-up notice)
   function openExtendDialog() {
-    if (level !== "strict") return extend(15, "");
+    if (!settings.hold) return extend(15, "");
     const reason = el("textarea", { class: "wp-input", rows: "2", placeholder: "Why add 15 minutes?" });
     const err = el("div", { class: "wp-error" });
     keepKeys(reason);
     openModal(el("div", { class: "wp-dialog" },
-      el("div", { class: "wp-title" }, "Extend time"),
-      el("p", { class: "wp-muted" }, "Strict mode: extending is a deliberate decision."),
+      el("div", { class: "wp-title" }, "Add time"),
+      el("p", { class: "wp-muted" }, "You asked Aim to hold you to your time limits, so adding time takes a reason."),
       reason, err,
       el("div", { class: "wp-actions" },
         el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Cancel"),
@@ -386,8 +423,7 @@
 
   async function extend(minutes, reason) {
     const r = await send({ type: "session-extend", minutes, reason });
-    if (r.daily) { closeModal(); toast(r.message); return true; } // the day's limit wins over the session
-    if (r.result !== "applied") return false;
+    if (r?.result !== "applied") return false;
     session = r.session;
     timeUpShown = false;
     closeNotice();
@@ -397,46 +433,17 @@
     return true;
   }
 
-  // Your rules: daily limits and avoided channels.
-  // rule = { status, message, level, soft } — soft rules (an Avoid → warn channel) just ask.
-  function openRuleDialog(info, rule) {
+  // A channel you chose to hide or be warned about: ask before watching, never force.
+  function openChannelWarning(info, action) {
     hold();
-    const id = info.id;
-    const actions = el("div", { class: "wp-actions" });
-    const body = [];
-    const watchAnyway = async (reason = "") => {
-      await send({ type: "override", video: info, reason, status: rule.status });
-      overridden.add(id);
-      closeModal();
-      const c = await send({ type: "check", channelKey: info.channelKey, kind: watchKind() });
-      continueAfterRules(info, c);
-    };
-    if (rule.soft) {
-      actions.append(
-        el("button", { class: "wp-btn wp-btn-text", onclick: () => watchAnyway() }, "Watch anyway"),
-        el("button", { class: "wp-btn wp-btn-primary", onclick: goBack }, "Go back"));
-    } else if (rule.level === "strict") {
-      body.push(el("p", { class: "wp-muted" }, "Strict mode is on, so this stays closed. You set this rule for a reason."));
-      actions.append(el("button", { class: "wp-btn wp-btn-primary", onclick: goBack }, "Go back"));
-    } else {
-      const reason = el("textarea", { class: "wp-input", rows: "2", placeholder: "Why break your rule this time?" });
-      const err = el("div", { class: "wp-error" });
-      keepKeys(reason);
-      if (rule.level === "balanced") body.push(reason, err);
-      actions.append(
-        el("button", { class: "wp-btn wp-btn-text", onclick: () => {
-          if (rule.level === "balanced" && reason.value.trim().length < 10) { err.textContent = "Write a real reason (a short sentence)."; return; }
-          watchAnyway(reason.value.trim());
-        } }, "Watch anyway"),
-        el("button", { class: "wp-btn wp-btn-primary", onclick: goBack }, "Go back"));
-    }
-    const hint = { leisure: "Focus sessions and quick answers aren't affected. Purposeful time stays open.",
-      hours: "Focus sessions and quick answers aren't affected.", total: "This covers all YouTube time today." }[rule.status];
-    openModal(el("div", { class: "wp-dialog" },
-      el("div", { class: "wp-dialog-brand" }, icon("logo"), "Your rule"),
-      el("div", { class: "wp-title" }, rule.message),
-      hint ? el("div", { class: "wp-muted" }, hint) : null,
-      ...body, actions));
+    const name = info.channel || "this channel";
+    openModal(el("div", { class: "wp-dialog", role: "dialog", "aria-modal": "true" },
+      el("div", { class: "wp-dialog-brand" }, icon("logo"), "Aim"),
+      el("div", { class: "wp-title" }, action === "hide" ? `You chose to hide ${name}.` : `You asked to be warned about ${name}.`),
+      el("div", { class: "wp-muted" }, "Change this anytime in Aim's settings."),
+      el("div", { class: "wp-actions" },
+        el("button", { class: "wp-btn wp-btn-text", onclick: () => { overridden.add(info.id); closeModal(); continueAfterRules(info); } }, "Watch anyway"),
+        el("button", { class: "wp-btn wp-btn-primary", onclick: goBack }, "Go back"))));
   }
 
   // Optional channel rule, set from the dropdown while watching.
@@ -446,16 +453,18 @@
     const pick = action => async () => {
       const r = await send({ type: "avoid", key: info.channelKey, name: info.channel, action });
       closeModal();
-      toast(r.result === "applied" ? `${info.channel}: ${action === "block" ? "blocked" : "you'll get a warning"}` : r.message);
-      if (r.result === "applied" && action === "block") goBack();
+      if (!r) return toast("Couldn't save that. Try again.");
+      settings.avoid = r.avoid;
+      applyHidden();
+      toast(`${info.channel}: ${action === "hide" ? "hidden from your feeds" : "you'll get a warning"}`);
     };
     openModal(el("div", { class: "wp-dialog", role: "dialog", "aria-modal": "true" },
-      el("div", { class: "wp-title" }, `Avoid ${info.channel || "this channel"}?`),
-      el("p", { class: "wp-muted" }, "Warn: you're asked before watching, outside Focus sessions. Block: closed at every level your strictness allows. Undoing either waits 24 hours."),
+      el("div", { class: "wp-title" }, `Hide or warn about ${info.channel || "this channel"}?`),
+      el("p", { class: "wp-muted" }, "Hide: its videos disappear from your homepage, search results and sidebar, and opening one asks first. Warn: Aim asks before you watch it outside a Focus session. Undo either in settings."),
       el("div", { class: "wp-actions" },
         el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Cancel"),
         el("button", { class: "wp-btn wp-btn-tonal", onclick: pick("warn") }, "Warn me"),
-        el("button", { class: "wp-btn wp-btn-primary", onclick: pick("block") }, "Block"))));
+        el("button", { class: "wp-btn wp-btn-primary", onclick: pick("hide") }, "Hide channel"))));
   }
 
   // ---------------- notices (bottom bar, YouTube-toast style) ----------------
@@ -505,7 +514,9 @@
       el("div", { class: "wp-notice-actions" },
         el("button", { class: "wp-btn wp-btn-primary", onclick: resumeSession }, "Resume"),
         el("button", { class: "wp-btn wp-btn-tonal", onclick: finishSession }, "End session"))
-    ], { dismissible: false }).dataset.keep = "1";
+    ], { dismissible: false });
+    notice.dataset.keep = "1";
+    notice.dataset.kind = "paused";
   }
 
   async function resumeSession() {
@@ -517,7 +528,7 @@
   // When time runs out
   function showTimeUp() {
     timeUpShown = true;
-    if (videoIdFromUrl()) hold(); // time's up means the video stops, at every strictness level
+    if (videoIdFromUrl()) hold(); // time's up means the video stops
     showNotice([
       el("span", { class: "wp-notice-icon" }, icon("clock")),
       el("div", { class: "wp-notice-text" }, el("div", { class: "wp-strong" }, "Your time is up"),
@@ -525,7 +536,9 @@
       el("div", { class: "wp-notice-actions" },
         el("button", { class: "wp-btn wp-btn-primary", onclick: finishSession }, "End session"),
         el("button", { class: "wp-btn wp-btn-tonal", onclick: openExtendDialog }, "Add 15 minutes"))
-    ], { dismissible: false }).dataset.keep = "1";
+    ], { dismissible: false });
+    notice.dataset.keep = "1";
+    notice.dataset.kind = "timeup";
   }
 
   // Session end — a brief reflection
@@ -534,19 +547,19 @@
   async function finishSession(outcome) {
     endingHere = true;
     if (videoIdFromUrl()) hold();
-    const s = await send({ type: "session-end", outcome: typeof outcome === "string" ? outcome : null });
+    await send({ type: "session-end", outcome: typeof outcome === "string" ? outcome : null });
     session = null;
     cleared.clear();
     overridden.clear();
-    if (s) await chrome.storage.local.set({ reflection: s });
     location.href = "https://www.youtube.com/";
   }
 
   async function showReflection() {
     const { reflection: s } = await chrome.storage.local.get("reflection");
     if (!s) return;
-    await chrome.storage.local.remove("reflection");
-    if (s.outcome === "yes" && s.mode === "quick") { toast("Glad you found it."); return; }
+    await send({ type: "reflection-clear" });
+    if (Date.now() - (s.endedAt || 0) > 10 * 60 * 1000) return; // ended long ago, e.g. from the popup
+    if (s.outcome === "yes") { toast("Glad you found it."); return; }
     const mins = Math.max(1, Math.round(s.usedSec / 60));
     const { saved = [] } = await chrome.storage.local.get("saved");
     const pathText = s.path.length > 1 ? s.path.map(p => p.purpose).join(" → ") : null;
@@ -571,6 +584,17 @@
     ]);
   }
 
+  // Once a day, after the minutes you chose. Information, not a block.
+  function showReminder(minutes) {
+    const text = `You've spent ${minutes >= 60 ? `${Math.floor(minutes / 60)}h ${minutes % 60}m` : `${minutes} minutes`} on YouTube today.`;
+    if (notice?.dataset.keep) return toast(text); // don't cover a time-up or paused notice
+    showNotice([
+      el("span", { class: "wp-notice-icon" }, icon("clock")),
+      el("div", { class: "wp-notice-text" }, el("div", { class: "wp-strong" }, text),
+        el("div", { class: "wp-muted" }, "This is the daily reminder you set in Aim. Nothing is blocked."))
+    ]);
+  }
+
   // ---------------- recommendations ----------------
   function recItems() {
     const root = $("#secondary") || $("#related");
@@ -587,50 +611,63 @@
     return items;
   }
 
-  function clearRecLabels() {
-    for (const n of $$("[data-wp-rec]")) {
-      n.removeAttribute("data-wp-rec");
-      n.querySelector(":scope > .wp-rec-tag")?.remove();
-    }
+  function clearRecLabel(n) {
+    n.removeAttribute("data-wp-rec");
+    delete n.dataset.wpRecTitle;
+    n.querySelector(":scope > .wp-rec-tag")?.remove();
   }
+  function clearRecLabels() { for (const n of $$("[data-wp-rec]")) clearRecLabel(n); }
 
   async function labelRecommendations() {
-    if (!session || session.mode === "explore" || session.paused || !settings.hasKey || settings.recMode === "off") return;
-    const items = recItems().filter(i => !i.node.hasAttribute("data-wp-rec"));
+    if (!session || session.mode !== "focus" || session.paused || !settings.hasKey || settings.recMode === "off") return;
+    // YouTube reuses sidebar elements for new videos, so a label only counts for the title it was given to.
+    const items = recItems().filter(i => i.node.dataset.wpRecTitle !== i.title);
     if (!items.length) return;
     const purposeAtStart = session.purpose;
-    const labels = await send({ type: "label-recs", purpose: purposeAtStart, titles: items.map(i => i.title) });
+    const labels = (await send({ type: "label-recs", purpose: purposeAtStart, titles: items.map(i => i.title) }))?.labels;
     if (!Array.isArray(labels) || !session || session.purpose !== purposeAtStart) return;
     const TEXT = { match: "Matches your purpose", related: "Related perspective", off: "Off purpose" };
     items.forEach((it, i) => {
       const lab = labels[i];
+      clearRecLabel(it.node);
       if (!TEXT[lab]) return;
       it.node.setAttribute("data-wp-rec", settings.recMode === "hide" && lab === "off" ? "hidden" : lab);
+      it.node.dataset.wpRecTitle = it.title;
       if (lab !== "off" || settings.recMode === "mark")
         it.node.prepend(el("div", { class: `wp wp-rec-tag wp-rec-${lab}` }, TEXT[lab]));
     });
   }
 
+  // ---------------- hidden channels ----------------
+  // Like YouTube's "Don't recommend channel": their videos drop out of feeds, results and the sidebar.
+  const FEED_ITEMS = "ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer, ytd-grid-video-renderer, yt-lockup-view-model";
+  const CHANNEL_LINK = 'a[href^="/@"], a[href^="/channel/"], a[href^="/c/"], a[href^="/user/"]';
 
-  // ---------------- quick answers ----------------
-  function gotMyAnswer() { return finishSession("yes"); }
-
-  function openConvertDialog() {
-    if (!session) return;
-    const time = chips([15, 30, 45, 60], 30, minLabel);
-    openModal(el("div", { class: "wp-dialog", role: "dialog", "aria-modal": "true" },
-      el("div", { class: "wp-title" }, "Turn this into a Focus session"),
-      el("div", { class: "wp-current" }, el("div", { class: "wp-label" }, "Your purpose"), el("div", { class: "wp-strong" }, session.purpose)),
-      el("label", { class: "wp-q wp-q-sm" }, "How much time do you want to spend?"), time.row,
-      el("div", { class: "wp-actions" },
-        el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Cancel"),
-        el("button", { class: "wp-btn wp-btn-primary", onclick: async () => {
-          session = await send({ type: "session-to-focus", budgetMin: time.get() });
-          timeUpShown = false;
-          closeModal(); closeNotice(); renderChip(); renderResultsBar();
-          toast("Focus session started");
-        } }, "Start Focus session"))));
+  function hiddenKeys() {
+    return new Set(Object.entries(settings.avoid || {}).filter(([, c]) => c.action === "hide").map(([k]) => channelPath(k)));
   }
+
+  function applyHidden() {
+    const hidden = hiddenKeys();
+    if (!hidden.size) { for (const n of $$("[data-wp-hidden]")) n.removeAttribute("data-wp-hidden"); return; }
+    for (const n of $$(FEED_ITEMS)) {
+      const box = n.closest("ytd-rich-item-renderer") || n;
+      if (box !== n && box.matches(FEED_ITEMS)) continue; // the outer item decides
+      const a = $(CHANNEL_LINK, n);
+      let key = "";
+      try { if (a) key = channelPath(new URL(a.href).pathname); } catch {}
+      box.toggleAttribute("data-wp-hidden", !!key && hidden.has(key));
+    }
+  }
+
+  let hideTimer = null;
+  const hideObserver = new MutationObserver(() => {
+    if (hideTimer || !hiddenKeys().size) return;
+    hideTimer = setTimeout(() => { hideTimer = null; applyHidden(); }, 300);
+  });
+
+  // ---------------- clarifying a purpose ----------------
+  function gotMyAnswer() { return finishSession("yes"); }
 
   function openRefineDialog() {
     if (!session) return;
@@ -644,24 +681,10 @@
       el("div", { class: "wp-actions" },
         el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Cancel"),
         el("button", { class: "wp-btn wp-btn-primary", onclick: async () => {
-          session = await send({ type: "session-refine", purpose: input.value });
+          session = (await send({ type: "session-refine", purpose: input.value })) || session;
           closeModal(); renderChip(); renderResultsBar();
         } }, "Save"))));
     setTimeout(() => { input.focus(); input.select(); }, 50);
-  }
-
-  // Quick answers have no timer to set up, just a silent soft limit.
-  function showSoftLimit() {
-    timeUpShown = true;
-    showNotice([
-      el("span", { class: "wp-notice-icon" }, icon("search")),
-      el("div", { class: "wp-notice-text" }, el("div", { class: "wp-strong" }, "Still looking for your answer?"),
-        el("div", { class: "wp-muted wp-ellipsis" }, `${Math.round(session.usedSec / 60)} minutes on: ${session.purpose}`)),
-      el("div", { class: "wp-notice-actions" },
-        el("button", { class: "wp-btn wp-btn-primary", onclick: gotMyAnswer }, "Got my answer"),
-        el("button", { class: "wp-btn wp-btn-tonal", onclick: () => { closeNotice(); openConvertDialog(); } }, "Make it a Focus session"),
-        el("button", { class: "wp-btn wp-btn-tonal", onclick: () => level === "strict" ? openExtendDialog() : extend(10, "") }, "Keep looking"))
-    ]);
   }
 
   // ---------------- homepage: "What brings you here?" ----------------
@@ -680,10 +703,10 @@
     clearInterval(exampleTimer);
   }
 
-  function goSearch(query, purpose) {
-    const go = () => { location.href = "/results?search_query=" + encodeURIComponent(query); };
-    if (purpose) chrome.storage.local.set({ pendingPurpose: { purpose, query, at: Date.now() } }).then(go);
-    else go();
+  // The purpose you typed can differ from the search you run; the results page picks it up.
+  async function goSearch(query, purpose) {
+    if (purpose) await send({ type: "pending-purpose", purpose, query });
+    location.href = "/results?search_query=" + encodeURIComponent(query);
   }
 
   async function renderHome() {
@@ -740,11 +763,11 @@
 
     if (session) {
       card.append(
-        el("div", { class: "wp-label" }, session.mode === "quick" ? "Your quick answer" : "Your purpose"),
+        el("div", { class: "wp-label" }, "Your purpose"),
         el("div", { class: "wp-home-purpose" }, session.purpose),
         el("div", { class: "wp-home-search" }, icon("search"), input, findBtn),
         el("div", { class: "wp-home-alt" },
-          session.mode === "quick" ? el("button", { class: "wp-btn wp-btn-text", onclick: gotMyAnswer }, "Got my answer") : null,
+          el("button", { class: "wp-btn wp-btn-text", onclick: gotMyAnswer }, "Got what I came for"),
           el("button", { class: "wp-btn wp-btn-text", onclick: finishSession }, "End session")));
     } else {
       card.append(
@@ -761,6 +784,7 @@
   }
 
   // ---------------- search results: the search becomes your purpose ----------------
+  const SEARCH_DEFAULT_MIN = 15;
   let lastHandledSearch = null;
 
   async function onSearch(query) {
@@ -768,10 +792,11 @@
     if (!query || query === lastHandledSearch) { renderResultsBar(); return; }
     lastHandledSearch = query;
     if (!session) {
-      const { pendingPurpose: p } = await chrome.storage.local.get("pendingPurpose");
-      chrome.storage.local.remove("pendingPurpose");
-      const purpose = p && p.query === query && Date.now() - p.at < 120000 ? p.purpose : query;
-      session = await send({ type: "session-start", mode: "quick", purpose, search: query, budgetMin: 15 });
+      // Searching with no session starts a short Focus session; the results bar shows it.
+      const p = await send({ type: "pending-purpose-take", query });
+      const started = await send({ type: "session-start", mode: "focus", purpose: p?.purpose || query, search: query, budgetMin: SEARCH_DEFAULT_MIN });
+      if (!started) return;
+      session = started;
       timeUpShown = false;
       renderChip();
       return renderResultsBar();
@@ -782,7 +807,7 @@
       const fit = await send({ type: "search-fit", purpose: session.purpose, query });
       if (fit?.verdict === "different") { renderResultsBar(); return showSearchDrift(query); }
     }
-    session = await send({ type: "session-add-search", query });
+    session = (await send({ type: "session-add-search", query })) || session;
     renderResultsBar();
   }
 
@@ -802,25 +827,18 @@
 
   async function renderResultsBar() {
     if (location.pathname !== "/results") return;
-    if (!session || session.mode === "explore") { $("#wp-results-bar")?.remove(); return; }
+    if (!session || session.mode !== "focus") { $("#wp-results-bar")?.remove(); return; }
     let anchor = null;
     for (let i = 0; i < 20 && !(anchor = $("ytd-search ytd-section-list-renderer")); i++) await sleep(250);
     if (!anchor || location.pathname !== "/results" || !session) return;
-
-    const isQuick = session.mode === "quick";
-    const seg = el("div", { class: "wp-seg" },
-      el("button", { class: "wp-seg-btn" + (isQuick ? " on" : ""), "aria-pressed": String(isQuick) }, "Quick answer"),
-      el("button", { class: "wp-seg-btn" + (!isQuick ? " on" : ""), "aria-pressed": String(!isQuick), onclick: () => isQuick && openConvertDialog() }, "Focus session"));
 
     const bar = el("div", { id: "wp-results-bar", class: "wp wp-results-bar" },
       el("div", { class: "wp-rb-purpose" },
         el("div", { class: "wp-label" }, "Your purpose"),
         el("div", { class: "wp-strong wp-ellipsis" }, session.purpose),
-        session.vague ? el("button", { class: "wp-link", onclick: openRefineDialog }, "Add detail for sharper suggestions") : null),
-      seg,
-      isQuick
-        ? el("button", { class: "wp-btn wp-btn-tonal", onclick: gotMyAnswer }, icon("check2"), "Got my answer")
-        : el("span", { class: "wp-muted" }, `${fmtMin(remaining(session))} left`));
+        el("button", { class: "wp-link", onclick: openRefineDialog }, session.vague ? "Add detail for sharper suggestions" : "Edit")),
+      el("span", { class: "wp-muted" }, `Focus · ${fmtMin(remaining(session))} left`),
+      el("button", { class: "wp-btn wp-btn-tonal", onclick: gotMyAnswer }, icon("check2"), "Got my answer"));
 
     const old = $("#wp-results-bar");
     if (old) old.replaceWith(bar);
@@ -833,37 +851,27 @@
     const info = await readVideoInfo(id);
     if (currentId !== id) return;
     currentInfo = info;
-    const check = await send({ type: "check", channelKey: info.channelKey, kind: watchKind() });
-    if (currentId !== id) return;
-    // Avoided channels: Block always applies; Warn applies outside Focus (your purpose takes precedence).
-    const a = check.avoid;
-    if (a && !overridden.has(id) && (a.action === "block" || watchKind() === "leisure")) {
-      return openRuleDialog(info, {
-        status: "avoid", level: check.level, soft: a.action === "warn",
-        message: a.action === "block" ? `You've blocked ${info.channel || "this channel"}.` : `You marked ${info.channel || "this channel"} as one to avoid.`
-      });
-    }
-    continueAfterRules(info, check);
+    // Hidden channels always ask; warned channels ask outside Focus (your purpose takes precedence).
+    const a = avoidFor(info.channelKey);
+    if (a && !overridden.has(id) && (a.action === "hide" || session?.mode !== "focus"))
+      return openChannelWarning(info, a.action);
+    continueAfterRules(info);
   }
 
-  function continueAfterRules(info, check) {
-    const id = info.id;
-    if (!session && !skipped.has(id)) return openStartDialog(info);
-    if (session?.timeUp && session.mode !== "quick") return showTimeUp();
+  function continueAfterRules(info) {
+    if (!session && !notNow) return openStartDialog(info);
+    if (session?.timeUp) return showTimeUp();
     if (session?.paused) return showPaused();
-    if (check.daily && check.daily.status !== "ok" && !overridden.has(id))
-      return openRuleDialog(info, { ...check.daily, level: check.level });
-    if (!session) return release(id);
+    if (!session) return release(info.id);
     evaluateVideo(info);
   }
 
   async function evaluateVideo(info) {
     const id = info.id;
-    if (!session || session.paused || session.mode === "explore" || !settings.hasKey) return release(id);
+    if (!session || session.paused || session.mode !== "focus" || !settings.hasKey) return release(id);
     const search = session.searches?.[session.searches.length - 1];
     const fit = await send({ type: "classify", purpose: session.purpose, video: info, search });
     if (currentId !== id) return;
-    send({ type: "log", entry: { kind: "video", videoId: id, title: info.title, purpose: session.purpose, verdict: fit?.verdict } });
     // A vague purpose ("woodworking") gets lighter checks: no drift prompts, just labels.
     if (fit?.verdict === "different" && !session.vague) return showDrift(info);
     release(id);
@@ -873,59 +881,74 @@
   }
 
   // ---------------- time tracking ----------------
+  // Time counts while a video plays (even in a background tab or the miniplayer) or while
+  // you're looking at YouTube. The background credits real elapsed time, so several open
+  // tabs never count the same moment twice.
   const TICK = 10;
-  setInterval(async () => {
+  const tickTimer = setInterval(async () => {
+    if (!chrome.runtime?.id) return shutDown();
     if (!$("#wp-chip")) renderChip(); // YouTube re-renders the top bar sometimes
     const id = currentId;
-    const v = getVideoEl();
-    const playing = !!id && !holding && cleared.has(id) && !!v && !v.paused;
-    // Browsing search results and scrolling counts too, as long as YouTube is on screen.
-    const sessionActive = !!session && !session.paused && !(session.timeUp && session.mode !== "quick") &&
-      document.visibilityState === "visible";
-    if (!playing && !sessionActive) return;
-    const r = await send({ type: "tick", kind: watchKind(), seconds: TICK, sessionActive });
+    const v = id ? getVideoEl() : $("ytd-miniplayer video");
+    const playing = !!v && !v.paused && !holding && (!id || cleared.has(id));
+    const looking = document.visibilityState === "visible" && document.hasFocus();
+    if (!playing && !looking) return;
+    const sessionRunning = !!session && !session.paused && !session.timeUp;
+    const r = await send({ type: "tick", seconds: TICK, sessionRunning });
     if (!r) return;
-    level = r.level;
     session = r.session;
     renderChip();
-    if (currentId !== id) return;
-    // Daily limits are checked live, so a long video can't run past them.
-    if (playing && r.daily?.status !== "ok" && !overridden.has(id)) return openRuleDialog(currentInfo, { ...r.daily, level: r.level });
-    if (session?.timeUp && !timeUpShown) session.mode === "quick" ? showSoftLimit() : showTimeUp();
+    if (r.reminder) showReminder(r.reminder);
+    if (session?.timeUp && !timeUpShown) showTimeUp();
   }, TICK * 1000);
 
-  // Keep in sync with changes made from the popup or another tab.
-  chrome.storage.onChanged.addListener(ch => {
+  // Keep in sync with changes made from the popup, settings or another tab.
+  chrome.storage.onChanged.addListener((ch, area) => {
+    if (area !== "local" || !alive) return;
     if (ch.session) {
       const ended = ch.session.oldValue && !ch.session.newValue;
       session = ch.session.newValue || null;
+      if (!session?.timeUp) timeUpShown = false;
+      // Time added or session resumed from another tab or the popup: lift this tab's hold too.
+      const lifted = (notice?.dataset.kind === "timeup" && session && !session.timeUp) ||
+        (notice?.dataset.kind === "paused" && session && !session.paused);
+      if (lifted) {
+        closeNotice();
+        if (currentInfo && holding) evaluateVideo(currentInfo);
+      }
       renderChip();
       if (ended && !endingHere && videoIdFromUrl()) { hold(); location.href = "https://www.youtube.com/"; }
+      if (location.pathname === "/") renderHome();
+      if (location.pathname === "/results") renderResultsBar();
     }
-    if (ch.level) level = ch.level.newValue;
-    if (ch.recMode) settings.recMode = ch.recMode.newValue;
-    if (ch.homeCard) { settings.homeCard = ch.homeCard.newValue !== false; route(); }
-    if (ch.session && location.pathname === "/") renderHome();
-    if (ch.session && location.pathname === "/results") renderResultsBar();
+    if (ch.settings) {
+      const homeChanged = (ch.settings.newValue?.homeCard !== false) !== settings.homeCard;
+      settings = { ...settings, ...(ch.settings.newValue || {}) };
+      if (homeChanged) route();
+    }
+    if (ch.avoid) { settings.avoid = ch.avoid.newValue || {}; applyHidden(); }
     if (ch.apiKey) settings.hasKey = !!(ch.apiKey.newValue || "").trim();
   });
 
   // ---------------- navigation ----------------
   function route() {
-    if (session?.timeUp && session.mode !== "quick" && !timeUpShown) showTimeUp();
+    if (session?.timeUp && !timeUpShown) showTimeUp();
     if (location.pathname === "/") renderHome(); else removeHome();
     if (location.pathname === "/results") onSearch(new URL(location.href).searchParams.get("search_query") || "");
     else $("#wp-results-bar")?.remove();
   }
 
+  // yt-navigate-finish fires for every in-app navigation, back and forward included.
   function onNavigate() {
     const id = videoIdFromUrl();
     renderChip();
     closeDropdown();
     route();
+    applyHidden();
     if (id === currentId) return;
     currentId = id;
     currentInfo = null;
+    clearRecLabels();
     closeModal();
     if (notice && !notice.dataset.keep) closeNotice();
     if (!id) { holding = false; return; }
@@ -941,12 +964,11 @@
   async function init() {
     const r = await send({ type: "session-get" });
     session = r?.session || null;
-    level = r?.level || "balanced";
     settings = (await send({ type: "settings" })) || settings;
     renderChip();
     showReflection();
+    hideObserver.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["href"] });
     window.addEventListener("yt-navigate-finish", onNavigate);
-    window.addEventListener("popstate", onNavigate);
     onNavigate();
   }
   init();
