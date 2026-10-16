@@ -150,7 +150,17 @@ const writes = {
   }
 };
 
+// Chrome's dark toolbar hides the dark rings of the default icon, so pages that can see the
+// color scheme (YouTube tabs, the popup) report it and the toolbar icon follows.
+const ICONS = { light: "icons", dark: "icons/light" };
+async function setToolbarTheme(dark) {
+  const dir = dark ? ICONS.dark : ICONS.light;
+  await chrome.action.setIcon({ path: { 16: `${dir}/16.png`, 32: `${dir}/32.png`, 48: `${dir}/48.png` } });
+  return { result: "applied" };
+}
+
 const reads = {
+  "theme": m => setToolbarTheme(!!m.dark),
   "session-get": async () => ({ session: await getSession() }),
   "settings": () => tabSettings(),
   "state": () => fullState(),

@@ -26,11 +26,14 @@
   .foot { display:flex; justify-content:space-between; margin-top:14px; }
   .foot a { color: var(--muted); font-size: 12px; cursor: pointer; }
   .tag { font-size: 11px; color: var(--muted); }
+  .logo { width: 22px; height: 22px; }
+  .for-dark { display: none; }
+  @media (prefers-color-scheme: dark) { .for-dark { display: inline; } .for-light { display: none; } }
 </style>
 </head>
 <body>
   <div class="brand">
-    <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 5.5l2.4 6.5L12 18.5 9.6 12z" fill="currentColor"/></svg>
+    <img class="logo for-light" src="icons/48.png" alt=""><img class="logo for-dark" src="icons/light/48.png" alt="">
     Aim
   </div>
   <div id="session"></div>

@@ -91,5 +91,8 @@ async function init() {
   window.addEventListener(YT.navigateEvent, onNavigate);
   onNavigate(); // holds a new video itself, so the early hold can stop
   early.done();
+  const scheme = matchMedia("(prefers-color-scheme: dark)");
+  send({ type: "theme", dark: scheme.matches });
+  scheme.addEventListener("change", () => send({ type: "theme", dark: scheme.matches }));
 }
 init();

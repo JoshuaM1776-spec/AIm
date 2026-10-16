@@ -76,7 +76,8 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>results</ytd-s
   step("homepage card replaces the feed", await p.isHidden("ytd-rich-grid-renderer"));
   step("early hide hands over to the card", await p.evaluate(() =>
     !document.documentElement.classList.contains("wp-boot") && document.documentElement.classList.contains("wp-home")));
-  step("icons render as SVG under Trusted Types", (await p.$$("#wp-chip svg circle")).length > 0);
+  step("Aim mark renders as SVG under Trusted Types", (await p.$$("#wp-chip svg path")).length === 5);
+  step("toolbar icon follows dark mode", await sw.evaluate(async () => (await setToolbarTheme(true)).result === "applied" && (await setToolbarTheme(false)).result === "applied"));
 
   // Watch without a session: start prompt with "Not now".
   await p.goto("https://www.youtube.com/watch?v=aaa");

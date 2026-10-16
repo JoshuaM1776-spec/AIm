@@ -84,3 +84,4 @@ document.getElementById("clear").addEventListener("click", async () => {
   render();
 });
 render();
+send({ type: "theme", dark: matchMedia("(prefers-color-scheme: dark)").matches });

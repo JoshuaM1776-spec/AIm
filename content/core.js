@@ -56,7 +56,8 @@ function shutDown() {
 // Icons are built with DOM calls rather than HTML strings, so YouTube's Trusted Types
 // policy can't block them. Each entry: [size, [tag, attributes], ...].
 const ICON = {
-  logo: [20, ["circle", {"cx": "12", "cy": "12", "r": "9", "fill": "none", "stroke": "currentColor", "stroke-width": "1.8"}], ["path", {"d": "M12 5.5l2.4 6.5L12 18.5 9.6 12z", "fill": "currentColor"}]],
+  // The Aim mark: rings follow the text color (so they turn light in YouTube's dark theme), the play button and dart stay red.
+  logo: [20, ["path", {"d": "M19.26 8.93A9.26 9.26 0 1 1 14.57 4.24", "fill": "none", "stroke": "currentColor", "stroke-width": "2.6"}], ["path", {"d": "M15.43 10.44A5.15 5.15 0 1 1 13.53 8.33", "fill": "none", "stroke": "currentColor", "stroke-width": "2"}], ["path", {"d": "M8.91 10.49L13.34 12.7L8.91 15.23Z", "fill": "#f2131f", "stroke": "#f2131f", "stroke-width": "0.7", "stroke-linejoin": "round"}], ["path", {"d": "M13.65 9.86L17.29 6.23", "stroke": "#e00d1b", "stroke-width": "1.1"}], ["path", {"d": "M16.34 5.12L19.66 1.17Q20.6 .85 20.67 1.49L20.67 4.01L23.61 4.01Q23.92 4.49 23.45 4.96L21.08 6.86Q20.45 7.33 19.66 7.33L17.44 7.33L16.5 6.86Z", "fill": "#f2131f"}]],
   chevron: [18, ["path", {"d": "M7 10l5 5 5-5", "fill": "none", "stroke": "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round"}]],
   right: [18, ["path", {"d": "M10 7l5 5-5 5", "fill": "none", "stroke": "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round"}]],
   pivot: [20, ["path", {"d": "M4 12a8 8 0 0 1 13.7-5.6M20 12a8 8 0 0 1-13.7 5.6M18 3v4h-4M6 21v-4h4", "fill": "none", "stroke": "currentColor", "stroke-width": "1.8", "stroke-linecap": "round", "stroke-linejoin": "round"}]],
