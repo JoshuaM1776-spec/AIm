@@ -9,18 +9,28 @@ function menuItem(iconName, text, onclick, opts = {}) {
 }
 
 // ---------------- modal dialogs ----------------
-function closeModal() { modal?.remove(); modal = null; }
-function openModal(card) {
+// Like YouTube's dialogs, Escape or a click outside closes one. Dialogs that hold a video
+// waiting for your decision pass { dismiss: null }, so only their own buttons close them.
+let modalDismiss = null;
+function closeModal() { modal?.remove(); modal = null; modalDismiss = null; }
+function openModal(card, { dismiss = closeModal } = {}) {
   closeModal();
-  modal = el("div", { class: "wp wp-scrim" }, card);
+  modal = el("div", { class: "wp wp-scrim", onclick: e => { if (e.target === modal) modalDismiss?.(); } }, card);
+  modalDismiss = dismiss;
   document.body.append(modal);
 }
 function keepKeys(input, onEnter) {
   input.addEventListener("keydown", e => {
     e.stopPropagation(); // keep YouTube shortcuts out of our text fields
+    if (e.key === "Escape") return modalDismiss?.();
     if (onEnter && e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onEnter(); }
   });
 }
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if (dropdown) { closeDropdown(); $("#wp-chip .wp-pill")?.focus(); e.stopPropagation(); }
+  else if (modal && modalDismiss) { modalDismiss(); e.stopPropagation(); }
+}, true);
 function chips(values, selected, fmt) {
   let value = selected;
   const row = el("div", { class: "wp-chips" });

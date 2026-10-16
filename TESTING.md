@@ -39,8 +39,11 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] youtube.com shows the "What brings you here?" card instead of the feed. The placeholder example rotates.
 - [ ] Hard-refresh the homepage a few times: the feed never flashes before the card appears.
 - [ ] With Settings → Homepage → "Leave the homepage alone", the feed appears normally on refresh (no blank delay).
-- [ ] The "Aim" button with "Start a session" appears in the top bar, left of YouTube's icons.
-- [ ] Switching YouTube to dark theme restyles the card, button and dialogs.
+- [ ] The Aim button (mark + "Start a session") sits just right of YouTube's search box and mic on a wide window. It looks like YouTube's Create button.
+- [ ] Narrow the window below 1200px: the button moves next to Create. Below about 860px it shows only the mark (and the time during a session).
+- [ ] Switching YouTube's theme (Settings → Appearance) restyles everything Aim shows to match, with no teal or other accent color anywhere.
+- [ ] The homepage card's search box looks like YouTube's own search box.
+- [ ] Escape and clicking outside close Aim's menu and ordinary dialogs. They do **not** close the start prompt on a video or a channel warning.
 - [ ] Settings → Homepage → "Leave the homepage alone" brings the feed back right away, in an open YouTube tab too.
 
 ### 3. Watching without a session

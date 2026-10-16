@@ -37,6 +37,16 @@ Chrome extension, Manifest V3, no build step.
 - **Daily reminder** (optional): one heads-up a day after N minutes on YouTube. Nothing is blocked.
 - **Channels** (optional): Hide removes a channel from feeds, results and the sidebar. Warn asks before you watch it outside Focus.
 
+## Design
+
+Aim should look like part of YouTube, not a separate product:
+
+- **Colors** come from YouTube's own theme variables (`--yt-spec-*`) in `content/content.css`, so light and dark mode match exactly. Aim has no accent color: everything is neutral like YouTube's menus and dialogs, and red appears only in the Aim mark.
+- **Shapes** copy YouTube's components: 36px pill buttons, 32px chips, 12px-radius menus and dialogs, YouTube's search box on the homepage card, snackbar-style toasts.
+- **Placement:** the Aim button sits beside YouTube's search box on wide windows (1200px+) and beside the Create button otherwise.
+- **Behavior:** Escape or a click outside closes menus and dialogs, except prompts that are holding a video for your decision.
+- The popup and settings page use the same palette and follow Chrome's light/dark mode.
+
 ## Stored data
 
 Everything lives in `chrome.storage.local`. `schemaVersion` records the data format. When it changes, bump `SCHEMA_VERSION` in `store.js`, add a step to `migrateStorage()`, and add a test to `tests/store.test.js`.

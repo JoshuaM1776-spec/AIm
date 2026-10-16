@@ -10,7 +10,7 @@ function openChannelWarning(info, action) {
     el("div", { class: "wp-muted" }, "Change this anytime in Aim's settings."),
     el("div", { class: "wp-actions" },
       el("button", { class: "wp-btn wp-btn-text", onclick: () => { overridden.add(info.id); closeModal(); continueAfterRules(info); } }, "Watch anyway"),
-      el("button", { class: "wp-btn wp-btn-primary", onclick: goBack }, "Go back"))));
+      el("button", { class: "wp-btn wp-btn-primary", onclick: goBack }, "Go back"))), { dismiss: null });
 }
 
 // Optional channel rule, set from the dropdown while watching.

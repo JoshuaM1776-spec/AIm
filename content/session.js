@@ -1,31 +1,34 @@
 // Aim — session UI: top-bar button and menu, start/pivot/add-time dialogs, pause, time up, ending.
 
-// ---------------- top-bar chip + dropdown ----------------
+// ---------------- top-bar button + menu ----------------
+// One pill shaped like YouTube's own Create button. It sits beside the search box when the
+// window is wide enough, and joins the buttons on the right when it isn't.
+const CHIP_BESIDE_SEARCH_MIN_WIDTH = 1200;
+
 function renderChip() {
-  const host = mastheadHost();
+  const beside = innerWidth >= CHIP_BESIDE_SEARCH_MIN_WIDTH ? mastheadCenter() : null;
+  const host = beside || mastheadHost();
   if (!host) return;
   let chip = $("#wp-chip");
-  if (!chip) {
-    chip = el("div", { id: "wp-chip", class: "wp" });
-    host.prepend(chip);
-  }
+  if (!chip) chip = el("div", { id: "wp-chip", class: "wp" });
+  if (chip.parentElement !== host) beside ? host.append(chip) : host.prepend(chip);
+  chip.classList.toggle("wp-chip-beside-search", !!beside);
   // Only rebuild when something visible changed, so keyboard focus survives the timer.
-  const sig = session ? `${session.mode}|${session.paused}|${fmtMin(remaining(session))}` : "none";
+  const sig = session ? `${session.mode}|${session.paused}|${session.timeUp}|${fmtMin(remaining(session))}` : "none";
   if (chip.dataset.sig === sig) return;
   chip.dataset.sig = sig;
   chip.replaceChildren();
-  const brand = el("span", { class: "wp-brand" }, icon("logo"), el("span", { class: "wp-brand-name" }, "Aim"));
   if (!session) {
-    chip.append(brand, el("button", { class: "wp-pill wp-pill-solid", onclick: () => openStartDialog(null) }, "Start a session"));
+    chip.append(el("button", { class: "wp-pill", title: "Aim", onclick: () => openStartDialog(null) },
+      icon("logo"), el("span", { class: "wp-pill-label" }, "Start a session")));
     return;
   }
-  const label = session.paused ? "Paused" : session.mode === "explore" ? "Explore" : "Focus";
-  const pill = el("button", {
-    class: `wp-pill wp-pill-${session.paused ? "paused" : session.mode}`,
-    "aria-haspopup": "menu",
+  const label = session.paused ? "Paused" : session.timeUp ? "Time's up" : session.mode === "explore" ? "Explore" : "Focus";
+  chip.append(el("button", {
+    class: "wp-pill", title: "Aim", "aria-haspopup": "menu",
     onclick: e => { e.stopPropagation(); dropdown ? closeDropdown() : openDropdown(); }
-  }, el("span", {}, label), el("span", { class: "wp-pill-time" }, fmtMin(remaining(session))), icon("chevron"));
-  chip.append(brand, pill);
+  }, icon("logo"), el("span", { class: "wp-pill-label" }, label),
+    el("span", { class: "wp-pill-time" }, fmtMin(remaining(session))), icon("chevron")));
 }
 
 async function openDropdown() {
@@ -150,7 +153,7 @@ function openStartDialog(info, initialMode = "focus") {
     info ? el("div", { class: "wp-muted wp-ellipsis" }, `Up next: ${info.title}`) : null,
     modeRow, purposeBlock, exploreNote,
     el("label", { class: "wp-q wp-q-sm" }, "How much time do you want to spend?"), time.row,
-    err, actions));
+    err, actions), { dismiss: info ? null : closeModal });
   setTimeout(() => purpose.focus(), 50);
 }
 

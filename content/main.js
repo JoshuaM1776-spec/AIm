@@ -91,6 +91,8 @@ async function init() {
   window.addEventListener(YT.navigateEvent, onNavigate);
   onNavigate(); // holds a new video itself, so the early hold can stop
   early.done();
+  let resizeTimer = null;
+  addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(renderChip, 150); });
   const scheme = matchMedia("(prefers-color-scheme: dark)");
   send({ type: "theme", dark: scheme.matches });
   scheme.addEventListener("change", () => send({ type: "theme", dark: scheme.matches }));

@@ -37,7 +37,9 @@ async function renderHome() {
   clearInterval(exampleTimer);
 
   const input = el("input", { class: "wp-home-input", type: "text", "aria-label": "What do you want to find or learn?" });
-  const findBtn = el("button", { class: "wp-btn wp-btn-primary wp-home-go" }, session ? "Search" : "Find it");
+  // Built like YouTube's own search box: a text field with an attached magnifier button.
+  const findBtn = el("button", { class: "wp-home-go", "aria-label": session ? "Search" : "Find it", title: session ? "Search" : "Find it" }, icon("search"));
+  const hint = el("div", { class: "wp-muted wp-home-hint" }, "Be specific about what you want to find or learn.");
   const choice = el("div", { class: "wp-home-choice", hidden: true });
   const card = el("div", { id: "wp-home", class: "wp wp-home-card", "data-key": key });
 
@@ -59,10 +61,10 @@ async function renderHome() {
     if (session) return goSearch(q, null);
     if (!settings.hasKey) return goSearch(q, q);
     findBtn.disabled = true;
-    findBtn.textContent = "One moment…";
+    hint.textContent = "Checking for a better search…";
     const r = await send({ type: "improve-search", purpose: q });
     findBtn.disabled = false;
-    findBtn.textContent = "Find it";
+    hint.textContent = "Be specific about what you want to find or learn.";
     if (!r?.better || !r.query || r.query.trim().toLowerCase() === q.toLowerCase()) return goSearch(q, q);
     // Only shown when there's a meaningfully better search. Purpose stays as you wrote it.
     choice.hidden = false;
@@ -80,7 +82,7 @@ async function renderHome() {
     card.append(
       el("div", { class: "wp-label" }, "Your purpose"),
       el("div", { class: "wp-home-purpose" }, session.purpose),
-      el("div", { class: "wp-home-search" }, icon("search"), input, findBtn),
+      el("div", { class: "wp-home-search" }, input, findBtn),
       el("div", { class: "wp-home-alt" },
         el("button", { class: "wp-btn wp-btn-text", onclick: gotMyAnswer }, "Got what I came for"),
         el("button", { class: "wp-btn wp-btn-text", onclick: finishSession }, "End session")));
@@ -88,8 +90,8 @@ async function renderHome() {
     card.append(
       el("div", { class: "wp-dialog-brand" }, icon("logo"), "Aim"),
       el("h1", { class: "wp-home-title" }, "What brings you here?"),
-      el("div", { class: "wp-home-search" }, icon("search"), input, findBtn),
-      el("div", { class: "wp-muted wp-home-hint" }, "Be specific about what you want to find or learn."),
+      el("div", { class: "wp-home-search" }, input, findBtn),
+      hint,
       choice,
       el("div", { class: "wp-home-alt" },
         el("span", { class: "wp-muted" }, "Just browsing?"),

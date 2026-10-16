@@ -4,7 +4,8 @@
 
 const YT = {
   navigateEvent: "yt-navigate-finish",       // fired after every in-app navigation, back/forward included
-  mastheadEnd: "ytd-masthead #end",          // right side of the top bar, where Aim's button goes
+  mastheadCenter: "ytd-masthead #center",    // the search box and voice search button
+  mastheadEnd: "ytd-masthead #end",          // right side of the top bar (Create, notifications, avatar)
   homeBrowse: 'ytd-browse[page-subtype="home"]',
   homePrimary: 'ytd-browse[page-subtype="home"] #primary',
   resultsList: "ytd-search ytd-section-list-renderer",
@@ -50,6 +51,7 @@ const squash = s => (s || "").replace(/\s+/g, " ").trim();
 const getVideoEl = () => $(YT.mainVideo) || $("video");
 const miniplayerVideo = () => $(YT.miniplayerVideo);
 const mastheadHost = () => $(YT.mastheadEnd);
+const mastheadCenter = () => $(YT.mastheadCenter);
 const homeHost = () => $(YT.homePrimary) || $(YT.homeBrowse);
 const resultsAnchor = () => $(YT.resultsList);
 const channelLink = () => first(YT.videoChannelLink);

@@ -21,11 +21,11 @@ async function render() {
   const st = await send({ type: "state" });
   if (!st) return;
   const S = st.settings;
-  $("homeCard").value = S.homeCard ? "on" : "off";
+  $("homeCard").checked = S.homeCard;
   $("recMode").value = S.recMode;
   $("hold").checked = S.hold;
   if (document.activeElement !== $("reminderMin")) $("reminderMin").value = S.reminderMin || "";
-  $("today").textContent = `Today so far: ${Math.floor(st.todaySec / 60)} minutes. Leave the reminder empty to turn it off.`;
+  $("today").textContent = `A heads-up once a day after this many minutes on YouTube. Nothing is blocked. Today so far: ${Math.floor(st.todaySec / 60)} min.`;
   if (document.activeElement !== $("key")) $("key").value = st.apiKey;
   if (document.activeElement !== $("model")) $("model").value = st.model;
 
@@ -42,6 +42,7 @@ async function render() {
     const row = document.createElement("div");
     row.className = "row";
     const name = document.createElement("div");
+    name.className = "what";
     name.textContent = c.name || key;
     const sel = document.createElement("select");
     for (const [value, label] of [["hide", "Hide"], ["warn", "Warn"], ["", "Remove"]]) {
@@ -58,7 +59,7 @@ async function render() {
   }
 }
 
-$("homeCard").onchange = () => setSetting("homeCard", $("homeCard").value === "on");
+$("homeCard").onchange = () => setSetting("homeCard", $("homeCard").checked);
 $("recMode").onchange = () => setSetting("recMode", $("recMode").value);
 $("hold").onchange = () => setSetting("hold", $("hold").checked);
 $("reminderMin").onchange = () => {
