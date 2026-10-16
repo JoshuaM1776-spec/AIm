@@ -7,6 +7,7 @@ Aim Free needs none of this. It's the foundation for Aim Plus: accounts, plans, 
 | **Supabase Auth** | Sign-in with a 6-digit code sent by email. No passwords. |
 | `migrations/0001_init.sql` | `profiles` (one per user, `plan` = `free` or `plus`) and `ai_usage` (one row per AI call). Row-level security: users can read only their own rows and can't change their plan. `ai_begin` / `ai_finish` enforce usage limits atomically and can be called only by the server. |
 | `functions/ai/` | The AI endpoint, an Edge Function. It checks the user's sign-in, plan and limits, calls Claude with the server's key, and records usage. `handler.ts` holds the logic (tested in Node), `index.ts` connects it to Supabase and the Claude API. |
+| `functions/ai-dashboard.ts` | The same endpoint as one file, for pasting into Supabase's browser editor. Generated: run `node tools/bundle-ai.mjs` after changing `functions/ai/`. A test fails if it's out of date. |
 | `../config.js` | The extension's pointer to this project: URL and anon key. Empty means Aim Free only. |
 | `../plus.js` | The extension's side: sign-in, keeping the session fresh, calling the endpoint. |
 

@@ -4,7 +4,7 @@ This connects Aim to your own Supabase project, so you can sign in to Aim and Ai
 
 - **Time:** about 45 minutes the first time.
 - **Cost:** Supabase's free plan is enough for testing. Claude API usage is pay as you go; testing costs cents.
-- **You'll need:** a Mac (Windows notes are included), Google Chrome, and the Aim **source** folder (unzip `aim-…-source.zip`). The source folder contains the `supabase` folder; the extension-only zip doesn't.
+- **You'll need:** a computer with Google Chrome, and the Aim **source** folder (unzip `aim-…-source.zip`). The source folder contains the `supabase` folder; the extension-only zip doesn't.
 
 > **Keep these private, always:** your Claude API key, the Supabase **service_role** key (also called the secret key), and your database password. Never paste them into a chat, an email or the extension.
 > **Safe to share:** the Supabase **Project URL** and the **anon** (public) key. They're designed to sit inside the extension.
@@ -71,60 +71,42 @@ Keep a note open as you go. You'll collect five things:
    5. Do the same for the **Confirm signup** template. Brand-new accounts may get this one.
 3. **Sending limit:** Supabase's built-in email sends only a few messages an hour and is meant for testing, so that's fine for now. Before real users, set up your own email sending under **Authentication → Emails → SMTP Settings**, for example with Resend, Postmark or Amazon SES. Each has a Supabase guide.
 
-## Part 5 — Install the Supabase command-line tool (one time)
+## Part 5 — Give the server your Claude key (in the browser)
 
-The server code is two files, so it's deployed with Supabase's command-line tool rather than the website editor.
+1. In the Supabase sidebar, open **Edge Functions**, then the **Secrets** tab or link. In some layouts it's under **Project Settings → Edge Functions → Secrets**.
+2. Add a secret:
+   - **Name:** `ANTHROPIC_API_KEY` (exactly like that, all capitals).
+   - **Value:** your Claude key, **#1**.
+3. Choose **Save**. Supabase stores it encrypted, and only your server function can read it.
+4. **Optional: a cheaper model while testing.** The default is Claude Opus 5.5. Add one more secret:
+   - **Name:** `AIM_MODEL`
+   - **Value:** `claude-haiku-5-5`
 
-**On a Mac:**
+   You can delete this secret later to go back to the default.
 
-1. Open **Terminal**: press ⌘-Space, type `Terminal`, press Return.
-2. If you don't have Homebrew yet, install it by pasting the command from **brew.sh** and pressing Return. Follow what it prints at the end; it may ask you to paste two more lines.
-3. Install the Supabase tool:
-   ```sh
-   brew install supabase/tap/supabase
-   ```
-4. Check it worked:
-   ```sh
-   supabase --version
-   ```
-   It should print a version number.
+## Part 6 — Put the server function online (in the browser)
 
-**On Windows:** install Node.js (the LTS version) from **nodejs.org**. Then, in the steps below, type `npx supabase` wherever you see `supabase`.
+1. In the Aim source folder, open `supabase/functions/ai-dashboard.ts` in TextEdit (on Windows, Notepad). It's the whole server in one file. Select all and copy.
+2. **Create the function:** in Supabase, open **Edge Functions** and choose **Deploy a new function**, then **Via Editor**.
+3. **Paste the code:** the editor opens with sample code. Delete all of it and paste the file you copied.
+4. **Name it:** set the function name to exactly `ai`, in lowercase. The name field is usually at the bottom of the editor. Aim looks for a function with this name.
+5. Choose **Deploy function** and wait until it says it's deployed, usually under a minute.
+6. **Check:** **Edge Functions** now lists `ai`. Leave its settings as they are.
 
-## Part 6 — Send the key to your server, and deploy
+<details>
+<summary>Alternative for later: the command line (needs Homebrew or Node.js)</summary>
 
-Run these one at a time in Terminal.
+If you ever have Supabase's command-line tool installed, from the Aim source folder:
 
-1. **Go to the Aim source folder.** Type `cd ` (with a space), drag the unzipped Aim folder from Finder into the Terminal window, and press Return.
-2. **Sign in:**
-   ```sh
-   supabase login
-   ```
-   A browser window opens. Approve it, then come back to Terminal.
-3. **Connect this folder to your project.** Replace `YOUR-PROJECT-REF` with **#4**:
-   ```sh
-   supabase link --project-ref YOUR-PROJECT-REF
-   ```
-   If it asks for the database password, paste **#2**. Nothing appears as you paste; that's normal. Then press Return.
-4. **Store the Claude key as a server secret.** Replace the key with **#1**:
-   ```sh
-   supabase secrets set ANTHROPIC_API_KEY=sk-ant-api03-PASTE-YOURS-HERE
-   ```
-   - **Optional: a cheaper model while testing.** The default is Claude Opus 5.5. For testing, a smaller model costs less:
-     ```sh
-     supabase secrets set AIM_MODEL=claude-haiku-5-5
-     ```
-   - **Clear the key from Terminal's history:** to keep the key out of the saved history, run `history -c` afterwards, or just close the Terminal window.
-5. **Deploy the server function:**
-   ```sh
-   supabase functions deploy ai
-   ```
-   - It finishes with a line saying the function is deployed.
-   - If it complains that Docker isn't running, use this instead:
-     ```sh
-     supabase functions deploy ai --use-api
-     ```
-6. **Check:** in the Supabase website, open **Edge Functions**. You should see `ai`.
+```sh
+supabase login
+supabase link --project-ref YOUR-PROJECT-REF
+supabase secrets set ANTHROPIC_API_KEY=sk-ant-api03-...
+supabase functions deploy ai
+```
+
+This deploys the same code from `supabase/functions/ai/`.
+</details>
 
 ## Part 7 — Point Aim at your project
 
@@ -178,18 +160,17 @@ Then load or reload the extension:
 | The email has a link, not a code | The template still uses the default text. Redo Part 4 for **Magic Link** and **Confirm signup**. |
 | "That code didn't work" | Use the newest email's code; each new request replaces the old code. Codes expire after an hour. |
 | "Too many tries" | Supabase allows one code per address per minute. Wait a minute. |
-| Check connection: "The AI couldn't be reached" | Usually the Claude key or billing. In Supabase, open **Edge Functions → ai → Logs** for the reason. Re-run the `secrets set` step with a valid key, and check you have credit in the Claude Console. |
+| Check connection: "The AI couldn't be reached" | Usually the Claude key or billing. In Supabase, open **Edge Functions → ai → Logs** for the reason. Check the `ANTHROPIC_API_KEY` secret (Part 5) holds a valid key, and that you have credit in the Claude Console. |
 | Check connection: "This needs Aim Plus" | Part 8, step 3 didn't match your email. Check the spelling, run it again, and reload Settings. |
-| "This origin isn't allowed" | You set `AIM_EXTENSION_ORIGINS` and the extension's ID changed. Loading the folder from a different place changes the ID. Remove the setting with `supabase secrets unset AIM_EXTENSION_ORIGINS`, or set it to the ID shown on `chrome://extensions`. |
+| "This origin isn't allowed" | You set `AIM_EXTENSION_ORIGINS` and the extension's ID changed. Loading the folder from a different place changes the ID. Delete that secret in **Edge Functions → Secrets**, or set it to the ID shown on `chrome://extensions`. |
 | "Something went wrong" right after deploying | Open **Edge Functions → ai → Logs** and send me the error line. Logs never contain your keys. |
+| Check connection fails, and the logs (or the error) mention **Invalid JWT** | Open **Edge Functions → ai → Details** and turn off **Verify JWT** (sometimes "Enforce JWT verification"), then save. Aim's code checks the sign-in itself, so this is safe. Newer Supabase projects sometimes need it. |
+| The editor won't deploy and shows a red error | Make sure you pasted the **whole** file: it starts with `// GENERATED` and ends with `});`. Paste it again and redeploy. |
 
 ## Later, before real users
 
 - **Email sending:** set up your own SMTP (Part 4).
-- **Lock the server to the published extension:** when the Chrome Web Store gives Aim its permanent ID:
-  ```sh
-  supabase secrets set AIM_EXTENSION_ORIGINS=chrome-extension://THE-STORE-ID
-  ```
+- **Lock the server to the published extension:** when the Chrome Web Store gives Aim its permanent ID, add a secret named `AIM_EXTENSION_ORIGINS` with the value `chrome-extension://THE-STORE-ID`.
 - **Watch spending:** keep the Claude Console spend limit, and check usage now and then:
   ```sql
   select date_trunc('day', created_at) as day, count(*) as calls,

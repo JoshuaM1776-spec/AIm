@@ -138,6 +138,15 @@ test("errors never reveal server details", async () => {
   assert.doesNotMatch(JSON.stringify(r.body), /secret/);
 });
 
+test("the one-file dashboard version is up to date with handler.ts and index.ts", async () => {
+  const fs = await import("node:fs");
+  const read = f => fs.readFileSync(new URL(f, import.meta.url), "utf8");
+  const bundled = read("../supabase/functions/ai-dashboard.ts");
+  assert.ok(bundled.includes(read("../supabase/functions/ai/handler.ts")), "run: node tools/bundle-ai.mjs");
+  const indexBody = read("../supabase/functions/ai/index.ts").split("\n").filter(l => !l.startsWith("import ")).join("\n").trim();
+  assert.ok(bundled.includes(indexBody.slice(-400)), "run: node tools/bundle-ai.mjs");
+});
+
 let failed = 0;
 for (const [name, fn] of tests) {
   try { await fn(); console.log("ok  ", name); }
