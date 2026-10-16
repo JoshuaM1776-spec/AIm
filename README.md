@@ -15,7 +15,16 @@ Chrome extension, Manifest V3, no build step.
 | `manifest.json` | Extension manifest |
 | `background.js` | Service worker. **The only writer of stored data**: the popup, settings page and YouTube tabs send it messages. Also makes the Claude API calls. |
 | `store.js` | Data and session logic, loaded only by the service worker: sessions, timer, settings, channels, migrations. Changes run one at a time through `serial()`. |
-| `content.js`, `content.css` | Everything on youtube.com: top-bar button, dialogs, notices, homepage card, results bar, video gate, timer ticks, channel hiding |
+| `content/` | Everything on youtube.com, loaded in the order listed in `manifest.json`. The files share one scope in the extension's isolated world. |
+| `content/early.js` | Runs at document_start: hides the homepage feed and holds videos until the rest of Aim has loaded, so nothing flashes. |
+| `content/core.js` | Shared state, messaging to the background, the `el()` DOM helper, icons |
+| `content/youtube.js` | **Every YouTube selector and page reader.** When YouTube changes its markup, fix it here (plus the feed rules in `content.css`). |
+| `content/ui.js` | Menus, dialogs, notices, toasts |
+| `content/gate.js` | Holds each new video, checks channel rules and purpose, then lets it play |
+| `content/session.js` | Top-bar button and menu, start / pivot / add-time dialogs, pause, time up, ending, reflection |
+| `content/home.js`, `search.js`, `recs.js`, `channels.js` | Homepage card, search results, sidebar labels, hidden/warned channels |
+| `content/main.js` | Timer ticks, sync with other tabs, navigation, startup. Loads last. |
+| `content/content.css` | Styles for all of the above |
 | `popup.html/js` | Toolbar popup |
 | `options.html/js` | Settings page |
 | `tests/` | Automated tests (see TESTING.md) |

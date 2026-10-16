@@ -48,7 +48,8 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>results</ytd-s
       return route.fulfill({ contentType: "application/json", body: JSON.stringify({ title: `Video ${id}`, author_name: `Chan ${id}`, author_url: `https://www.youtube.com/@chan${id}` }) });
     }
     const body = u.pathname === "/watch" ? WATCH(u.searchParams.get("v")) : u.pathname === "/results" ? RESULTS : HOME;
-    route.fulfill({ contentType: "text/html", body });
+    // Same Trusted Types policy YouTube sends, so string-to-HTML writes would fail here too.
+    route.fulfill({ contentType: "text/html", body, headers: { "content-security-policy": "require-trusted-types-for 'script'" } });
   });
   await ctx.route(/^https:\/\/api\.anthropic\.com\//, r => r.abort());
 
@@ -65,12 +66,17 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>results</ytd-s
   p.on("pageerror", e => errors.push("page: " + e.message));
   p.on("console", m => { if (m.type() === "error") errors.push("console: " + m.text()); });
 
-  // Homepage: card and top-bar button.
-  await p.goto("https://www.youtube.com/");
+  // Homepage: the feed is hidden from the very first moment, then the card takes over.
+  await p.goto("https://www.youtube.com/", { waitUntil: "domcontentloaded" });
+  step("feed hidden before Aim's main scripts run", await p.evaluate(() =>
+    document.documentElement.classList.contains("wp-boot") || document.documentElement.classList.contains("wp-home")));
   await p.waitForSelector("#wp-chip .wp-pill", { timeout: 5000 });
   step("top-bar button renders", (await p.textContent("#wp-chip")).includes("Start a session"));
   await p.waitForSelector("#wp-home", { timeout: 5000 });
   step("homepage card replaces the feed", await p.isHidden("ytd-rich-grid-renderer"));
+  step("early hide hands over to the card", await p.evaluate(() =>
+    !document.documentElement.classList.contains("wp-boot") && document.documentElement.classList.contains("wp-home")));
+  step("icons render as SVG under Trusted Types", (await p.$$("#wp-chip svg circle")).length > 0);
 
   // Watch without a session: start prompt with "Not now".
   await p.goto("https://www.youtube.com/watch?v=aaa");

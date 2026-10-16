@@ -37,6 +37,8 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 ### 2. Homepage
 
 - [ ] youtube.com shows the "What brings you here?" card instead of the feed. The placeholder example rotates.
+- [ ] Hard-refresh the homepage a few times: the feed never flashes before the card appears.
+- [ ] With Settings → Homepage → "Leave the homepage alone", the feed appears normally on refresh (no blank delay).
 - [ ] The "Aim" button with "Start a session" appears in the top bar, left of YouTube's icons.
 - [ ] Switching YouTube to dark theme restyles the card, button and dialogs.
 - [ ] Settings → Homepage → "Leave the homepage alone" brings the feed back right away, in an open YouTube tab too.
@@ -44,6 +46,7 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 ### 3. Watching without a session
 
 - [ ] With no session, open a video. It's held, and the prompt shows "Up next: …" with **Not now**.
+- [ ] Paste a video URL into the address bar and load it fresh: no sound or playback before the prompt appears.
 - [ ] **Not now** plays the video. Opening more videos in the same tab doesn't ask again.
 - [ ] A new tab asks again.
 
@@ -132,6 +135,5 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 ## Known issues (not regressions)
 
 - Purpose checks need your own Claude API key until the hosted backend (Phase 4).
-- The homepage feed can flash briefly, and a video can start for a split second, before Aim loads (fixed in Phase 2).
 - Hiding channels depends on the channel link in each video tile. Tiles that only link the channel by ID, not by @handle, may not be matched.
 - Miniplayer time counting relies on YouTube's `ytd-miniplayer` element and needs checking on real YouTube.

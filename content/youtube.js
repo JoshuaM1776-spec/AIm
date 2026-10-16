@@ -1,0 +1,120 @@
+// Aim — everything that depends on YouTube's page structure: URLs, selectors, reading video details.
+// When YouTube changes its markup, this is the file to fix (plus the few selectors in content.css
+// and early.js, which can't read this table).
+
+const YT = {
+  navigateEvent: "yt-navigate-finish",       // fired after every in-app navigation, back/forward included
+  mastheadEnd: "ytd-masthead #end",          // right side of the top bar, where Aim's button goes
+  homeBrowse: 'ytd-browse[page-subtype="home"]',
+  homePrimary: 'ytd-browse[page-subtype="home"] #primary',
+  resultsList: "ytd-search ytd-section-list-renderer",
+  mainVideo: "video.html5-main-video",
+  miniplayerVideo: "ytd-miniplayer video",
+  watchFlexy: "ytd-watch-flexy",             // carries the current video's ID in its video-id attribute
+  watchTitle: "h1.ytd-watch-metadata yt-formatted-string",
+  watchDescription: "ytd-watch-metadata #description-inline-expander",
+  videoChannelLink: [
+    "ytd-watch-metadata #channel-name a", "#owner #channel-name a",
+    "ytd-reel-player-overlay-renderer #channel-name a", "yt-reel-channel-bar-view-model a"
+  ],
+  sidebar: ["#secondary", "#related"],
+  sidebarItems: "ytd-compact-video-renderer, yt-lockup-view-model",
+  itemWatchLink: 'a[href*="/watch?v="]',
+  itemTitle: ["#video-title", "h3"],
+  feedItems: "ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer, ytd-grid-video-renderer, yt-lockup-view-model",
+  feedItemOuter: "ytd-rich-item-renderer",   // grid cell wrapping a lockup; hide the whole cell
+  channelHref: 'a[href^="/@"], a[href^="/channel/"], a[href^="/c/"], a[href^="/user/"]'
+};
+
+const first = (sels, root = document) => { for (const s of sels) { const n = $(s, root); if (n) return n; } return null; };
+
+// ---------------- URLs ----------------
+function videoIdFromUrl() {
+  const u = new URL(location.href);
+  if (u.pathname === "/watch") return u.searchParams.get("v");
+  const m = u.pathname.match(/^\/shorts\/([^/?]+)/);
+  return m ? m[1] : null;
+}
+
+// "/@name/videos" and "/@name" are the same channel. (Same rule as channelPath in store.js.)
+function channelPath(p) {
+  let path = String(p || "");
+  try { path = decodeURIComponent(path); } catch {}
+  const m = path.match(/^\/(@[^/?#]+|channel\/[^/?#]+|c\/[^/?#]+|user\/[^/?#]+)/);
+  return m ? "/" + m[1] : path;
+}
+const hrefChannel = a => { try { return a ? channelPath(new URL(a.href).pathname) : ""; } catch { return ""; } };
+const squash = s => (s || "").replace(/\s+/g, " ").trim();
+
+// ---------------- page parts ----------------
+const getVideoEl = () => $(YT.mainVideo) || $("video");
+const miniplayerVideo = () => $(YT.miniplayerVideo);
+const mastheadHost = () => $(YT.mastheadEnd);
+const homeHost = () => $(YT.homePrimary) || $(YT.homeBrowse);
+const resultsAnchor = () => $(YT.resultsList);
+const channelLink = () => first(YT.videoChannelLink);
+
+// ---------------- the video on screen ----------------
+// YouTube swaps videos without reloading, so for a moment the page can still show the
+// previous video's details. oEmbed gives the right title and channel for this ID, and the
+// description is only read once the page has caught up to the same video.
+async function readVideoInfo(id) {
+  const info = { id, title: "", channel: "", channelKey: "", description: "" };
+  try {
+    const r = await fetch("/oembed?format=json&url=" + encodeURIComponent("https://www.youtube.com/watch?v=" + id));
+    if (r.ok) {
+      const o = await r.json();
+      info.title = squash(o.title);
+      info.channel = squash(o.author_name);
+      try { info.channelKey = channelPath(new URL(o.author_url).pathname); } catch {}
+    }
+  } catch {}
+  const isWatch = location.pathname === "/watch";
+  for (let i = 0; i < 15 && currentId === id; i++) {
+    const pageTitle = squash($(YT.watchTitle)?.textContent);
+    const caughtUp = isWatch
+      ? $(YT.watchFlexy)?.getAttribute("video-id") === id && !!pageTitle && (!info.title || pageTitle === info.title)
+      : !!channelLink();
+    if (caughtUp) {
+      const link = channelLink();
+      info.title ||= pageTitle;
+      info.channel ||= squash(link?.textContent);
+      info.channelKey ||= hrefChannel(link);
+      if (isWatch) info.description = $(YT.watchDescription)?.innerText?.trim() || "";
+      break;
+    }
+    await sleep(200);
+  }
+  info.title ||= document.title.replace(/ - YouTube$/, "").trim();
+  info.channelKey ||= info.channel;
+  return info;
+}
+
+// ---------------- lists of videos ----------------
+// Sidebar recommendations on a watch page: [{ node, title }], at most 15.
+function sidebarItems() {
+  const root = first(YT.sidebar);
+  if (!root) return [];
+  const seen = new Set(), items = [];
+  for (const r of $$(YT.sidebarItems, root)) {
+    const a = $(YT.itemWatchLink, r);
+    const title = (first(YT.itemTitle, r)?.textContent || a?.title || "").trim();
+    if (!a || !title || seen.has(a.href)) continue;
+    seen.add(a.href);
+    items.push({ node: r, title });
+    if (items.length >= 15) break;
+  }
+  return items;
+}
+
+// Every video tile on the page (feed, results, sidebar): [{ box, channelKey }], where box is
+// the element to hide. A lockup inside a grid cell is skipped; the cell itself is listed.
+function videoTiles() {
+  const tiles = [];
+  for (const n of $$(YT.feedItems)) {
+    const box = n.closest(YT.feedItemOuter) || n;
+    if (box !== n && box.matches(YT.feedItems)) continue;
+    tiles.push({ box, channelKey: hrefChannel($(YT.channelHref, n)) });
+  }
+  return tiles;
+}
