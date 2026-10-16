@@ -29,6 +29,8 @@ Later steps add tasks (learning paths, curation) to the `TASKS` table in `handle
 
 ## Set it up
 
+**New to this? Follow [docs/SETUP.md](../docs/SETUP.md) instead:** the same steps, explained one click at a time.
+
 You need a Supabase account, the [Supabase CLI](https://supabase.com/docs/guides/cli), and a Claude API key from the [Claude Console](https://platform.claude.com/).
 
 1. **Create a project** in the Supabase dashboard. Note its URL and **anon (public) key** (Project Settings → API).
