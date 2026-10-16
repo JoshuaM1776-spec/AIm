@@ -31,11 +31,11 @@ async function renderHome() {
   const input = el("input", { class: "wp-home-input", type: "text", "aria-label": "What do you want to find or learn?" });
   // Built like YouTube's own search box: a text field with an attached magnifier button.
   const findBtn = el("button", { class: "wp-home-go", "aria-label": p ? "Search" : "Find it", title: p ? "Search" : "Find it" }, icon("search"));
-  const hint = el("div", { class: "wp-muted wp-home-hint" }, "Your search becomes your purpose. Be specific.");
+  const hint = el("div", { class: "wp-muted wp-home-hint" }, "Your search becomes your Target. Be specific.");
   const card = el("div", { id: "wp-home", class: "wp wp-home-card", "data-key": key });
 
   if (p) {
-    input.placeholder = "Search toward this purpose";
+    input.placeholder = "Search toward your Target";
   } else {
     input.placeholder = "What do you want to find or learn?";
   }
@@ -55,12 +55,12 @@ async function renderHome() {
       el("div", { class: "wp-muted" }, `You set a daily limit of ${settings.totalMin} minutes. It resets at midnight.`));
   } else if (p) {
     card.append(
-      el("div", { class: "wp-label" }, "Your purpose"),
+      el("div", { class: "wp-label" }, "Current Target"),
       el("div", { class: "wp-home-purpose" }, p.text),
       el("div", { class: "wp-home-search" }, input, findBtn),
       el("div", { class: "wp-home-alt" },
-        el("button", { class: "wp-btn wp-btn-tonal", onclick: askDone }, icon("check2"), "Done"),
-        el("button", { class: "wp-btn wp-btn-text", onclick: () => openPivotDialog() }, "Change purpose")),
+        el("button", { class: "wp-btn wp-btn-tonal", onclick: askDone }, icon("check2"), "Target complete"),
+        el("button", { class: "wp-btn wp-btn-text", onclick: () => openPivotDialog() }, "Change Target")),
       el("div", { class: "wp-label wp-home-break-label" }, "Or take a break"),
       breakChips(takeBreak));
   } else {

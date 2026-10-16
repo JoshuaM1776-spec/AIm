@@ -105,8 +105,8 @@ function showBreakOver(kind) {
       el("div", { class: "wp-strong" }, kind === "leisure" ? "That's today's leisure time" : "Break time is up"),
       el("div", { class: "wp-muted wp-ellipsis" }, p ? `Ready to get back to: ${p.text}` : "What's next?")),
     el("div", { class: "wp-notice-actions" },
-      p ? el("button", { class: "wp-btn wp-btn-primary", onclick: closeNotice }, "Return to my purpose")
-        : el("button", { class: "wp-btn wp-btn-primary", onclick: () => { closeNotice(); openStartDialog(); } }, "Set a purpose"),
+      p ? el("button", { class: "wp-btn wp-btn-primary", onclick: closeNotice }, "Back on Target")
+        : el("button", { class: "wp-btn wp-btn-primary", onclick: () => { closeNotice(); openStartDialog(); } }, "Set Target"),
       more ? el("button", { class: "wp-btn wp-btn-tonal", onclick: () => { closeNotice(); takeBreak({ minutes: 15 }); } }, "Extend break (15 min)") : null)
   ], { dismissible: false });
   notice.dataset.kind = "break-over";

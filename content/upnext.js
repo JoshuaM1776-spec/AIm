@@ -29,5 +29,5 @@ function renderUpNext() {
           el("div", { class: "wp-upnext-text" },
             el("div", { class: "wp-upnext-title" }, v.title || "Video"),
             v.channel ? el("div", { class: "wp-muted" }, v.channel) : null)))
-      : [el("div", { class: "wp-muted wp-upnext-empty" }, "Search toward your purpose, and what you find shows up here.")])));
+      : [el("div", { class: "wp-muted wp-upnext-empty" }, "Search toward your Target, and what you find shows up here.")])));
 }

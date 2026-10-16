@@ -35,7 +35,7 @@ async function render() {
   }
   const m = s => Math.floor(s / 60);
   $("leisureNote").textContent = `Breaks share this allowance. When it's used up, breaks are done for the day. Used today: ${m(t.leisure)} min.`;
-  $("today").textContent = `Today so far: ${m(t.purpose)} min on purpose, ${m(t.leisure)} min on breaks, ${m(t.purpose + t.leisure + t.other)} min on YouTube in all.`;
+  $("today").textContent = `Today so far: ${m(t.purpose)} min on Target, ${m(t.leisure)} min on breaks, ${m(t.purpose + t.leisure + t.other)} min on YouTube in all.`;
 
   const av = $("avoid");
   av.replaceChildren();
@@ -43,7 +43,7 @@ async function render() {
   if (!entries.length) {
     const empty = document.createElement("div");
     empty.className = "empty";
-    empty.textContent = "No channels yet. That's fine. Your purpose handles most of it.";
+    empty.textContent = "No channels yet. That's fine. Your Target handles most of it.";
     av.append(empty);
   }
   for (const [key, c] of entries) {

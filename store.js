@@ -261,7 +261,7 @@ async function pivotPurpose(text, limitMin, video) {
   const s = await readAll();
   if (!s.purpose) return startPurpose({ text, limitMin, video });
   text = clip(text, 300);
-  if (text.length < 2) return { result: "error", message: "Write your new purpose." };
+  if (text.length < 2) return { result: "error", message: "Write your new Target." };
   const p = s.purpose;
   p.text = text;
   p.vague = isVague(text);
@@ -283,7 +283,7 @@ function setLimitFromNow(p, minutes) {
 async function setPurposeLimit({ minutes, add }) {
   const s = await readAll();
   const p = s.purpose;
-  if (!p) return { result: "error", message: "No purpose set." };
+  if (!p) return { result: "error", message: "No Target set." };
   if (add) setLimitFromNow(p, Math.max(0, p.limitMin ? p.limitMin - Math.ceil(p.usedSec / 60) : 0) + parseInt(add, 10));
   else setLimitFromNow(p, parseInt(minutes, 10) || 0);
   p.timeUp = !!p.limitMin && p.usedSec >= p.limitMin * 60;
@@ -308,7 +308,7 @@ async function refinePurpose(text) {
 async function addSearch(query) {
   const s = await readAll();
   query = clip(query, 200);
-  if (!s.purpose || !query) return { result: "error", message: "No purpose set." };
+  if (!s.purpose || !query) return { result: "error", message: "No Target set." };
   const last = s.purpose.searches[s.purpose.searches.length - 1];
   if (last?.q !== query) s.purpose.searches.push({ q: query, at: Date.now() });
   s.purpose.searches = s.purpose.searches.slice(-50);
@@ -337,7 +337,7 @@ function allow(p, videos, lists, query) {
 
 async function allowVideos({ query, videos, lists }) {
   const s = await readAll();
-  if (!s.purpose) return { result: "error", message: "No purpose set." };
+  if (!s.purpose) return { result: "error", message: "No Target set." };
   allow(s.purpose, Array.isArray(videos) ? videos.slice(0, 100) : [], Array.isArray(lists) ? lists.slice(0, 20) : [], query);
   await chrome.storage.local.set({ purpose: s.purpose });
   return { result: "applied", count: s.purpose.allowed.length };
@@ -379,7 +379,7 @@ async function checkSearch(query) {
 // Done. The record is also left as a reflection for the next YouTube page to show.
 async function finishPurpose(outcome) {
   const s = await readAll();
-  if (!s.purpose) return { result: "error", message: "No purpose set." };
+  if (!s.purpose) return { result: "error", message: "No Target set." };
   outcome = ["yes", "partly", "no"].includes(outcome) ? outcome : null;
   const record = purposeRecord(s.purpose, outcome);
   const stop = s.stop?.kind === "purpose" ? null : s.stop;

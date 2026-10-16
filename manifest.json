@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Aim",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "minimum_chrome_version": "116",
-  "description": "Use YouTube on purpose. Your search becomes your purpose, Aim keeps you on it, and breaks are a deliberate choice.",
+  "description": "Watch YouTube with intention. Your search becomes your Target, Aim keeps you on it, and breaks are a deliberate choice.",
   "permissions": [
     "storage"
   ],

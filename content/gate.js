@@ -104,7 +104,7 @@ async function evaluateVideo(info) {
 // Neither a purpose nor a break: choose one. There's no third way to watch.
 function showChoiceCard(info) {
   hold();
-  const input = el("input", { class: "wp-input", type: "text", placeholder: "What do you want to find or learn?", "aria-label": "Your purpose" });
+  const input = el("input", { class: "wp-input", type: "text", placeholder: "What do you want to find or learn?", "aria-label": "Your Target" });
   const err = el("div", { class: "wp-error" });
   const start = async () => {
     const text = input.value.trim();
@@ -121,7 +121,7 @@ function showChoiceCard(info) {
     brandLine(),
     el("div", { class: "wp-title" }, "What brings you here?"),
     el("div", { class: "wp-muted wp-ellipsis" }, info.title),
-    el("div", { class: "wp-row" }, input, el("button", { class: "wp-btn wp-btn-primary", onclick: start }, "Set purpose")),
+    el("div", { class: "wp-row" }, input, el("button", { class: "wp-btn wp-btn-primary", onclick: start }, "Set Target")),
     err,
     el("div", { class: "wp-label" }, "Or take a break"),
     breakChips(takeBreak, { oneVideoId: info.id }));
@@ -133,20 +133,20 @@ function showChoiceCard(info) {
 function showDriftCard(info) {
   hold();
   const p = activePurpose();
-  const input = el("input", { class: "wp-input", type: "text", placeholder: "Search toward your purpose", "aria-label": "Search toward your purpose" });
+  const input = el("input", { class: "wp-input", type: "text", placeholder: "Search toward your Target", "aria-label": "Search toward your Target" });
   const search = () => { const q = input.value.trim(); if (q) location.href = "/results?search_query=" + encodeURIComponent(q); };
   keepKeys(input, search);
   showPlayerCard(
     brandLine(),
-    el("div", { class: "wp-title" }, "Not part of your purpose"),
-    el("div", { class: "wp-current" }, el("div", { class: "wp-label" }, "Your purpose"), el("div", { class: "wp-strong" }, p.text)),
+    el("div", { class: "wp-title" }, "Not on your Target"),
+    el("div", { class: "wp-current" }, el("div", { class: "wp-label" }, "Current Target"), el("div", { class: "wp-strong" }, p.text)),
     el("div", { class: "wp-muted" }, p.searches.length
-      ? "While you're on purpose, you watch what your searches for it found. This video wasn't among them."
+      ? "While you have a Target, you watch what your searches for it found. This video wasn't among them."
       : "Search for what you're looking for, and the results are yours to watch."),
     el("div", { class: "wp-row" }, input, el("button", { class: "wp-btn wp-btn-tonal", onclick: search }, "Search")),
     el("div", { class: "wp-actions wp-actions-start" },
       history.length > 1 ? el("button", { class: "wp-btn wp-btn-primary", onclick: goBack }, "Back") : null,
-      el("button", { class: "wp-btn wp-btn-tonal", onclick: () => openPivotDialog("", { video: info }) }, "Change purpose"),
+      el("button", { class: "wp-btn wp-btn-tonal", onclick: () => openPivotDialog("", { video: info }) }, "Change Target"),
       el("button", { class: "wp-btn wp-btn-text", onclick: () => saveCurrent(true) }, "Save for later")),
     el("div", { class: "wp-label" }, "Or take a break"),
     breakChips(takeBreak, { oneVideoId: info.id }));
@@ -161,7 +161,7 @@ function showTimeUpCard() {
     el("div", { class: "wp-title" }, "Time's up"),
     el("div", { class: "wp-muted" }, `You set ${p.limitMin} minutes for: ${p.text}`),
     el("div", { class: "wp-actions wp-actions-start" },
-      el("button", { class: "wp-btn wp-btn-primary", onclick: askDone }, "Done"),
+      el("button", { class: "wp-btn wp-btn-primary", onclick: askDone }, "Target complete"),
       el("button", { class: "wp-btn wp-btn-tonal", onclick: () => addPurposeTime(15) }, "Add 15 minutes")),
     el("div", { class: "wp-label" }, "Or take a break"),
     breakChips(takeBreak));
@@ -175,14 +175,14 @@ function showTotalCard() {
     el("div", { class: "wp-title" }, "That's today's YouTube time"),
     el("div", { class: "wp-muted" }, `You set a daily limit of ${settings.totalMin} minutes. It resets at midnight.`),
     activePurpose() ? el("div", { class: "wp-actions wp-actions-start" },
-      el("button", { class: "wp-btn wp-btn-tonal", onclick: askDone }, "Done with my purpose")) : null);
+      el("button", { class: "wp-btn wp-btn-tonal", onclick: askDone }, "Target complete")) : null);
 }
 
 // ---------------- limits running out mid-video ----------------
 const STOP_TEXT = {
   break: "Your break is over.",
   leisure: "That's today's leisure time.",
-  purpose: "Time's up for your purpose.",
+  purpose: "Time's up for this Target.",
   total: "That's today's YouTube time."
 };
 

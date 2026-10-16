@@ -58,7 +58,7 @@ function breakControls() {
 }
 
 function pivotControls() {
-  const input = el("input", { class: "field", placeholder: "What do you want to focus on instead?", "aria-label": "New purpose" });
+  const input = el("input", { class: "field", placeholder: "What do you want to focus on instead?", "aria-label": "New Target" });
   const go = () => input.value.trim() && act({ type: "purpose-pivot", text: input.value });
   input.addEventListener("keydown", e => { if (e.key === "Enter") go(); });
   setTimeout(() => input.focus(), 0);
@@ -66,7 +66,7 @@ function pivotControls() {
     ...(st.recent || []).slice(0, 4).map(t => el("button", { class: "link muted", onclick: () => { input.value = t; input.focus(); } }, `↺ ${t}`)),
     el("div", { class: "pair" },
       el("button", { class: "btn", onclick: () => { open = null; renderCurrent(); } }, "Cancel"),
-      el("button", { class: "btn primary", onclick: go }, "Change purpose")));
+      el("button", { class: "btn primary", onclick: go }, "Change Target")));
 }
 
 function doneControls() {
@@ -91,9 +91,9 @@ function renderCurrent() {
         left !== null ? ring(left, b.durationMin) : null,
         el("div", {}, el("div", { class: "big" }, b.oneVideoId ? "Just this video" : `${dur(left)} left`),
           left !== null ? el("div", { class: "muted" }, `of ${dur(b.durationMin)}`) : null)),
-      p ? el("div", { class: "muted" }, `Your purpose is waiting: ${p.text}`) : null,
+      p ? el("div", { class: "muted" }, `Your Target is waiting: ${p.text}`) : null,
       el("div", { class: "pair" },
-        el("button", { class: "btn primary", onclick: () => act({ type: "break-end" }) }, p ? "Back to my purpose" : "End break"),
+        el("button", { class: "btn primary", onclick: () => act({ type: "break-end" }) }, p ? "Back on Target" : "End break"),
         b.durationMin && !(st.leisureLeftMin !== null && st.leisureLeftMin < 1)
           ? el("button", { class: "btn", onclick: () => act({ type: "break-extend", minutes: 15 }) }, "+15 min") : null)));
     return;
@@ -101,7 +101,7 @@ function renderCurrent() {
   if (p) {
     const left = p.limitMin ? mins(p.limitMin * 60 - p.usedSec) : null;
     box.append(el("div", { class: "card" },
-      el("div", { class: "tag" }, "Current purpose"),
+      el("div", { class: "tag" }, "Current Target"),
       el("div", { class: "strong big" }, p.text),
       el("div", { class: "ring-row" },
         left !== null ? ring(left, p.limitMin) : null,
@@ -110,13 +110,13 @@ function renderCurrent() {
       open === "pivot" ? pivotControls() : open === "done" ? doneControls() : el("div", {},
         breakControls(),
         open === "break" ? null : el("div", { class: "pair" },
-          el("button", { class: "btn", onclick: () => { open = "pivot"; renderCurrent(); } }, "↺ Change purpose"),
-          el("button", { class: "btn", onclick: () => { open = "done"; renderCurrent(); } }, "✓ Done")))));
+          el("button", { class: "btn", onclick: () => { open = "pivot"; renderCurrent(); } }, "↺ Change Target"),
+          el("button", { class: "btn", onclick: () => { open = "done"; renderCurrent(); } }, "✓ Target complete")))));
     return;
   }
   box.append(el("div", { class: "card" },
-    el("div", { class: "strong" }, "No purpose set"),
-    el("div", { class: "muted", style: "margin-bottom:10px" }, "Search on YouTube and your search becomes your purpose."),
+    el("div", { class: "strong" }, "No Target set"),
+    el("div", { class: "muted", style: "margin-bottom:10px" }, "Search on YouTube and your search becomes your Target."),
     breakControls()));
 }
 
@@ -128,17 +128,17 @@ function renderWeek() {
   const max = Math.max(1, ...w.days.map(d => d.purpose + d.leisure));
   const total = k => Math.round(w.days.reduce((s, d) => s + d[k], 0) / 60);
   box.replaceChildren(
-    el("div", { class: "bars", title: "Time on purpose (dark) and on breaks (light), per day" },
-      ...w.days.map(d => el("div", { class: "bar7", title: `${d.day}: ${mins(d.purpose)} min on purpose, ${mins(d.leisure)} min on breaks` },
+    el("div", { class: "bars", title: "Time on Target (dark) and on breaks (light), per day" },
+      ...w.days.map(d => el("div", { class: "bar7", title: `${d.day}: ${mins(d.purpose)} min on Target, ${mins(d.leisure)} min on breaks` },
         el("div", { class: "p", style: `height:${(d.purpose / max) * 100}%` }),
         el("div", { class: "l", style: `height:${(d.leisure / max) * 100}%` })))),
     el("div", { class: "days" }, ...w.days.map(d => el("span", {}, d.label))),
     el("div", { class: "row item" },
-      el("span", {}, el("span", { class: "key", style: "background:var(--text)" }), "On purpose ", el("b", {}, dur(total("purpose")))),
+      el("span", {}, el("span", { class: "key", style: "background:var(--text)" }), "On Target ", el("b", {}, dur(total("purpose")))),
       el("span", {}, el("span", { class: "key", style: "background:var(--muted)" }), "Breaks ", el("b", {}, dur(total("leisure"))))),
     el("div", { class: "muted" }, w.purposes
-      ? `${w.purposes} purpose${w.purposes > 1 ? "s" : ""} done · found what you needed in ${w.found}`
-      : "Finished purposes show up here."));
+      ? `${w.purposes} Target${w.purposes > 1 ? "s" : ""} complete · found what you needed in ${w.found}`
+      : "Completed Targets show up here."));
 }
 
 function renderToday() {
@@ -147,7 +147,7 @@ function renderToday() {
   const line = (label, value) => el("div", { class: "row item" }, el("span", {}, label), el("span", { class: "muted" }, value));
   const all = t.purpose + t.leisure + t.other;
   document.getElementById("today").replaceChildren(
-    line("On purpose", `${mins(t.purpose)} min`),
+    line("On Target", `${mins(t.purpose)} min`),
     line("Breaks", S.leisureMin ? `${mins(t.leisure)} of ${S.leisureMin} min` : `${mins(t.leisure)} min`),
     line("All YouTube", S.totalMin ? `${mins(all)} of ${S.totalMin} min` : `${mins(all)} min`));
 }
@@ -168,7 +168,7 @@ function renderHistory() {
   const box = document.getElementById("history");
   box.replaceChildren();
   const recent = st.history.slice(-5).reverse();
-  if (!recent.length) { box.append(el("div", { class: "muted" }, "Finished purposes and breaks show up here.")); return; }
+  if (!recent.length) { box.append(el("div", { class: "muted" }, "Completed Targets and breaks show up here.")); return; }
   const OUT = { yes: "Found it", partly: "Partly", no: "Didn't find it" };
   for (const h of recent) {
     const videos = h.videos?.length ? `${h.videos.length} video${h.videos.length > 1 ? "s" : ""}` : null;
@@ -190,7 +190,7 @@ async function render() {
 
 document.getElementById("settings").addEventListener("click", () => chrome.runtime.openOptionsPage());
 document.getElementById("clear").addEventListener("click", async () => {
-  if (!confirm("Clear your history of purposes and breaks?")) return;
+  if (!confirm("Clear your history of Targets and breaks?")) return;
   await send({ type: "history-clear" });
   render();
 });

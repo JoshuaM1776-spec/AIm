@@ -4,6 +4,8 @@ Where Aim stands, what comes next, and the decisions that shape it. Includes Add
 
 ## Product principles
 
+**Brand idea:** Set a Target. Stay on Target. Reach your Target. This is a guiding concept, not a tagline that has to appear everywhere. Aim should feel useful and encouraging, not militaristic, rigid or productivity-obsessed.
+
 From the original specification:
 
 - Feel like part of YouTube, not a separate productivity app.
@@ -25,11 +27,35 @@ Added by Addendum 01:
 
 No gamification: no points, streaks or badges. This already matches Aim Free.
 
+## Terminology: Target (done in 0.15.0)
+
+| Interface element | Wording |
+|---|---|
+| Opening prompt | What brings you here? |
+| Search placeholder | What do you want to find or learn? |
+| Establish | Set Target |
+| Active objective | Current Target |
+| Change | Change Target |
+| Finish | Target complete |
+| Browse freely | Take a break |
+| Return after a break | Back on Target |
+
+- **"Target" is capitalized** as Aim's own term. Everything else keeps YouTube's sentence case ("Take a break", "Target complete").
+- **Natural phrasing stays where it reads better:** "What brings you here?", "Not on your Target", "Is … part of your Target?".
+- **Code and stored data keep `purpose`.** Renaming them would need a storage migration for no user benefit.
+
+## Out of scope: ad blocking
+
+- **Aim doesn't block, skip or alter YouTube ads.** Ad blocking brings reliability, maintenance and platform risk, and Aim is about intentional viewing, not ad removal.
+- **Aim stays compatible** with ad blockers people install separately.
+- Ad blocking isn't on the roadmap. It may be evaluated separately later.
+
 ## Status
 
 | Step | What | State |
 |---|---|---|
 | 0–3, A–D | **Aim Free.** Purpose from search, word check, allowed list, breaks with a daily leisure allowance, grace period, distractions hidden, Done and reflection, popup with a week view, Advanced settings | Built and tested against mock pages. **Real-YouTube run of TESTING.md still needed.** |
+| — | **Target wording** in every Aim Free screen (0.15.0) | Done, tests updated |
 | E | **Plus backend foundation.** Accounts with an emailed code, plans, AI endpoint with per-user limits, Settings sign-in | Built and tested locally. Needs a Supabase project to go live. |
 
 ## The three learning experiences share one flow
@@ -67,6 +93,10 @@ Study sessions come **before** learning paths. They're smaller, they serve the s
 - **Data model on the server** (see Decisions): learners, plans, plan items, concepts, progress events.
 - Account deletion and data export from Settings.
 
+### TB — TeachBack MVP (approved, Addendum 02)
+
+Right after F1, because it's self-contained: it needs only a Target (or a topic typed in) and works before study sessions or learning paths exist. See [TeachBack](#teachback) below.
+
 ### F2 — Study sessions
 
 - Objective, plus optional topics, plus an **optional upload**: study guide, syllabus, notes, reading (PDF, DOCX, text, pasted text).
@@ -103,6 +133,90 @@ Study sessions come **before** learning paths. They're smaller, they serve the s
 - Billing (Stripe through Supabase) changes `profiles.plan`.
 - Monitoring, cost dashboards and abuse controls.
 - Web app (Chrome side panel first; web later).
+
+## TeachBack
+
+Conversational assessment for Aim Plus: AI "students" ask questions, and the learner explains. *If you understand something, you should be able to explain it.* The AI instructor helps people learn; TeachBack checks what they can explain on their own. The two never share evidence.
+
+### Status
+
+- **Approved.** It's waiting on the original TeachBack prototype's source, so its mechanics and interaction patterns can be reused (Phase A).
+- **Nothing is built yet.** It depends on F1 (the Plus shell and the learner and progress tables).
+
+### Proposed architecture (smallest maintainable)
+
+**Where it runs:** a dedicated extension page, `teachback.html`, in its own tab. A conversation doesn't fit the popup or a card on YouTube.
+
+**Ways in:**
+- **Test My Understanding** in the "Target complete?" dialog (Plus users only).
+- Plan checkpoints in the side panel (F2 and F3).
+- A standalone start where you type a topic.
+
+**Session introduction:** "Your students have some questions. See how well you can explain what you've learned."
+
+**Server:** three new tasks in the existing AI endpoint's task registry. Same sign-in, limits and server-held key; nothing AI-related lives in the extension.
+
+| Task | Does |
+|---|---|
+| `teachback-start` | Builds 2–4 learning objectives from the Target, the plan, or uploaded material (when available) and asks the first question |
+| `teachback-turn` | Evaluates one answer against its objective as structured JSON (evidence quote, rating per dimension, misconception, whether help was given), then picks the next move: follow up, harder, different angle, next objective, or finish |
+| `teachback-finish` | Writes the results from the recorded evidence |
+
+**Data:**
+- **The conversation and evidence are stored on the server,** in `assessments` and `assessment_turns` keyed by `learner_id`. The client can't rewrite evidence, and an unfinished session can be resumed for 7 days. After that it closes as **Incomplete**, and untested objectives show **Not assessed**.
+
+**Honest results** (no unsupported claims of mastery):
+- The **status for each objective comes from code, not the model:**
+  - **Demonstrated** needs at least one answer rated sound *without* substantive help, plus one application or follow-up answer.
+  - Answers that needed help count as **Partial**.
+  - Objectives with no evidence are **Not assessed**.
+- **The model writes only the narrative,** and it may cite only recorded evidence quotes.
+- **Results are labeled as estimates.** There's no single overall score.
+
+**Results screen:**
+- a summary;
+- strengths;
+- gaps and misconceptions;
+- evidence quotes;
+- recommended review, with links to the plan's video for that objective, or a suggested search that becomes a new Target;
+- **next actions:** Review weak areas, Try again, or Continue learning.
+
+**Progress:**
+- Results write `demonstrated` and `needs_review` events into the progress model (Decision 3), with `source: teachback`.
+- The instructor's help is recorded with `source: instructor`.
+
+**AI students:**
+- Four questioning styles (Curious, Skeptic, Connector, Practical) that the server rotates. The user never picks them.
+- They're short and plain, not theatrical.
+
+**Rules during an assessment:**
+- No answers handed out. The students can clarify a question or give a small hint, and the hint is recorded.
+- The learner can skip a question or end early.
+
+**Limits:**
+- At most 4 objectives, 3 follow-ups per objective and 15 turns per session.
+- Answers up to about 2,000 characters.
+- Each turn counts against the user's AI limits, and the model is chosen per task.
+- The server trims the history it sends to the model.
+
+**Grounding:**
+- Assessments are grounded in the objectives plus reference material: the plan, video titles, descriptions and chapters, and uploaded study guides once F2 has them.
+- Without reference material, the results say they're based on general subject knowledge.
+
+**Privacy:**
+- Answers are learning data under the account (Decision 4).
+- They can be deleted with the account, and aren't used for anything else.
+
+### Phases
+
+| Phase | Scope |
+|---|---|
+| A | Inspect the prototype source; map what to reuse |
+| B | Text-only Questions Only MVP: standalone and from "Target complete?" |
+| C | Study session and learning path checkpoints; review links to plan items |
+| D | Voice input (Web Speech API on the TeachBack page), refined student styles, history, and a full "teach the class" format |
+
+Homeschool use (a Thursday check before Friday's project, and parent review) is future work; see HOMESCHOOL.md.
 
 ## Decisions needed now (to avoid rework)
 
@@ -165,7 +279,13 @@ The Data API allows about **100 searches a day for the whole app** (10,000 quota
   - versioned instructor prompts.
 - **Re-set limits once real usage is measured.** Today's 300 calls and 400k tokens a day suit single calls, not tutoring conversations.
 
-### 8. Age and consent
+### 8. Channels are stored by channel ID in Plus and later
+
+- **Aim Free's hidden and warned channels are keyed by the `@handle` link,** which is all a tile reliably shows. That's fine for a local list.
+- **Server-side Plus and homeschool preferences** (Preferred and Don't Recommend) must store the stable `UC…` channel ID, with the name only as a label.
+- Curation captures the ID when a result shows it, and looks it up from the channel page in the user's tab otherwise.
+
+### 9. Age and consent
 
 - **Aim Plus is 13+.**
 - **Homeschool serves younger children.** That brings COPPA (verifiable parental consent) and similar laws elsewhere, so it needs its own privacy design and legal review before any build.
@@ -183,8 +303,12 @@ The Data API allows about **100 searches a day for the whole app** (10,000 quota
   4. Same YouTube, distractions gone.
   5. Focused results.
   6. Plus study session.
+- **Other lines to use:**
+  - "You came to YouTube to learn. Stay on track."
+  - "Make more of YouTube."
+  - "Watch with intention."
 - **Low-cost changes, proposed for approval:**
-  - Store summary: "Study on YouTube without getting distracted. Your search becomes your purpose, and Aim keeps you on it." (113 characters)
+  - Store summary: "Study on YouTube without getting distracted. Your search becomes your Target, and Aim keeps you on it." (112 characters)
   - Homepage example chips: add a study example (for example "Study for my biology exam") and keep the general ones.
   - The landing page waits until approved.
 - **Homeschool teaser:** on the future website only, not in the extension. A teaser inside Aim Free would break the no-advertising rule.

@@ -84,19 +84,19 @@ function purposeBar(p) {
   const left = purposeLeft(p);
   return el("div", { id: "wp-results-bar", class: "wp wp-results-bar" },
     el("div", { class: "wp-rb-purpose" },
-      el("div", { class: "wp-label" }, "Your purpose"),
+      el("div", { class: "wp-label" }, "Current Target"),
       el("div", { class: "wp-strong wp-ellipsis" }, p.text),
       el("button", { class: "wp-link", onclick: openRefineDialog }, "Edit")),
     left !== null ? el("span", { class: "wp-muted" }, `${fmtMin(left)} left`) : null,
-    el("button", { class: "wp-btn wp-btn-tonal", onclick: askDone }, icon("check2"), "Done"));
+    el("button", { class: "wp-btn wp-btn-tonal", onclick: askDone }, icon("check2"), "Target complete"));
 }
 
 // The search shares no meaningful word with the purpose: ask once, results hidden meanwhile.
 function pendingBar(p, query) {
   return el("div", { id: "wp-results-bar", class: "wp wp-results-bar wp-rb-pending" },
     el("div", { class: "wp-rb-purpose" },
-      el("div", { class: "wp-strong" }, `Is “${query}” part of your purpose?`),
-      el("div", { class: "wp-muted wp-ellipsis" }, `Your purpose: ${p.text}`)),
+      el("div", { class: "wp-strong" }, `Is “${query}” part of your Target?`),
+      el("div", { class: "wp-muted wp-ellipsis" }, `Current Target: ${p.text}`)),
     el("div", { class: "wp-actions wp-actions-start" },
       el("button", { class: "wp-btn wp-btn-primary", onclick: async () => {
         await acceptSearch(query);
@@ -104,7 +104,7 @@ function pendingBar(p, query) {
         captureResults();
       } }, "Yes, it's part of it"),
       el("button", { class: "wp-btn wp-btn-tonal", onclick: () =>
-        openPivotDialog(query, { afterConfirm: () => send({ type: "purpose-search", query }) }) }, "Change purpose"),
+        openPivotDialog(query, { afterConfirm: () => send({ type: "purpose-search", query }) }) }, "Change Target"),
       el("button", { class: "wp-btn wp-btn-text", onclick: () => history.back() }, "Back")),
     el("div", { class: "wp-rb-break" }, el("div", { class: "wp-label" }, "Or take a break"), breakChips(takeBreak)));
 }

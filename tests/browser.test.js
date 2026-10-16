@@ -100,7 +100,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("feed hidden before Aim's main scripts run", await p.evaluate(() =>
     document.documentElement.classList.contains("wp-boot") || document.documentElement.classList.contains("wp-home")));
   await p.waitForSelector("#wp-chip .wp-pill", { timeout: 5000 });
-  step("indicator invites a purpose", (await text("#wp-chip")).includes("Set a purpose") && !(await text("#wp-chip")).includes("null"));
+  step("indicator invites a purpose", (await text("#wp-chip")).includes("Set Target") && !(await text("#wp-chip")).includes("null"));
   await p.waitForSelector("#wp-home", { timeout: 5000 });
   step("homepage card replaces the feed", await p.isHidden("ytd-rich-grid-renderer"));
   const card0 = await text("#wp-home");
@@ -134,7 +134,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("moving to another video ends the one-video break", !st.brk && st.history.some(h => h.type === "break" && h.oneVideo));
 
   await p.fill(".wp-player-card input", "Learn how sourdough starters work");
-  await p.click('.wp-player-card button:text-is("Set purpose")');
+  await p.click('.wp-player-card button:text-is("Set Target")');
   await p.waitForTimeout(800);
   st = await store();
   step("setting a purpose from the card plays the video", st.purpose?.text === "Learn how sourdough starters work" && st.purpose.limitMin === null && !(await p.$(".wp-player-card")));
@@ -143,11 +143,11 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("with a purpose: autoplay switched off", (await p.getAttribute(".ytp-autonav-toggle-button", "aria-checked")) === "false" &&
     (await p.evaluate(() => localStorage.getItem("aim-autoplay-restore"))) === "1");
   step("with a purpose: Shorts link hidden", await p.isHidden("#guideShorts"));
-  step("Up next shows what the purpose has so far (nothing searched yet)", (await text("#wp-upnext")).includes("Search toward your purpose"));
+  step("Up next shows what the purpose has so far (nothing searched yet)", (await text("#wp-upnext")).includes("Search toward your Target"));
   await p.evaluate(() => ytNav("/watch?v=elsewhere"));
   await p.waitForSelector(".wp-player-card", { timeout: 6000 });
   card = await text(".wp-player-card");
-  step("a video your searches didn't find is not part of the purpose", card.includes("Not part of your purpose") && card.includes("Change purpose") && !/watch anyway/i.test(card), card.slice(0, 140));
+  step("a video your searches didn't find is not part of the purpose", card.includes("Not on your Target") && card.includes("Change Target") && !/watch anyway/i.test(card), card.slice(0, 140));
   await p.evaluate(() => ytNav("/watch?v=bbb"));
   await p.waitForTimeout(1500);
   step("going back to the purpose's video plays it", !(await p.$(".wp-player-card")));
@@ -155,8 +155,8 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   // ---------- the menu ----------
   await p.click("#wp-chip .wp-pill");
   let menu = await text(".wp-dropdown");
-  step("menu: purpose, no time limit, what's hidden, break choices, Done, Change purpose",
-    ["Your purpose", "No time limit", "Shorts, recommendations and feeds hidden · autoplay off", "Adjust", "Take a break", "Done", "Change purpose", "Save this video", "Hide or warn"].every(t => menu.includes(t)) &&
+  step("menu: purpose, no time limit, what's hidden, break choices, Done, Change Target",
+    ["Current Target", "No time limit", "Shorts, recommendations and feeds hidden · autoplay off", "Adjust", "Take a break", "Target complete", "Change Target", "Save this video", "Hide or warn"].every(t => menu.includes(t)) &&
     !/Pause|Explore|Add 15/.test(menu), menu.slice(0, 200));
 
   // ---------- take a break and come back ----------
@@ -172,8 +172,8 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     (await p.getAttribute(".ytp-autonav-toggle-button", "aria-checked")) === "true");
   await p.click("#wp-chip .wp-pill");
   menu = await text(".wp-dropdown");
-  step("break menu offers going back to the purpose", menu.includes("Back to my purpose") && menu.includes("Your purpose is waiting"));
-  await p.click('.wp-dropdown button:has-text("Back to my purpose")');
+  step("break menu offers going back to the purpose", menu.includes("Back on Target") && menu.includes("Your Target is waiting"));
+  await p.click('.wp-dropdown button:has-text("Back on Target")');
   await p.waitForTimeout(600);
   st = await store();
   step("ending the break resumes the purpose", !st.brk && st.purpose?.suspended === false);
@@ -188,8 +188,8 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("a break that runs out ends and the purpose resumes", !st.brk && st.purpose && !st.purpose.suspended && st.stop?.kind === "break");
   await p.waitForSelector(".wp-notice", { timeout: 5000 });
   const over = await text(".wp-notice");
-  step("a \"Break time is up\" card offers the purpose or more break", over.includes("Break time is up") && over.includes("Return to my purpose") && over.includes("Extend break"), over);
-  await p.click('.wp-notice button:has-text("Return to my purpose")');
+  step("a \"Break time is up\" card offers the purpose or more break", over.includes("Break time is up") && over.includes("Back on Target") && over.includes("Extend break"), over);
+  await p.click('.wp-notice button:has-text("Back on Target")');
 
   // ---------- a purpose time limit ----------
   await p.click("#wp-chip .wp-pill");
@@ -202,7 +202,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await sw.evaluate(async () => { const { purpose } = await chrome.storage.local.get("purpose"); await chrome.storage.local.set({ purpose: { ...purpose, usedSec: purpose.limitMin * 60 - 3 } }); });
   await p.waitForSelector(".wp-player-card", { timeout: 15000 });
   card = await text(".wp-player-card");
-  step("time up shows a card on the player", card.includes("Time's up") && card.includes("Done") && card.includes("Add 15 minutes"), card.slice(0, 100));
+  step("time up shows a card on the player", card.includes("Time's up") && card.includes("Target complete") && card.includes("Add 15 minutes"), card.slice(0, 100));
   await p.click('.wp-player-card button:text-is("Add 15 minutes")');
   await p.waitForTimeout(800);
   st = await store();
@@ -210,16 +210,16 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
 
   // ---------- Done ----------
   await p.click("#wp-chip .wp-pill");
-  await p.click('.wp-dropdown button:has-text("Done")');
+  await p.click('.wp-dropdown button:has-text("Target complete")');
   await p.waitForSelector(".wp-done-dialog", { timeout: 3000 });
   const doneText = await text(".wp-done-dialog");
-  step("Done asks first: found it, partly, not really, or keep going", ["Purpose complete?", "Yes, I'm done", "Partly", "Not really", "Keep going"].every(t => doneText.includes(t)));
+  step("Done asks first: found it, partly, not really, or keep going", ["Target complete?", "Yes, I'm done", "Partly", "Not really", "Keep going"].every(t => doneText.includes(t)));
   await p.click('.wp-done-dialog button:text-is("Yes, I\'m done")');
   await p.waitForURL("https://www.youtube.com/", { timeout: 5000 });
   await p.waitForSelector(".wp-toast", { timeout: 5000 });
   step("Done lands on the homepage with a short confirmation", (await text(".wp-toast")).includes("Glad you found it"));
   await p.click("#wp-chip .wp-pill");
-  await p.click('.wp-dropdown button:has-text("Set a purpose")');
+  await p.click('.wp-dropdown button:has-text("Set Target")');
   await p.waitForSelector(".wp-dialog .wp-recent", { timeout: 3000 });
   step("setting a purpose offers recent ones", (await text(".wp-dialog .wp-recent")).includes("Learn how sourdough starters work"));
   await p.click('.wp-dialog .wp-recent-item');
@@ -234,7 +234,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.waitForSelector("#wp-results-bar", { timeout: 5000 });
   st = await store();
   step("a search with no purpose becomes the purpose (no time limit)", st.purpose?.text === "how to fix a leaky faucet" && st.purpose.limitMin === null && st.purpose.searches[0].q === "how to fix a leaky faucet");
-  step("results bar shows the purpose and Done", (await text("#wp-results-bar")).includes("how to fix a leaky faucet") && (await text("#wp-results-bar")).includes("Done"));
+  step("results bar shows the purpose and Done", (await text("#wp-results-bar")).includes("how to fix a leaky faucet") && (await text("#wp-results-bar")).includes("Target complete"));
   step("in results: Shorts shelf and Shorts hidden, videos shown", (await p.isHidden("#shortsShelf")) && (await p.isHidden("#shortItem")) && (await p.isVisible("#normalItem")));
   await p.waitForTimeout(800);
   st = await store();
@@ -251,12 +251,12 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.goto("https://www.youtube.com/results?search_query=faucet+cartridge+replacement");
   await p.waitForSelector("#wp-results-bar", { timeout: 5000 });
   await p.waitForTimeout(500);
-  step("a related search continues silently", !(await text("#wp-results-bar")).includes("part of your purpose?") &&
+  step("a related search continues silently", !(await text("#wp-results-bar")).includes("part of your Target?") &&
     (await store()).purpose.searches.some(s => s.q === "faucet cartridge replacement"));
   await p.goto("https://www.youtube.com/results?search_query=gaming+laptop+deals");
   await p.waitForSelector("#wp-results-bar", { timeout: 5000 });
   await p.waitForTimeout(500);
-  step("an unrelated search asks first, results hidden", (await text("#wp-results-bar")).includes("Is “gaming laptop deals” part of your purpose?") &&
+  step("an unrelated search asks first, results hidden", (await text("#wp-results-bar")).includes("Is “gaming laptop deals” part of your Target?") &&
     await p.evaluate(() => document.documentElement.classList.contains("wp-search-pending")));
   await p.click('#wp-results-bar button:has-text("Yes, it\'s part of it")');
   await p.waitForTimeout(800);
@@ -265,10 +265,10 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     st.purpose.searches.some(s => s.q === "gaming laptop deals"));
   await p.goto("https://www.youtube.com/shorts/s9");
   await p.waitForSelector("#shorts-player .wp-player-card", { timeout: 6000 });
-  step("opening a Short during a purpose asks first", (await text(".wp-player-card")).includes("Shorts are hidden while you're on purpose"));
+  step("opening a Short during a purpose asks first", (await text(".wp-player-card")).includes("Shorts are hidden while you're on Target"));
   await p.goto("https://www.youtube.com/feed/subscriptions");
   await p.waitForSelector("#wp-feed-note", { timeout: 6000 });
-  step("subscriptions feed replaced by a note during a purpose", (await p.isHidden("#subsGrid")) && (await text("#wp-feed-note")).includes("Feeds are hidden while you're on purpose"));
+  step("subscriptions feed replaced by a note during a purpose", (await p.isHidden("#subsGrid")) && (await text("#wp-feed-note")).includes("Feeds are hidden while you're on Target"));
   await sw.evaluate(() => finishPurpose(null));
 
   // ---------- leisure used up ----------
@@ -305,8 +305,8 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("no AI, no API key anywhere in settings", !/API key|Claude|AI check/i.test(optText));
   step("no Aim Plus section while config.js is empty", plusHidden);
   step("popup shows the purpose with quick controls, the week, today and history",
-    ["Current purpose", "learn to sharpen a chisel", "Take a break", "Change purpose", "Done", "This week", "purposes done", "On purpose", "Breaks", "Found it"].every(t => popText.includes(t)), popText.slice(0, 200));
-  await pop.click('button:has-text("Done")');
+    ["Current Target", "learn to sharpen a chisel", "Take a break", "Change Target", "Target complete", "This week", "Targets complete", "On Target", "Breaks", "Found it"].every(t => popText.includes(t)), popText.slice(0, 200));
+  await pop.click('button:has-text("Target complete")');
   await pop.click('button:text-is("Yes, I\'m done")');
   await pop.waitForTimeout(500);
   step("Done from the popup asks and ends the purpose", !(await store()).purpose && (await store()).history.pop().outcome === "yes");

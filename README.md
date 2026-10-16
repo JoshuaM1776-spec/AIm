@@ -39,6 +39,10 @@ Chrome extension, Manifest V3, no build step.
 
 ## Product rules
 
+**Wording:** the interface calls the active objective a **Target** (Set Target, Current Target, Change Target, Target complete, Back on Target), and keeps natural phrasing where it reads better ("What brings you here?"). Code and stored data still say `purpose`; that's deliberate, to avoid a data migration for a wording change.
+
+Aim doesn't block or alter YouTube's ads, and stays compatible with ad blockers people install separately.
+
 - **Two states, nothing in between.** A **purpose** (why you're on YouTube right now) or a **break** (free browsing). With neither, Aim asks before a video plays: set a purpose, or take a break (15 / 30 / 60 min, or just this video).
 - **Your search becomes your purpose.** Later searches that share a meaningful word with it continue silently; others ask once, "Is this part of your purpose?". Changing purpose is deliberate and keeps your searches, videos and time limit.
 - **On purpose, you watch what your searches found:** their results, playlists among them, and the video you set the purpose from. Anything else shows "Not part of your purpose": go back, search, change purpose or take a break. The sidebar shows **Up next from your search** instead of YouTube's recommendations. No AI is involved.

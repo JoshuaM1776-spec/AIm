@@ -27,7 +27,7 @@ function openAvoidDialog() {
   };
   openModal(el("div", { class: "wp-dialog", role: "dialog", "aria-modal": "true" },
     el("div", { class: "wp-title" }, `Hide or warn about ${info.channel || "this channel"}?`),
-    el("p", { class: "wp-muted" }, "Hide: its videos disappear from your homepage, search results and sidebar, and opening one asks first. Warn: Aim asks before you watch it outside a purpose. Undo either in settings."),
+    el("p", { class: "wp-muted" }, "Hide: its videos disappear from your homepage, search results and sidebar, and opening one asks first. Warn: Aim asks before you watch it without a Target. Undo either in settings."),
     el("div", { class: "wp-actions" },
       el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Cancel"),
       el("button", { class: "wp-btn wp-btn-tonal", onclick: pick("warn") }, "Warn me"),
