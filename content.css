@@ -1,4 +1,4 @@
-/* Waypoint — styled to read as part of YouTube. Follows YouTube's light/dark theme. */
+/* Aim — styled to read as part of YouTube. Follows YouTube's light/dark theme. */
 
 .wp {
   --wp-bg: #ffffff;
@@ -9,7 +9,7 @@
   --wp-muted: #606060;
   --wp-border: rgba(0, 0, 0, 0.1);
   --wp-hover: rgba(0, 0, 0, 0.05);
-  --wp-accent: #1f7a6d;            /* restrained teal: Waypoint's own accent, not YouTube red */
+  --wp-accent: #1f7a6d;            /* restrained teal: Aim's own accent, not YouTube red */
   --wp-accent-soft: rgba(31, 122, 109, 0.12);
   --wp-amber: #a06a00;
   --wp-amber-soft: rgba(196, 140, 20, 0.14);

@@ -1,4 +1,4 @@
-// Waypoint — toolbar popup
+// Aim — toolbar popup
 
 function el(tag, attrs = {}, ...kids) {
   const n = document.createElement(tag);
@@ -20,7 +20,7 @@ async function renderSession() {
   if (!s) {
     box.append(el("div", { class: "card" },
       el("div", { class: "strong" }, "No session running"),
-      el("div", { class: "muted" }, "Start one from the Waypoint button in YouTube's top bar.")));
+      el("div", { class: "muted" }, "Start one from the Aim button in YouTube's top bar.")));
     return;
   }
   if (s.mode === "quick") {

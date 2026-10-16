@@ -1,4 +1,4 @@
-// Waypoint — settings page. Logic lives in store.js.
+// Aim — settings page. Logic lives in store.js.
 
 const LEVEL_INFO = {
   lenient: "Rules warn you. You can always watch anyway.",

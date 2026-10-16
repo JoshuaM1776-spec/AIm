@@ -1,4 +1,4 @@
-// Waypoint — background service worker
+// Aim — background service worker
 // AI checks (purpose fit, starter path, recommendation labels), rules, and the watch log.
 
 importScripts("store.js");

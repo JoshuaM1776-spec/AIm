@@ -1,4 +1,4 @@
-// Waypoint — shared settings logic (used by background.js, options and popup)
+// Aim — shared settings logic (used by background.js, options and popup)
 // Rule of the app: tightening is instant, loosening waits 24 hours.
 //
 // Three layers of boundaries:

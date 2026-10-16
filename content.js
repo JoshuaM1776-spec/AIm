@@ -1,4 +1,4 @@
-// Waypoint — runs on youtube.com
+// Aim — runs on youtube.com
 // Stay focused when you can. Pivot when you choose. Explore when you intend to.
 
 (() => {
@@ -22,7 +22,7 @@
   const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   const ICON = {
-    waypoint: `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 5.5l2.4 6.5L12 18.5 9.6 12z" fill="currentColor"/></svg>`,
+    logo: `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 5.5l2.4 6.5L12 18.5 9.6 12z" fill="currentColor"/></svg>`,
     chevron: `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
     right: `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M10 7l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
     pivot: `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.7-5.6M20 12a8 8 0 0 1-13.7 5.6M18 3v4h-4M6 21v-4h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
@@ -114,7 +114,7 @@
       host.prepend(chip);
     }
     chip.replaceChildren();
-    const brand = el("span", { class: "wp-brand" }, icon("waypoint"), el("span", { class: "wp-brand-name" }, "Waypoint"));
+    const brand = el("span", { class: "wp-brand" }, icon("logo"), el("span", { class: "wp-brand-name" }, "Aim"));
     if (!session) {
       chip.append(brand, el("button", { class: "wp-pill wp-pill-solid", onclick: () => openStartDialog(null) }, "Start a session"));
       return;
@@ -249,7 +249,7 @@
     const time = chips([15, 30, 45, 60], 30, minLabel);
     const err = el("div", { class: "wp-error" });
     const purposeBlock = el("div", {}, el("label", { class: "wp-q" }, "What do you want to accomplish?"), purpose);
-    const exploreNote = el("p", { class: "wp-muted", hidden: true }, "No purpose needed. Waypoint just keeps time.");
+    const exploreNote = el("p", { class: "wp-muted", hidden: true }, "No purpose needed. Aim just keeps time.");
     // Explore draws from today's leisure allowance.
     let leisure = null;
     send({ type: "check", channelKey: "", kind: "leisure" }).then(c => {
@@ -258,7 +258,7 @@
       exploreNote.textContent = c.daily.status !== "ok"
         ? `${c.daily.message} Focus sessions are still open.`
         : c.leisureLeft === Infinity || c.limits.leisureMin === 0
-          ? "No purpose needed. Waypoint just keeps time."
+          ? "No purpose needed. Aim just keeps time."
           : `No purpose needed. You have ${c.leisureLeft} minutes of leisure left today.`;
     });
 
@@ -310,7 +310,7 @@
     actions.append(el("button", { class: "wp-btn wp-btn-primary", onclick: start }, "Start session"));
 
     openModal(el("div", { class: "wp-dialog", role: "dialog", "aria-modal": "true" },
-      el("div", { class: "wp-dialog-brand" }, icon("waypoint"), "Waypoint"),
+      el("div", { class: "wp-dialog-brand" }, icon("logo"), "Aim"),
       info ? el("div", { class: "wp-muted wp-ellipsis" }, `Up next: ${info.title}`) : null,
       modeRow, purposeBlock, exploreNote,
       el("label", { class: "wp-q wp-q-sm" }, "How much time do you want to spend?"), time.row,
@@ -433,7 +433,7 @@
     const hint = { leisure: "Focus sessions and quick answers aren't affected. Purposeful time stays open.",
       hours: "Focus sessions and quick answers aren't affected.", total: "This covers all YouTube time today." }[rule.status];
     openModal(el("div", { class: "wp-dialog" },
-      el("div", { class: "wp-dialog-brand" }, icon("waypoint"), "Your rule"),
+      el("div", { class: "wp-dialog-brand" }, icon("logo"), "Your rule"),
       el("div", { class: "wp-title" }, rule.message),
       hint ? el("div", { class: "wp-muted" }, hint) : null,
       ...body, actions));
@@ -491,7 +491,7 @@
     if (!currentInfo) return;
     await send({ type: "save", video: currentInfo });
     closeNotice();
-    toast("Saved for later. Find it under the Waypoint icon.");
+    toast("Saved for later. Find it under the Aim icon.");
     if (thenLeave) goBack();
   }
 
@@ -561,7 +561,7 @@
         el("div", { class: "wp-strong" }, "Session complete"),
         el("div", { class: "wp-muted" }, s.mode !== "explore" ? `You spent ${mins} minutes on: ${s.purpose}` : `You explored for ${mins} minutes.`),
         pathText ? el("div", { class: "wp-muted wp-ellipsis" }, `Path: ${pathText}`) : null,
-        saved.length ? el("div", { class: "wp-muted" }, `${saved.length} saved for later. Start a session for them from the Waypoint icon.`) : null),
+        saved.length ? el("div", { class: "wp-muted" }, `${saved.length} saved for later. Find them under the Aim icon.`) : null),
       s.mode !== "explore" ? el("div", { class: "wp-notice-actions wp-col" },
         el("div", { class: "wp-label" }, "Did you get what you came for?"),
         el("div", { class: "wp-notice-actions" },
@@ -748,7 +748,7 @@
           el("button", { class: "wp-btn wp-btn-text", onclick: finishSession }, "End session")));
     } else {
       card.append(
-        el("div", { class: "wp-dialog-brand" }, icon("waypoint"), "Waypoint"),
+        el("div", { class: "wp-dialog-brand" }, icon("logo"), "Aim"),
         el("h1", { class: "wp-home-title" }, "What brings you here?"),
         el("div", { class: "wp-home-search" }, icon("search"), input, findBtn),
         el("div", { class: "wp-muted wp-home-hint" }, "Be specific about what you want to find or learn."),
