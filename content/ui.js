@@ -52,7 +52,7 @@ function showPlayerCard(...content) {
   closeModal();
   const host = playerHost();
   playerCard = el("div", { class: "wp wp-player-card" + (host ? "" : " wp-player-card-floating") },
-    el("div", { class: "wp-pc-inner", role: "dialog", "aria-label": "Aim" }, ...content));
+    el("div", { class: "wp-pc-inner", role: "dialog", "aria-label": BRAND }, ...content));
   (host || document.body).append(playerCard);
   return playerCard;
 }
@@ -62,9 +62,19 @@ function showPlayerCard(...content) {
 function breakChips(onPick, { oneVideoId = null } = {}) {
   const used = leisureUsedUp();
   const left = status.leisureLeftMin;
-  const row = el("div", { class: "wp-chips" },
+  const row = el("div", { class: "wp-chips" });
+  // Custom: the row turns into "[ 20 ] min  Start".
+  const custom = () => {
+    const input = el("input", { class: "wp-input wp-custom-min", type: "number", min: "1", max: String(left ?? 600), value: String(Math.min(20, left ?? 20)), "aria-label": "Break length in minutes" });
+    const go = () => { const m = parseInt(input.value, 10); if (m > 0) onPick({ minutes: m }); };
+    keepKeys(input, go);
+    row.replaceChildren(input, el("span", { class: "wp-muted" }, "min"), el("button", { class: "wp-chip wp-chip-on", onclick: go }, "Start break"));
+    setTimeout(() => { input.focus(); input.select(); }, 0);
+  };
+  row.append(...[
     oneVideoId ? el("button", { class: "wp-chip", disabled: used, onclick: () => onPick({ oneVideoId }) }, "Just this video") : null,
-    ...BREAK_CHOICES.map(m => el("button", { class: "wp-chip", disabled: used || (left !== null && left < m && m !== BREAK_CHOICES[0]), onclick: () => onPick({ minutes: m }) }, minLabel(m))));
+    ...BREAK_CHOICES.map(m => el("button", { class: "wp-chip", disabled: used || (left !== null && left < m && m !== BREAK_CHOICES[0]), onclick: () => onPick({ minutes: m }) }, minLabel(m))),
+    el("button", { class: "wp-chip", disabled: used, onclick: custom }, "Custom")].filter(Boolean));
   const note = el("div", { class: "wp-muted" }, used ? "Today's leisure time is used up. It resets at midnight."
     : left !== null ? `${left} min of leisure time left today.` : "");
   return el("div", { class: "wp-break-pick" }, row, note);
@@ -83,6 +93,23 @@ async function takeBreak(choice) {
   if (r.capped) toast(`Break set to ${r.capped} min: what's left of today's leisure time.`);
   else toast(choice.oneVideoId ? "Enjoy the video." : `Break: ${choice.minutes} minutes.`);
   if (currentId) regate(currentId);
+}
+
+// A break ran out: back to your purpose (already resumed), or more break while leisure time lasts.
+function showBreakOver(kind) {
+  const p = activePurpose();
+  const more = kind === "break" && !leisureUsedUp();
+  showNotice([
+    el("span", { class: "wp-notice-icon" }, icon("logo")),
+    el("div", { class: "wp-notice-text" },
+      el("div", { class: "wp-strong" }, kind === "leisure" ? "That's today's leisure time" : "Break time is up"),
+      el("div", { class: "wp-muted wp-ellipsis" }, p ? `Ready to get back to: ${p.text}` : "What's next?")),
+    el("div", { class: "wp-notice-actions" },
+      p ? el("button", { class: "wp-btn wp-btn-primary", onclick: closeNotice }, "Return to my purpose")
+        : el("button", { class: "wp-btn wp-btn-primary", onclick: () => { closeNotice(); openStartDialog(); } }, "Set a purpose"),
+      more ? el("button", { class: "wp-btn wp-btn-tonal", onclick: () => { closeNotice(); takeBreak({ minutes: 15 }); } }, "Extend break (15 min)") : null)
+  ], { dismissible: false });
+  notice.dataset.kind = "break-over";
 }
 
 // ---------------- notices (bottom bar, YouTube-toast style) ----------------

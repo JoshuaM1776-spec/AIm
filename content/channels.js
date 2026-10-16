@@ -5,9 +5,9 @@ function openChannelWarning(info, action) {
   hold();
   const name = info.channel || "this channel";
   showPlayerCard(
-    el("div", { class: "wp-dialog-brand" }, icon("logo"), "Aim"),
+    brandLine(),
     el("div", { class: "wp-title" }, action === "hide" ? `You chose to hide ${name}.` : `You asked to be warned about ${name}.`),
-    el("div", { class: "wp-muted" }, "Change this anytime in Aim's settings."),
+    el("div", { class: "wp-muted" }, `Change this anytime in ${BRAND}'s settings.`),
     el("div", { class: "wp-actions wp-actions-start" },
       el("button", { class: "wp-btn wp-btn-primary", onclick: goBack }, "Go back"),
       el("button", { class: "wp-btn wp-btn-text", onclick: () => { overridden.add(info.id); closePlayerCard(); continueAfterRules(info); } }, "Continue")));

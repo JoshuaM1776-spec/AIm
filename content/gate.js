@@ -51,7 +51,7 @@ async function saveCurrent(thenLeave) {
   if (!currentInfo) return;
   await send({ type: "save", video: currentInfo });
   closeNotice();
-  toast("Saved for later. Find it under the Aim icon.");
+  toast(`Saved for later. Find it under the ${BRAND} icon.`);
   if (thenLeave) goBack();
 }
 
@@ -118,7 +118,7 @@ function showChoiceCard(info) {
   };
   keepKeys(input, start);
   showPlayerCard(
-    el("div", { class: "wp-dialog-brand" }, icon("logo"), "Aim"),
+    brandLine(),
     el("div", { class: "wp-title" }, "What brings you here?"),
     el("div", { class: "wp-muted wp-ellipsis" }, info.title),
     el("div", { class: "wp-row" }, input, el("button", { class: "wp-btn wp-btn-primary", onclick: start }, "Set purpose")),
@@ -137,7 +137,7 @@ function showDriftCard(info) {
   const search = () => { const q = input.value.trim(); if (q) location.href = "/results?search_query=" + encodeURIComponent(q); };
   keepKeys(input, search);
   showPlayerCard(
-    el("div", { class: "wp-dialog-brand" }, icon("logo"), "Aim"),
+    brandLine(),
     el("div", { class: "wp-title" }, "Not part of your purpose"),
     el("div", { class: "wp-current" }, el("div", { class: "wp-label" }, "Your purpose"), el("div", { class: "wp-strong" }, p.text)),
     el("div", { class: "wp-muted" }, p.searches.length
@@ -157,11 +157,11 @@ function showTimeUpCard() {
   hold();
   const p = activePurpose();
   showPlayerCard(
-    el("div", { class: "wp-dialog-brand" }, icon("logo"), "Aim"),
+    brandLine(),
     el("div", { class: "wp-title" }, "Time's up"),
     el("div", { class: "wp-muted" }, `You set ${p.limitMin} minutes for: ${p.text}`),
     el("div", { class: "wp-actions wp-actions-start" },
-      el("button", { class: "wp-btn wp-btn-primary", onclick: () => finishPurpose() }, "Done"),
+      el("button", { class: "wp-btn wp-btn-primary", onclick: askDone }, "Done"),
       el("button", { class: "wp-btn wp-btn-tonal", onclick: () => addPurposeTime(15) }, "Add 15 minutes")),
     el("div", { class: "wp-label" }, "Or take a break"),
     breakChips(takeBreak));
@@ -171,11 +171,11 @@ function showTimeUpCard() {
 function showTotalCard() {
   hold();
   showPlayerCard(
-    el("div", { class: "wp-dialog-brand" }, icon("logo"), "Aim"),
+    brandLine(),
     el("div", { class: "wp-title" }, "That's today's YouTube time"),
     el("div", { class: "wp-muted" }, `You set a daily limit of ${settings.totalMin} minutes. It resets at midnight.`),
     activePurpose() ? el("div", { class: "wp-actions wp-actions-start" },
-      el("button", { class: "wp-btn wp-btn-tonal", onclick: () => finishPurpose() }, "Done with my purpose")) : null);
+      el("button", { class: "wp-btn wp-btn-tonal", onclick: askDone }, "Done with my purpose")) : null);
 }
 
 // ---------------- limits running out mid-video ----------------

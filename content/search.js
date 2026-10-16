@@ -88,7 +88,7 @@ function purposeBar(p) {
       el("div", { class: "wp-strong wp-ellipsis" }, p.text),
       el("button", { class: "wp-link", onclick: openRefineDialog }, "Edit")),
     left !== null ? el("span", { class: "wp-muted" }, `${fmtMin(left)} left`) : null,
-    el("button", { class: "wp-btn wp-btn-tonal", onclick: () => finishPurpose() }, icon("check2"), "Done"));
+    el("button", { class: "wp-btn wp-btn-tonal", onclick: askDone }, icon("check2"), "Done"));
 }
 
 // The search shares no meaningful word with the purpose: ask once, results hidden meanwhile.

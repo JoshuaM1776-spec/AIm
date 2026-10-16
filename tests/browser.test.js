@@ -100,14 +100,19 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("feed hidden before Aim's main scripts run", await p.evaluate(() =>
     document.documentElement.classList.contains("wp-boot") || document.documentElement.classList.contains("wp-home")));
   await p.waitForSelector("#wp-chip .wp-pill", { timeout: 5000 });
-  step("indicator invites a purpose", (await text("#wp-chip")).includes("Set a purpose"));
+  step("indicator invites a purpose", (await text("#wp-chip")).includes("Set a purpose") && !(await text("#wp-chip")).includes("null"));
   await p.waitForSelector("#wp-home", { timeout: 5000 });
   step("homepage card replaces the feed", await p.isHidden("ytd-rich-grid-renderer"));
+  const card0 = await text("#wp-home");
   step("early hide hands over to the card", await p.evaluate(() =>
     !document.documentElement.classList.contains("wp-boot") && document.documentElement.classList.contains("wp-home")));
-  step("homepage card offers a search and a break", (await text("#wp-home")).includes("What brings you here?") &&
-    (await p.$$("#wp-home .wp-chip")).length === 3, await text("#wp-home"));
-  step("Aim mark renders as SVG under Trusted Types", (await p.$$("#wp-chip svg path")).length >= 5);
+  step("homepage card offers a search, examples and a break", (await text("#wp-home")).includes("What brings you here?") &&
+    ["Learn cabinetmaking", "Fix my truck", "15m", "Custom"].every(t => card0.includes(t)), card0.slice(0, 160));
+  step("tapping an example fills the search box", await (async () => {
+    await p.click('#wp-home .wp-chip:text-is("Fix my truck")');
+    return (await p.inputValue("#wp-home .wp-home-input")) === "Fix my truck";
+  })());
+  step("the mark (bullseye, no play triangle) renders as SVG under Trusted Types", (await p.$$("#wp-chip .wp-icon:first-child svg circle")).length === 1 && (await p.$$("#wp-chip .wp-icon:first-child svg path")).length === 4);
   step("toolbar icon follows dark mode", await sw.evaluate(async () => (await setToolbarTheme(true)).result === "applied" && (await setToolbarTheme(false)).result === "applied"));
 
   // ---------- a video with neither a purpose nor a break ----------
@@ -133,7 +138,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.waitForTimeout(800);
   st = await store();
   step("setting a purpose from the card plays the video", st.purpose?.text === "Learn how sourdough starters work" && st.purpose.limitMin === null && !(await p.$(".wp-player-card")));
-  step("indicator shows the purpose", (await text("#wp-chip")).includes("Learn how sourdough"));
+  step("indicator shows the purpose", (await text("#wp-chip")).includes("Learn how sourdough") && !(await text("#wp-chip")).includes("null"));
   step("with a purpose: sidebar recommendations and end screens hidden", (await p.isHidden("#related")) && (await p.isHidden(".ytp-ce-element")));
   step("with a purpose: autoplay switched off", (await p.getAttribute(".ytp-autonav-toggle-button", "aria-checked")) === "false" &&
     (await p.evaluate(() => localStorage.getItem("aim-autoplay-restore"))) === "1");
@@ -159,6 +164,10 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.waitForTimeout(600);
   st = await store();
   step("a break from the menu keeps the purpose waiting", st.brk?.durationMin === 15 && st.purpose?.suspended === true);
+  const chip1 = await text("#wp-chip");
+  await p.waitForTimeout(2100);
+  const chip2 = await text("#wp-chip");
+  step("the indicator counts the break down by the second, with an end button", /Break1[45]:\d\d left/.test(chip1) && chip1 !== chip2 && !!(await p.$("#wp-chip .wp-chip-end")), `${chip1} → ${chip2}`);
   step("on a break: recommendations, Shorts and autoplay are back", (await p.isVisible("#related")) && (await p.isVisible("#guideShorts")) &&
     (await p.getAttribute(".ytp-autonav-toggle-button", "aria-checked")) === "true");
   await p.click("#wp-chip .wp-pill");
@@ -177,6 +186,10 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.waitForFunction(() => !document.querySelector("#wp-chip")?.textContent.includes("Break"), null, { timeout: 15000 });
   st = await store();
   step("a break that runs out ends and the purpose resumes", !st.brk && st.purpose && !st.purpose.suspended && st.stop?.kind === "break");
+  await p.waitForSelector(".wp-notice", { timeout: 5000 });
+  const over = await text(".wp-notice");
+  step("a \"Break time is up\" card offers the purpose or more break", over.includes("Break time is up") && over.includes("Return to my purpose") && over.includes("Extend break"), over);
+  await p.click('.wp-notice button:has-text("Return to my purpose")');
 
   // ---------- a purpose time limit ----------
   await p.click("#wp-chip .wp-pill");
@@ -198,11 +211,20 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   // ---------- Done ----------
   await p.click("#wp-chip .wp-pill");
   await p.click('.wp-dropdown button:has-text("Done")');
+  await p.waitForSelector(".wp-done-dialog", { timeout: 3000 });
+  const doneText = await text(".wp-done-dialog");
+  step("Done asks first: found it, partly, not really, or keep going", ["Purpose complete?", "Yes, I'm done", "Partly", "Not really", "Keep going"].every(t => doneText.includes(t)));
+  await p.click('.wp-done-dialog button:text-is("Yes, I\'m done")');
   await p.waitForURL("https://www.youtube.com/", { timeout: 5000 });
-  await p.waitForSelector(".wp-notice", { timeout: 5000 });
-  step("Done lands on the homepage and asks once", (await text(".wp-notice")).includes("Did you find what you needed?"));
-  await p.click('.wp-notice button:text-is("Yes")');
-  await p.waitForTimeout(400);
+  await p.waitForSelector(".wp-toast", { timeout: 5000 });
+  step("Done lands on the homepage with a short confirmation", (await text(".wp-toast")).includes("Glad you found it"));
+  await p.click("#wp-chip .wp-pill");
+  await p.click('.wp-dropdown button:has-text("Set a purpose")');
+  await p.waitForSelector(".wp-dialog .wp-recent", { timeout: 3000 });
+  step("setting a purpose offers recent ones", (await text(".wp-dialog .wp-recent")).includes("Learn how sourdough starters work"));
+  await p.click('.wp-dialog .wp-recent-item');
+  step("tapping a recent purpose fills the box", (await p.inputValue(".wp-dialog textarea")) === "Learn how sourdough starters work");
+  await p.keyboard.press("Escape");
   st = await store();
   const done = st.history.filter(h => h.type === "purpose").pop();
   step("the purpose is in the history with its videos and answer", !st.purpose && done?.outcome === "yes" && done.path.length === 1);
@@ -280,7 +302,12 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   const popText = (await pop.textContent("body")).replace(/\s+/g, " ");
   const optText = await (async () => { const o = await ctx.newPage(); await o.goto(`chrome-extension://${extId}/options.html`); await o.waitForTimeout(400); const t = await o.textContent("body"); await o.close(); return t; })();
   step("no AI, no API key anywhere in settings", !/API key|Claude|AI check/i.test(optText));
-  step("popup shows the purpose, today's time and history", popText.includes("learn to sharpen a chisel") && popText.includes("Breaks") && popText.includes("On purpose") && popText.includes("Found it"), popText.slice(0, 160));
+  step("popup shows the purpose with quick controls, the week, today and history",
+    ["Current purpose", "learn to sharpen a chisel", "Take a break", "Change purpose", "Done", "This week", "purposes done", "On purpose", "Breaks", "Found it"].every(t => popText.includes(t)), popText.slice(0, 200));
+  await pop.click('button:has-text("Done")');
+  await pop.click('button:text-is("Yes, I\'m done")');
+  await pop.waitForTimeout(500);
+  step("Done from the popup asks and ends the purpose", !(await store()).purpose && (await store()).history.pop().outcome === "yes");
 
   const opt = await ctx.newPage();
   opt.on("pageerror", e => errors.push("options: " + e.message));

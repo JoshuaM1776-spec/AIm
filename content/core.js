@@ -7,7 +7,8 @@
 let purpose = null;          // { text, searches, videos, limitMin, usedSec, timeUp, suspended (during a break) }
 let brk = null;              // { durationMin (null for one video), usedSec, oneVideoId }
 let stop = null;             // a limit that ran out: { kind, videoId (may finish), graceEndsAt }
-let status = { today: null, leisureLeftMin: null, totalReached: false };
+let status = { today: null, leisureLeftMin: null, totalReached: false, recent: [] };
+let breakEndsAt = 0;         // local estimate for the break countdown, re-synced with every status
 let settings = { homeCard: true, leisureMin: 60, graceMin: 15, avoid: {} };
 let searchPending = null;    // a search that doesn't seem to fit the purpose, waiting for "is this part of it?"
 let currentId = null;        // video on screen
@@ -18,6 +19,9 @@ const overridden = new Set();// videos from a hidden/warned channel you chose to
 let modal = null, notice = null, dropdown = null, playerCard = null;
 let endingHere = false;      // this tab ended the session (vs. the popup or another tab)
 let alive = true;            // false once the extension is reloaded or updated under this tab
+
+// The product name comes from manifest.json, so renaming is a one-file change (see README).
+const BRAND = chrome.runtime.getManifest().name;
 
 // Set up by early.js at document_start; a stand-in if Aim was loaded into an already-open tab.
 const early = typeof aimEarly !== "undefined" ? aimEarly : { done() {}, showFeed() {} };
@@ -48,6 +52,7 @@ function shutDown() {
   if (!alive) return;
   alive = false;
   clearInterval(tickTimer);
+  clearInterval(countdownTimer);
   pageObserver.disconnect();
   holding = false;
   early.done();
@@ -59,8 +64,9 @@ function shutDown() {
 // Icons are built with DOM calls rather than HTML strings, so YouTube's Trusted Types
 // policy can't block them. Each entry: [size, [tag, attributes], ...].
 const ICON = {
-  // The Aim mark: rings follow the text color (so they turn light in YouTube's dark theme), the play button and dart stay red.
-  logo: [20, ["path", {"d": "M19.26 8.93A9.26 9.26 0 1 1 14.57 4.24", "fill": "none", "stroke": "currentColor", "stroke-width": "2.6"}], ["path", {"d": "M15.43 10.44A5.15 5.15 0 1 1 13.53 8.33", "fill": "none", "stroke": "currentColor", "stroke-width": "2"}], ["path", {"d": "M8.91 10.49L13.34 12.7L8.91 15.23Z", "fill": "#f2131f", "stroke": "#f2131f", "stroke-width": "0.7", "stroke-linejoin": "round"}], ["path", {"d": "M13.65 9.86L17.29 6.23", "stroke": "#e00d1b", "stroke-width": "1.1"}], ["path", {"d": "M16.34 5.12L19.66 1.17Q20.6 .85 20.67 1.49L20.67 4.01L23.61 4.01Q23.92 4.49 23.45 4.96L21.08 6.86Q20.45 7.33 19.66 7.33L17.44 7.33L16.5 6.86Z", "fill": "#f2131f"}]],
+  // The mark (same drawing as icons/mark.svg): rings follow the text color, so they turn light in
+  // YouTube's dark theme; the bullseye and dart stay red.
+  logo: [20, ["path", {"d": "M19.26 8.93A9.26 9.26 0 1 1 14.57 4.24", "fill": "none", "stroke": "currentColor", "stroke-width": "2.6"}], ["path", {"d": "M15.43 10.44A5.15 5.15 0 1 1 13.53 8.33", "fill": "none", "stroke": "currentColor", "stroke-width": "2"}], ["circle", {"cx": "10.8", "cy": "12.7", "r": "2.2", "fill": "#f2131f"}], ["path", {"d": "M13.65 9.86L17.29 6.23", "stroke": "#e00d1b", "stroke-width": "1.1"}], ["path", {"d": "M16.34 5.12L19.66 1.17Q20.6 .85 20.67 1.49L20.67 4.01L23.61 4.01Q23.92 4.49 23.45 4.96L21.08 6.86Q20.45 7.33 19.66 7.33L17.44 7.33L16.5 6.86Z", "fill": "#f2131f"}]],
   chevron: [18, ["path", {"d": "M7 10l5 5 5-5", "fill": "none", "stroke": "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round"}]],
   right: [18, ["path", {"d": "M10 7l5 5-5 5", "fill": "none", "stroke": "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round"}]],
   pivot: [20, ["path", {"d": "M4 12a8 8 0 0 1 13.7-5.6M20 12a8 8 0 0 1-13.7 5.6M18 3v4h-4M6 21v-4h4", "fill": "none", "stroke": "currentColor", "stroke-width": "1.8", "stroke-linecap": "round", "stroke-linejoin": "round"}]],
@@ -100,8 +106,16 @@ function svgIcon(name) {
   return svg;
 }
 const icon = name => el("span", { class: "wp-icon" }, svgIcon(name));
+// The small "mark + name" line at the top of Aim's cards and dialogs.
+const brandLine = () => el("div", { class: "wp-dialog-brand" }, icon("logo"), BRAND);
 
 const fmtMin = sec => `${Math.max(0, Math.ceil(sec / 60))} min`;
+// 24:36, or 1:02:05 past an hour.
+function fmtClock(sec) {
+  sec = Math.max(0, Math.round(sec));
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = String(sec % 60).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${s}` : `${m}:${s}`;
+}
 
 // The purpose in effect right now (a purpose waits, suspended, while you're on a break).
 const activePurpose = () => (purpose && !purpose.suspended ? purpose : null);
@@ -137,8 +151,9 @@ function applyStatus(r) {
   purpose = r.purpose || null;
   brk = r.brk || null;
   stop = r.stop || null;
-  status = { today: r.today, leisureLeftMin: r.leisureLeftMin, totalReached: !!r.totalReached };
+  status = { today: r.today, leisureLeftMin: r.leisureLeftMin, totalReached: !!r.totalReached, recent: r.recent || status.recent };
   if (r.settings) settings = { ...settings, ...r.settings };
+  breakEndsAt = brk?.durationMin ? Date.now() + breakLeft(brk) * 1000 : 0;
 }
 
 const minLabel = m => (m >= 60 ? `${m / 60}h` : `${m}m`);

@@ -332,6 +332,35 @@ test("word check: searches that share a meaningful word continue the purpose", a
   assert.strictEqual(await fits("photographic composition"), true, "shared five-letter start");
 });
 
+// ---------- activity ----------
+test("recent purposes: newest first, distinct, without the current one", async () => {
+  const env = fresh();
+  for (const t of ["learn sourdough", "fix my truck", "Learn Sourdough", "improve my photography"]) {
+    await env.run(`startPurpose({ text: ${JSON.stringify(t)} })`);
+    await env.run(`finishPurpose("yes")`);
+  }
+  await env.run(`startPurpose({ text: "fix my truck" })`);
+  const recent = await env.run(`recentPurposes(${JSON.stringify(env.local.history)}, "fix my truck")`);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(recent)), ["improve my photography", "Learn Sourdough"]);
+});
+
+test("the week summary has 7 days of time and what came of the purposes", async () => {
+  const env = fresh();
+  await env.run(`startPurpose({ text: "learn sourdough" })`);
+  await env.ticks(6);
+  await env.run(`finishPurpose("yes")`);
+  await env.run(`startPurpose({ text: "fix my truck" })`);
+  await env.run(`finishPurpose("no")`);
+  await env.run(`startBreak({ minutes: 15 })`);
+  await env.ticks(3);
+  const w = await env.run(`weekSummary(${JSON.stringify(env.local.usage)}, ${JSON.stringify(env.local.history)})`);
+  assert.strictEqual(w.days.length, 7);
+  const today = w.days[6];
+  assert.strictEqual(Math.round(today.purpose), 60);
+  assert.strictEqual(Math.round(today.leisure), 30);
+  assert.deepStrictEqual([w.purposes, w.found], [2, 1]);
+});
+
 // ---------- settings and channels ----------
 test("settings are validated", async () => {
   const env = fresh();

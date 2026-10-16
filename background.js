@@ -17,15 +17,17 @@ async function ensureMigrated() {
 
 // What the popup and settings page show.
 async function fullState() {
-  const d = await chrome.storage.local.get(["saved", "history", "avoid"]);
-  return { ...(await getStatus()), saved: d.saved || [], history: d.history || [], avoid: d.avoid || {} };
+  const d = await chrome.storage.local.get(["saved", "history", "avoid", "usage"]);
+  const status = await getStatus(), history = d.history || [];
+  return { ...status, saved: d.saved || [], history, avoid: d.avoid || {},
+    week: weekSummary(d.usage || {}, history), recent: recentPurposes(history, status.purpose?.text) };
 }
 
 // What a YouTube tab needs to know.
 async function tabState() {
-  const { avoid = {} } = await chrome.storage.local.get("avoid");
+  const { avoid = {}, history = [] } = await chrome.storage.local.get(["avoid", "history"]);
   const status = await getStatus();
-  return { ...status, settings: { ...status.settings, avoid } };
+  return { ...status, settings: { ...status.settings, avoid }, recent: recentPurposes(history, status.purpose?.text) };
 }
 
 // Changes to stored data run one at a time (see serial in store.js).

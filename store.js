@@ -189,6 +189,32 @@ async function getStatus() {
   };
 }
 
+// ---------- activity ----------
+// The last few distinct purposes, newest first, for "Recent purposes".
+function recentPurposes(history, current, n = 5) {
+  const seen = new Set(current ? [current.toLowerCase()] : []), out = [];
+  for (const h of history.slice().reverse()) {
+    if (h.type !== "purpose" || !h.text || seen.has(h.text.toLowerCase())) continue;
+    seen.add(h.text.toLowerCase());
+    out.push(h.text);
+    if (out.length === n) break;
+  }
+  return out;
+}
+
+// The last 7 days: time per day, and what came of the purposes finished in them.
+function weekSummary(usage, history, now = new Date()) {
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+    days.push({ day: todayKey(d), label: d.toLocaleDateString(undefined, { weekday: "narrow" }), ...emptyDay(), ...(usage[todayKey(d)] || {}) });
+  }
+  const since = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6).getTime();
+  const done = history.filter(h => h.type === "purpose" && (h.endedAt || 0) >= since);
+  return { days, purposes: done.length, found: done.filter(h => h.outcome === "yes").length,
+    breaks: history.filter(h => h.type === "break" && (h.endedAt || 0) >= since).length };
+}
+
 // ---------- history ----------
 function archive(history, record) {
   history.push(record);
@@ -381,7 +407,7 @@ async function startBreak({ minutes, oneVideoId }) {
   if (left < 60) return { result: "error", message: "Today's leisure time is used up." };
   let durationMin = null;
   if (!oneVideoId) {
-    durationMin = Math.max(1, parseInt(minutes, 10) || 15);
+    durationMin = Math.min(600, Math.max(1, parseInt(minutes, 10) || 15));
     if (left !== Infinity) durationMin = Math.min(durationMin, Math.floor(left / 60));
   }
   const writes = {};

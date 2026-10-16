@@ -55,6 +55,15 @@ Aim should look like part of YouTube, not a separate product:
 - **Behavior:** Escape or a click outside closes menus and dialogs, except prompts that are holding a video for your decision.
 - The popup and settings page use the same palette and follow Chrome's light/dark mode.
 
+## Rebranding
+
+The name isn't final, so it lives in one place:
+
+- **Name and descriptions:** `name`, `description` and `action.default_title` in `manifest.json`. The YouTube pages, popup and settings page all read the name from there.
+- **Icons:** `icons/16|32|48|128.png` (dark mark, for light toolbars) and `icons/light/` (light mark, for dark toolbars). The source drawing is `icons/mark.svg`.
+- **The mark on YouTube** is the same drawing, built in code: `ICON.logo` in `content/core.js`.
+- `PRIVACY.md` and `STORE_LISTING.md` mention the name in text.
+
 ## Stored data
 
 Everything lives in `chrome.storage.local`. `schemaVersion` records the data format. When it changes, bump `SCHEMA_VERSION` in `store.js`, add a step to `migrateStorage()`, and add a test to `tests/store.test.js`.
@@ -62,3 +71,8 @@ Everything lives in `chrome.storage.local`. `schemaVersion` records the data for
 ## Testing
 
 See [TESTING.md](TESTING.md).
+
+## Privacy and release
+
+- [PRIVACY.md](PRIVACY.md): what Aim stores (all of it locally) and why.
+- [STORE_LISTING.md](STORE_LISTING.md): the Chrome Web Store listing, ready to paste, and what's still needed before submitting.

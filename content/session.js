@@ -9,10 +9,7 @@ const shorten = (t, n) => (t.length > n ? t.slice(0, n - 1).trimEnd() + "…" : 
 
 function chipContent() {
   if (status.totalReached) return { label: "Done for today", time: null };
-  if (brk) {
-    const left = breakLeft(brk);
-    return { label: "Break", time: brk.oneVideoId ? "1 video" : fmtMin(left) };
-  }
+  if (brk) return { label: "Break", time: brk.oneVideoId ? "1 video" : `${fmtClock((breakEndsAt - Date.now()) / 1000)} left` };
   const p = activePurpose();
   if (p) return { label: shorten(p.text, 28), time: p.timeUp ? "Time's up" : purposeLeft(p) !== null ? fmtMin(purposeLeft(p)) : null };
   return { label: "Set a purpose", time: null };
@@ -28,14 +25,24 @@ function renderChip() {
   chip.classList.toggle("wp-chip-beside-search", !!beside);
   const { label, time } = chipContent();
   // Only rebuild when something visible changed, so keyboard focus survives the timer.
-  const sig = `${label}|${time}`;
-  if (chip.dataset.sig === sig) return;
+  // A timed break's countdown ticks in place instead (see tickCountdown).
+  const sig = `${label}|${brk?.durationMin ? `break:${brk.id}` : time}`;
+  if (chip.dataset.sig === sig) return tickCountdown();
   chip.dataset.sig = sig;
-  chip.replaceChildren(el("button", {
-    class: "wp-pill", title: purpose?.text ? `Aim: ${purpose.text}` : "Aim", "aria-haspopup": "menu",
+  chip.replaceChildren(...[el("button", {
+    class: "wp-pill", title: purpose?.text ? `${BRAND}: ${purpose.text}` : BRAND, "aria-haspopup": "menu",
     onclick: e => { e.stopPropagation(); dropdown ? closeDropdown() : openDropdown(); }
   }, icon("logo"), el("span", { class: "wp-pill-label" }, label),
-    time ? el("span", { class: "wp-pill-time" }, time) : null, icon("chevron")));
+    time ? el("span", { class: "wp-pill-time" }, time) : null, icon("chevron")),
+    brk ? el("button", { class: "wp-icon-btn wp-chip-end", title: "End break", "aria-label": "End break", onclick: e => { e.stopPropagation(); endBreakNow(); } }, svgIcon("close")) : null]
+    .filter(Boolean)); // replaceChildren would print a null as the text "null"
+}
+
+// The break countdown, every second, without rebuilding the indicator.
+function tickCountdown() {
+  if (!brk?.durationMin) return;
+  const t = $("#wp-chip .wp-pill-time");
+  if (t) t.textContent = `${fmtClock((breakEndsAt - Date.now()) / 1000)} left`;
 }
 
 // ---------------- the menu ----------------
@@ -83,7 +90,7 @@ function purposeMenu() {
     el("div", { class: "wp-label" }, "Searches toward this purpose"),
     el("div", { class: "wp-muted" }, p.searches.slice(-4).map(s => s.q).join(" · "))) : null;
   return [head, time, searches, focusBlock(), breakBlock(), el("div", { class: "wp-menu-items" },
-    menuItem("check2", "Done", () => finishPurpose()),
+    menuItem("check2", "Done", askDone),
     menuItem("pivot", "Change purpose", () => openPivotDialog()),
     left !== null ? menuItem("clock", "Change time limit", openLimitDialog) : null,
     ...videoItems())].filter(Boolean);
@@ -130,6 +137,15 @@ async function extendBreakNow() {
 }
 
 // ---------------- dialogs ----------------
+// "Recent purposes": one tap fills the box (it still needs confirming).
+function recentList(input) {
+  const recent = (status.recent || []).filter(t => t !== purpose?.text);
+  if (!recent.length) return null;
+  return el("div", { class: "wp-recent" },
+    el("div", { class: "wp-label" }, "Recent purposes"),
+    ...recent.map(t => el("button", { class: "wp-recent-item", onclick: () => { input.value = t; input.focus(); } }, icon("clock"), el("span", { class: "wp-ellipsis" }, t))));
+}
+
 // Set a purpose from the indicator (the homepage card and searching do the same).
 function openStartDialog() {
   closeDropdown();
@@ -148,8 +164,8 @@ function openStartDialog() {
   };
   keepKeys(input, start);
   openModal(el("div", { class: "wp-dialog", role: "dialog", "aria-modal": "true" },
-    el("div", { class: "wp-dialog-brand" }, icon("logo"), "Aim"),
-    el("label", { class: "wp-q" }, "What brings you here?"), input, err,
+    brandLine(),
+    el("label", { class: "wp-q" }, "What brings you here?"), input, recentList(input), err,
     el("div", { class: "wp-actions" },
       el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Cancel"),
       el("button", { class: "wp-btn wp-btn-primary", onclick: start }, "Set purpose"))));
@@ -180,7 +196,7 @@ function openPivotDialog(prefill = "", { afterConfirm = null, video = null } = {
   openModal(el("div", { class: "wp-dialog", role: "dialog", "aria-modal": "true" },
     el("div", { class: "wp-title" }, "Change purpose"),
     el("div", { class: "wp-current" }, el("div", { class: "wp-label" }, "Current purpose"), el("div", { class: "wp-strong" }, purpose.text)),
-    el("label", { class: "wp-q wp-q-sm" }, "What would you like to focus on instead?"), input,
+    el("label", { class: "wp-q wp-q-sm" }, "What would you like to focus on instead?"), input, recentList(input),
     el("p", { class: "wp-muted" }, "Your searches, videos and time limit carry over."), err,
     el("div", { class: "wp-actions" },
       el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Cancel"),
@@ -237,6 +253,23 @@ async function addPurposeTime(minutes) {
 }
 
 // ---------------- Done ----------------
+// Done asks once, before ending: did you find what you were looking for? Or keep going.
+function askDone() {
+  closeDropdown();
+  const p = activePurpose() || purpose;
+  if (!p) return;
+  openModal(el("div", { class: "wp-dialog wp-done-dialog", role: "dialog", "aria-modal": "true" },
+    el("div", { class: "wp-done-check" }, icon("check")),
+    el("div", { class: "wp-title" }, "Purpose complete?"),
+    el("div", { class: "wp-muted" }, p.text),
+    el("label", { class: "wp-q wp-q-sm" }, "Did you find what you were looking for?"),
+    el("div", { class: "wp-done-actions" },
+      el("button", { class: "wp-btn wp-btn-primary", onclick: () => finishPurpose("yes") }, "Yes, I'm done"),
+      el("button", { class: "wp-btn wp-btn-tonal", onclick: () => finishPurpose("partly") }, "Partly"),
+      el("button", { class: "wp-btn wp-btn-tonal", onclick: () => finishPurpose("no") }, "Not really"),
+      el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Keep going"))));
+}
+
 // Done never leaves you inside a video: you land back on "What brings you here?",
 // where Aim asks once whether you found what you needed.
 async function finishPurpose(outcome) {
@@ -255,7 +288,7 @@ async function showReflection() {
   if (!s) return;
   await send({ type: "reflection-clear" });
   if (Date.now() - (s.endedAt || 0) > 10 * 60 * 1000) return; // ended long ago, e.g. from the popup
-  if (s.outcome) return toast("Done. Glad you found it.");
+  if (s.outcome) return toast(s.outcome === "yes" ? "Done. Glad you found it." : "Done. Noted for next time.");
   const mins = Math.max(1, Math.round(s.usedSec / 60));
   const pathText = s.path?.length > 1 ? s.path.map(p => p.text).join(" → ") : null;
   const rate = outcome => async () => {

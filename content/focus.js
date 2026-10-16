@@ -57,7 +57,7 @@ function renderFeedNote() {
   if (existing && existing.parentElement === host && existing.dataset.key === key) return;
   existing?.remove();
   host.prepend(el("div", { id: "wp-feed-note", class: "wp wp-home-card wp-feed-note", "data-key": key },
-    el("div", { class: "wp-dialog-brand" }, icon("logo"), "Aim"),
+    brandLine(),
     el("div", { class: "wp-title" }, p ? "Feeds are hidden while you're on purpose" : "Feeds are hidden until you choose"),
     el("div", { class: "wp-muted" }, p ? `Your purpose: ${p.text}` : "Search for what you came for, or take a break to browse."),
     el("div", { class: "wp-label wp-home-break-label" }, "Take a break to browse"),
@@ -70,7 +70,7 @@ function showShortsCard() {
   hold();
   const p = activePurpose();
   showPlayerCard(
-    el("div", { class: "wp-dialog-brand" }, icon("logo"), "Aim"),
+    brandLine(),
     el("div", { class: "wp-title" }, "Shorts are hidden while you're on purpose"),
     p ? el("div", { class: "wp-current" }, el("div", { class: "wp-label" }, "Your purpose"), el("div", { class: "wp-strong" }, p.text)) : null,
     el("div", { class: "wp-actions wp-actions-start" },

@@ -1,6 +1,9 @@
 // Aim — settings page. Reads and changes data through the background worker.
 
 const $ = id => document.getElementById(id);
+const BRAND = chrome.runtime.getManifest().name; // the product name lives in manifest.json
+for (const n of document.querySelectorAll("[data-brand]")) n.textContent = BRAND;
+document.title = `${BRAND} — Settings`;
 const send = msg => chrome.runtime.sendMessage(msg).catch(() => null);
 
 function toast(msg) {

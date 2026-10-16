@@ -20,6 +20,9 @@ const tickTimer = setInterval(async () => {
   react(await send({ type: "tick", seconds: TICK, video }));
 }, TICK * 1000);
 
+// The break countdown in the indicator, every second.
+const countdownTimer = setInterval(() => { if (alive) tickCountdown(); }, 1000);
+
 // Apply a new status and respond to what changed: a limit running out, a break ending,
 // a purpose set or finished from the popup or another tab.
 function react(r) {
@@ -34,7 +37,8 @@ function react(r) {
   const changed = (before.brk?.id !== brk?.id) || (before.purpose?.id !== purpose?.id) ||
     (before.purpose?.suspended !== purpose?.suspended) || (before.purpose?.timeUp !== purpose?.timeUp) ||
     (before.purpose?.text !== purpose?.text) || before.total !== status.totalReached;
-  if (breakEnded && !newStop) toast(purpose ? `Break's over. Back to: ${purpose.text}` : "Your break is over.");
+  // A break that ran out (not one you ended yourself) gets a card: back to your purpose, or more break.
+  if (breakEnded && newStop && ["break", "leisure"].includes(stop.kind) && !graced(currentId)) showBreakOver(stop.kind);
   if (changed || newStop) route();
   if (!currentId) return;
   if (newStop && graced(currentId)) return showGraceNotice();

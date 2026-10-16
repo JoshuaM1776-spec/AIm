@@ -92,16 +92,27 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 
 ### 8. Done
 
-- [ ] Menu → **Done** (or the results bar or homepage Done button) lands on the homepage and asks once: "Did you find what you needed?" Yes / Partly / No.
+- [ ] Menu → **Done** (or the results bar, homepage or time-up card) asks first: "Purpose complete? Did you find what you were looking for?" with Yes, I'm done / Partly / Not really / Keep going.
+- [ ] Keep going closes it. The others land on the homepage with a short confirmation.
 - [ ] Recent in the popup shows the purpose (with its pivots), minutes, number of videos and your answer.
 
-### 9. Timer accuracy
+### 9. Step D details
+
+- [ ] Homepage card: example chips (Learn cabinetmaking…) fill the search box when tapped.
+- [ ] Break chips everywhere include **Custom**: it becomes a minutes box with Start break.
+- [ ] During a timed break the indicator counts down by the second ("Break 14:59 left") with an × that ends the break.
+- [ ] When a break runs out with nothing playing: a "Break time is up" card offers Return to my purpose (or Set a purpose) and Extend break (15 min) while leisure time is left.
+- [ ] Change purpose and Set a purpose list your recent purposes; tapping one fills the box.
+- [ ] Popup: current purpose with a time ring (when there's a limit), Take a break / Change purpose / Done working inline; This week (7 bars: on purpose dark, breaks light) with totals and how many purposes found what you needed.
+- [ ] The mark has a red bullseye (no play triangle) everywhere: toolbar (light and dark), YouTube, popup, settings.
+
+### 10. Timer accuracy
 
 - [ ] **Two YouTube windows side by side**, both visible, for 2 minutes. Today's time grows by about 2 minutes, not 4.
 - [ ] **A video in a background tab** keeps counting while it plays.
 - [ ] Miniplayer: start a video, open the miniplayer, browse. Time keeps counting.
 
-### 10. Channels
+### 11. Channels
 
 - [ ] On a video: menu → Hide or warn about this channel → **Hide channel**. The toast confirms and the video keeps playing.
 - [ ] That channel's videos disappear from the homepage feed (during a break), search results and the sidebar.
@@ -109,7 +120,7 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] **Warn me** on another channel: its videos ask before playing unless you have a purpose.
 - [ ] Settings → Advanced lists both. Switching Hide/Warn or removing takes effect immediately.
 
-### 11. Sync and reload
+### 12. Sync and reload
 
 - [ ] Done from the popup while a YouTube tab is on a video: that tab shows the "What brings you here?" card on the player within a few seconds.
 - [ ] Two YouTube tabs: starting a break or setting a purpose in one updates the other's indicator, and a card waiting on the other tab's player clears if the new state allows its video.
@@ -123,4 +134,3 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - Aim changes YouTube's own autoplay switch. If Aim is removed during a purpose, autoplay stays off until you switch it back on.
 - Hiding channels depends on the channel link in each video tile. Tiles that only link the channel by ID, not by @handle, may not be matched.
 - Miniplayer time counting relies on YouTube's `ytd-miniplayer` element and needs checking on real YouTube.
-- The logo still has the red play triangle in the center (replaced in step D).

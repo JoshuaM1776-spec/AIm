@@ -173,6 +173,19 @@ html[dark] .wp {
 .wp-menu-first { border-top: 0; }
 .wp-home-break-label { margin-top: 12px; }
 
+/* ---------- step D pieces ---------- */
+.wp-chip-end { width: 32px; height: 32px; margin-left: 2px; color: var(--wp-muted); }
+.wp-custom-min { width: 72px; padding: 6px 8px; }
+.wp-break-pick .wp-chips { align-items: center; }
+.wp-recent { display: flex; flex-direction: column; gap: 2px; }
+.wp-recent-item { display: flex; align-items: center; gap: 12px; padding: 6px 8px; margin: 0 -8px; border: 0; border-radius: 8px; background: none; font-size: 14px; text-align: left; min-width: 0; }
+.wp-recent-item:hover { background: var(--wp-hover); }
+.wp-recent-item .wp-icon { color: var(--wp-muted); }
+.wp-done-dialog { align-items: center; text-align: center; width: 420px; }
+.wp-done-check { color: var(--wp-text); transform: scale(1.6); margin: 8px 0 4px; }
+.wp-done-check svg path { stroke: var(--wp-raised); }
+.wp-done-actions { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 4px; }
+
 /* ---------- notices (bottom of the page) and toasts (YouTube snackbar) ---------- */
 .wp-notice {
   position: fixed; z-index: 2350; left: 50%; bottom: 24px; transform: translateX(-50%);
