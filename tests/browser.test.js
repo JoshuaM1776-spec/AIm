@@ -4,7 +4,14 @@
 // Optional: PLAYWRIGHT=/path/to/playwright CHROMIUM_PATH=/path/to/chrome
 const { chromium } = require(process.env.PLAYWRIGHT || "playwright");
 const path = require("path"), fs = require("fs"), os = require("os");
-const EXT = path.join(__dirname, "..");
+// A copy of the extension with Aim Plus switched off (empty config.js), so this tests Aim Free exactly
+// as a Free-only build behaves and never contacts a real server. tests/plus.test.mjs covers Plus.
+const EXT = (() => {
+  const root = path.join(__dirname, ".."), dir = fs.mkdtempSync(path.join(os.tmpdir(), "aim-free-"));
+  for (const f of fs.readdirSync(root)) if (!["tests", "supabase", "docs", "tools", ".git"].includes(f)) fs.cpSync(path.join(root, f), path.join(dir, f), { recursive: true });
+  fs.writeFileSync(path.join(dir, "config.js"), 'self.AIM_PLUS = { supabaseUrl: "", supabaseAnonKey: "" };');
+  return dir;
+})();
 
 const page = (body, title = "YouTube") => `<!doctype html><html><head><title>${title}</title></head><body>
 <ytd-masthead><div id="end"></div></ytd-masthead>

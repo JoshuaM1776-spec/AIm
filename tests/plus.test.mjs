@@ -73,7 +73,7 @@ const base = `http://127.0.0.1:${server.address().port}`;
 
 // ---------- the extension, configured for the stand-in ----------
 const ext = fs.mkdtempSync(path.join(os.tmpdir(), "aim-ext-"));
-for (const f of fs.readdirSync(ROOT)) if (!["tests", "supabase", ".git"].includes(f)) fs.cpSync(path.join(ROOT, f), path.join(ext, f), { recursive: true });
+for (const f of fs.readdirSync(ROOT)) if (!["tests", "supabase", "docs", "tools", ".git"].includes(f)) fs.cpSync(path.join(ROOT, f), path.join(ext, f), { recursive: true });
 fs.writeFileSync(path.join(ext, "config.js"), `self.AIM_PLUS = { supabaseUrl: ${JSON.stringify(base)}, supabaseAnonKey: "anon-test-key" };`);
 
 const userData = fs.mkdtempSync(path.join(os.tmpdir(), "aim-"));

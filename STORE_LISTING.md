@@ -68,8 +68,9 @@ Don't show YouTube's logo prominently in screenshots or promos, and don't make t
 
 ## Before submitting
 
+- [ ] **Decide Free-only or with Plus.** `config.js` now points at the Aim Plus project. For a Free-only release, empty both values first. For a release with Plus, update PRIVACY.md and the privacy answers above.
 - [ ] Run `TESTING.md` on real YouTube (light and dark, wide and narrow windows).
 - [ ] Confirm the logo (`icons/`, see README → Rebranding). The name is Aim.
 - [ ] Fill in the contact email in `PRIVACY.md` and publish it.
-- [ ] Build the zip without `tests/`: `git archive --format=zip -o aim.zip HEAD ':!tests' ':!supabase' ':!docs'`.
+- [ ] Build the zip without `tests/`: `git archive --format=zip -o aim.zip HEAD ':!tests' ':!supabase' ':!docs' ':!tools'`.
 - [ ] Developer account: one-time $5 registration fee, and verify a contact email.
