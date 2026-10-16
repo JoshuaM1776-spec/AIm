@@ -1,14 +1,11 @@
 {
   "manifest_version": 3,
   "name": "Aim",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "minimum_chrome_version": "116",
-  "description": "Watch YouTube on purpose. Set a goal, stay focused, pivot when you choose, and save the rest for later.",
+  "description": "Use YouTube on purpose. Your search becomes your purpose, Aim keeps you on it, and breaks are a deliberate choice.",
   "permissions": [
     "storage"
-  ],
-  "host_permissions": [
-    "https://api.anthropic.com/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -37,10 +34,10 @@
         "content/gate.js",
         "content/channels.js",
         "content/focus.js",
-        "content/recs.js",
         "content/session.js",
         "content/home.js",
         "content/search.js",
+        "content/upnext.js",
         "content/main.js"
       ],
       "run_at": "document_idle"

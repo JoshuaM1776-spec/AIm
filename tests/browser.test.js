@@ -49,7 +49,9 @@ const HOME = page(`<ytd-browse page-subtype="home"><div id="primary"><ytd-rich-g
 const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   <ytd-reel-shelf-renderer id="shortsShelf">Shorts shelf</ytd-reel-shelf-renderer>
   <ytd-video-renderer id="shortItem"><a href="/shorts/s9">A short</a></ytd-video-renderer>
-  <ytd-video-renderer id="normalItem"><a href="/watch?v=n1">A video</a></ytd-video-renderer>
+  <ytd-video-renderer id="normalItem"><a id="video-title" href="/watch?v=n1">Fixing a leaky faucet</a><ytd-channel-name><a href="/@plumb">Plumb Co</a></ytd-channel-name></ytd-video-renderer>
+  <ytd-video-renderer><a id="video-title" href="/watch?v=n2">Faucet cartridge swap</a><ytd-channel-name><a href="/@fixit">Fix It</a></ytd-channel-name></ytd-video-renderer>
+  <ytd-playlist-renderer><a href="/watch?v=p0&list=PLfaucet">Faucet playlist</a></ytd-playlist-renderer>
 </ytd-section-list-renderer></div></ytd-search>`);
 
 (async () => {
@@ -87,7 +89,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
   const text = async sel => ((await p.$(sel)) ? (await p.textContent(sel)).replace(/\s+/g, " ") : "");
 
-  step("service worker started and migrated", (await store()).schemaVersion === 3);
+  step("service worker started and migrated", (await store()).schemaVersion === 4);
 
   const p = await ctx.newPage();
   p.on("pageerror", e => errors.push("page: " + e.message));
@@ -136,6 +138,14 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("with a purpose: autoplay switched off", (await p.getAttribute(".ytp-autonav-toggle-button", "aria-checked")) === "false" &&
     (await p.evaluate(() => localStorage.getItem("aim-autoplay-restore"))) === "1");
   step("with a purpose: Shorts link hidden", await p.isHidden("#guideShorts"));
+  step("Up next shows what the purpose has so far (nothing searched yet)", (await text("#wp-upnext")).includes("Search toward your purpose"));
+  await p.evaluate(() => ytNav("/watch?v=elsewhere"));
+  await p.waitForSelector(".wp-player-card", { timeout: 6000 });
+  card = await text(".wp-player-card");
+  step("a video your searches didn't find is not part of the purpose", card.includes("Not part of your purpose") && card.includes("Change purpose") && !/watch anyway/i.test(card), card.slice(0, 140));
+  await p.evaluate(() => ytNav("/watch?v=bbb"));
+  await p.waitForTimeout(1500);
+  step("going back to the purpose's video plays it", !(await p.$(".wp-player-card")));
 
   // ---------- the menu ----------
   await p.click("#wp-chip .wp-pill");
@@ -204,6 +214,33 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("a search with no purpose becomes the purpose (no time limit)", st.purpose?.text === "how to fix a leaky faucet" && st.purpose.limitMin === null && st.purpose.searches[0].q === "how to fix a leaky faucet");
   step("results bar shows the purpose and Done", (await text("#wp-results-bar")).includes("how to fix a leaky faucet") && (await text("#wp-results-bar")).includes("Done"));
   step("in results: Shorts shelf and Shorts hidden, videos shown", (await p.isHidden("#shortsShelf")) && (await p.isHidden("#shortItem")) && (await p.isVisible("#normalItem")));
+  await p.waitForTimeout(800);
+  st = await store();
+  step("the search's results become part of the purpose", ["n1", "n2"].every(id => st.purpose.allowed.some(v => v.id === id)) &&
+    st.purpose.allowedLists.includes("PLfaucet") && !st.purpose.allowed.some(v => v.id === "s9"), JSON.stringify(st.purpose.allowed.map(v => v.id)));
+  await p.goto("https://www.youtube.com/watch?v=n1");
+  await p.waitForTimeout(2000);
+  step("a result plays without a card", !(await p.$(".wp-player-card")));
+  const upnext = await text("#wp-upnext");
+  step("Up next from your search lists the other results", upnext.includes("Up next from your search") && upnext.includes("Faucet cartridge swap") && !upnext.includes("Fixing a leaky faucet"), upnext.slice(0, 120));
+  await p.goto("https://www.youtube.com/watch?v=zz1&list=PLfaucet");
+  await p.waitForTimeout(2000);
+  step("a video in a playlist from the results plays", !(await p.$(".wp-player-card")));
+  await p.goto("https://www.youtube.com/results?search_query=faucet+cartridge+replacement");
+  await p.waitForSelector("#wp-results-bar", { timeout: 5000 });
+  await p.waitForTimeout(500);
+  step("a related search continues silently", !(await text("#wp-results-bar")).includes("part of your purpose?") &&
+    (await store()).purpose.searches.some(s => s.q === "faucet cartridge replacement"));
+  await p.goto("https://www.youtube.com/results?search_query=gaming+laptop+deals");
+  await p.waitForSelector("#wp-results-bar", { timeout: 5000 });
+  await p.waitForTimeout(500);
+  step("an unrelated search asks first, results hidden", (await text("#wp-results-bar")).includes("Is “gaming laptop deals” part of your purpose?") &&
+    await p.evaluate(() => document.documentElement.classList.contains("wp-search-pending")));
+  await p.click('#wp-results-bar button:has-text("Yes, it\'s part of it")');
+  await p.waitForTimeout(800);
+  st = await store();
+  step("answering Yes shows the results and adds the search", !(await p.evaluate(() => document.documentElement.classList.contains("wp-search-pending"))) &&
+    st.purpose.searches.some(s => s.q === "gaming laptop deals"));
   await p.goto("https://www.youtube.com/shorts/s9");
   await p.waitForSelector("#shorts-player .wp-player-card", { timeout: 6000 });
   step("opening a Short during a purpose asks first", (await text(".wp-player-card")).includes("Shorts are hidden while you're on purpose"));
@@ -241,6 +278,8 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await pop.goto(`chrome-extension://${extId}/popup.html`);
   await pop.waitForTimeout(500);
   const popText = (await pop.textContent("body")).replace(/\s+/g, " ");
+  const optText = await (async () => { const o = await ctx.newPage(); await o.goto(`chrome-extension://${extId}/options.html`); await o.waitForTimeout(400); const t = await o.textContent("body"); await o.close(); return t; })();
+  step("no AI, no API key anywhere in settings", !/API key|Claude|AI check/i.test(optText));
   step("popup shows the purpose, today's time and history", popText.includes("learn to sharpen a chisel") && popText.includes("Breaks") && popText.includes("On purpose") && popText.includes("Found it"), popText.slice(0, 160));
 
   const opt = await ctx.newPage();

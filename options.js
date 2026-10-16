@@ -30,12 +30,9 @@ async function render() {
     if (![...sel.options].some(o => o.value === String(S[k]))) sel.append(new Option(`${S[k]} minutes`, S[k]));
     sel.value = String(S[k]);
   }
-  $("recMode").value = S.recMode;
   const m = s => Math.floor(s / 60);
   $("leisureNote").textContent = `Breaks share this allowance. When it's used up, breaks are done for the day. Used today: ${m(t.leisure)} min.`;
   $("today").textContent = `Today so far: ${m(t.purpose)} min on purpose, ${m(t.leisure)} min on breaks, ${m(t.purpose + t.leisure + t.other)} min on YouTube in all.`;
-  if (document.activeElement !== $("key")) $("key").value = st.apiKey;
-  if (document.activeElement !== $("model")) $("model").value = st.model;
 
   const av = $("avoid");
   av.replaceChildren();
@@ -68,10 +65,5 @@ $("homeCard").onchange = () => setSetting("homeCard", $("homeCard").checked);
 for (const k of TOGGLES) $(k).onchange = () => setSetting(k, $(k).checked);
 if (location.hash === "#advanced") { $("advanced").open = true; $("advanced").scrollIntoView(); }
 for (const k of ["leisureMin", "graceMin", "totalMin", "purposeLimitMin"]) $(k).onchange = () => setSetting(k, parseInt($(k).value, 10));
-$("recMode").onchange = () => setSetting("recMode", $("recMode").value);
-$("saveKey").onclick = async () => {
-  const r = await send({ type: "ai-key", apiKey: $("key").value, model: $("model").value });
-  toast(r?.result === "applied" ? "Saved." : "Couldn't save that.");
-};
 
 render();

@@ -12,9 +12,9 @@
 //   break length · daily leisure allowance (hard) · purpose time limit · daily YouTube total (hard).
 // When one runs out mid-video, that video may finish within the grace period (default 15 min).
 
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 const DEFAULT_SETTINGS = {
-  homeCard: true, recMode: "mark", leisureMin: 60, graceMin: 15, totalMin: 0, purposeLimitMin: 0,
+  homeCard: true, leisureMin: 60, graceMin: 15, totalMin: 0, purposeLimitMin: 0,
   // Distractions, reduced whenever you're not on a break (see content.css and content/focus.js).
   hideShorts: true, hideRecs: true, hideFeeds: true, noAutoplay: true
 };
@@ -22,7 +22,6 @@ const GRACE_CHOICES = [0, 5, 10, 15, 30];
 const minutesSetting = max => v => Number.isInteger(v) && v >= 0 && v <= max;
 const SETTING_RULES = {
   homeCard: v => typeof v === "boolean",
-  recMode: v => ["off", "mark", "hide"].includes(v),
   leisureMin: minutesSetting(24 * 60),   // 0 = no daily allowance
   graceMin: v => GRACE_CHOICES.includes(v),
   totalMin: minutesSetting(24 * 60),     // 0 = no daily total
@@ -82,6 +81,7 @@ async function migrateStorage() {
   // Version 1 only stamped the version, so 0 and 1 hold the same Waypoint 0.5 data.
   if (schemaVersion < 2) await migrateTo2(await chrome.storage.local.get(null));
   if (schemaVersion < 3) await migrateTo3(await chrome.storage.local.get(null));
+  if (schemaVersion < 4) await migrateTo4(await chrome.storage.local.get(null));
   await chrome.storage.local.set({ schemaVersion: SCHEMA_VERSION });
 }
 
@@ -97,7 +97,7 @@ async function migrateTo2(old) {
     usage[day] = typeof u === "number" ? u : (u.leisure || 0) + (u.purposeful || 0);
   const toFocus = s => (s && s.mode === "quick" ? { ...s, mode: "focus" } : s);
   await chrome.storage.local.set({
-    settings: { homeCard: old.homeCard !== false, recMode: SETTING_RULES.recMode(old.recMode) ? old.recMode : "mark" },
+    settings: { homeCard: old.homeCard !== false },
     avoid, usage, session: toFocus(old.session || null),
     sessions: (old.sessions || []).map(toFocus)
   });
@@ -110,7 +110,7 @@ async function migrateTo2(old) {
 // allowance and grace period. Usage is split into purpose / leisure / other.
 async function migrateTo3(old) {
   const s2 = old.settings || {};
-  const settings = { ...DEFAULT_SETTINGS, homeCard: s2.homeCard !== false, recMode: SETTING_RULES.recMode(s2.recMode) ? s2.recMode : "mark" };
+  const settings = { ...DEFAULT_SETTINGS, homeCard: s2.homeCard !== false };
   const s = old.session;
   let purpose = null, brk = null;
   if (s && s.mode !== "explore" && s.purpose) {
@@ -133,6 +133,16 @@ async function migrateTo3(old) {
         searches: (r.searches || []).map(q => ({ q, at: r.startedAt })), videos: [] });
   await chrome.storage.local.set({ settings, purpose, brk, stop: null, usage, history });
   await chrome.storage.local.remove(["session", "sessions", "reminderDay"]);
+}
+
+// 4: Aim Free uses no AI. Purposes are kept by what your own searches found (purpose.allowed),
+// so the personal API key, its model and the AI recommendation setting are removed.
+async function migrateTo4(old) {
+  const settings = { ...DEFAULT_SETTINGS, ...(old.settings || {}) };
+  delete settings.recMode;
+  const purpose = old.purpose ? { allowed: [], allowedLists: [], ...old.purpose } : null;
+  await chrome.storage.local.set({ settings, purpose });
+  await chrome.storage.local.remove(["apiKey", "model"]);
 }
 
 // ---------- settings ----------
@@ -199,12 +209,13 @@ function newPurpose(text, search, limitMin) {
   return {
     id: uid(), text, vague: isVague(text), startedAt: now, limitMin: limitMin > 0 ? limitMin : null,
     usedSec: 0, lastCountAt: 0, timeUp: false, suspended: false,
-    searches: search ? [{ q: clip(search, 200), at: now }] : [], path: [{ text, at: now }], pivots: 0, videos: []
+    searches: search ? [{ q: clip(search, 200), at: now }] : [], path: [{ text, at: now }], pivots: 0, videos: [],
+    allowed: [], allowedLists: []
   };
 }
 
 // Starting a purpose ends any break (the break is what you were doing instead).
-async function startPurpose({ text, search, limitMin }) {
+async function startPurpose({ text, search, limitMin, video }) {
   text = clip(text, 300);
   if (text.length < 2) return { result: "error", message: "Write what you're here for." };
   const s = await readAll(), settings = await getSettings();
@@ -213,15 +224,16 @@ async function startPurpose({ text, search, limitMin }) {
   if (s.purpose) s.history = archive(s.history, purposeRecord(s.purpose, null));
   const limit = limitMin === undefined ? settings.purposeLimitMin : parseInt(limitMin, 10) || 0;
   const purpose = newPurpose(text, search, limit);
+  if (video?.id) allow(purpose, [video], [], search || "");
   await chrome.storage.local.set({ ...writes, purpose, history: s.history, stop: s.stop?.kind === "total" ? s.stop : null });
   return { result: "applied", purpose };
 }
 
 // A pivot changes purpose and keeps what it has: searches, videos, the time limit.
 // Pass limitMin to set a new limit from now (0 removes it).
-async function pivotPurpose(text, limitMin) {
+async function pivotPurpose(text, limitMin, video) {
   const s = await readAll();
-  if (!s.purpose) return startPurpose({ text, limitMin });
+  if (!s.purpose) return startPurpose({ text, limitMin, video });
   text = clip(text, 300);
   if (text.length < 2) return { result: "error", message: "Write your new purpose." };
   const p = s.purpose;
@@ -230,6 +242,7 @@ async function pivotPurpose(text, limitMin) {
   p.pivots += 1;
   p.path.push({ text, at: Date.now() });
   if (limitMin !== undefined && limitMin !== null) setLimitFromNow(p, parseInt(limitMin, 10) || 0);
+  if (video?.id) allow(p, [video], [], "");
   p.timeUp = !!p.limitMin && p.usedSec >= p.limitMin * 60;
   const stop = s.stop?.kind === "purpose" && !p.timeUp ? null : s.stop;
   await chrome.storage.local.set({ purpose: p, stop });
@@ -275,6 +288,66 @@ async function addSearch(query) {
   s.purpose.searches = s.purpose.searches.slice(-50);
   await chrome.storage.local.set({ purpose: s.purpose });
   return { result: "applied", purpose: s.purpose };
+}
+
+// ---------- what a purpose allows ----------
+// During a purpose you watch what your own searches for it found: their results, playlists
+// among them, and the video you set the purpose from. No AI decides; you chose the searches.
+const MAX_ALLOWED = 500;
+function allow(p, videos, lists, query) {
+  p.allowed ||= [];
+  p.allowedLists ||= [];
+  const known = new Set(p.allowed.map(v => v.id));
+  for (const v of videos) {
+    const id = clip(v.id, 20);
+    if (!id || known.has(id)) continue;
+    known.add(id);
+    p.allowed.push({ id, title: clip(v.title, 300), channel: clip(v.channel, 200), q: clip(query, 200), at: Date.now() });
+  }
+  p.allowed = p.allowed.slice(-MAX_ALLOWED);
+  for (const l of lists) { const id = clip(l, 64); if (id && !p.allowedLists.includes(id)) p.allowedLists.push(id); }
+  p.allowedLists = p.allowedLists.slice(-50);
+}
+
+async function allowVideos({ query, videos, lists }) {
+  const s = await readAll();
+  if (!s.purpose) return { result: "error", message: "No purpose set." };
+  allow(s.purpose, Array.isArray(videos) ? videos.slice(0, 100) : [], Array.isArray(lists) ? lists.slice(0, 20) : [], query);
+  await chrome.storage.local.set({ purpose: s.purpose });
+  return { result: "applied", count: s.purpose.allowed.length };
+}
+
+// ---------- does a new search continue the purpose? ----------
+// A word check, no AI: the search continues your purpose if it shares a meaningful word with
+// the purpose or an earlier search for it ("sourdough starter" → "starter feeding ratio").
+// Otherwise Aim asks once. Filler words don't count, and simple word endings are ignored.
+const FILLER = new Set(("a an the and or but of to in on for with by at from as is are was were be been how what why when where which who whom " +
+  "do does did i me my mine you your it its this that these those can could should would will vs versus about into onto than then there their " +
+  "best top easy simple quick guide tutorial tutorials video videos full complete step steps learn learning make making understand understanding " +
+  "find get way ways tips tricks basics basic beginner beginners new explained explain introduction intro part review using use").split(" "));
+
+function stem(w) {
+  if (w.length > 5 && w.endsWith("ing")) return w.slice(0, -3);
+  if (w.length > 4 && w.endsWith("ies")) return w.slice(0, -3) + "y";
+  if (w.length > 4 && /(s|x|z|ch|sh)es$/.test(w)) return w.slice(0, -2);
+  if (w.length > 4 && w.endsWith("ed")) return w.slice(0, -2);
+  if (w.length > 3 && w.endsWith("s") && !w.endsWith("ss")) return w.slice(0, -1);
+  return w;
+}
+function meaningfulWords(text) {
+  return (String(text || "").toLowerCase().match(/[\p{L}\p{N}]+/gu) || [])
+    .filter(w => w.length > 1 && !FILLER.has(w)).map(stem);
+}
+function searchFits(purpose, query) {
+  const q = meaningfulWords(query);
+  if (!q.length) return true; // nothing to judge by
+  const known = [purpose.text, ...(purpose.searches || []).map(s => s.q)].flatMap(meaningfulWords);
+  const same = (a, b) => a === b || (a.length >= 5 && b.length >= 5 && a.slice(0, 5) === b.slice(0, 5));
+  return q.some(w => known.some(k => same(w, k)));
+}
+async function checkSearch(query) {
+  const s = await readAll();
+  return { fits: !s.purpose || searchFits(s.purpose, clip(query, 200)) };
 }
 
 // Done. The record is also left as a reflection for the next YouTube page to show.

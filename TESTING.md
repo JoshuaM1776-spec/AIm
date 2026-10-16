@@ -17,19 +17,20 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 
 1. `chrome://extensions` → Developer mode on → **Load unpacked** → choose this folder.
 2. Open the service worker console (the "service worker" link on the extension card) and keep it open to catch errors.
-3. Run the checklist once **without** an API key, then once **with** a key (Settings → AI check).
+3. Nothing to configure: Aim needs no account or key.
 4. Start from a clean profile, or clear data: service worker console → `chrome.storage.local.clear()`, then reload the extension.
 
 ### 1. Install, upgrade and settings
 
 - [ ] Extension loads with no errors on the card.
-- [ ] Service worker console: `chrome.storage.local.get("schemaVersion")` returns `{ schemaVersion: 3 }`.
+- [ ] Service worker console: `chrome.storage.local.get("schemaVersion")` returns `{ schemaVersion: 4 }`.
 - [ ] **Upgrade from 0.9** (same folder, then reload):
   - a running Focus session becomes your purpose, without its timer;
   - an Explore session becomes a break;
   - history, saved videos and channels are kept.
 - [ ] Popup shows the current purpose or break, Saved for later, Today (on purpose / breaks / all YouTube) and Recent.
-- [ ] Settings shows only "Replace the homepage feed" and "Daily leisure time", plus a collapsed **Advanced** section. Every change saves instantly.
+- [ ] Settings shows only "Replace the homepage feed" and "Daily leisure time", plus a collapsed **Advanced** section. Every change saves instantly. There's no API key or AI setting anywhere.
+- [ ] **Upgrade from 0.11:** a stored API key is deleted, and a running purpose keeps working (search again to fill its list).
 - [ ] No mentions of Focus/Explore modes, pausing a session, strictness or the daily reminder anywhere.
 
 ### 2. Homepage and design
@@ -51,11 +52,15 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 ### 4. Purpose
 
 - [ ] Search with no purpose: your search becomes the purpose, with no time limit. The results bar shows it with Edit and **Done**.
-- [ ] Homepage card with a key: a conversational query may offer "Suggested search". The purpose stays as typed either way.
-- [ ] Further searches stay under the purpose (indicator menu → "Searches toward this purpose").
-- [ ] The indicator menu shows: your purpose (click to change it), "No time limit · Set one", Take a break, Done, Change purpose, Save, Hide or warn.
-- [ ] With a key: an unrelated video shows "Not part of your purpose" on the player, with Back to my purpose / Change purpose / Save for later and break options. An unrelated search shows a notice with Back / Change purpose.
-- [ ] Change purpose keeps your searches, videos and time limit (see Recent in the popup after Done).
+- [ ] Click a result: it plays. The sidebar shows **Up next from your search** with the other results (thumbnails, titles, channels) instead of YouTube's recommendations.
+- [ ] Scroll the results further, then open one from far down: it plays too (results are captured as they load).
+- [ ] A playlist in the results: its videos play.
+- [ ] Open a video your searches didn't find (a link in a description, a channel page, a pasted URL): "Not part of your purpose" on the player, with Back, a search box, Change purpose, Save for later and break options. There's no "watch anyway".
+- [ ] **Change purpose** from that card: the new purpose includes the video, which then plays.
+- [ ] A related search ("sourdough starter" → "starter feeding schedule") continues silently.
+- [ ] An unrelated one ("gaming laptop deals") hides its results behind "Is … part of your purpose?". **Yes** shows them and they become watchable. **Change purpose** or a break also work.
+- [ ] Set a purpose from the indicator on a video page: that video plays. From the homepage, with no search yet: any video asks you to search first.
+- [ ] The indicator menu shows your purpose, "No time limit · Set one", what's hidden, Take a break, Done, Change purpose, Save, Hide or warn.
 
 ### 5. Breaks during a purpose
 
@@ -104,12 +109,7 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] **Warn me** on another channel: its videos ask before playing unless you have a purpose.
 - [ ] Settings → Advanced lists both. Switching Hide/Warn or removing takes effect immediately.
 
-### 11. Recommendations (key required, until step C)
-
-- [ ] With a purpose on a watch page, sidebar videos get "Matches your purpose" / "Related perspective" / "Off purpose" labels after a few seconds.
-- [ ] Moving to another video clears old labels. No label sits on the wrong video.
-
-### 12. Sync and reload
+### 11. Sync and reload
 
 - [ ] Done from the popup while a YouTube tab is on a video: that tab shows the "What brings you here?" card on the player within a few seconds.
 - [ ] Two YouTube tabs: starting a break or setting a purpose in one updates the other's indicator, and a card waiting on the other tab's player clears if the new state allows its video.
@@ -117,7 +117,8 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 
 ## Known issues (not regressions)
 
-- Purpose checks, sidebar labels and the search suggestion still need your own Claude API key. Step C replaces them with checks that need no AI.
+- The word check knows words, not meanings: synonyms ("tap" vs "faucet") get the question once; answering Yes teaches it that search.
+- Up next links reload the page instead of using YouTube's in-page navigation, so they're a little slower than YouTube's own.
 - Hiding the Shorts menu link matches YouTube's English label ("Shorts") as well as its link; other languages rely on the link alone.
 - Aim changes YouTube's own autoplay switch. If Aim is removed during a purpose, autoplay stays off until you switch it back on.
 - Hiding channels depends on the channel link in each video tile. Tiles that only link the channel by ID, not by @handle, may not be matched.

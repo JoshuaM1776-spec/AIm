@@ -43,12 +43,24 @@ function react(r) {
   if (newStop || breakEnded || purposeEnded || (changed && (holding || playerCard))) regate(currentId);
 }
 
+// YouTube keeps adding to the page (more results as you scroll, the sidebar after a video
+// loads). Catch up shortly after: hide hidden channels, capture new results, fill Up next.
+let pageTimer = null;
+const pageObserver = new MutationObserver(() => {
+  if (pageTimer) return;
+  pageTimer = setTimeout(() => {
+    pageTimer = null;
+    if (hiddenKeys().size) applyHidden();
+    captureResults();
+    renderUpNext();
+  }, 400);
+});
+
 // Keep in sync with changes made from the popup, settings or another tab.
 let syncTimer = null;
 chrome.storage.onChanged.addListener((ch, area) => {
   if (area !== "local" || !alive) return;
   if (ch.avoid) { settings.avoid = ch.avoid.newValue || {}; applyHidden(); }
-  if (ch.apiKey) settings.hasKey = !!(ch.apiKey.newValue || "").trim();
   if (!(ch.purpose || ch.brk || ch.stop || ch.settings)) return;
   // Several keys change together; read the whole status once they've settled.
   clearTimeout(syncTimer);
@@ -58,8 +70,9 @@ chrome.storage.onChanged.addListener((ch, area) => {
 // ---------------- navigation ----------------
 function route() {
   if (location.pathname === "/") renderHome(); else removeHome();
-  if (location.pathname === "/results") onSearch(new URL(location.href).searchParams.get("search_query") || "");
-  else $("#wp-results-bar")?.remove();
+  if (location.pathname === "/results") onSearch(searchQuery());
+  else { $("#wp-results-bar")?.remove(); setSearchPending(null); }
+  renderUpNext();
 }
 
 // yt-navigate-finish fires for every in-app navigation, back and forward included.
@@ -73,7 +86,6 @@ function onNavigate() {
   if (id === currentId) return;
   currentId = id;
   currentInfo = null;
-  clearRecLabels();
   closeModal();
   closePlayerCard();
   if (notice && !notice.dataset.keep) closeNotice();
@@ -92,7 +104,7 @@ async function init() {
   renderChip();
   syncFocus();
   showReflection();
-  hideObserver.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["href"] });
+  pageObserver.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["href"] });
   window.addEventListener(YT.navigateEvent, onNavigate);
   onNavigate(); // holds a new video itself, so the early hold can stop
   early.done();

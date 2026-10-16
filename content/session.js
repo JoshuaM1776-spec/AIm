@@ -136,7 +136,9 @@ function openStartDialog() {
   const input = el("textarea", { class: "wp-input", rows: "2", placeholder: "What do you want to find or learn?" });
   const err = el("div", { class: "wp-error" });
   const start = async () => {
-    const r = await send({ type: "purpose-start", text: input.value });
+    // Set from a video page, the purpose includes the video on screen.
+    const video = currentId && currentInfo?.id === currentId ? { id: currentId, title: currentInfo.title, channel: currentInfo.channel } : undefined;
+    const r = await send({ type: "purpose-start", text: input.value, video });
     if (!r || r.result !== "applied") { err.textContent = r?.message || "Couldn't set that. Try again."; return; }
     applyStatus(await send({ type: "status" }));
     closeModal();
@@ -155,14 +157,16 @@ function openStartDialog() {
 }
 
 // The intentional pivot: a new purpose, keeping searches, videos and the time limit.
-function openPivotDialog(prefill = "", { afterConfirm = null } = {}) {
+// From a video that didn't fit, pass it as `video`: the new purpose includes it.
+function openPivotDialog(prefill = "", { afterConfirm = null, video = null } = {}) {
   closeDropdown();
   if (!purpose) return openStartDialog();
   const input = el("textarea", { class: "wp-input", rows: "2", placeholder: "What do you want to focus on instead?" });
   input.value = typeof prefill === "string" ? prefill : "";
   const err = el("div", { class: "wp-error" });
   const confirm = async () => {
-    const r = await send({ type: "purpose-pivot", text: input.value });
+    const v = video ? { id: video.id, title: video.title, channel: video.channel } : undefined;
+    const r = await send({ type: "purpose-pivot", text: input.value, video: v });
     if (!r || r.result !== "applied") { err.textContent = r?.message || "Couldn't change the purpose. Try again."; return; }
     if (afterConfirm) await afterConfirm();
     applyStatus(await send({ type: "status" }));

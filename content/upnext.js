@@ -1,0 +1,33 @@
+// Aim — "Up next from your search": during a purpose, the watch page's sidebar shows what your
+// own searches found, in place of YouTube's recommendations. No AI: your search, YouTube's ranking.
+
+function upNextItems(p) {
+  const pool = (p.allowed || []).filter(v => v.id !== currentId);
+  const lastQ = p.searches?.[p.searches.length - 1]?.q;
+  const fromLast = pool.filter(v => v.q === lastQ);
+  return (fromLast.length >= 3 ? fromLast : pool.slice().reverse()).slice(0, 12);
+}
+
+function renderUpNext() {
+  const existing = $("#wp-upnext");
+  const p = activePurpose();
+  const host = p && !brk && location.pathname === "/watch" ? sidebarHost() : null;
+  if (!host) { existing?.remove(); return; }
+  const items = upNextItems(p);
+  const lastQ = p.searches?.[p.searches.length - 1]?.q;
+  const key = `${currentId}|${lastQ}|${items.map(v => v.id).join(",")}`;
+  if (existing && existing.parentElement === host && existing.dataset.key === key) return;
+  existing?.remove();
+  host.prepend(el("div", { id: "wp-upnext", class: "wp wp-upnext", "data-key": key },
+    el("div", { class: "wp-upnext-head" },
+      el("div", { class: "wp-strong" }, "Up next from your search"),
+      el("div", { class: "wp-muted wp-ellipsis" }, lastQ ? `“${lastQ}”` : p.text)),
+    ...(items.length
+      ? items.map(v => el("a", { class: "wp-upnext-item", href: `/watch?v=${encodeURIComponent(v.id)}`, title: v.title || "" },
+          // A background image: if the thumbnail can't load, a grey box remains, not a broken-image icon.
+          el("div", { class: "wp-upnext-thumb", style: `background-image: url("https://i.ytimg.com/vi/${encodeURIComponent(v.id)}/mqdefault.jpg")` }),
+          el("div", { class: "wp-upnext-text" },
+            el("div", { class: "wp-upnext-title" }, v.title || "Video"),
+            v.channel ? el("div", { class: "wp-muted" }, v.channel) : null)))
+      : [el("div", { class: "wp-muted wp-upnext-empty" }, "Search toward your purpose, and what you find shows up here.")])));
+}

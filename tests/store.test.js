@@ -29,15 +29,15 @@ function makeEnv(initial = {}) {
   return env;
 }
 const VIDEO = { id: "abc123", title: "Feeding a sourdough starter", channel: "Bread Co" };
-const fresh = () => makeEnv({ schemaVersion: 3 });
-const DEFAULTS = { homeCard: true, recMode: "mark", leisureMin: 60, graceMin: 15, totalMin: 0, purposeLimitMin: 0,
+const fresh = () => makeEnv({ schemaVersion: 4 });
+const DEFAULTS = { homeCard: true, leisureMin: 60, graceMin: 15, totalMin: 0, purposeLimitMin: 0,
   hideShorts: true, hideRecs: true, hideFeeds: true, noAutoplay: true };
 
 const tests = [];
 const test = (name, fn) => tests.push([name, fn]);
 
 // ---------- migrations ----------
-test("migrates Waypoint 0.5 data all the way to v3", async () => {
+test("migrates Waypoint 0.5 data all the way to v4", async () => {
   const env = makeEnv({
     schemaVersion: 1, level: "strict", homeCard: false, recMode: "hide",
     limits: { leisureMin: 60, totalMin: 90 },
@@ -49,8 +49,8 @@ test("migrates Waypoint 0.5 data all the way to v3", async () => {
   });
   await env.run("migrateStorage()");
   const d = env.local;
-  assert.strictEqual(d.schemaVersion, 3);
-  assert.deepStrictEqual(d.settings, { ...DEFAULTS, homeCard: false, recMode: "hide" });
+  assert.strictEqual(d.schemaVersion, 4);
+  assert.deepStrictEqual(d.settings, { ...DEFAULTS, homeCard: false });
   assert.deepStrictEqual(d.avoid, { "/@loud": { name: "Loud", action: "hide" } });
   assert.deepStrictEqual(d.usage, { "2026-10-15": { purpose: 1800, leisure: 0, other: 0 } });
   assert.strictEqual(d.purpose.text, "fix faucet");
@@ -59,7 +59,8 @@ test("migrates Waypoint 0.5 data all the way to v3", async () => {
   assert.deepStrictEqual(d.history.map(h => h.type), ["purpose", "break"]);
   for (const k of ["session", "sessions", "level", "limits", "log", "homeCard"]) assert.ok(!(k in d), k + " should be removed");
   assert.deepStrictEqual(d.saved, [{ id: "abc" }]);
-  assert.strictEqual(d.apiKey, "k");
+  assert.ok(!("apiKey" in d), "the personal API key is removed: Aim Free uses no AI");
+  assert.deepStrictEqual(d.purpose.allowed, []);
 });
 
 test("migrates v2 (Focus/Explore) data: Explore becomes a break", async () => {
@@ -82,7 +83,7 @@ test("migrates v2 (Focus/Explore) data: Explore becomes a break", async () => {
 test("fresh install gets defaults", async () => {
   const env = makeEnv({});
   await env.run("migrateStorage()");
-  assert.strictEqual(env.local.schemaVersion, 3);
+  assert.strictEqual(env.local.schemaVersion, 4);
   assert.deepStrictEqual(env.local.settings, DEFAULTS);
 });
 
@@ -210,14 +211,14 @@ test("no grace when nothing is playing, or when the grace period is set to 0", a
   await env.run(`startBreak({ minutes: 1 })`);
   let st = await env.ticks(7);
   assert.strictEqual(st.stop.videoId, null);
-  env = makeEnv({ schemaVersion: 3, settings: { graceMin: 0 } });
+  env = makeEnv({ schemaVersion: 4, settings: { graceMin: 0 } });
   await env.run(`startBreak({ minutes: 1 })`);
   st = await env.ticks(7, 10, VIDEO);
   assert.strictEqual(st.stop.videoId, null);
 });
 
 test("the daily leisure allowance caps breaks and is a hard stop", async () => {
-  const env = makeEnv({ schemaVersion: 3, settings: { leisureMin: 20 } });
+  const env = makeEnv({ schemaVersion: 4, settings: { leisureMin: 20 } });
   let r = await env.run(`startBreak({ minutes: 30 })`);
   assert.strictEqual(r.brk.durationMin, 20, "capped to what's left today");
   assert.strictEqual(r.capped, 20);
@@ -234,7 +235,7 @@ test("the daily leisure allowance caps breaks and is a hard stop", async () => {
 });
 
 test("extending a break draws on the remaining allowance", async () => {
-  const env = makeEnv({ schemaVersion: 3, settings: { leisureMin: 40 } });
+  const env = makeEnv({ schemaVersion: 4, settings: { leisureMin: 40 } });
   await env.run(`startBreak({ minutes: 15 })`);
   let r = await env.run(`extendBreak(15)`);
   assert.strictEqual(r.added, 15);
@@ -264,7 +265,7 @@ test("starting a purpose ends the break", async () => {
 
 // ---------- daily total ----------
 test("the daily YouTube total is a hard stop for the rest of the day", async () => {
-  const env = makeEnv({ schemaVersion: 3, settings: { totalMin: 1 } });
+  const env = makeEnv({ schemaVersion: 4, settings: { totalMin: 1 } });
   await env.run(`startPurpose({ text: "learn sourdough" })`);
   const st = await env.ticks(7, 10, VIDEO);
   assert.strictEqual(st.stop.kind, "total");
@@ -284,13 +285,60 @@ test("idle time counts toward the daily total but not leisure or purpose", async
   assert.deepStrictEqual(Object.values(env.today()).map(Math.round), [0, 0, 60]);
 });
 
+test("migrates v3 data: drops the API key and AI setting, gives the purpose an allowed list", async () => {
+  const env = makeEnv({ schemaVersion: 3, apiKey: "sk-ant-x", model: "m", settings: { homeCard: true, recMode: "hide", leisureMin: 30 },
+    purpose: { id: "p1", text: "learn sourdough", searches: [], videos: [], path: [] } });
+  await env.run("migrateStorage()");
+  const d = env.local;
+  assert.strictEqual(d.schemaVersion, 4);
+  assert.ok(!("apiKey" in d) && !("model" in d));
+  assert.ok(!("recMode" in d.settings));
+  assert.strictEqual(d.settings.leisureMin, 30, "other settings kept");
+  assert.deepStrictEqual([d.purpose.allowed, d.purpose.allowedLists], [[], []]);
+});
+
+// ---------- what a purpose allows ----------
+test("search results become what the purpose allows, without duplicates", async () => {
+  const env = fresh();
+  await env.run(`startPurpose({ text: "learn sourdough", search: "sourdough starter" })`);
+  await env.run(`allowVideos({ query: "sourdough starter", videos: [{ id: "v1", title: "A" }, { id: "v2", title: "B" }], lists: ["PL1"] })`);
+  await env.run(`allowVideos({ query: "sourdough starter", videos: [{ id: "v2", title: "B" }, { id: "v3", title: "C" }], lists: ["PL1"] })`);
+  assert.deepStrictEqual(env.local.purpose.allowed.map(v => v.id), ["v1", "v2", "v3"]);
+  assert.deepStrictEqual(env.local.purpose.allowedLists, ["PL1"]);
+  assert.strictEqual(env.local.purpose.allowed[0].q, "sourdough starter");
+});
+
+test("a purpose set from a video, or a pivot from one, includes that video", async () => {
+  const env = fresh();
+  await env.run(`startPurpose({ text: "fix my faucet", video: { id: "f1", title: "Faucet fix" } })`);
+  assert.deepStrictEqual(env.local.purpose.allowed.map(v => v.id), ["f1"]);
+  await env.run(`pivotPurpose("replace a faucet cartridge", undefined, { id: "f2", title: "Cartridge" })`);
+  assert.deepStrictEqual(env.local.purpose.allowed.map(v => v.id), ["f1", "f2"]);
+});
+
+test("word check: searches that share a meaningful word continue the purpose", async () => {
+  const env = fresh();
+  await env.run(`startPurpose({ text: "learn how sourdough bread works", search: "sourdough starter" })`);
+  const fits = async q => (await env.run(`checkSearch(${JSON.stringify(q)})`)).fits;
+  assert.strictEqual(await fits("starter feeding ratio"), true, "shares 'starter' with an earlier search");
+  assert.strictEqual(await fits("Sourdough Starters"), true, "case and plurals don't matter");
+  assert.strictEqual(await fits("best gaming laptop 2026"), false);
+  assert.strictEqual(await fits("how to make the best"), true, "nothing but filler: nothing to judge by");
+  assert.strictEqual(await fits("breads of france"), true, "plural 'breads' matches 'bread'");
+  await env.run(`startPurpose({ text: "fix a leaking faucet" })`);
+  assert.strictEqual(await fits("faucet leaks under sink"), true);
+  assert.strictEqual(await fits("kitchen tap washer"), false, "synonyms aren't known: Aim asks");
+  await env.run(`startPurpose({ text: "improve my photography" })`);
+  assert.strictEqual(await fits("photographic composition"), true, "shared five-letter start");
+});
+
 // ---------- settings and channels ----------
 test("settings are validated", async () => {
   const env = fresh();
   assert.strictEqual((await env.run(`setSetting("graceMin", 7)`)).result, "error");
   assert.strictEqual((await env.run(`setSetting("graceMin", 30)`)).result, "applied");
   assert.strictEqual((await env.run(`setSetting("leisureMin", 90)`)).result, "applied");
-  assert.strictEqual((await env.run(`setSetting("recMode", "nuke")`)).result, "error");
+  assert.strictEqual((await env.run(`setSetting("recMode", "mark")`)).result, "error", "the AI setting is gone");
   assert.strictEqual((await env.run(`setSetting("apiKey", "x")`)).result, "error");
   assert.strictEqual((await env.run(`setSetting("hideShorts", false)`)).result, "applied");
   assert.strictEqual((await env.run(`setSetting("noAutoplay", "yes")`)).result, "error");

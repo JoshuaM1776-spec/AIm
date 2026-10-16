@@ -8,7 +8,8 @@ let purpose = null;          // { text, searches, videos, limitMin, usedSec, tim
 let brk = null;              // { durationMin (null for one video), usedSec, oneVideoId }
 let stop = null;             // a limit that ran out: { kind, videoId (may finish), graceEndsAt }
 let status = { today: null, leisureLeftMin: null, totalReached: false };
-let settings = { recMode: "mark", hasKey: false, homeCard: true, leisureMin: 60, graceMin: 15, avoid: {} };
+let settings = { homeCard: true, leisureMin: 60, graceMin: 15, avoid: {} };
+let searchPending = null;    // a search that doesn't seem to fit the purpose, waiting for "is this part of it?"
 let currentId = null;        // video on screen
 let currentInfo = null;
 let holding = false;         // keep the video paused until cleared
@@ -47,12 +48,12 @@ function shutDown() {
   if (!alive) return;
   alive = false;
   clearInterval(tickTimer);
-  hideObserver.disconnect();
+  pageObserver.disconnect();
   holding = false;
   early.done();
   early.showFeed();
-  for (const n of $$("#wp-chip, #wp-home, #wp-feed-note, #wp-results-bar, .wp-notice, .wp-scrim, .wp-dropdown, .wp-player-card")) n.remove();
-  document.documentElement.classList.remove("wp-home", "wp-focus", "wp-hide-shorts", "wp-hide-recs", "wp-hide-feeds");
+  for (const n of $$("#wp-chip, #wp-home, #wp-feed-note, #wp-results-bar, #wp-upnext, .wp-notice, .wp-scrim, .wp-dropdown, .wp-player-card")) n.remove();
+  document.documentElement.classList.remove("wp-home", "wp-search-pending", "wp-focus", "wp-hide-shorts", "wp-hide-recs", "wp-hide-feeds");
 }
 
 // Icons are built with DOM calls rather than HTML strings, so YouTube's Trusted Types
@@ -110,6 +111,25 @@ const breakLeft = b => (b?.durationMin ? Math.max(0, b.durationMin * 60 - b.used
 // The video playing when a limit ran out may finish, within the grace period.
 const graced = id => !!(stop && id && stop.videoId === id && Date.now() < stop.graceEndsAt);
 const leisureUsedUp = () => status.leisureLeftMin !== null && status.leisureLeftMin < 1;
+
+// During a purpose you watch what your searches for it found (see allow in store.js).
+function isAllowed(id) {
+  const p = activePurpose();
+  if (!p || !id) return false;
+  if (p.allowed?.some(v => v.id === id)) return true;
+  const list = new URL(location.href).searchParams.get("list");
+  return !!list && !!p.allowedLists?.includes(list);
+}
+// Mirror an allow locally right away, so a click on a result is never judged before the
+// background has stored it.
+function allowLocal(videos, lists, query) {
+  const p = activePurpose();
+  if (!p) return;
+  p.allowed ||= [];
+  p.allowedLists ||= [];
+  for (const v of videos) if (!p.allowed.some(x => x.id === v.id)) p.allowed.push({ ...v, q: query, at: Date.now() });
+  for (const l of lists) if (!p.allowedLists.includes(l)) p.allowedLists.push(l);
+}
 
 // Take in a status reply from the background (see getStatus in store.js).
 function applyStatus(r) {

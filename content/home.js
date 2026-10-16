@@ -19,9 +19,8 @@ function removeHome() {
   clearInterval(exampleTimer);
 }
 
-// The purpose you typed can differ from the search you run; the results page picks it up.
-async function goSearch(query, purpose) {
-  if (purpose) await send({ type: "pending-purpose", purpose, query });
+// Searching from the card is a YouTube search; the results page makes it your purpose.
+function goSearch(query) {
   location.href = "/results?search_query=" + encodeURIComponent(query);
 }
 
@@ -43,7 +42,6 @@ async function renderHome() {
   // Built like YouTube's own search box: a text field with an attached magnifier button.
   const findBtn = el("button", { class: "wp-home-go", "aria-label": p ? "Search" : "Find it", title: p ? "Search" : "Find it" }, icon("search"));
   const hint = el("div", { class: "wp-muted wp-home-hint" }, "Your search becomes your purpose. Be specific.");
-  const choice = el("div", { class: "wp-home-choice", hidden: true });
   const card = el("div", { id: "wp-home", class: "wp wp-home-card", "data-key": key });
 
   if (p) {
@@ -58,25 +56,10 @@ async function renderHome() {
     }, 3500);
   }
 
-  const submit = async () => {
+  const submit = () => {
     const q = input.value.trim();
     if (!q) { input.focus(); return; }
-    if (p) return goSearch(q, null);
-    if (!settings.hasKey) return goSearch(q, q);
-    findBtn.disabled = true;
-    hint.textContent = "Checking for a better search…";
-    const r = await send({ type: "improve-search", purpose: q });
-    findBtn.disabled = false;
-    hint.textContent = "Your search becomes your purpose. Be specific.";
-    if (!r?.better || !r.query || r.query.trim().toLowerCase() === q.toLowerCase()) return goSearch(q, q);
-    // Only shown when there's a meaningfully better search. Purpose stays as you wrote it.
-    choice.hidden = false;
-    choice.replaceChildren(
-      el("div", {}, el("div", { class: "wp-label" }, "Your purpose"), el("div", { class: "wp-strong" }, q)),
-      el("div", {}, el("div", { class: "wp-label" }, "Suggested search"), el("div", { class: "wp-strong" }, r.query)),
-      el("div", { class: "wp-actions" },
-        el("button", { class: "wp-btn wp-btn-tonal", onclick: () => goSearch(q, q) }, "Use my search"),
-        el("button", { class: "wp-btn wp-btn-primary", onclick: () => goSearch(r.query, q) }, "Use suggested search")));
+    goSearch(q);
   };
   findBtn.onclick = submit;
   keepKeys(input, submit);
@@ -102,7 +85,6 @@ async function renderHome() {
       el("h1", { class: "wp-home-title" }, "What brings you here?"),
       el("div", { class: "wp-home-search" }, input, findBtn),
       hint,
-      choice,
       el("div", { class: "wp-label wp-home-break-label" }, "Just browsing? Take a break"),
       breakChips(takeBreak));
   }

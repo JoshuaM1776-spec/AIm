@@ -24,6 +24,11 @@ const YT = {
     "ytd-reel-player-overlay-renderer #channel-name a", "yt-reel-channel-bar-view-model a"
   ],
   sidebar: ["#secondary", "#related"],
+  sidebarHost: "ytd-watch-flexy #secondary",   // where "Up next from your search" goes
+  results: "ytd-search",
+  resultVideos: "ytd-video-renderer, yt-lockup-view-model",
+  resultPlaylists: "ytd-playlist-renderer, ytd-radio-renderer, yt-lockup-view-model",
+  resultChannel: ["ytd-channel-name a", "#channel-name a", 'a[href^="/@"]'],
   sidebarItems: "ytd-compact-video-renderer, yt-lockup-view-model",
   itemWatchLink: 'a[href*="/watch?v="]',
   itemTitle: ["#video-title", "h3"],
@@ -120,6 +125,30 @@ function sidebarItems() {
   }
   return items;
 }
+
+// Videos and playlists on a search results page: { videos: [{ id, title, channel }], lists: [id] }.
+// Shorts in results are left out (they link to /shorts/, not /watch).
+function searchResults() {
+  const root = $(YT.results);
+  const videos = [], lists = new Set(), seen = new Set();
+  if (!root) return { videos, lists: [] };
+  for (const n of $$(YT.resultVideos, root)) {
+    const a = $(YT.itemWatchLink, n);
+    if (!a) continue;
+    let id = null, list = null;
+    try { const u = new URL(a.href); id = u.searchParams.get("v"); list = u.searchParams.get("list"); } catch {}
+    if (list) lists.add(list);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    videos.push({ id, title: squash(first(YT.itemTitle, n)?.textContent || a.title), channel: squash(first(YT.resultChannel, n)?.textContent) });
+  }
+  for (const n of $$(YT.resultPlaylists, root)) {
+    try { const l = new URL($('a[href*="list="]', n)?.href).searchParams.get("list"); if (l) lists.add(l); } catch {}
+  }
+  return { videos, lists: [...lists] };
+}
+const searchQuery = () => (new URL(location.href).searchParams.get("search_query") || "").trim();
+const sidebarHost = () => $(YT.sidebarHost);
 
 // Every video tile on the page (feed, results, sidebar): [{ box, channelKey }], where box is
 // the element to hide. A lockup inside a grid cell is skipped; the cell itself is listed.

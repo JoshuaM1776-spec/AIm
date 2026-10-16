@@ -1,6 +1,6 @@
 // Aim — the video gate: hold each new video, then decide.
 //   On a break        → it plays.
-//   With a purpose    → it's checked against the purpose.
+//   With a purpose    → it plays if your searches for the purpose found it.
 //   With neither      → a card over the player asks: a purpose, or a break?
 //   A limit ran out   → the video that was playing may finish within the grace period;
 //                       anything else waits for a decision.
@@ -88,20 +88,16 @@ async function continueAfterRules(info) {
   evaluateVideo(info);
 }
 
-// With a purpose: does this video belong to it? (AI-based for now; replaced by the
-// search-based rule in step C, which needs no AI.)
+// With a purpose: is this video one your searches for it found? No AI: you chose the searches.
 async function evaluateVideo(info) {
   const id = info.id;
-  const p = activePurpose();
-  if (!p || !settings.hasKey) return release(id);
-  const search = p.searches?.[p.searches.length - 1]?.q;
-  const fit = await send({ type: "classify", purpose: p.text, video: info, search });
-  if (currentId !== id) return;
-  // A vague purpose ("woodworking") gets lighter checks: no drift card, just labels.
-  if (fit?.verdict === "different" && !p.vague) return showDriftCard(info);
+  if (!isAllowed(id)) {
+    // Make sure we're not judging by a stale copy (a result clicked a moment ago).
+    applyStatus(await send({ type: "status" }));
+    if (currentId !== id) return;
+    if (!isAllowed(id)) return showDriftCard(info);
+  }
   release(id);
-  setTimeout(labelRecommendations, 2500);
-  setTimeout(labelRecommendations, 7000);
 }
 
 // ---------------- cards over the player ----------------
@@ -113,7 +109,7 @@ function showChoiceCard(info) {
   const start = async () => {
     const text = input.value.trim();
     if (text.length < 2) { err.textContent = "Write what you're here for."; return input.focus(); }
-    const r = await send({ type: "purpose-start", text });
+    const r = await send({ type: "purpose-start", text, video: { id: info.id, title: info.title, channel: info.channel } });
     if (!r || r.result !== "applied") { err.textContent = r?.message || "Couldn't set that. Try again."; return; }
     applyStatus(await send({ type: "status" }));
     renderChip();
@@ -132,18 +128,25 @@ function showChoiceCard(info) {
   setTimeout(() => input.focus(), 50);
 }
 
-// With a purpose, a video that doesn't belong to it: change purpose or take a break.
+// With a purpose, a video your searches for it didn't find: back, search, change purpose,
+// or take a break. There's no "watch anyway": a video that fits elsewhere means a new purpose.
 function showDriftCard(info) {
   hold();
   const p = activePurpose();
+  const input = el("input", { class: "wp-input", type: "text", placeholder: "Search toward your purpose", "aria-label": "Search toward your purpose" });
+  const search = () => { const q = input.value.trim(); if (q) location.href = "/results?search_query=" + encodeURIComponent(q); };
+  keepKeys(input, search);
   showPlayerCard(
     el("div", { class: "wp-dialog-brand" }, icon("logo"), "Aim"),
     el("div", { class: "wp-title" }, "Not part of your purpose"),
     el("div", { class: "wp-current" }, el("div", { class: "wp-label" }, "Your purpose"), el("div", { class: "wp-strong" }, p.text)),
-    el("div", { class: "wp-muted wp-ellipsis" }, `This video: ${info.title}`),
+    el("div", { class: "wp-muted" }, p.searches.length
+      ? "While you're on purpose, you watch what your searches for it found. This video wasn't among them."
+      : "Search for what you're looking for, and the results are yours to watch."),
+    el("div", { class: "wp-row" }, input, el("button", { class: "wp-btn wp-btn-tonal", onclick: search }, "Search")),
     el("div", { class: "wp-actions wp-actions-start" },
-      el("button", { class: "wp-btn wp-btn-primary", onclick: goBack }, "Back to my purpose"),
-      el("button", { class: "wp-btn wp-btn-tonal", onclick: () => openPivotDialog() }, "Change purpose"),
+      history.length > 1 ? el("button", { class: "wp-btn wp-btn-primary", onclick: goBack }, "Back") : null,
+      el("button", { class: "wp-btn wp-btn-tonal", onclick: () => openPivotDialog("", { video: info }) }, "Change purpose"),
       el("button", { class: "wp-btn wp-btn-text", onclick: () => saveCurrent(true) }, "Save for later")),
     el("div", { class: "wp-label" }, "Or take a break"),
     breakChips(takeBreak, { oneVideoId: info.id }));

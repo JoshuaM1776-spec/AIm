@@ -200,17 +200,22 @@ html[dark] .wp {
   box-shadow: var(--wp-shadow); animation: wp-in .15s ease-out;
 }
 
-/* ---------- recommendation labels (YouTube badge style) ---------- */
-[data-wp-rec] { position: relative; }
-[data-wp-rec="off"] { opacity: .45; transition: opacity .15s; }
-[data-wp-rec="off"]:hover { opacity: .9; }
-[data-wp-rec="hidden"] { display: none !important; }
-.wp-rec-tag {
-  display: inline-flex; align-self: flex-start; width: max-content; margin: 0 0 4px; padding: 0 4px; border-radius: 4px;
-  background: var(--wp-tonal); font-size: 12px; line-height: 18px; font-weight: 500;
-}
-.wp-rec-match { color: var(--wp-text); }
-.wp-rec-related, .wp-rec-off { color: var(--wp-muted); }
+/* ---------- "Up next from your search" (in the watch page's sidebar during a purpose) ---------- */
+.wp-upnext { display: flex; flex-direction: column; gap: 8px; margin: 0 0 16px; }
+.wp-upnext-head { padding: 0 0 4px; }
+.wp-upnext-item { display: flex; gap: 8px; color: var(--wp-text); text-decoration: none; border-radius: 8px; }
+.wp-upnext-item:hover .wp-upnext-title { text-decoration: underline; }
+.wp-upnext-thumb { width: 168px; height: 94px; flex: none; border-radius: 8px; background: var(--wp-tonal) center / cover no-repeat; }
+.wp-upnext-text { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.wp-upnext-title { font-size: 14px; line-height: 20px; font-weight: 500; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.wp-upnext-empty { padding: 12px; border-radius: 12px; background: var(--wp-tonal); font-size: 14px; line-height: 20px; }
+
+/* A search waiting for "is this part of your purpose?" keeps its results hidden. */
+html.wp-search-pending ytd-search ytd-section-list-renderer { visibility: hidden !important; }
+.wp-results-bar.wp-rb-pending { flex-direction: column; align-items: stretch; gap: 12px; }
+.wp-rb-pending .wp-rb-purpose { flex: none; }
+.wp-rb-pending .wp-actions { margin-top: 0; }
+.wp-rb-break { display: flex; flex-direction: column; gap: 6px; }
 
 /* ---------- hidden channels ---------- */
 [data-wp-hidden] { display: none !important; }
@@ -265,8 +270,6 @@ html.wp-boot ytd-browse[page-subtype="home"] ytd-feed-filter-chip-bar-renderer {
 .wp-home-go:hover { background: var(--wp-tonal-hover); }
 .wp-home-go:disabled { opacity: .6; cursor: progress; }
 .wp-home-hint { margin: -8px 0 0 16px; font-size: 13px; }
-.wp-home-choice { background: var(--wp-tonal); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-.wp-home-choice .wp-actions { margin-top: 0; }
 .wp-home-alt { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
 
 /* ---------- search results bar ---------- */

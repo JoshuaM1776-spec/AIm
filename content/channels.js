@@ -46,8 +46,3 @@ function applyHidden() {
   for (const { box, channelKey } of videoTiles()) box.toggleAttribute("data-wp-hidden", !!channelKey && hidden.has(channelKey));
 }
 
-let hideTimer = null;
-const hideObserver = new MutationObserver(() => {
-  if (hideTimer || !hiddenKeys().size) return;
-  hideTimer = setTimeout(() => { hideTimer = null; applyHidden(); }, 300);
-});
