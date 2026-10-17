@@ -1,4 +1,4 @@
-// Aim — toolbar popup: quick controls for the current purpose or break, and your activity.
+// Aim — toolbar popup: the current Target (Resume, Take a Break, Done), and your activity folded below.
 // Reads and changes data through the background worker.
 
 function el(tag, attrs = {}, ...kids) {
@@ -35,7 +35,8 @@ const ICONS = {
   coffee: ["M5 9.5h11v4.5a4.5 4.5 0 0 1-4.5 4.5h-2A4.5 4.5 0 0 1 5 14z", "M16 11h1.5a2.5 2.5 0 0 1 0 5H16", "M8.5 3.5c-.9 1 .9 2 0 3.2M11.5 3.5c-.9 1 .9 2 0 3.2"],
   change: ["M4 12a8 8 0 0 1 14-5.3L20 9", "M20 4v5h-5", "M20 12a8 8 0 0 1-14 5.3L4 15", "M4 20v-5h5"],
   check: ["M5 12.5l4.5 4.5L19 7.5"],
-  chevron: ["M9 6l6 6-6 6"]
+  chevron: ["M9 6l6 6-6 6"],
+  play: ["M8 5.5v13l10.5-6.5z"]
 };
 
 let st = null;
@@ -53,6 +54,17 @@ function ring(left, total) {
     svg.append(ci);
   }
   return svg;
+}
+
+// Back to where you left off: the last video at the moment you left it, or the last search.
+async function resume(id) {
+  const r = await send({ type: "purpose-resume", id });
+  if (!r || r.result !== "applied") return alert(r?.message || "Couldn't resume that Target. Try again.");
+  // On a YouTube tab, go there in place; anywhere else, open a new tab rather than leave the page you're on.
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true }).catch(() => []);
+  const here = tab ? await chrome.tabs.sendMessage(tab.id, { type: "go", url: r.url }).catch(() => null) : null;
+  if (!here?.ok) await chrome.tabs.create({ url: r.url });
+  window.close();
 }
 
 async function act(msg) {
@@ -118,28 +130,28 @@ function renderCurrent() {
     return;
   }
   if (p) {
+    // Time left only when you set a limit; otherwise just how long you've been at it.
     const left = p.limitMin ? mins(p.limitMin * 60 - p.usedSec) : null;
     box.append(el("div", { class: "card" },
-      el("button", { class: "cur-head", title: "All Targets", onclick: () => send({ type: "open-targets" }) },
-        el("div", { style: "min-width:0" }, el("div", { class: "tag" }, "Current Target"), el("div", { class: "strong big" }, p.text)),
-        el("span", { class: "chev" }, ico(ICONS.chevron))),
-      el("div", { class: "ring-row" },
-        left !== null ? ring(left, p.limitMin) : null,
-        el("div", {}, el("div", { class: "big" }, left !== null ? `${dur(left)} left` : "No time limit"),
-          el("div", { class: "muted" }, left !== null ? `of ${dur(p.limitMin)}` : `${dur(mins(p.usedSec))} so far`))),
+      el("div", { class: "tag" }, "Current Target"),
+      el("div", { class: "strong big cur-text" }, p.text),
+      left !== null ? el("div", { class: "ring-row" }, ring(left, p.limitMin),
+        el("div", {}, el("div", { class: "big" }, `${dur(left)} left`), el("div", { class: "muted" }, `of ${dur(p.limitMin)}`)))
+        : el("div", { class: "muted elapsed" }, `${dur(Math.max(1, mins(p.usedSec)))} so far`),
       open === "pivot" ? pivotControls() : open === "done" ? doneControls() : el("div", {},
-        breakControls(),
-        open === "break" ? null : el("div", { class: "pair" },
-          el("button", { class: "btn", onclick: () => { open = "pivot"; renderCurrent(); } }, ico(ICONS.change), "Change Target"),
-          el("button", { class: "btn", onclick: () => { open = "done"; renderCurrent(); } }, ico(ICONS.check), "Target complete")),
-        open === "break" ? null : el("div", { class: "foot", style: "padding:8px 0 0;text-align:left;border:0" },
-          el("a", { id: "setAside", onclick: () => act({ type: "purpose-pause" }) }, "Set aside for later"))),
-      el("button", { class: "limits", onclick: () => send({ type: "open-options", section: "advanced" }) }, "Daily limits", el("span", { class: "chev" }, ico(ICONS.chevron)))));
+        open === "break" ? null : el("button", { class: "btn wide primary", id: "resume", onclick: () => resume(p.id) }, ico(ICONS.play), "Resume"),
+        open === "break" ? breakControls() : el("div", { class: "pair" },
+          el("button", { class: "btn", onclick: () => { open = "break"; renderCurrent(); } }, ico(ICONS.coffee), "Take a Break"),
+          el("button", { class: "btn", title: "Target complete", onclick: () => { open = "done"; renderCurrent(); } }, ico(ICONS.check), "Done")),
+        open === "break" ? null : el("div", { class: "more" },
+          el("button", { class: "link", onclick: () => { open = "pivot"; renderCurrent(); } }, "Change Target"),
+          el("button", { class: "link", id: "setAside", onclick: () => act({ type: "purpose-pause" }) }, "Set aside"),
+          el("button", { class: "link", onclick: () => send({ type: "open-targets" }) }, "All Targets")))));
     return;
   }
   box.append(el("div", { class: "card" },
     el("div", { class: "strong" }, "No Target set"),
-    el("div", { class: "muted", style: "margin-bottom:10px" }, "Search on YouTube and your search becomes your Target."),
+    el("div", { class: "muted", style: "margin-bottom:10px" }, "Open YouTube and tell Aim what you're looking for."),
     breakControls()));
 }
 
@@ -212,7 +224,7 @@ async function render() {
 }
 
 document.getElementById("settings").addEventListener("click", () => chrome.runtime.openOptionsPage());
-document.getElementById("allTargets").addEventListener("click", () => send({ type: "open-targets" }));
+document.getElementById("limits").addEventListener("click", () => send({ type: "open-options", section: "advanced" }));
 document.getElementById("clear").addEventListener("click", async () => {
   if (!confirm("Clear your history of Targets and breaks?")) return;
   await send({ type: "history-clear" });

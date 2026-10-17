@@ -1,8 +1,8 @@
 // Aim — the homepage card that replaces the feed.
 
 // ---------------- homepage: "What brings you here?" ----------------
-// Example purposes on the card: one tap fills the search box.
-const EXAMPLES = ["Study for my biology exam", "Learn cabinetmaking", "Understand the Roman Republic", "Fix my truck"];
+// Example requests on the card, said the way you'd ask a librarian: one tap fills the box.
+const EXAMPLES = ["I want to understand how jet engines work.", "Find a good tutorial for building a timber frame porch.", "Help me study for my biology exam."];
 
 function removeHome() {
   early.showFeed();
@@ -31,14 +31,14 @@ async function renderHome() {
   if ($("#wp-home")?.dataset.key === key) return; // don't rebuild while someone is typing
   $("#wp-home")?.remove();
 
-  const input = el("input", { class: "wp-home-input", type: "text", "aria-label": "What do you want to find or learn?",
-    placeholder: "What do you want to find or learn?" });
-  // Built like YouTube's own search box: a text field with an attached magnifier button.
-  const findBtn = el("button", { class: "wp-home-go", "aria-label": "Search", title: "Search" }, icon("search"));
+  const input = el("input", { class: "wp-home-input", type: "text", "aria-label": "Tell me what you're looking for",
+    placeholder: "Tell me what you're looking for…" });
+  // One rounded field with a small arrow inside it; Enter does the same.
+  const findBtn = el("button", { class: "wp-home-go", "aria-label": "Go", title: "Go" }, icon("right"));
   const card = el("div", { id: "wp-home", class: "wp wp-home-card", "data-key": key });
   const lib = account.on;
   const hintText = p ? "Searching for something new? If it isn't part of your Target, Aim asks first."
-    : lib ? `Tell ${BRAND} what you want to accomplish. It'll help you find it.` : "Your search becomes your Target. Be specific.";
+    : lib ? `Tell ${BRAND} what you want to accomplish. It'll help you find it.` : "What you type becomes your Target. Be specific.";
   const hint = el("div", { class: "wp-muted wp-home-hint" }, hintText);
   // Signed in, a request or goal goes to the librarian; a plain search goes straight to YouTube.
   const busy = on => {
@@ -77,9 +77,9 @@ async function renderHome() {
     el("div", { class: "wp-home-search" }, input, findBtn),
     hint,
     // Examples help a first visit; once there's something to pick up, they'd only add clutter.
-    !p && !others.length ? el("div", { class: "wp-label" }, "Examples") : null,
-    !p && !others.length ? el("div", { class: "wp-chips" }, ...EXAMPLES.map(t => el("button", { class: "wp-chip", onclick: () => { input.value = t; input.focus(); } }, t))) : null,
-    p ? null : el("button", { class: "wp-btn wp-btn-primary wp-btn-block wp-home-go-big", onclick: submit }, "Search YouTube", icon("right")),
+    !p && !others.length ? el("div", { class: "wp-label" }, "Try asking") : null,
+    !p && !others.length ? el("div", { class: "wp-home-examples" }, ...EXAMPLES.map(t =>
+      el("button", { class: "wp-home-example", onclick: () => { input.value = t; input.focus(); } }, `“${t}”`))) : null,
     resumeBlock,
     el("div", { class: "wp-label wp-home-break-label" }, p ? "Or take a break" : "Just browsing? Take a break"),
     breakChips(takeBreak)].filter(Boolean));
@@ -117,7 +117,7 @@ function currentTargetRow(p) {
     el("div", { class: "wp-home-purpose" }, p.text),
     el("div", { class: "wp-muted wp-home-meta" }, targetMeta({ ...p, videos: (p.videos || []).length })),
     el("div", { class: "wp-home-alt" },
-      el("button", { class: "wp-btn wp-btn-primary", onclick: () => resumeTarget(p.id) }, icon("play"), "Continue"),
+      el("button", { class: "wp-btn wp-btn-accent", onclick: () => resumeTarget(p.id) }, icon("play"), "Continue"),
       el("button", { class: "wp-btn wp-btn-tonal", onclick: askDone }, icon("check2"), "Target complete"),
       el("button", { class: "wp-btn wp-btn-text", onclick: setAsideTarget }, "Set aside")));
 }

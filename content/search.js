@@ -83,17 +83,33 @@ async function renderResultsBar() {
   else anchor.parentElement.insertBefore(bar, anchor);
 }
 
+// One compact row: the Target, a small Change action, Done, and (signed in) the librarian, which
+// stays folded away unless it has something new to say about this search. The videos stay the
+// main event.
+let libOpen = null; // { query, open }: the reader's own choice for this search
 function purposeBar(p, lib) {
   const left = purposeLeft(p);
-  return el("div", { id: "wp-results-bar", class: `wp wp-results-bar${lib ? " wp-rb-lib" : ""}` },
+  const query = searchQuery().toLowerCase();
+  const L = p.librarian;
+  const fresh = !!(L && (L.refine || L.note) && (L.searches?.[0] || "").toLowerCase() === query);
+  const open = lib && (libOpen?.query === query ? libOpen.open : fresh);
+  const bar = el("div", { id: "wp-results-bar", class: `wp wp-results-bar${open ? " wp-rb-open" : ""}` });
+  const toggle = lib ? el("button", { class: `wp-rb-icon${open ? " on" : ""}`, "aria-label": open ? "Hide the librarian" : "Ask the librarian",
+    title: open ? "Hide the librarian" : "Ask the librarian", "aria-expanded": open ? "true" : "false",
+    onclick: () => { libOpen = { query, open: !open }; renderResultsBar(); if (!open) setTimeout(() => $("#wp-lib .wp-lib-input")?.focus(), 0); } },
+    icon("ask")) : null;
+  bar.append(...[
     el("div", { class: "wp-rb-purpose" },
-      el("div", { class: "wp-label" }, "Current Target"),
-      el("div", { class: "wp-strong wp-ellipsis" }, p.text),
-      el("button", { class: "wp-link", onclick: openRefineDialog }, "Edit")),
-    left !== null ? el("span", { class: "wp-muted" }, `${fmtMin(left)} left`) : null,
-    el("button", { class: "wp-btn wp-btn-tonal", onclick: askDone }, icon("check2"), "Target complete"),
+      el("span", { class: "wp-rb-mark" }, icon("logo")),
+      el("span", { class: "wp-rb-label" }, "Target"),
+      el("span", { class: "wp-strong wp-ellipsis wp-rb-text", title: p.text }, p.text),
+      el("button", { class: "wp-link wp-rb-change", onclick: () => openPivotDialog() }, "Change")),
+    left !== null ? el("span", { class: "wp-muted wp-rb-left" }, `${fmtMin(left)} left`) : null,
+    el("button", { class: "wp-rb-icon", "aria-label": "Target complete", title: "Target complete", onclick: askDone }, icon("check2")),
+    toggle,
     activeStudy(p) ? studyBarBlock(p) : null,
-    lib ? librarianBlock(p) : null);
+    open ? librarianBlock(p) : null].filter(Boolean));
+  return bar;
 }
 
 // The search shares no meaningful word with the purpose: ask once, results hidden meanwhile.

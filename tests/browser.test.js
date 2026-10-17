@@ -114,10 +114,11 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("early hide hands over to the card", await p.evaluate(() =>
     !document.documentElement.classList.contains("wp-boot") && document.documentElement.classList.contains("wp-home")));
   step("homepage card offers a search, examples and a break", (await text("#wp-home")).includes("What brings you here?") &&
-    ["Learn cabinetmaking", "Fix my truck", "15m", "Custom"].every(t => card0.includes(t)), card0.slice(0, 160));
+    (await p.getAttribute("#wp-home .wp-home-input", "placeholder")) === "Tell me what you're looking for…" && !card0.includes("Search YouTube") &&
+    ["jet engines", "timber frame porch", "15m", "Custom"].every(t => card0.includes(t)), card0.slice(0, 160));
   step("tapping an example fills the search box", await (async () => {
-    await p.click('#wp-home .wp-chip:text-is("Fix my truck")');
-    return (await p.inputValue("#wp-home .wp-home-input")) === "Fix my truck";
+    await p.click('#wp-home .wp-home-example:has-text("biology exam")');
+    return (await p.inputValue("#wp-home .wp-home-input")) === "Help me study for my biology exam.";
   })());
   step("the mark (bullseye, no play triangle) renders as SVG under Trusted Types", (await p.$$("#wp-chip .wp-icon:first-child svg circle")).length === 1 && (await p.$$("#wp-chip .wp-icon:first-child svg path")).length === 4);
   step("toolbar icon follows dark mode", await sw.evaluate(async () => (await setToolbarTheme(true)).result === "applied" && (await setToolbarTheme(false)).result === "applied"));
@@ -246,7 +247,8 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.waitForSelector("#wp-results-bar", { timeout: 5000 });
   st = await store();
   step("a search with no purpose becomes the purpose (no time limit)", st.purpose?.text === "how to fix a leaky faucet" && st.purpose.limitMin === null && st.purpose.searches[0].q === "how to fix a leaky faucet");
-  step("results bar shows the purpose and Done", (await text("#wp-results-bar")).includes("how to fix a leaky faucet") && (await text("#wp-results-bar")).includes("Target complete"));
+  step("results bar is a compact row: Target, Change and done", (await text("#wp-results-bar")).includes("how to fix a leaky faucet") &&
+    (await text("#wp-results-bar")).includes("Change") && !!(await p.$("#wp-results-bar [aria-label='Target complete']")) && !(await text("#wp-results-bar")).includes("left"));
   step("in results: Shorts shelf and Shorts hidden, videos shown", (await p.isHidden("#shortsShelf")) && (await p.isHidden("#shortItem")) && (await p.isVisible("#normalItem")));
   await p.waitForTimeout(800);
   st = await store();
@@ -316,9 +318,10 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     const t = await o.textContent("body"), h = await o.$eval("#plus", n => n.hidden && !n.querySelector("input")); await o.close(); return [t, h]; })();
   step("no AI, no API key anywhere in settings", !/API key|Claude|AI check/i.test(optText));
   step("no Aim Plus section while config.js is empty", plusHidden);
-  step("popup shows the purpose with quick controls, the week, today and history",
-    ["Current Target", "learn to sharpen a chisel", "Take a Break", "Change Target", "Target complete", "This week", "Targets complete", "On Target", "Breaks", "Found it"].every(t => popText.includes(t)), popText.slice(0, 200));
-  await pop.click('button:has-text("Target complete")');
+  step("popup leads with the Target: Resume, Take a Break, Done; activity folded below",
+    ["Current Target", "learn to sharpen a chisel", "so far", "Resume", "Take a Break", "Done", "Change Target", "Your activity", "This week", "Targets complete", "On Target", "Breaks", "Found it", "Daily limits"].every(t => popText.includes(t)) &&
+    !popText.includes("left") && !(await pop.$eval("#activity", d => d.open)), popText.slice(0, 200));
+  await pop.click('button:text-is("Done")');
   await pop.click('button:text-is("Yes, I\'m done")');
   await pop.waitForTimeout(500);
   step("Done from the popup asks and ends the purpose", !(await store()).purpose && (await store()).history.pop().outcome === "yes");
@@ -336,7 +339,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     home.includes("Pick up where you left off") && home.includes("Current Target") && home.includes("Fix my truck's AC") && home.includes("Continue"), home.slice(0, 160));
   step("home: the set-aside Target under Recent Targets, with when and Resume",
     home.includes("Recent Targets") && home.includes("Study for my biology exam") && home.includes("Last active today") && !!(await p.$(".wp-home-row button:text-is('Resume')")));
-  step("home: no example chips once there's something to pick up", !home.includes("Examples") && home.includes("View all Targets") && !/\bnull\b/.test(home));
+  step("home: no example chips once there's something to pick up", !home.includes("Try asking") && home.includes("View all Targets") && !/\bnull\b/.test(home));
   await p.click(".wp-home-row button:text-is('Resume')");
   await p.waitForURL(/watch\?v=bio1/);
   step("Resume returns to the last video at the moment you left it", p.url().includes("watch?v=bio1&t=300s"), p.url());

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <style>
-  /* YouTube's palette, with Aim's one accent (YouTube red) for primary actions and the time ring. */
-  :root { --accent:#ff0033; --accent-hover:#e0002c; --card-border:rgba(0,0,0,.08); --bg:#fff; --text:#0f0f0f; --muted:#606060; --divider:rgba(0,0,0,.1); --tonal:rgba(0,0,0,.05); --tonal-hover:rgba(0,0,0,.1); --hover:rgba(0,0,0,.05); }
+  /* YouTube's palette; Aim red is an accent only: Resume, Back on Target and the time ring. */
+  :root { --accent:#e5131f; --accent-hover:#c8101b; --card-border:rgba(0,0,0,.08); --bg:#fff; --text:#0f0f0f; --muted:#606060; --divider:rgba(0,0,0,.1); --tonal:rgba(0,0,0,.05); --tonal-hover:rgba(0,0,0,.1); --hover:rgba(0,0,0,.05); }
   @media (prefers-color-scheme: dark) {
     :root { --card-border:rgba(255,255,255,.1); --bg:#282828; --text:#f1f1f1; --muted:#aaa; --divider:rgba(255,255,255,.1); --tonal:rgba(255,255,255,.1); --tonal-hover:rgba(255,255,255,.2); --hover:rgba(255,255,255,.1); }
   }
@@ -17,13 +17,18 @@
   h2 { font-size: 14px; line-height: 20px; font-weight: 500; margin: 0; padding: 12px 16px 4px; border-top: 1px solid var(--divider); }
   #session { padding: 0 16px 12px; }
   #session .card { background: var(--bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 14px; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
-  .cur-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; background: none; border: 0; padding: 0 0 12px; margin-bottom: 4px;
-    border-bottom: 1px solid var(--divider); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
-  .cur-head:hover .strong { text-decoration: underline; }
   .chev { color: var(--muted); flex: none; }
-  .limits { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 12px; padding: 10px 0 0; border: 0; border-top: 1px solid var(--divider);
-    background: none; color: var(--text); font: 500 13px Roboto, Arial, sans-serif; cursor: pointer; }
-  .limits:hover { color: var(--accent); }
+  .cur-text { margin-top: 2px; }
+  .elapsed { margin: 4px 0 12px; }
+  .more { display: flex; gap: 16px; margin-top: 10px; }
+  .more .link { color: var(--muted); font-size: 12px; padding: 2px 0; }
+  .more .link:hover { color: var(--text); }
+  details.activity > summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 16px; border-top: 1px solid var(--divider); font-weight: 500; }
+  details.activity > summary::-webkit-details-marker { display: none; }
+  details.activity > summary .chev { transition: transform .15s; }
+  details.activity[open] > summary .chev { transform: rotate(90deg); }
+  details.activity h2 { border-top: 0; padding-top: 4px; color: var(--muted); font-size: 12px; }
   .ico { width: 18px; height: 18px; flex: none; }
   .card { padding: 0 16px 8px; }
   .strong { font-weight: 500; }
@@ -79,15 +84,19 @@
     <button class="icon-btn" id="settings" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 13.5l1.6 1.2-1.8 3.1-1.9-.7a7 7 0 0 1-1.7 1l-.3 2h-3.6l-.3-2a7 7 0 0 1-1.7-1l-1.9.7-1.8-3.1 1.6-1.2a7 7 0 0 1 0-3l-1.6-1.2 1.8-3.1 1.9.7a7 7 0 0 1 1.7-1l.3-2h3.6l.3 2a7 7 0 0 1 1.7 1l1.9-.7 1.8 3.1-1.6 1.2a7 7 0 0 1 0 3z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
   </div>
   <div id="session"></div>
-  <h2>This week</h2>
-  <div class="card" id="week"></div>
-  <h2>Today</h2>
-  <div class="card" id="today"></div>
-  <h2>Saved for later</h2>
-  <div class="card" id="saved"></div>
-  <h2>Recent</h2>
-  <div class="card" id="history"></div>
-  <div class="foot"><a id="allTargets">All Targets</a> · <a id="clear">Clear history</a></div>
+  <details class="activity" id="activity">
+    <summary>Your activity <span class="chev"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
+    <h2>This week</h2>
+    <div class="card" id="week"></div>
+    <h2>Today</h2>
+    <div class="card" id="today"></div>
+    <h2>Saved for later</h2>
+    <div class="card" id="saved"></div>
+    <h2>Recent</h2>
+    <div class="card" id="history"></div>
+    <div class="foot" style="border:0"><a id="clear">Clear history</a></div>
+  </details>
+  <div class="foot"><a id="limits">Daily limits</a></div>
   <script src="popup.js"></script>
 </body>
 </html>

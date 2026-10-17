@@ -237,6 +237,12 @@ await ctx.route(/^https:\/\/www\.youtube\.com\//, route => {
   route.fulfill({ contentType: "text/html", body, headers: { "content-security-policy": "require-trusted-types-for 'script'" } });
 });
 const yt = await ctx.newPage();
+// The librarian folds away unless it has something new for this search; open it when it's folded.
+async function openLibrarian() {
+  await yt.waitForSelector("#wp-results-bar [aria-label='Ask the librarian'], .wp-lib-input");
+  if (!(await yt.$(".wp-lib-input"))) await yt.click("#wp-results-bar [aria-label='Ask the librarian']");
+  await yt.waitForSelector(".wp-lib-input");
+}
 await yt.goto("https://www.youtube.com/");
 await yt.waitForSelector("#wp-home");
 step("signed in, the homepage invites requests for the librarian", (await yt.textContent("#wp-home")).includes("It'll help you find it"));
@@ -265,6 +271,8 @@ step("answering the question continues the same Target, with context", srv.lastA
   srv.lastAskPrompt.includes("Which engine does it have?") && srv.lastAskPrompt.includes("THE PERSON NOW SAYS: 4.0L V6"));
 const libState = await sw.evaluate(() => chrome.storage.local.get("purpose").then(d => d.purpose));
 step("the conversation is kept with the Target, in this browser", libState.librarian.thread.length === 4 && libState.text === "Replace the alternator on my 2014 Tacoma");
+step("the results bar is one compact row: Target, Change, done and the librarian", bar.includes("Change") &&
+  !!(await yt.$("#wp-results-bar [aria-label='Target complete']")) && !!(await yt.$("#wp-results-bar [aria-label='Hide the librarian']")));
 const asksBefore = srv.ask.length, callsBefore = srv.aiCalls;
 await yt.fill(".wp-lib-input", "serpentine belt");
 await yt.press(".wp-lib-input", "Enter");
@@ -274,7 +282,9 @@ step("a plain search goes straight to YouTube, no AI", srv.aiCalls === callsBefo
 await yt.click("button:text-is(\"Yes, it's part of it\")");
 // When the librarian can't help, the request still searches YouTube.
 srv.ask.push(undefined);
-await yt.waitForSelector(".wp-lib-input");
+step("with nothing new to say, the librarian stays folded away", await (async () => {
+  await yt.waitForSelector("#wp-results-bar [aria-label='Ask the librarian']"); return !(await yt.$("#wp-lib")); })());
+await openLibrarian();
 await yt.fill(".wp-lib-input", "what socket size do I need for the tensioner bolt?");
 await yt.press(".wp-lib-input", "Enter");
 await yt.waitForURL(/search_query=what%20socket%20size/);
@@ -284,7 +294,7 @@ step("if the librarian fails, the request is searched on YouTube as typed", true
 srv.ask.push({ target: "Cellular respiration exam Friday", kind: "learn", note: "Start with glycolysis, then the Krebs cycle.",
   searches: ["cellular respiration explained"], question: "", options: [], same_target: false });
 await yt.goto("https://www.youtube.com/results?search_query=serpentine%20belt");
-await yt.waitForSelector(".wp-lib-input");
+await openLibrarian();
 await yt.fill(".wp-lib-input", "I'm struggling with cellular respiration and have an exam Friday");
 await yt.press(".wp-lib-input", "Enter");
 await yt.waitForURL(/search_query=cellular%20respiration%20explained/);

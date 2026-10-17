@@ -145,7 +145,7 @@ function showBreakOver(kind) {
       p.last?.id ? el("div", { class: "wp-return-thumb", style: `background-image:url("https://i.ytimg.com/vi/${encodeURIComponent(p.last.id)}/mqdefault.jpg")` }) : null,
       el("div", { style: "min-width:0" }, el("div", { class: "wp-strong wp-ellipsis" }, p.text),
         el("div", { class: "wp-muted" }, left !== null ? `${fmtMin(left)} remaining` : `${fmtMin(p.usedSec || 0)} so far`))) : null,
-    p ? el("button", { class: "wp-btn wp-btn-primary wp-btn-block", onclick: closeModal }, "Back on Target")
+    p ? el("button", { class: "wp-btn wp-btn-accent wp-btn-block", onclick: closeModal }, "Back on Target")
       : el("button", { class: "wp-btn wp-btn-primary wp-btn-block", onclick: () => { closeModal(); openStartDialog(); } }, "Set Target"),
     more ? el("button", { class: "wp-btn wp-btn-tonal wp-btn-block", onclick: () => { closeModal(); takeBreak({ minutes: 15 }); } }, "Extend break (15 min)") : null,
     el("button", { class: "wp-btn wp-btn-text wp-btn-block", onclick: closeModal }, "Keep browsing for now")));

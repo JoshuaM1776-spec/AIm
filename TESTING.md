@@ -55,7 +55,7 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 
 ### 4. Purpose
 
-- [ ] Search with no Target: your search becomes the Target, with no time limit. The results bar shows it as Current Target, with Edit and **Target complete**.
+- [ ] Search with no Target: your search becomes the Target, with no time limit. The results bar is one compact row: Target, a small **Change** link and a check (Target complete). No time left unless you set a limit.
 - [ ] Click a result: it plays. The sidebar shows **Up next from your search** with the other results (thumbnails, titles, channels) instead of YouTube's recommendations.
 - [ ] Scroll the results further, then open one from far down: it plays too (results are captured as they load).
 - [ ] A playlist in the results: its videos play.
@@ -98,7 +98,10 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 
 - [ ] Menu → **Target complete** (or the results bar, homepage or time-up card) asks first: "Target complete? Did you find what you were looking for?" with Yes, I'm done / Partly / Not really / Keep going.
 - [ ] Keep going closes it. The others land on the homepage with a short confirmation.
-- [ ] Recent in the popup shows the Target (with its pivots), minutes, number of videos and your answer.
+- [ ] Homepage with no Targets: "What brings you here?", one rounded field ("Tell me what you're looking for…") with a small arrow inside, three example requests, and no big Search YouTube button. Enter and the arrow both work.
+- [ ] Popup with a Target: Resume (red), Take a Break, Done, then small Change Target · Set aside · All Targets links. It shows "N min so far" (time left only with a limit). **Resume** on a YouTube tab goes to the last video at the moment you left; on another site it opens a new tab instead. "Your activity" is folded.
+- [ ] Results after a plain search, signed in: the librarian is folded behind the speech-bubble icon; clicking it opens the ask box. After a request it opens by itself.
+- [ ] Recent in the popup (under Your activity) shows the Target (with its pivots), minutes, number of videos and your answer.
 
 ### 9. Step D details
 
@@ -140,7 +143,7 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] **Resume** the old one: the video opens at about the moment you left it, and plays (it's part of that Target). The other Target is now under Recent Targets.
 - [ ] A Target with searches but no video resumes on its last search's results.
 - [ ] Menu → **Set aside for later**: back on the homepage, no current Target, both under Recent Targets (at most two show).
-- [ ] **View all Targets** (homepage, or the popup's footer) opens a page with Current, Set aside (Resume, Remove) and Completed (Start again). **Start again** opens the last video watched for it.
+- [ ] **View all Targets** (homepage, or the popup's All Targets link) opens a page with Current, Set aside (Resume, Remove) and Completed (Start again). **Start again** opens the last video watched for it.
 - [ ] Searching related things ("spark plugs", "ignition coils" for "repair my engine") stays one Target; nothing new appears under Recent Targets.
 - [ ] Resuming never opens TeachBack or anything AI.
 - [ ] Popup: the Current card has "Set aside for later".
@@ -150,7 +153,7 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] Signed out: the homepage says "Your search becomes your Target", and nothing calls Aim's server (service worker Network panel).
 - [ ] Signed in: the homepage says "Tell Aim what you want to accomplish. It'll help you find it."
 - [ ] A plain search ("sourdough starter") goes straight to YouTube, as before.
-- [ ] A request ("I need to replace the alternator on my 2014 Tacoma") shows "Aim is looking…", then opens YouTube results for a better search. The results bar shows the Target in your words, a short note, and maybe one question as choices ("2.7L / 4.0L V6") and "Also try" searches.
+- [ ] A request ("I need to replace the alternator on my 2014 Tacoma") shows "Aim is looking…", then opens YouTube results for a better search. The results bar shows the Target in your words with the librarian open: a short note, and maybe one question as choices ("2.7L / 4.0L V6") and "Also try" searches.
 - [ ] Within a few seconds, "Aim's picks from these results" appears above YouTube's results: up to 3 groups, each video with a reason. YouTube's results are still below. Reloading shows the same picks immediately.
 - [ ] Tapping a choice refines: new searches, same Target. "Find something that explains that last part more clearly" after watching a video understands what "that last part" was.
 - [ ] A request for something unrelated starts a new Target and sets the old one aside.

@@ -65,13 +65,16 @@ Aim doesn't block or alter YouTube's ads, and stays compatible with ad blockers 
 
 ## Design
 
-Aim should feel like it belongs inside YouTube, with calm, polished moments of decision:
+YouTube helps you find something to watch. Aim helps you find what you need. Aim should feel like it belongs inside YouTube, with calm, polished moments of decision:
 
-- **Colors** come from YouTube's own theme variables (`--yt-spec-*`) in `content/content.css`, so light and dark mode match exactly. Aim has one accent, red (`--wp-accent`). It's used for primary actions, the chosen option, the time ring and the break indicator. Everything else is neutral.
-- **Shapes:** 16px-radius dialogs and cards with a centered brand line and a close button when dismissible, full-width primary buttons for the main decision, segmented choices (Take a Break), a green check for Target complete, and YouTube's search box on the homepage card.
+- **Colors** come from YouTube's own theme variables (`--yt-spec-*`) in `content/content.css`, so light and dark mode match exactly. Aim red (`--wp-accent`, #e5131f) is an accent, not the default: it marks the one way back to your Target (Continue, Resume, Back on Target), the time ring and the mark. Primary buttons are neutral (`.wp-btn-primary`, dark on light); use `.wp-btn-accent` only for that "back to it" action.
+- **Homepage:** a conversation, not a search box. "What brings you here?", one rounded field ("Tell me what you're looking for…") with a small arrow inside it (Enter works too), example requests said the way you'd ask a librarian, then at most one current and two recent Targets to pick up.
+- **Results:** a compact one-row Target indicator above YouTube's results: the Target, a small Change action, a done check, and (signed in) a librarian icon. The librarian stays folded away unless it has something new to say about this search. Time left shows only when you set a limit. The videos stay the main event.
+- **Popup:** about the current Target: Resume, Take a Break, Done, with Change Target, Set aside and All Targets as small links. It shows time so far, or time left only when you set a limit. Activity is folded under "Your activity"; Daily limits and Settings are secondary.
+- **Shapes:** 16px-radius dialogs and cards with a centered brand line and a close button when dismissible, full-width buttons for the main decision, segmented choices (Take a Break) and a green check for Target complete.
 - **Placement:** the Aim button sits beside YouTube's search box on wide windows (1200px+) and beside the Create button otherwise.
 - **Behavior:** Escape or a click outside closes menus and dialogs, except prompts that are holding a video for your decision.
-- **The popup and Aim's own pages** use the same palette and accent, and follow Chrome's light/dark mode.
+- **Aim's own pages** use the same palette and accent, and follow Chrome's light/dark mode.
 - **Never** use YouTube's logo, icons, artwork or code. Aim's name and mark appear on every card, so nothing reads as YouTube's own feature.
 
 ## Rebranding
