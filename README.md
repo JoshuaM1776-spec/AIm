@@ -65,13 +65,14 @@ Aim doesn't block or alter YouTube's ads, and stays compatible with ad blockers 
 
 ## Design
 
-Aim should look like part of YouTube, not a separate product:
+Aim should feel like it belongs inside YouTube, with calm, polished moments of decision:
 
-- **Colors** come from YouTube's own theme variables (`--yt-spec-*`) in `content/content.css`, so light and dark mode match exactly. Aim has no accent color: everything is neutral like YouTube's menus and dialogs, and red appears only in the Aim mark.
-- **Shapes** copy YouTube's components: 36px pill buttons, 32px chips, 12px-radius menus and dialogs, YouTube's search box on the homepage card, snackbar-style toasts.
+- **Colors** come from YouTube's own theme variables (`--yt-spec-*`) in `content/content.css`, so light and dark mode match exactly. Aim has one accent, red (`--wp-accent`). It's used for primary actions, the chosen option, the time ring and the break indicator. Everything else is neutral.
+- **Shapes:** 16px-radius dialogs and cards with a centered brand line and a close button when dismissible, full-width primary buttons for the main decision, segmented choices (Take a Break), a green check for Target complete, and YouTube's search box on the homepage card.
 - **Placement:** the Aim button sits beside YouTube's search box on wide windows (1200px+) and beside the Create button otherwise.
 - **Behavior:** Escape or a click outside closes menus and dialogs, except prompts that are holding a video for your decision.
-- The popup and settings page use the same palette and follow Chrome's light/dark mode.
+- **The popup and Aim's own pages** use the same palette and accent, and follow Chrome's light/dark mode.
+- **Never** use YouTube's logo, icons, artwork or code. Aim's name and mark appear on every card, so nothing reads as YouTube's own feature.
 
 ## Rebranding
 

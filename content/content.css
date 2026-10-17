@@ -1,9 +1,9 @@
-/* Aim — styled to read as part of YouTube.
+/* Aim — styled to sit naturally inside YouTube.
    Colors come from YouTube's own theme variables (--yt-spec-*), so Aim follows YouTube's light
-   and dark themes exactly; the fallbacks only apply if YouTube ever renames them. No accent
-   color of our own: like YouTube's menus and dialogs, everything is neutral, and red is
-   reserved for the Aim mark. Sizes follow YouTube's components: 36px pill buttons, 32px chips,
-   12px-radius menus and dialogs. */
+   and dark themes exactly; the fallbacks only apply if YouTube ever renames them. Aim's one accent
+   is YouTube red (--wp-accent): primary actions, the selected choice and the break indicator.
+   Everything else stays neutral. Cards and dialogs are a little rounder and roomier than
+   YouTube's menus, so Aim's moments of decision read as calm and deliberate. */
 
 .wp {
   --wp-text: var(--yt-spec-text-primary, #0f0f0f);
@@ -22,6 +22,12 @@
   --wp-search-button: var(--ytd-searchbox-legacy-button-color, #f8f8f8);
   --wp-search-focus: #1c62b9;
   --wp-shadow: 0 4px 32px 0 rgba(0, 0, 0, 0.1);
+  --wp-accent: #ff0033;
+  --wp-accent-hover: #e0002c;
+  --wp-accent-soft: rgba(255, 0, 51, 0.08);
+  --wp-on-accent: #ffffff;
+  --wp-success: #2ba640;
+  --wp-card-border: rgba(0, 0, 0, 0.08);
   font-family: "Roboto", "Arial", sans-serif;
   color: var(--wp-text);
   -webkit-font-smoothing: antialiased;
@@ -43,6 +49,8 @@ html[dark] .wp {
   --wp-search-button: var(--ytd-searchbox-legacy-button-color, #222222);
   --wp-search-focus: #1c62b9;
   --wp-shadow: 0 4px 32px 0 rgba(0, 0, 0, 0.5);
+  --wp-accent-soft: rgba(255, 0, 51, 0.16);
+  --wp-card-border: rgba(255, 255, 255, 0.1);
 }
 
 .wp *, .wp *::before, .wp *::after { box-sizing: border-box; }
@@ -331,3 +339,73 @@ html.wp-boot ytd-browse[page-subtype="home"] ytd-feed-filter-chip-bar-renderer {
 .wp-study-list { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
 .wp-study-here { font-weight: 500; }
 .wp-study-bar { border-top: 1px solid var(--wp-divider); padding-top: 12px; }
+
+/* ======================================================================
+   Polish: YouTube-red primary actions, roomier cards, segmented choices.
+   ====================================================================== */
+.wp .wp-btn-primary { background: var(--wp-accent); color: var(--wp-on-accent); }
+.wp .wp-btn-primary:hover { background: var(--wp-accent-hover); opacity: 1; }
+.wp .wp-btn-primary:disabled { opacity: .5; cursor: default; }
+.wp-btn-block { width: 100%; height: 44px; border-radius: 22px; font-size: 15px; }
+.wp .wp-chip-on, .wp .wp-chip-on:hover, .wp .wp-seg-btn.on, .wp .wp-seg-btn.on:hover {
+  background: var(--wp-accent-soft); color: var(--wp-accent); box-shadow: inset 0 0 0 1.5px var(--wp-accent);
+}
+
+/* Dialogs: rounder, roomier, with a centered brand line and a close button when dismissible. */
+.wp-dialog, .wp-pc-inner { border-radius: 16px; position: relative; }
+.wp-dialog { padding: 28px; gap: 14px; }
+.wp-dialog-close { position: absolute; top: 12px; right: 12px; color: var(--wp-muted); }
+.wp-dialog-center { align-items: center; text-align: center; }
+.wp-dialog-center .wp-title { margin-top: 2px; }
+.wp-dialog-brand { color: var(--wp-text); font-size: 18px; font-weight: 700; gap: 8px; }
+.wp-dialog-center .wp-dialog-brand { justify-content: center; }
+.wp-dialog-brand .wp-icon { transform: scale(1.15); }
+.wp-sub { font-size: 14px; line-height: 20px; color: var(--wp-muted); margin: -6px 0 2px; }
+
+/* A search-style field: icon, input, and an optional arrow. */
+.wp-field { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 8px 0 14px; border-radius: 12px;
+  border: 1px solid var(--wp-search-border); background: var(--wp-base); }
+.wp-field:focus-within { border-color: var(--wp-search-focus); box-shadow: inset 0 0 0 1px var(--wp-search-focus); }
+.wp-field .wp-icon { color: var(--wp-muted); }
+.wp-field input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--wp-text); font: 400 15px/22px "Roboto", Arial, sans-serif; }
+.wp-field input::placeholder { color: var(--wp-muted); }
+
+/* Segmented choices (Take a Break): equal boxes; the chosen one in red. */
+.wp-opts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; width: 100%; }
+.wp-opt { height: 56px; border-radius: 10px; border: 1px solid var(--wp-divider); background: var(--wp-base); font-size: 14px; color: var(--wp-text); }
+.wp-opt:hover { background: var(--wp-hover); }
+.wp .wp-opt.on { border-color: var(--wp-accent); background: var(--wp-accent-soft); color: var(--wp-accent); font-weight: 500; }
+.wp-opt:disabled { opacity: .45; cursor: default; }
+.wp-break-custom { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.wp-dialog-icon { display: inline-flex; align-items: center; gap: 8px; }
+
+/* The indicator during a break: red-tinted, with the time counting down. */
+.wp .wp-pill-break { background: var(--wp-accent-soft); }
+.wp .wp-pill-break:hover { background: var(--wp-accent-soft); filter: brightness(.97); }
+.wp-pill-break .wp-pill-label { color: var(--wp-accent); }
+.wp-pill-break .wp-pill-time { color: var(--wp-text); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+/* "Target complete?": a green check. */
+.wp .wp-done-check { width: 56px; height: 56px; border-radius: 50%; background: var(--wp-success); color: #fff; display: flex;
+  align-items: center; justify-content: center; transform: none; margin: 4px 0 2px; }
+.wp .wp-done-check .wp-icon { transform: scale(1.4); }
+.wp .wp-done-check svg circle { display: none; }
+.wp .wp-done-check svg path { stroke: #fff; }
+
+/* "Break time is up": the Target you're returning to. */
+.wp-return { display: flex; gap: 12px; align-items: center; width: 100%; padding: 10px; border-radius: 12px;
+  border: 1px solid var(--wp-divider); text-align: left; }
+.wp-return-thumb { width: 96px; height: 54px; flex: none; border-radius: 8px; background: var(--wp-tonal) center / cover no-repeat; }
+
+/* Homepage card: a calm, centered card. */
+.wp-home-card { background: var(--wp-raised); border: 1px solid var(--wp-card-border); border-radius: 20px;
+  box-shadow: var(--wp-shadow); padding: 32px; margin-top: 8vh; }
+.wp-home-card > .wp-dialog-brand { align-self: center; }
+.wp-home-card .wp-home-title { text-align: center; }
+.wp-home-card .wp-home-lede { text-align: center; align-self: center; margin-top: -10px; }
+.wp-home-card .wp-home-hint { text-align: center; margin-left: 0; }
+.wp-home-card .wp-chips { justify-content: center; }
+.wp-home-card > .wp-label:not(.wp-home-break-label) { text-align: center; }
+.wp-home-card .wp-home-break-label { text-align: center; }
+.wp-home-card .wp-break-pick { align-items: center; }
+.wp-home-card .wp-break-pick .wp-chips { justify-content: center; }

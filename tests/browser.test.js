@@ -167,7 +167,9 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     !/Pause|Explore|Add 15/.test(menu), menu.slice(0, 200));
 
   // ---------- take a break and come back ----------
-  await p.click('.wp-dropdown .wp-chip:text-is("15m")');
+  await p.click('.wp-dropdown button:has-text("Take a break")');
+  await p.click('.wp-break-dialog .wp-opt:text-is("15 minutes")');
+  await p.click('.wp-break-dialog button:text-is("Start Break")');
   await p.waitForTimeout(600);
   st = await store();
   step("a break from the menu keeps the purpose waiting", st.brk?.durationMin === 15 && st.purpose?.suspended === true);
@@ -187,16 +189,19 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
 
   // ---------- a break running out ----------
   await p.click("#wp-chip .wp-pill");
-  await p.click('.wp-dropdown .wp-chip:text-is("15m")');
+  await p.click('.wp-dropdown button:has-text("Take a break")');
+  await p.click('.wp-break-dialog .wp-opt:text-is("15 minutes")');
+  await p.click('.wp-break-dialog button:text-is("Start Break")');
   await p.waitForTimeout(500);
   await patchLocal("brk", { usedSec: 15 * 60 - 3 });
   await p.waitForFunction(() => !document.querySelector("#wp-chip")?.textContent.includes("Break"), null, { timeout: 15000 });
   st = await store();
   step("a break that runs out ends and the purpose resumes", !st.brk && st.purpose && !st.purpose.suspended && st.stop?.kind === "break");
-  await p.waitForSelector(".wp-notice", { timeout: 5000 });
-  const over = await text(".wp-notice");
+  await p.waitForSelector(".wp-break-over", { timeout: 5000 });
+  const over = await text(".wp-break-over");
   step("a \"Break time is up\" card offers the purpose or more break", over.includes("Break time is up") && over.includes("Back on Target") && over.includes("Extend break"), over);
-  await p.click('.wp-notice button:has-text("Back on Target")');
+  step("the break-over card also lets you keep browsing", over.includes("Keep browsing for now"));
+  await p.click('.wp-break-over button:has-text("Back on Target")');
 
   // ---------- a purpose time limit ----------
   await p.click("#wp-chip .wp-pill");
@@ -230,7 +235,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.waitForSelector(".wp-dialog .wp-recent", { timeout: 3000 });
   step("setting a purpose offers recent ones", (await text(".wp-dialog .wp-recent")).includes("Learn how sourdough starters work"));
   await p.click('.wp-dialog .wp-recent-item');
-  step("tapping a recent purpose fills the box", (await p.inputValue(".wp-dialog textarea")) === "Learn how sourdough starters work");
+  step("tapping a recent purpose fills the box", (await p.inputValue(".wp-dialog .wp-field input")) === "Learn how sourdough starters work");
   await p.keyboard.press("Escape");
   st = await store();
   const done = st.history.filter(h => h.type === "purpose").pop();
@@ -312,7 +317,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("no AI, no API key anywhere in settings", !/API key|Claude|AI check/i.test(optText));
   step("no Aim Plus section while config.js is empty", plusHidden);
   step("popup shows the purpose with quick controls, the week, today and history",
-    ["Current Target", "learn to sharpen a chisel", "Take a break", "Change Target", "Target complete", "This week", "Targets complete", "On Target", "Breaks", "Found it"].every(t => popText.includes(t)), popText.slice(0, 200));
+    ["Current Target", "learn to sharpen a chisel", "Take a Break", "Change Target", "Target complete", "This week", "Targets complete", "On Target", "Breaks", "Found it"].every(t => popText.includes(t)), popText.slice(0, 200));
   await pop.click('button:has-text("Target complete")');
   await pop.click('button:text-is("Yes, I\'m done")');
   await pop.waitForTimeout(500);

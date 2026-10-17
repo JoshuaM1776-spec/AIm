@@ -76,10 +76,11 @@ async function renderHome() {
     p ? null : el("div", { class: "wp-muted wp-home-lede" }, `Whether you're preparing for an exam, learning a new skill, or finding a quick answer, ${BRAND} helps you stay focused on what you came to YouTube to accomplish.`),
     el("div", { class: "wp-home-search" }, input, findBtn),
     hint,
-    resumeBlock,
     // Examples help a first visit; once there's something to pick up, they'd only add clutter.
     !p && !others.length ? el("div", { class: "wp-label" }, "Examples") : null,
     !p && !others.length ? el("div", { class: "wp-chips" }, ...EXAMPLES.map(t => el("button", { class: "wp-chip", onclick: () => { input.value = t; input.focus(); } }, t))) : null,
+    p ? null : el("button", { class: "wp-btn wp-btn-primary wp-btn-block wp-home-go-big", onclick: submit }, "Search YouTube", icon("right")),
+    resumeBlock,
     el("div", { class: "wp-label wp-home-break-label" }, p ? "Or take a break" : "Just browsing? Take a break"),
     breakChips(takeBreak)].filter(Boolean));
   host.prepend(card);

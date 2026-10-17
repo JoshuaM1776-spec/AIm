@@ -30,9 +30,9 @@ function renderChip() {
   if (chip.dataset.sig === sig) return tickCountdown();
   chip.dataset.sig = sig;
   chip.replaceChildren(...[el("button", {
-    class: "wp-pill", title: purpose?.text ? `${BRAND}: ${purpose.text}` : BRAND, "aria-haspopup": "menu",
+    class: "wp-pill" + (brk ? " wp-pill-break" : ""), title: purpose?.text ? `${BRAND}: ${purpose.text}` : BRAND, "aria-haspopup": "menu",
     onclick: e => { e.stopPropagation(); dropdown ? closeDropdown() : openDropdown(); }
-  }, icon("logo"), el("span", { class: "wp-pill-label" }, label),
+  }, icon(brk ? "coffee" : "logo"), el("span", { class: "wp-pill-label" }, label),
     time ? el("span", { class: "wp-pill-time" }, time) : null, icon("chevron")),
     brk ? el("button", { class: "wp-icon-btn wp-chip-end", title: "End break", "aria-label": "End break", onclick: e => { e.stopPropagation(); endBreakNow(); } }, svgIcon("close")) : null]
     .filter(Boolean)); // replaceChildren would print a null as the text "null"
@@ -65,7 +65,8 @@ function timeBlock(label, left, total) {
 }
 
 function breakBlock() {
-  return el("div", { class: "wp-menu-block" }, el("div", { class: "wp-label" }, "Take a break"), breakChips(takeBreak));
+  return el("div", { class: "wp-menu-items" }, menuItem("coffee", "Take a break", openBreakDialog,
+    { hint: leisureUsedUp() ? "none left today" : status.leisureLeftMin !== null ? `${status.leisureLeftMin} min left` : "" }));
 }
 
 function videoItems() {
@@ -150,7 +151,7 @@ function recentList(input) {
 // Set a purpose from the indicator (the homepage card and searching do the same).
 function openStartDialog() {
   closeDropdown();
-  const input = el("textarea", { class: "wp-input", rows: "2", placeholder: "What do you want to find or learn?" });
+  const input = el("input", { type: "text", placeholder: "What do you want to find or learn?", "aria-label": "Your Target" });
   const err = el("div", { class: "wp-error" });
   const start = async () => {
     // Set from a video page, the purpose includes the video on screen.
@@ -166,7 +167,8 @@ function openStartDialog() {
   keepKeys(input, start);
   openModal(el("div", { class: "wp-dialog", role: "dialog", "aria-modal": "true" },
     brandLine(),
-    el("label", { class: "wp-q" }, "What brings you here?"), input, recentList(input), err,
+    el("label", { class: "wp-q" }, "What brings you here?"),
+    el("div", { class: "wp-field" }, icon("search"), input), recentList(input), err,
     el("div", { class: "wp-actions" },
       el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Cancel"),
       el("button", { class: "wp-btn wp-btn-primary", onclick: start }, "Set Target"))));
@@ -178,7 +180,7 @@ function openStartDialog() {
 function openPivotDialog(prefill = "", { afterConfirm = null, video = null } = {}) {
   closeDropdown();
   if (!purpose) return openStartDialog();
-  const input = el("textarea", { class: "wp-input", rows: "2", placeholder: "What do you want to focus on instead?" });
+  const input = el("input", { type: "text", placeholder: "What do you want to find or learn?", "aria-label": "New Target" });
   input.value = typeof prefill === "string" ? prefill : "";
   const err = el("div", { class: "wp-error" });
   const confirm = async () => {
@@ -197,7 +199,7 @@ function openPivotDialog(prefill = "", { afterConfirm = null, video = null } = {
   openModal(el("div", { class: "wp-dialog", role: "dialog", "aria-modal": "true" },
     el("div", { class: "wp-title" }, "Change Target"),
     el("div", { class: "wp-current" }, el("div", { class: "wp-label" }, "Current Target"), el("div", { class: "wp-strong" }, purpose.text)),
-    el("label", { class: "wp-q wp-q-sm" }, "What would you like to focus on instead?"), input, recentList(input),
+    el("div", { class: "wp-field" }, icon("search"), input), recentList(input),
     el("p", { class: "wp-muted" }, "Your current Target is set aside with its searches and videos. Pick it up again from the homepage anytime."), err,
     el("div", { class: "wp-actions" },
       el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Cancel"),
@@ -261,16 +263,17 @@ async function askDone() {
   const p = activePurpose() || purpose;
   if (!p) return;
   const plus = (await send({ type: "plus-brief" }))?.plus === true;
-  openModal(el("div", { class: "wp-dialog wp-done-dialog", role: "dialog", "aria-modal": "true" },
+  openModal(el("div", { class: "wp-dialog wp-dialog-center wp-done-dialog", role: "dialog", "aria-modal": "true" },
     el("div", { class: "wp-done-check" }, icon("check")),
     el("div", { class: "wp-title" }, "Target complete?"),
     el("div", { class: "wp-muted" }, p.text),
     el("label", { class: "wp-q wp-q-sm" }, "Did you find what you were looking for?"),
     el("div", { class: "wp-done-actions" },
-      el("button", { class: "wp-btn wp-btn-primary", onclick: () => finishPurpose("yes") }, "Yes, I'm done"),
-      el("button", { class: "wp-btn wp-btn-tonal", onclick: () => finishPurpose("partly") }, "Partly"),
-      el("button", { class: "wp-btn wp-btn-tonal", onclick: () => finishPurpose("no") }, "Not really"),
-      el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Keep going")),
+      el("button", { class: "wp-btn wp-btn-primary wp-btn-block", onclick: () => finishPurpose("yes") }, "Yes, I'm done"),
+      el("div", { class: "wp-row", style: "width:100%" },
+        el("button", { class: "wp-btn wp-btn-tonal", style: "flex:1", onclick: () => finishPurpose("partly") }, "Partly"),
+        el("button", { class: "wp-btn wp-btn-tonal", style: "flex:1", onclick: () => finishPurpose("no") }, "Not really")),
+      el("button", { class: "wp-btn wp-btn-text wp-btn-block", onclick: closeModal }, "Keep going")),
     plus ? el("div", { class: "wp-done-teachback" },
       el("span", { class: "wp-muted" }, "Learned something?"),
       el("button", { class: "wp-btn wp-btn-tonal", onclick: () => send({ type: "open-teachback", topic: p.text }) }, "Test my understanding")) : null));

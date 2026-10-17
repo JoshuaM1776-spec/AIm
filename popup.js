@@ -19,6 +19,25 @@ const mins = sec => Math.max(0, Math.ceil(sec / 60));
 // 80 → "1h 20m", 45 → "45 min"
 const dur = m => (m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ""}` : `${m} min`);
 
+// Small line icons, drawn like the ones on YouTube.
+const SVG = "http://www.w3.org/2000/svg";
+function ico(paths) {
+  const s = document.createElementNS(SVG, "svg");
+  s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("class", "ico"); s.setAttribute("aria-hidden", "true");
+  for (const d of paths) {
+    const p = document.createElementNS(SVG, "path");
+    for (const [k, v] of Object.entries({ d, fill: "none", stroke: "currentColor", "stroke-width": "1.8", "stroke-linecap": "round", "stroke-linejoin": "round" })) p.setAttribute(k, v);
+    s.append(p);
+  }
+  return s;
+}
+const ICONS = {
+  coffee: ["M5 9.5h11v4.5a4.5 4.5 0 0 1-4.5 4.5h-2A4.5 4.5 0 0 1 5 14z", "M16 11h1.5a2.5 2.5 0 0 1 0 5H16", "M8.5 3.5c-.9 1 .9 2 0 3.2M11.5 3.5c-.9 1 .9 2 0 3.2"],
+  change: ["M4 12a8 8 0 0 1 14-5.3L20 9", "M20 4v5h-5", "M20 12a8 8 0 0 1-14 5.3L4 15", "M4 20v-5h5"],
+  check: ["M5 12.5l4.5 4.5L19 7.5"],
+  chevron: ["M9 6l6 6-6 6"]
+};
+
 let st = null;
 let open = null; // which inline control is open: "break" | "pivot" | "done"
 
@@ -45,7 +64,7 @@ async function act(msg) {
 
 // ---------------- the current purpose or break ----------------
 function breakControls() {
-  if (open !== "break") return el("button", { class: "btn wide", onclick: () => { open = "break"; renderCurrent(); } }, "☕ Take a break");
+  if (open !== "break") return el("button", { class: "btn wide", onclick: () => { open = "break"; renderCurrent(); } }, ico(ICONS.coffee), "Take a Break");
   const left = st.leisureLeftMin, used = left !== null && left < 1;
   const custom = el("input", { class: "field", type: "number", min: "1", placeholder: "Minutes", "aria-label": "Custom break length in minutes", style: "width:96px;margin:0" });
   return el("div", {},
@@ -101,8 +120,9 @@ function renderCurrent() {
   if (p) {
     const left = p.limitMin ? mins(p.limitMin * 60 - p.usedSec) : null;
     box.append(el("div", { class: "card" },
-      el("div", { class: "tag" }, "Current Target"),
-      el("div", { class: "strong big" }, p.text),
+      el("button", { class: "cur-head", title: "All Targets", onclick: () => send({ type: "open-targets" }) },
+        el("div", { style: "min-width:0" }, el("div", { class: "tag" }, "Current Target"), el("div", { class: "strong big" }, p.text)),
+        el("span", { class: "chev" }, ico(ICONS.chevron))),
       el("div", { class: "ring-row" },
         left !== null ? ring(left, p.limitMin) : null,
         el("div", {}, el("div", { class: "big" }, left !== null ? `${dur(left)} left` : "No time limit"),
@@ -110,10 +130,11 @@ function renderCurrent() {
       open === "pivot" ? pivotControls() : open === "done" ? doneControls() : el("div", {},
         breakControls(),
         open === "break" ? null : el("div", { class: "pair" },
-          el("button", { class: "btn", onclick: () => { open = "pivot"; renderCurrent(); } }, "↺ Change Target"),
-          el("button", { class: "btn", onclick: () => { open = "done"; renderCurrent(); } }, "✓ Target complete")),
-        open === "break" ? null : el("div", { class: "foot", style: "padding:8px 0 0;text-align:left" },
-          el("a", { id: "setAside", onclick: () => act({ type: "purpose-pause" }) }, "Set aside for later")))));
+          el("button", { class: "btn", onclick: () => { open = "pivot"; renderCurrent(); } }, ico(ICONS.change), "Change Target"),
+          el("button", { class: "btn", onclick: () => { open = "done"; renderCurrent(); } }, ico(ICONS.check), "Target complete")),
+        open === "break" ? null : el("div", { class: "foot", style: "padding:8px 0 0;text-align:left;border:0" },
+          el("a", { id: "setAside", onclick: () => act({ type: "purpose-pause" }) }, "Set aside for later"))),
+      el("button", { class: "limits", onclick: () => send({ type: "open-options", section: "advanced" }) }, "Daily limits", el("span", { class: "chev" }, ico(ICONS.chevron)))));
     return;
   }
   box.append(el("div", { class: "card" },
