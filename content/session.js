@@ -92,6 +92,7 @@ function purposeMenu() {
   return [head, time, searches, focusBlock(), breakBlock(), el("div", { class: "wp-menu-items" },
     menuItem("check2", "Target complete", askDone),
     menuItem("pivot", "Change Target", () => openPivotDialog()),
+    menuItem("pause", "Set aside for later", setAsideTarget),
     left !== null ? menuItem("clock", "Change time limit", openLimitDialog) : null,
     ...videoItems())].filter(Boolean);
 }
@@ -172,8 +173,8 @@ function openStartDialog() {
   setTimeout(() => input.focus(), 50);
 }
 
-// The intentional pivot: a new purpose, keeping searches, videos and the time limit.
-// From a video that didn't fit, pass it as `video`: the new purpose includes it.
+// The intentional pivot: a new Target. The current one is set aside, to resume later.
+// From a video that didn't fit, pass it as `video`: the new Target includes it.
 function openPivotDialog(prefill = "", { afterConfirm = null, video = null } = {}) {
   closeDropdown();
   if (!purpose) return openStartDialog();
@@ -189,7 +190,7 @@ function openPivotDialog(prefill = "", { afterConfirm = null, video = null } = {
     closeModal();
     renderChip();
     route();
-    toast(`Target changed: ${purpose.text}`);
+    toast(r.setAside ? `New Target. "${shorten(r.setAside, 40)}" is set aside for later.` : `New Target: ${purpose.text}`);
     if (currentId) regate(currentId);
   };
   keepKeys(input, confirm);
@@ -197,7 +198,7 @@ function openPivotDialog(prefill = "", { afterConfirm = null, video = null } = {
     el("div", { class: "wp-title" }, "Change Target"),
     el("div", { class: "wp-current" }, el("div", { class: "wp-label" }, "Current Target"), el("div", { class: "wp-strong" }, purpose.text)),
     el("label", { class: "wp-q wp-q-sm" }, "What would you like to focus on instead?"), input, recentList(input),
-    el("p", { class: "wp-muted" }, "Your searches, videos and time limit carry over."), err,
+    el("p", { class: "wp-muted" }, "Your current Target is set aside with its searches and videos. Pick it up again from the homepage anytime."), err,
     el("div", { class: "wp-actions" },
       el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Cancel"),
       el("button", { class: "wp-btn wp-btn-primary", onclick: confirm }, "Change Target"))));

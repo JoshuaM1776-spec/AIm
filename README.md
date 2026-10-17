@@ -31,6 +31,7 @@ Chrome extension, Manifest V3, no build step.
 | `content/main.js` | Timer ticks, sync with other tabs, navigation, startup. Loads last. |
 | `content/content.css` | Styles for all of the above |
 | `popup.html/js` | Toolbar popup |
+| `targets.html/js` | All Targets: current, set aside (Resume, Remove) and completed (Start again) |
 | `options.html/js` | Settings page |
 | `config.js`, `plus.js` | Aim Plus in the service worker: where the server is (empty = Free only), sign-in with an emailed code, calling Aim's AI endpoint. Only Aim's own pages can use it, never YouTube tabs. |
 | `options-plus.js` | The Aim Plus section of Settings (hidden until `config.js` is filled in) |
@@ -48,6 +49,7 @@ Aim doesn't block or alter YouTube's ads, and stays compatible with ad blockers 
 - **Two states, nothing in between.** A **purpose** (why you're on YouTube right now) or a **break** (free browsing). With neither, Aim asks before a video plays: set a purpose, or take a break (15 / 30 / 60 min, or just this video).
 - **Your search becomes your purpose.** Later searches that share a meaningful word with it continue silently; others ask once, "Is this part of your purpose?". Changing purpose is deliberate and keeps your searches, videos and time limit.
 - **On purpose, you watch what your searches found:** their results, playlists among them, and the video you set the purpose from. Anything else shows "Not part of your purpose": go back, search, change purpose or take a break. The sidebar shows **Up next from your search** instead of YouTube's recommendations. No AI is involved.
+- **Picking up where you left off.** A Target is active, set aside, or completed. **Change Target** and **Set aside for later** keep the old Target, with its searches, the videos they found and where you were in the last video. The homepage shows the current Target and the two most recent set-aside ones under "Pick up where you left off"; **View all Targets** lists every one. **Resume** returns to the last video at the moment you left it, or else the last search, and never starts anything else (no AI). Completed Targets can be started again. More searches on the same Target never create new Targets.
 - **Purposes have no time limit** unless you set one. **Done** ends a purpose and asks once whether you found what you needed.
 - **Breaks** share a **daily leisure allowance** (default 1 hour), a hard stop. A purpose waits during a break and resumes after it.
 - **Optional daily YouTube limit**, also a hard stop until midnight.

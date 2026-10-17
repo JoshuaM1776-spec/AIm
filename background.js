@@ -26,9 +26,11 @@ async function fullState() {
 
 // What a YouTube tab needs to know.
 async function tabState() {
-  const { avoid = {}, history = [] } = await chrome.storage.local.get(["avoid", "history"]);
+  const { avoid = {}, history = [], paused = [] } = await chrome.storage.local.get(["avoid", "history", "paused"]);
   const status = await getStatus();
-  return { ...status, settings: { ...status.settings, avoid }, recent: recentPurposes(history, status.purpose?.text) };
+  return { ...status, settings: { ...status.settings, avoid }, recent: recentPurposes(history, status.purpose?.text),
+    // The homepage shows at most two set-aside Targets; the Targets page shows everything.
+    paused: paused.slice(0, 2).map(p => summary(p, "paused")), pausedCount: paused.length };
 }
 
 // Changes to stored data run one at a time (see serial in store.js).
@@ -41,6 +43,9 @@ const writes = {
   "purpose-search": m => addSearch(m.query),
   "purpose-allow": m => allowVideos({ query: m.query, videos: m.videos, lists: m.lists }),
   "purpose-done": m => finishPurpose(m.outcome),
+  "purpose-pause": () => pausePurpose(),
+  "purpose-resume": m => resumePurpose(String(m.id || "")),
+  "paused-drop": m => dropPaused(String(m.id || "")),
   "purpose-rate": m => ratePurpose(m.id, m.outcome),
   "break-start": m => startBreak({ minutes: m.minutes, oneVideoId: m.oneVideoId }),
   "break-extend": m => extendBreak(m.minutes),
@@ -69,6 +74,8 @@ const reads = {
   "status": () => tabState(),
   "state": () => fullState(),
   "search-check": m => checkSearch(m.query),
+  "targets": () => readAll().then(resumable),
+  "open-targets": () => chrome.tabs.create({ url: chrome.runtime.getURL("targets.html") }).then(() => ({ result: "applied" })),
   // YouTube tabs may only learn whether to offer Plus features, and open TeachBack for a topic.
   "plus-brief": () => plusBrief(),
   "open-teachback": m => {

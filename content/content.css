@@ -284,7 +284,18 @@ html.wp-boot ytd-browse[page-subtype="home"] ytd-feed-filter-chip-bar-renderer {
 .wp-home-go:disabled { opacity: .6; cursor: progress; }
 .wp-home-hint { margin: -8px 0 0 16px; font-size: 13px; }
 .wp-home-lede { margin: -8px 0 0; font-size: 14px; line-height: 20px; max-width: 560px; }
-.wp-home-alt { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+.wp-home-alt { display: flex; align-items: center; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
+/* "Pick up where you left off": the current Target, then at most two set-aside ones. */
+.wp-home-resume { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.wp-home-current { border: 1px solid var(--wp-divider, rgba(0,0,0,.1)); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 4px; }
+.wp-home-current .wp-home-purpose { margin-top: 0; }
+.wp-home-meta { font-size: 13px; line-height: 18px; }
+.wp-home-sub { margin-top: 8px; }
+.wp-home-recent { display: flex; flex-direction: column; }
+.wp-home-row { display: flex; align-items: center; gap: 16px; padding: 10px 0; border-top: 1px solid var(--wp-divider, rgba(0,0,0,.1)); }
+.wp-home-sub + .wp-home-row { border-top: 0; }
+.wp-home-row-text { flex: 1; min-width: 0; }
+.wp-home-all { align-self: flex-start; margin-left: -12px; }
 
 /* ---------- search results bar ---------- */
 .wp-results-bar {

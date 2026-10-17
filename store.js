@@ -12,7 +12,7 @@
 //   break length · daily leisure allowance (hard) · purpose time limit · daily YouTube total (hard).
 // When one runs out mid-video, that video may finish within the grace period (default 15 min).
 
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 const DEFAULT_SETTINGS = {
   homeCard: true, leisureMin: 60, graceMin: 15, totalMin: 0, purposeLimitMin: 0,
   // Distractions, reduced whenever you're not on a break (see content.css and content/focus.js).
@@ -82,6 +82,7 @@ async function migrateStorage() {
   if (schemaVersion < 2) await migrateTo2(await chrome.storage.local.get(null));
   if (schemaVersion < 3) await migrateTo3(await chrome.storage.local.get(null));
   if (schemaVersion < 4) await migrateTo4(await chrome.storage.local.get(null));
+  if (schemaVersion < 5) await migrateTo5(await chrome.storage.local.get(null));
   await chrome.storage.local.set({ schemaVersion: SCHEMA_VERSION });
 }
 
@@ -145,6 +146,13 @@ async function migrateTo4(old) {
   await chrome.storage.local.remove(["apiKey", "model"]);
 }
 
+// 5: Targets can be set aside and resumed (the `paused` list), and remember when they were last
+// active and the last video watched, so resuming picks up where you left off.
+async function migrateTo5(old) {
+  const purpose = old.purpose ? { lastActiveAt: old.purpose.startedAt || Date.now(), last: null, ...old.purpose } : null;
+  await chrome.storage.local.set({ purpose, paused: Array.isArray(old.paused) ? old.paused : [] });
+}
+
 // ---------- settings ----------
 async function getSettings() {
   const { settings } = await chrome.storage.local.get("settings");
@@ -161,13 +169,14 @@ async function setSetting(key, value) {
 
 // ---------- reading the current state ----------
 async function readAll() {
-  const d = await chrome.storage.local.get(["purpose", "brk", "stop", "usage", "usageLastAt", "history"]);
+  const d = await chrome.storage.local.get(["purpose", "brk", "stop", "usage", "usageLastAt", "history", "paused"]);
   const day = todayKey();
   const usage = d.usage || {};
   usage[day] ||= emptyDay();
   // Limits are per day: yesterday's stop doesn't carry over.
   const stop = d.stop && d.stop.day === day ? d.stop : null;
-  return { purpose: d.purpose || null, brk: d.brk || null, stop, usage, usageLastAt: d.usageLastAt || 0, history: d.history || [], day };
+  return { purpose: d.purpose || null, brk: d.brk || null, stop, usage, usageLastAt: d.usageLastAt || 0, history: d.history || [],
+    paused: d.paused || [], day };
 }
 
 function leisureLeftSec(settings, today) {
@@ -215,6 +224,28 @@ function weekSummary(usage, history, now = new Date()) {
     breaks: history.filter(h => h.type === "break" && (h.endedAt || 0) >= since).length };
 }
 
+// ---------- Targets you can pick up again ----------
+// The home screen shows the current Target and at most two others; the Targets page shows all.
+// Set-aside Targets come first (they're unfinished), then recently completed ones.
+function resumable(s) {
+  const pausedList = s.paused.map(p => summary(p, "paused"));
+  const done = s.history.filter(h => h.type === "purpose" && h.text).slice().reverse().map(h => summary(h, "completed"));
+  return { current: s.purpose ? summary(s.purpose, "active") : null, paused: pausedList, completed: done.slice(0, 100) };
+}
+function summary(p, state) {
+  return { id: p.id, text: p.text, state, lastActiveAt: p.lastActiveAt || p.pausedAt || p.endedAt || p.startedAt,
+    usedSec: Math.round(p.usedSec || 0), videos: (p.videos || []).length, searches: (p.searches || []).length,
+    outcome: p.outcome || null, last: p.last || null };
+}
+
+// Where to land when a Target is resumed: the last video, at the moment you left it; otherwise
+// the last search; otherwise the homepage, which shows the Target.
+function resumeUrl(p) {
+  if (p.last?.id) return `https://www.youtube.com/watch?v=${encodeURIComponent(p.last.id)}${p.last.t > 5 ? `&t=${Math.floor(p.last.t)}s` : ""}`;
+  const q = p.searches?.[p.searches.length - 1]?.q;
+  return q ? `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}` : "https://www.youtube.com/";
+}
+
 // ---------- history ----------
 function archive(history, record) {
   history.push(record);
@@ -234,45 +265,93 @@ function newPurpose(text, search, limitMin) {
   const now = Date.now();
   return {
     id: uid(), text, vague: isVague(text), startedAt: now, limitMin: limitMin > 0 ? limitMin : null,
-    usedSec: 0, lastCountAt: 0, timeUp: false, suspended: false,
+    usedSec: 0, lastCountAt: 0, timeUp: false, suspended: false, lastActiveAt: now, last: null,
     searches: search ? [{ q: clip(search, 200), at: now }] : [], path: [{ text, at: now }], pivots: 0, videos: [],
     allowed: [], allowedLists: []
   };
 }
 
-// Starting a purpose ends any break (the break is what you were doing instead).
+// Starting a Target ends any break (the break is what you were doing instead), and sets aside
+// the Target you had, so you can pick it up again later.
 async function startPurpose({ text, search, limitMin, video }) {
   text = clip(text, 300);
   if (text.length < 2) return { result: "error", message: "Write what you're here for." };
   const s = await readAll(), settings = await getSettings();
   const writes = {};
   if (s.brk) { s.history = archive(s.history, breakRecord(s.brk)); writes.brk = null; }
-  if (s.purpose) s.history = archive(s.history, purposeRecord(s.purpose, null));
+  const setAside = s.purpose ? park(s, s.purpose) : null;
   const limit = limitMin === undefined ? settings.purposeLimitMin : parseInt(limitMin, 10) || 0;
   const purpose = newPurpose(text, search, limit);
   if (video?.id) allow(purpose, [video], [], search || "");
-  await chrome.storage.local.set({ ...writes, purpose, history: s.history, stop: s.stop?.kind === "total" ? s.stop : null });
-  return { result: "applied", purpose };
+  await chrome.storage.local.set({ ...writes, purpose, paused: s.paused, history: s.history, stop: s.stop?.kind === "total" ? s.stop : null });
+  return { result: "applied", purpose, setAside: setAside ? setAside.text : null };
 }
 
-// A pivot changes purpose and keeps what it has: searches, videos, the time limit.
-// Pass limitMin to set a new limit from now (0 removes it).
+// Changing Target is a deliberate change of objective: the old Target is set aside (resumable,
+// with its searches and videos) and the new one starts fresh, with the video that prompted it.
 async function pivotPurpose(text, limitMin, video) {
-  const s = await readAll();
-  if (!s.purpose) return startPurpose({ text, limitMin, video });
   text = clip(text, 300);
   if (text.length < 2) return { result: "error", message: "Write your new Target." };
-  const p = s.purpose;
-  p.text = text;
-  p.vague = isVague(text);
-  p.pivots += 1;
-  p.path.push({ text, at: Date.now() });
-  if (limitMin !== undefined && limitMin !== null) setLimitFromNow(p, parseInt(limitMin, 10) || 0);
-  if (video?.id) allow(p, [video], [], "");
-  p.timeUp = !!p.limitMin && p.usedSec >= p.limitMin * 60;
-  const stop = s.stop?.kind === "purpose" && !p.timeUp ? null : s.stop;
-  await chrome.storage.local.set({ purpose: p, stop });
-  return { result: "applied", purpose: p };
+  return startPurpose({ text, limitMin: limitMin ?? undefined, video });
+}
+
+// Set-aside Targets: newest first, at most 20. The oldest beyond that become history, unfinished.
+const MAX_PAUSED = 20;
+function park(s, p) {
+  const parked = { ...p, suspended: false, lastCountAt: 0, pausedAt: Date.now(), lastActiveAt: p.lastActiveAt || Date.now() };
+  s.paused = [parked, ...s.paused.filter(x => x.id !== p.id)];
+  for (const old of s.paused.splice(MAX_PAUSED)) s.history = archive(s.history, purposeRecord(old, null));
+  return parked;
+}
+
+// Set the current Target aside on purpose, without starting another.
+async function pausePurpose() {
+  const s = await readAll();
+  if (!s.purpose) return { result: "error", message: "No Target set." };
+  const parked = park(s, s.purpose);
+  const stop = s.stop?.kind === "purpose" ? null : s.stop;
+  await chrome.storage.local.set({ purpose: null, paused: s.paused, history: s.history, stop });
+  return { result: "applied", setAside: parked.text };
+}
+
+// Pick a Target up again: a set-aside one comes back as it was; a completed one starts again
+// with its searches and the videos you watched for it. The current Target, if any, is set aside.
+// Returns where to go: the last video at the moment you left it, or the last search.
+async function resumePurpose(id) {
+  const s = await readAll();
+  if (s.purpose?.id === id) return { result: "applied", purpose: s.purpose, url: resumeUrl(s.purpose) };
+  let next = s.paused.find(p => p.id === id);
+  if (next) {
+    s.paused = s.paused.filter(p => p.id !== id);
+    next = { ...next, suspended: false, lastCountAt: 0, lastActiveAt: Date.now() };
+    delete next.pausedAt;
+    if (next.last?.id) allow(next, [next.last], [], "");
+  } else {
+    const done = s.history.find(h => h.type === "purpose" && h.id === id);
+    if (!done) return { result: "error", message: "That Target isn't available any more." };
+    next = newPurpose(done.text, null, 0);
+    next.searches = (done.searches || []).slice(-50);
+    allow(next, done.videos || [], [], "");
+    const lastVideo = (done.videos || []).slice().sort((a, b) => (b.at || 0) - (a.at || 0))[0];
+    next.last = lastVideo ? { id: lastVideo.id, title: lastVideo.title, t: 0, at: lastVideo.at } : null;
+    next.restartedFrom = done.id;
+  }
+  const writes = {};
+  if (s.brk) { s.history = archive(s.history, breakRecord(s.brk)); writes.brk = null; }
+  if (s.purpose) park(s, s.purpose);
+  await chrome.storage.local.set({ ...writes, purpose: next, paused: s.paused, history: s.history,
+    stop: s.stop?.kind === "total" ? s.stop : null });
+  return { result: "applied", purpose: next, url: resumeUrl(next) };
+}
+
+// Remove a set-aside Target you don't want to come back to. It stays in history, unfinished.
+async function dropPaused(id) {
+  const s = await readAll();
+  const p = s.paused.find(x => x.id === id);
+  if (!p) return { result: "error", message: "Not found." };
+  s.paused = s.paused.filter(x => x.id !== id);
+  await chrome.storage.local.set({ paused: s.paused, history: archive(s.history, purposeRecord(p, null)) });
+  return { result: "applied" };
 }
 
 function setLimitFromNow(p, minutes) {
@@ -467,6 +546,9 @@ async function recordTick(seconds, video) {
   if (activity) {
     activity.usedSec += credit(activity.lastCountAt, now, seconds);
     activity.lastCountAt = now;
+    activity.lastActiveAt = now;
+    // Where you are in the video, so resuming the Target can return to it.
+    if (activity === purpose && video?.id) purpose.last = { id: clip(video.id, 20), title: clip(video.title, 300), t: Math.max(0, Number(video.t) || 0), at: now };
     if (video?.id) {
       let v = activity.videos.find(x => x.id === video.id);
       if (!v) {

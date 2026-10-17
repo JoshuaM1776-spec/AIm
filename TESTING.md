@@ -27,7 +27,7 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 ### 1. Install, upgrade and settings
 
 - [ ] Extension loads with no errors on the card.
-- [ ] Service worker console: `chrome.storage.local.get("schemaVersion")` returns `{ schemaVersion: 4 }`.
+- [ ] Service worker console: `chrome.storage.local.get("schemaVersion")` returns `{ schemaVersion: 5 }`.
 - [ ] **Upgrade from 0.9** (same folder, then reload):
   - a running Focus session becomes your Target, without its timer;
   - an Explore session becomes a break;
@@ -134,7 +134,18 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] **Sign out** returns to the email form. Signing in again works.
 - [ ] YouTube behaves exactly as without an account.
 
-### 13. TeachBack (Aim Plus account on the plus plan)
+### 13. Picking up where you left off
+
+- [ ] Set a Target, watch part of a video, then **Change Target** (menu or a "Not on your Target" card). The homepage shows the new one as **Current Target** with **Continue**, and the old one under **Recent Targets** with "Last active today" and **Resume**. No example chips.
+- [ ] **Resume** the old one: the video opens at about the moment you left it, and plays (it's part of that Target). The other Target is now under Recent Targets.
+- [ ] A Target with searches but no video resumes on its last search's results.
+- [ ] Menu → **Set aside for later**: back on the homepage, no current Target, both under Recent Targets (at most two show).
+- [ ] **View all Targets** (homepage, or the popup's footer) opens a page with Current, Set aside (Resume, Remove) and Completed (Start again). **Start again** opens the last video watched for it.
+- [ ] Searching related things ("spark plugs", "ignition coils" for "repair my engine") stays one Target; nothing new appears under Recent Targets.
+- [ ] Resuming never opens TeachBack or anything AI.
+- [ ] Popup: the Current card has "Set aside for later".
+
+### 14. TeachBack (Aim Plus account on the plus plan)
 
 - [ ] Settings → Aim Plus → **Test my understanding** opens TeachBack in a new tab. On YouTube, **Target complete?** shows "Learned something? Test my understanding" (Plus only; not when signed out or on Free).
 - [ ] Start with a topic (and optionally notes): Milo asks a first, basic question within a few seconds.
@@ -144,7 +155,7 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] Reload the TeachBack tab mid-session: the same question comes back. Reload on results: results come back.
 - [ ] In Supabase, `assessments`, `assessment_turns` and `progress_events` have rows for the session; `ai_usage` has one row per AI call.
 
-### 14. Sync and reload
+### 15. Sync and reload
 
 - [ ] Target complete from the popup while a YouTube tab is on a video: that tab shows the "What brings you here?" card on the player within a few seconds.
 - [ ] Two YouTube tabs: starting a break or setting a Target in one updates the other's indicator, and a card waiting on the other tab's player clears if the new state allows its video.

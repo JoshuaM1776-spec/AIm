@@ -151,7 +151,8 @@ function applyStatus(r) {
   purpose = r.purpose || null;
   brk = r.brk || null;
   stop = r.stop || null;
-  status = { today: r.today, leisureLeftMin: r.leisureLeftMin, totalReached: !!r.totalReached, recent: r.recent || status.recent };
+  status = { today: r.today, leisureLeftMin: r.leisureLeftMin, totalReached: !!r.totalReached, recent: r.recent || status.recent,
+    paused: r.paused || status.paused || [], pausedCount: r.pausedCount ?? status.pausedCount ?? 0 };
   if (r.settings) settings = { ...settings, ...r.settings };
   breakEndsAt = brk?.durationMin ? Date.now() + breakLeft(brk) * 1000 : 0;
 }

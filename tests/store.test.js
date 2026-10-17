@@ -29,7 +29,7 @@ function makeEnv(initial = {}) {
   return env;
 }
 const VIDEO = { id: "abc123", title: "Feeding a sourdough starter", channel: "Bread Co" };
-const fresh = () => makeEnv({ schemaVersion: 4 });
+const fresh = () => makeEnv({ schemaVersion: 5 });
 const DEFAULTS = { homeCard: true, leisureMin: 60, graceMin: 15, totalMin: 0, purposeLimitMin: 0,
   hideShorts: true, hideRecs: true, hideFeeds: true, noAutoplay: true };
 
@@ -37,7 +37,7 @@ const tests = [];
 const test = (name, fn) => tests.push([name, fn]);
 
 // ---------- migrations ----------
-test("migrates Waypoint 0.5 data all the way to v4", async () => {
+test("migrates Waypoint 0.5 data all the way to v5", async () => {
   const env = makeEnv({
     schemaVersion: 1, level: "strict", homeCard: false, recMode: "hide",
     limits: { leisureMin: 60, totalMin: 90 },
@@ -49,7 +49,7 @@ test("migrates Waypoint 0.5 data all the way to v4", async () => {
   });
   await env.run("migrateStorage()");
   const d = env.local;
-  assert.strictEqual(d.schemaVersion, 4);
+  assert.strictEqual(d.schemaVersion, 5);
   assert.deepStrictEqual(d.settings, { ...DEFAULTS, homeCard: false });
   assert.deepStrictEqual(d.avoid, { "/@loud": { name: "Loud", action: "hide" } });
   assert.deepStrictEqual(d.usage, { "2026-10-15": { purpose: 1800, leisure: 0, other: 0 } });
@@ -83,7 +83,7 @@ test("migrates v2 (Focus/Explore) data: Explore becomes a break", async () => {
 test("fresh install gets defaults", async () => {
   const env = makeEnv({});
   await env.run("migrateStorage()");
-  assert.strictEqual(env.local.schemaVersion, 4);
+  assert.strictEqual(env.local.schemaVersion, 5);
   assert.deepStrictEqual(env.local.settings, DEFAULTS);
 });
 
@@ -101,15 +101,90 @@ test("a purpose has no time limit by default and records searches and videos", a
   assert.strictEqual(Math.round(env.today().purpose), 60);
 });
 
-test("pivot keeps searches, videos and remaining time", async () => {
+test("Change Target sets the old Target aside, with its searches and videos, and starts fresh", async () => {
   const env = fresh();
-  await env.run(`startPurpose({ text: "learn sourdough", limitMin: 30 })`);
-  await env.ticks(6, 10, VIDEO);
-  const r = await env.run(`pivotPurpose("understand gluten development")`);
-  assert.strictEqual(r.purpose.text, "understand gluten development");
-  assert.strictEqual(r.purpose.limitMin, 30);
-  assert.strictEqual(r.purpose.videos.length, 1);
-  assert.deepStrictEqual(r.purpose.path.map(p => p.text), ["learn sourdough", "understand gluten development"]);
+  await env.run(`startPurpose({ text: "learn sourdough", search: "sourdough starter", limitMin: 30 })`);
+  await env.ticks(6, 10, { ...VIDEO, t: 95 });
+  const r = await env.run(`pivotPurpose("fix my truck's AC", undefined, { id: "ac1", title: "AC recharge" })`);
+  assert.strictEqual(r.purpose.text, "fix my truck's AC");
+  assert.strictEqual(r.purpose.searches.length, 0, "the new Target starts fresh");
+  assert.ok(r.purpose.allowed.some(v => v.id === "ac1"), "with the video that prompted it");
+  assert.strictEqual(r.setAside, "learn sourdough");
+  const parked = env.local.paused[0];
+  assert.strictEqual(parked.text, "learn sourdough");
+  assert.strictEqual(parked.videos.length, 1);
+  assert.deepStrictEqual(parked.last, { id: VIDEO.id, title: VIDEO.title, t: 95, at: parked.last.at });
+  assert.strictEqual(env.local.history.length, 0, "set aside, not finished");
+});
+
+test("resuming a set-aside Target restores it and returns to the video where you left off", async () => {
+  const env = fresh();
+  await env.run(`startPurpose({ text: "learn sourdough", search: "sourdough starter" })`);
+  await env.run(`allowVideos({ query: "sourdough starter", videos: [{ id: "abc123", title: "Feeding" }, { id: "zzz" }], lists: [] })`);
+  await env.ticks(3, 10, { ...VIDEO, t: 412 });
+  await env.run(`pausePurpose()`);
+  assert.strictEqual(env.local.purpose, null);
+  await env.run(`startPurpose({ text: "fix my truck's AC", search: "truck ac recharge" })`);
+  const id = env.local.paused[0].id;
+  const r = await env.run(`resumePurpose(${JSON.stringify(id)})`);
+  assert.strictEqual(r.purpose.text, "learn sourdough");
+  assert.strictEqual(r.purpose.searches[0].q, "sourdough starter");
+  assert.strictEqual(r.purpose.allowed.length, 2, "what its searches found is still watchable");
+  assert.strictEqual(r.url, "https://www.youtube.com/watch?v=abc123&t=412s");
+  assert.deepStrictEqual(env.local.paused.map(p => p.text), ["fix my truck's AC"], "the Target you had is set aside in turn");
+  // Resuming the current Target just says where to go.
+  assert.strictEqual((await env.run(`resumePurpose(${JSON.stringify(r.purpose.id)})`)).url, r.url);
+});
+
+test("resuming without a video goes back to the last search; resuming ends a break", async () => {
+  const env = fresh();
+  await env.run(`startPurpose({ text: "learn sourdough", search: "sourdough starter" })`);
+  await env.run(`addSearch("starter feeding ratio")`);
+  await env.run(`pausePurpose()`);
+  await env.run(`startBreak({ minutes: 15 })`);
+  const r = await env.run(`resumePurpose(${JSON.stringify(env.local.paused[0].id)})`);
+  assert.strictEqual(r.url, "https://www.youtube.com/results?search_query=starter%20feeding%20ratio");
+  assert.strictEqual(env.local.brk, null);
+  assert.strictEqual(env.local.purpose.suspended, false);
+});
+
+test("a completed Target can be started again with its searches and watched videos", async () => {
+  const env = fresh();
+  await env.run(`startPurpose({ text: "learn sourdough", search: "sourdough starter" })`);
+  await env.ticks(3, 10, VIDEO);
+  await env.run(`finishPurpose("yes")`);
+  const done = env.local.history[0];
+  const r = await env.run(`resumePurpose(${JSON.stringify(done.id)})`);
+  assert.notStrictEqual(r.purpose.id, done.id, "a new Target");
+  assert.strictEqual(r.purpose.text, "learn sourdough");
+  assert.strictEqual(r.purpose.searches[0].q, "sourdough starter");
+  assert.ok(r.purpose.allowed.some(v => v.id === VIDEO.id));
+  assert.strictEqual(r.url, `https://www.youtube.com/watch?v=${VIDEO.id}`);
+  assert.strictEqual(env.local.history.length, 1, "the finished record stays");
+  assert.strictEqual((await env.run(`resumePurpose("nope")`)).result, "error");
+});
+
+test("set-aside Targets: newest first, at most 20, removable, and searches never become Targets", async () => {
+  const env = fresh();
+  for (let i = 0; i < 22; i++) await env.run(`startPurpose({ text: "target ${i}" })`);
+  assert.strictEqual(env.local.paused.length, 20);
+  assert.strictEqual(env.local.paused[0].text, "target 20");
+  assert.deepStrictEqual(env.local.history.map(h => h.text), ["target 0"], "the oldest beyond 20 moves to history");
+  await env.run(`dropPaused(${JSON.stringify(env.local.paused[0].id)})`);
+  assert.strictEqual(env.local.paused.length, 19);
+  // More searches on the same Target stay part of it.
+  await env.run(`addSearch("spark plugs")`);
+  await env.run(`addSearch("ignition coils")`);
+  assert.strictEqual(env.local.paused.length, 19);
+  assert.strictEqual(env.local.purpose.searches.length, 2);
+});
+
+test("migrating to v5 adds the set-aside list and when the Target was last active", async () => {
+  const env = makeEnv({ schemaVersion: 4, purpose: { id: "p1", text: "learn sourdough", startedAt: 1000, usedSec: 0, searches: [], videos: [], allowed: [] } });
+  await env.run(`migrateStorage()`);
+  assert.strictEqual(env.local.schemaVersion, 5);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(env.local.paused)), []);
+  assert.strictEqual(env.local.purpose.lastActiveAt, 1000);
 });
 
 test("a pivot is never lost to a concurrent tick (serial queue)", async () => {
@@ -211,14 +286,14 @@ test("no grace when nothing is playing, or when the grace period is set to 0", a
   await env.run(`startBreak({ minutes: 1 })`);
   let st = await env.ticks(7);
   assert.strictEqual(st.stop.videoId, null);
-  env = makeEnv({ schemaVersion: 4, settings: { graceMin: 0 } });
+  env = makeEnv({ schemaVersion: 5, settings: { graceMin: 0 } });
   await env.run(`startBreak({ minutes: 1 })`);
   st = await env.ticks(7, 10, VIDEO);
   assert.strictEqual(st.stop.videoId, null);
 });
 
 test("the daily leisure allowance caps breaks and is a hard stop", async () => {
-  const env = makeEnv({ schemaVersion: 4, settings: { leisureMin: 20 } });
+  const env = makeEnv({ schemaVersion: 5, settings: { leisureMin: 20 } });
   let r = await env.run(`startBreak({ minutes: 30 })`);
   assert.strictEqual(r.brk.durationMin, 20, "capped to what's left today");
   assert.strictEqual(r.capped, 20);
@@ -235,7 +310,7 @@ test("the daily leisure allowance caps breaks and is a hard stop", async () => {
 });
 
 test("extending a break draws on the remaining allowance", async () => {
-  const env = makeEnv({ schemaVersion: 4, settings: { leisureMin: 40 } });
+  const env = makeEnv({ schemaVersion: 5, settings: { leisureMin: 40 } });
   await env.run(`startBreak({ minutes: 15 })`);
   let r = await env.run(`extendBreak(15)`);
   assert.strictEqual(r.added, 15);
@@ -265,7 +340,7 @@ test("starting a purpose ends the break", async () => {
 
 // ---------- daily total ----------
 test("the daily YouTube total is a hard stop for the rest of the day", async () => {
-  const env = makeEnv({ schemaVersion: 4, settings: { totalMin: 1 } });
+  const env = makeEnv({ schemaVersion: 5, settings: { totalMin: 1 } });
   await env.run(`startPurpose({ text: "learn sourdough" })`);
   const st = await env.ticks(7, 10, VIDEO);
   assert.strictEqual(st.stop.kind, "total");
@@ -290,7 +365,7 @@ test("migrates v3 data: drops the API key and AI setting, gives the purpose an a
     purpose: { id: "p1", text: "learn sourdough", searches: [], videos: [], path: [] } });
   await env.run("migrateStorage()");
   const d = env.local;
-  assert.strictEqual(d.schemaVersion, 4);
+  assert.strictEqual(d.schemaVersion, 5);
   assert.ok(!("apiKey" in d) && !("model" in d));
   assert.ok(!("recMode" in d.settings));
   assert.strictEqual(d.settings.leisureMin, 30, "other settings kept");
@@ -313,7 +388,8 @@ test("a purpose set from a video, or a pivot from one, includes that video", asy
   await env.run(`startPurpose({ text: "fix my faucet", video: { id: "f1", title: "Faucet fix" } })`);
   assert.deepStrictEqual(env.local.purpose.allowed.map(v => v.id), ["f1"]);
   await env.run(`pivotPurpose("replace a faucet cartridge", undefined, { id: "f2", title: "Cartridge" })`);
-  assert.deepStrictEqual(env.local.purpose.allowed.map(v => v.id), ["f1", "f2"]);
+  assert.deepStrictEqual(env.local.purpose.allowed.map(v => v.id), ["f2"]);
+  assert.deepStrictEqual(env.local.paused[0].allowed.map(v => v.id), ["f1"], "the first video stays with the set-aside Target");
 });
 
 test("word check: searches that share a meaningful word continue the purpose", async () => {

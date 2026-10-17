@@ -24,22 +24,17 @@ async function renderHome() {
   document.documentElement.classList.add("wp-home");
   early.showFeed(); // the card's own rule (html.wp-home) hides the feed from here on
   const p = activePurpose();
-  const key = status.totalReached ? "total" : p ? `p|${p.text}` : `idle|${leisureUsedUp()}`;
+  const others = status.paused || [];
+  const key = status.totalReached ? "total"
+    : [p ? `p|${p.id}|${p.text}` : "idle", leisureUsedUp(), others.map(x => x.id).join(",")].join("|");
   if ($("#wp-home")?.dataset.key === key) return; // don't rebuild while someone is typing
   $("#wp-home")?.remove();
 
-  const input = el("input", { class: "wp-home-input", type: "text", "aria-label": "What do you want to find or learn?" });
+  const input = el("input", { class: "wp-home-input", type: "text", "aria-label": "What do you want to find or learn?",
+    placeholder: "What do you want to find or learn?" });
   // Built like YouTube's own search box: a text field with an attached magnifier button.
-  const findBtn = el("button", { class: "wp-home-go", "aria-label": p ? "Search" : "Find it", title: p ? "Search" : "Find it" }, icon("search"));
-  const hint = el("div", { class: "wp-muted wp-home-hint" }, "Your search becomes your Target. Be specific.");
+  const findBtn = el("button", { class: "wp-home-go", "aria-label": "Search", title: "Search" }, icon("search"));
   const card = el("div", { id: "wp-home", class: "wp wp-home-card", "data-key": key });
-
-  if (p) {
-    input.placeholder = "Search toward your Target";
-  } else {
-    input.placeholder = "What do you want to find or learn?";
-  }
-
   const submit = () => {
     const q = input.value.trim();
     if (!q) { input.focus(); return; }
@@ -53,27 +48,83 @@ async function renderHome() {
       brandLine(),
       el("h1", { class: "wp-home-title" }, "That's today's YouTube time"),
       el("div", { class: "wp-muted" }, `You set a daily limit of ${settings.totalMin} minutes. It resets at midnight.`));
-  } else if (p) {
-    card.append(
-      el("div", { class: "wp-label" }, "Current Target"),
-      el("div", { class: "wp-home-purpose" }, p.text),
-      el("div", { class: "wp-home-search" }, input, findBtn),
-      el("div", { class: "wp-home-alt" },
-        el("button", { class: "wp-btn wp-btn-tonal", onclick: askDone }, icon("check2"), "Target complete"),
-        el("button", { class: "wp-btn wp-btn-text", onclick: () => openPivotDialog() }, "Change Target")),
-      el("div", { class: "wp-label wp-home-break-label" }, "Or take a break"),
-      breakChips(takeBreak));
-  } else {
-    card.append(
-      brandLine(),
-      el("h1", { class: "wp-home-title" }, "What brings you here?"),
-      el("div", { class: "wp-muted wp-home-lede" }, `Whether you're preparing for an exam, learning a new skill, or finding a quick answer, ${BRAND} helps you stay focused on what you came to YouTube to accomplish.`),
-      el("div", { class: "wp-home-search" }, input, findBtn),
-      hint,
-      el("div", { class: "wp-label" }, "Examples"),
-      el("div", { class: "wp-chips" }, ...EXAMPLES.map(t => el("button", { class: "wp-chip", onclick: () => { input.value = t; input.focus(); } }, t))),
-      el("div", { class: "wp-label wp-home-break-label" }, "Just browsing? Take a break"),
-      breakChips(takeBreak));
+    host.prepend(card);
+    return;
   }
+
+  const resumeBlock = (p || others.length) ? el("div", { class: "wp-home-resume" },
+    el("div", { class: "wp-label" }, "Pick up where you left off"),
+    p ? currentTargetRow(p) : null,
+    others.length ? el("div", { class: "wp-home-recent" },
+      el("div", { class: "wp-label wp-home-sub" }, "Recent Targets"),
+      ...others.map(pausedTargetRow)) : null,
+    el("button", { class: "wp-btn wp-btn-text wp-home-all", onclick: () => send({ type: "open-targets" }) }, "View all Targets")) : null;
+
+  card.append(...[
+    brandLine(),
+    el("h1", { class: "wp-home-title" }, "What brings you here?"),
+    p ? null : el("div", { class: "wp-muted wp-home-lede" }, `Whether you're preparing for an exam, learning a new skill, or finding a quick answer, ${BRAND} helps you stay focused on what you came to YouTube to accomplish.`),
+    el("div", { class: "wp-home-search" }, input, findBtn),
+    el("div", { class: "wp-muted wp-home-hint" }, p
+      ? "Searching for something new? If it isn't part of your Target, Aim asks first."
+      : "Your search becomes your Target. Be specific."),
+    resumeBlock,
+    // Examples help a first visit; once there's something to pick up, they'd only add clutter.
+    !p && !others.length ? el("div", { class: "wp-label" }, "Examples") : null,
+    !p && !others.length ? el("div", { class: "wp-chips" }, ...EXAMPLES.map(t => el("button", { class: "wp-chip", onclick: () => { input.value = t; input.focus(); } }, t))) : null,
+    el("div", { class: "wp-label wp-home-break-label" }, p ? "Or take a break" : "Just browsing? Take a break"),
+    breakChips(takeBreak)].filter(Boolean));
   host.prepend(card);
+}
+
+// "Last active yesterday"
+function lastActive(ts) {
+  if (!ts) return "";
+  const day = d => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const days = Math.round((day(new Date()) - day(new Date(ts))) / 86400000);
+  if (days <= 0) return "Last active today";
+  if (days === 1) return "Last active yesterday";
+  if (days < 7) return `Last active ${days} days ago`;
+  return `Last active ${new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
+}
+
+function targetMeta(t) {
+  const mins = Math.round((t.usedSec || 0) / 60);
+  return [lastActive(t.lastActiveAt), mins ? `${mins} min` : null, t.videos ? `${t.videos} video${t.videos > 1 ? "s" : ""}` : null]
+    .filter(Boolean).join(" · ");
+}
+
+// Resuming goes back to the last video, at the moment you left it, or else the last search.
+// It never starts anything else, AI included.
+async function resumeTarget(id) {
+  const r = await send({ type: "purpose-resume", id });
+  if (!r || r.result !== "applied") return toast(r?.message || "Couldn't resume that Target. Try again.");
+  location.href = r.url;
+}
+
+function currentTargetRow(p) {
+  return el("div", { class: "wp-home-current" },
+    el("div", { class: "wp-label" }, "Current Target"),
+    el("div", { class: "wp-home-purpose" }, p.text),
+    el("div", { class: "wp-muted wp-home-meta" }, targetMeta({ ...p, videos: (p.videos || []).length })),
+    el("div", { class: "wp-home-alt" },
+      el("button", { class: "wp-btn wp-btn-primary", onclick: () => resumeTarget(p.id) }, icon("play"), "Continue"),
+      el("button", { class: "wp-btn wp-btn-tonal", onclick: askDone }, icon("check2"), "Target complete"),
+      el("button", { class: "wp-btn wp-btn-text", onclick: setAsideTarget }, "Set aside")));
+}
+
+function pausedTargetRow(t) {
+  return el("div", { class: "wp-home-row" },
+    el("div", { class: "wp-home-row-text" },
+      el("div", { class: "wp-strong wp-ellipsis" }, t.text),
+      el("div", { class: "wp-muted wp-home-meta" }, targetMeta(t))),
+    el("button", { class: "wp-btn wp-btn-tonal", onclick: () => resumeTarget(t.id) }, "Resume"));
+}
+
+async function setAsideTarget() {
+  closeDropdown();
+  const r = await send({ type: "purpose-pause" });
+  if (r?.result !== "applied") return toast("Couldn't set that aside. Try again.");
+  toast("Set aside. Pick it up again from the homepage anytime.");
+  if (location.pathname !== "/") location.href = "https://www.youtube.com/";
 }

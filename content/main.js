@@ -16,7 +16,7 @@ const tickTimer = setInterval(async () => {
   const playing = !!v && !v.paused && !holding && (!id || cleared.has(id));
   const looking = document.visibilityState === "visible" && document.hasFocus();
   if (!playing && !looking) return;
-  const video = playing && id && currentInfo?.id === id ? { id, title: currentInfo.title, channel: currentInfo.channel } : null;
+  const video = playing && id && currentInfo?.id === id ? { id, title: currentInfo.title, channel: currentInfo.channel, t: Math.floor(v.currentTime || 0) } : null;
   react(await send({ type: "tick", seconds: TICK, video }));
 }, TICK * 1000);
 

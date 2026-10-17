@@ -111,7 +111,9 @@ function renderCurrent() {
         breakControls(),
         open === "break" ? null : el("div", { class: "pair" },
           el("button", { class: "btn", onclick: () => { open = "pivot"; renderCurrent(); } }, "↺ Change Target"),
-          el("button", { class: "btn", onclick: () => { open = "done"; renderCurrent(); } }, "✓ Target complete")))));
+          el("button", { class: "btn", onclick: () => { open = "done"; renderCurrent(); } }, "✓ Target complete")),
+        open === "break" ? null : el("div", { class: "foot", style: "padding:8px 0 0;text-align:left" },
+          el("a", { id: "setAside", onclick: () => act({ type: "purpose-pause" }) }, "Set aside for later")))));
     return;
   }
   box.append(el("div", { class: "card" },
@@ -189,6 +191,7 @@ async function render() {
 }
 
 document.getElementById("settings").addEventListener("click", () => chrome.runtime.openOptionsPage());
+document.getElementById("allTargets").addEventListener("click", () => send({ type: "open-targets" }));
 document.getElementById("clear").addEventListener("click", async () => {
   if (!confirm("Clear your history of Targets and breaks?")) return;
   await send({ type: "history-clear" });

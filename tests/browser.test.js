@@ -96,7 +96,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
   const text = async sel => ((await p.$(sel)) ? (await p.textContent(sel)).replace(/\s+/g, " ") : "");
 
-  step("service worker started and migrated", (await store()).schemaVersion === 4);
+  step("service worker started and migrated", (await store()).schemaVersion === 5);
 
   const p = await ctx.newPage();
   p.on("pageerror", e => errors.push("page: " + e.message));
@@ -317,6 +317,46 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await pop.click('button:text-is("Yes, I\'m done")');
   await pop.waitForTimeout(500);
   step("Done from the popup asks and ends the purpose", !(await store()).purpose && (await store()).history.pop().outcome === "yes");
+
+  // ---------- picking a Target up again ----------
+  await sw.evaluate(() => serial(() => setSetting("homeCard", true))); // an earlier check switched the homepage card off
+  await sw.evaluate(() => serial(() => startPurpose({ text: "Study for my biology exam", search: "cell biology" })));
+  await sw.evaluate(() => serial(() => allowVideos({ query: "cell biology", videos: [{ id: "bio1", title: "Cells" }], lists: [] })));
+  await sw.evaluate(() => serial(() => recordTick(10, { id: "bio1", title: "Video bio1", channel: "Chan bio1", t: 300 })));
+  await sw.evaluate(() => serial(() => startPurpose({ text: "Fix my truck's AC", search: "truck ac recharge" })));
+  await p.goto("https://www.youtube.com/");
+  await p.waitForSelector("#wp-home .wp-home-resume");
+  let home = await text("#wp-home");
+  step("home: Pick up where you left off, with the current Target and Continue",
+    home.includes("Pick up where you left off") && home.includes("Current Target") && home.includes("Fix my truck's AC") && home.includes("Continue"), home.slice(0, 160));
+  step("home: the set-aside Target under Recent Targets, with when and Resume",
+    home.includes("Recent Targets") && home.includes("Study for my biology exam") && home.includes("Last active today") && !!(await p.$(".wp-home-row button:text-is('Resume')")));
+  step("home: no example chips once there's something to pick up", !home.includes("Examples") && home.includes("View all Targets") && !/\bnull\b/.test(home));
+  await p.click(".wp-home-row button:text-is('Resume')");
+  await p.waitForURL(/watch\?v=bio1/);
+  step("Resume returns to the last video at the moment you left it", p.url().includes("watch?v=bio1&t=300s"), p.url());
+  await p.waitForTimeout(800);
+  st = await store();
+  step("the resumed Target is current and the other is set aside", st.purpose?.text === "Study for my biology exam" &&
+    st.paused.map(x => x.text).join() === "Fix my truck's AC" && !(await p.$(".wp-player-card")));
+  await p.click("#wp-chip .wp-pill");
+  await p.click('.wp-dropdown button:has-text("Set aside for later")');
+  await p.waitForURL("https://www.youtube.com/");
+  await p.waitForSelector("#wp-home .wp-home-recent");
+  st = await store();
+  home = await text("#wp-home");
+  step("Set aside for later: no current Target, both waiting on the homepage", !st.purpose && st.paused.length === 2 &&
+    !home.includes("Current Target") && home.includes("Study for my biology exam") && home.includes("Fix my truck's AC"));
+  const [all] = await Promise.all([ctx.waitForEvent("page"), p.click("button:text-is('View all Targets')")]);
+  await all.waitForSelector("h2:text-is('Set aside')");
+  const allText = await all.textContent("main");
+  step("View all Targets lists set-aside and completed Targets", allText.includes("Study for my biology exam") && allText.includes("Start again") &&
+    allText.includes("learn to sharpen a chisel"), allText.slice(0, 200));
+  await all.click(".row-item:has-text(\"Fix my truck's AC\") button:text-is('Resume')");
+  await all.waitForURL(/results\?search_query=truck/);
+  step("resuming a Target without a video goes back to its last search", (await store()).purpose?.text === "Fix my truck's AC");
+  await all.close();
+  await sw.evaluate(() => serial(() => finishPurpose("yes")));
 
   const opt = await ctx.newPage();
   opt.on("pageerror", e => errors.push("options: " + e.message));
