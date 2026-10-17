@@ -447,7 +447,8 @@ function searchFits(purpose, query) {
   const q = meaningfulWords(query);
   if (!q.length) return true; // nothing to judge by
   // Searches the librarian suggested for this Target count as part of it too.
-  const known = [purpose.text, ...(purpose.searches || []).map(s => s.q), ...(purpose.librarian?.searches || [])].flatMap(meaningfulWords);
+  const known = [purpose.text, ...(purpose.searches || []).map(s => s.q), ...(purpose.librarian?.searches || []),
+    ...(purpose.study?.topics || []).flatMap(t => [t.title, ...t.searches])].flatMap(meaningfulWords);
   const same = (a, b) => a === b || (a.length >= 5 && b.length >= 5 && a.slice(0, 5) === b.slice(0, 5));
   return q.some(w => known.some(k => same(w, k)));
 }
@@ -502,6 +503,45 @@ async function savePicks({ query, groups }) {
   s.purpose.librarian.picks = picks;
   await chrome.storage.local.set({ purpose: s.purpose });
   return { result: "applied" };
+}
+
+// ---------- study sessions (Aim Plus) ----------
+// A study session is a plan attached to the Target: ordered topics, each with a short brief, its
+// searches, the videos picked for it, which of them you watched, and a TeachBack check. It lives
+// with the Target in this browser; sessions are temporary and goal-oriented.
+async function startStudy({ title, scopeNote, topics, notes }) {
+  const s = await readAll();
+  if (!s.purpose) return { result: "error", message: "No Target set." };
+  const list = (Array.isArray(topics) ? topics : []).slice(0, 6).map(t => ({
+    id: uid(), title: clip(t.title, 80), brief: clip(t.brief, 500),
+    searches: (Array.isArray(t.searches) ? t.searches : []).map(q => clip(q, 150)).filter(Boolean).slice(0, 2),
+    videos: [], watched: [], check: null
+  })).filter(t => t.title && t.searches.length);
+  if (!list.length) return { result: "error", message: "That plan was empty." };
+  s.purpose.study = { id: uid(), title: clip(title, 80) || s.purpose.text, scopeNote: clip(scopeNote, 300), notes: clip(notes, 6000),
+    topics: list, current: 0, startedAt: Date.now(), endedAt: null };
+  await chrome.storage.local.set({ purpose: s.purpose });
+  return { result: "applied", study: s.purpose.study, url: `https://www.youtube.com/results?search_query=${encodeURIComponent(list[0].searches[0])}` };
+}
+
+// videos: the librarian's picks for a topic; current: move to a topic; check: a TeachBack result.
+async function updateStudy({ topicId, videos, current, check, end }) {
+  const s = await readAll();
+  const st = s.purpose?.study;
+  if (!st) return { result: "error", message: "No study session." };
+  if (end) st.endedAt = Date.now();
+  if (Number.isInteger(current) && current >= 0 && current < st.topics.length) st.current = current;
+  const t = st.topics.find(x => x.id === topicId);
+  if (t && Array.isArray(videos)) t.videos = videos.slice(0, 4).map(v => ({ id: clip(v.id, 20), title: clip(v.title, 200), channel: clip(v.channel, 100), reason: clip(v.reason, 120) })).filter(v => v.id);
+  if (t && check && typeof check === "object") {
+    t.check = { assessmentId: clip(check.assessmentId, 64), at: Date.now(), endedEarly: !!check.endedEarly,
+      objectives: (Array.isArray(check.objectives) ? check.objectives : []).slice(0, 4).map(o => ({
+        text: clip(o.text, 200), status: ["demonstrated", "partial", "needs_review", "not_assessed"].includes(o.status) ? o.status : "not_assessed",
+        search: clip(o.search, 120) })) };
+  }
+  if (t && Array.isArray(videos)) allow(s.purpose, t.videos, [], t.searches[0]);
+  await chrome.storage.local.set({ purpose: s.purpose });
+  return { result: "applied", study: st };
 }
 
 // Done. The record is also left as a reflection for the next YouTube page to show.
@@ -598,6 +638,11 @@ async function recordTick(seconds, video) {
     activity.lastActiveAt = now;
     // Where you are in the video, so resuming the Target can return to it.
     if (activity === purpose && video?.id) purpose.last = { id: clip(video.id, 20), title: clip(video.title, 300), t: Math.max(0, Number(video.t) || 0), at: now };
+    // In a study session, a topic's video counts as watched once it has played a little.
+    if (activity === purpose && video?.id && purpose.study && !purpose.study.endedAt) {
+      for (const t of purpose.study.topics)
+        if (t.videos.some(v => v.id === video.id) && !t.watched.includes(video.id)) t.watched.push(video.id);
+    }
     if (video?.id) {
       let v = activity.videos.find(x => x.id === video.id);
       if (!v) {

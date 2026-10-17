@@ -44,6 +44,8 @@ const writes = {
   "purpose-allow": m => allowVideos({ query: m.query, videos: m.videos, lists: m.lists }),
   "purpose-done": m => finishPurpose(m.outcome),
   "purpose-pause": () => pausePurpose(),
+  "study-start": m => startStudy({ title: m.title, scopeNote: m.scopeNote, topics: m.topics, notes: m.notes }),
+  "study-update": m => updateStudy({ topicId: m.topicId, videos: m.videos, current: m.current, check: m.check, end: !!m.end }),
   "librarian-apply": m => applyLibrarian({ request: m.request, answer: m.answer, newTarget: !!m.newTarget }),
   "librarian-picks": m => savePicks({ query: m.query, groups: m.groups }),
   "purpose-resume": m => resumePurpose(String(m.id || "")),
@@ -77,14 +79,18 @@ const reads = {
   "state": () => fullState(),
   "search-check": m => checkSearch(m.query),
   "targets": () => readAll().then(resumable),
+  "open-study": () => chrome.tabs.create({ url: chrome.runtime.getURL("study.html") }).then(() => ({ result: "applied" })),
   "open-targets": () => chrome.tabs.create({ url: chrome.runtime.getURL("targets.html") }).then(() => ({ result: "applied" })),
   // YouTube tabs may only learn whether to offer Plus features, and open TeachBack for a topic.
   "plus-brief": () => plusBrief(),
   // The librarian's two tasks, which YouTube tabs may call for a signed-in account (see plus.js).
   "librarian": m => plusLibrarian(m.task, m.input),
   "open-teachback": m => {
-    const topic = typeof m.topic === "string" ? m.topic.trim().slice(0, 200) : "";
-    const url = chrome.runtime.getURL("teachback.html" + (topic ? "?topic=" + encodeURIComponent(topic) : ""));
+    const q = new URLSearchParams();
+    if (typeof m.topic === "string" && m.topic.trim()) q.set("topic", m.topic.trim().slice(0, 200));
+    if (typeof m.notes === "string" && m.notes.trim()) q.set("notes", m.notes.trim().slice(0, 3000));
+    if (typeof m.study === "string" && /^[\w-]{8,64}$/.test(m.study)) q.set("study", m.study); // a study topic to report back to
+    const url = chrome.runtime.getURL("teachback.html" + (q.size ? "?" + q : ""));
     return chrome.tabs.create({ url }).then(() => ({ result: "applied" }));
   }
 };

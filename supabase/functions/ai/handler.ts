@@ -6,6 +6,7 @@
 
 import { type AiRequest, type TaskCtx, type TeachbackDb, TaskError, finishTask, get, start, turn } from "./teachback.ts";
 import { ask, rank } from "./librarian.ts";
+import { studyPlan } from "./study.ts";
 
 export type Plan = "free" | "plus";
 
@@ -63,6 +64,8 @@ export const TASKS: Record<string, Task> = {
   "teachback-turn": { plan: "plus", run: turn },
   "teachback-finish": { plan: "plus", run: finishTask },
   "teachback-get": { plan: "plus", run: get },
+  // Study sessions: see study.ts.
+  "study-plan": { plan: "plus", run: studyPlan },
   // The librarian: any signed-in account, within its plan's allowance. See librarian.ts.
   "librarian-ask": { run: ask },
   "librarian-rank": { run: rank }

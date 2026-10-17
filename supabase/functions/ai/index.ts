@@ -161,7 +161,7 @@ const deps: Deps = {
       dayTokens: num("AIM_FREE_DAY_TOKENS", 80_000),
       minuteCalls: num("AIM_FREE_MINUTE_CALLS", 10)
     },
-    maxBodyBytes: 16 * 1024
+    maxBodyBytes: 24 * 1024 // a pasted study guide can run to a few pages
   }
 };
 

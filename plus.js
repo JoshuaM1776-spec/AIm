@@ -223,9 +223,9 @@ async function plusBrief() {
   return { plus: s?.plan === "plus", account: !!s };
 }
 
-// The librarian, for YouTube tabs: only its two tasks, only when signed in. Errors come back as
+// The librarian, for YouTube tabs: only its tasks (and planning a study session), only when signed in. Errors come back as
 // { error, code } so the tab can fall back to a plain YouTube search.
-const LIBRARIAN_TASKS = new Set(["librarian-ask", "librarian-rank"]);
+const LIBRARIAN_TASKS = new Set(["librarian-ask", "librarian-rank", "study-plan"]);
 async function plusLibrarian(task, input) {
   if (!LIBRARIAN_TASKS.has(task) || !plusConfigured()) return { error: "Unavailable.", code: "unavailable" };
   try { return await plusCall(task, input); }

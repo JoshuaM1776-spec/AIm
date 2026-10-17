@@ -56,6 +56,9 @@ const deps = {
           objectives: ["Explain what photosynthesis produces", "Explain the role of light", "Explain where it happens in the cell"] }
       : props.includes("evaluation") ? srv.director.shift()
       : props.includes("hint") ? { hint: "Think about what the plant keeps for later." }
+      : props.includes("topics") ? (srv.studyPrompt = req.prompt, { title: "Cellular respiration", scope_note: "",
+          topics: [{ title: "Glycolysis", brief: "Glucose is split into pyruvate in the cytoplasm.", searches: ["glycolysis explained"] },
+            { title: "Krebs cycle", brief: "Pyruvate's carbon is released as CO2 in the mitochondria.", searches: ["krebs cycle explained"] }] })
       : props.includes("searches") ? (srv.lastAskPrompt = req.prompt, srv.ask.shift())
       : props.includes("groups") ? (srv.rankCalls++, srv.rank(req))
       : { summary: "You explained what photosynthesis produces. Light and location weren't covered yet.", strengths: ["What photosynthesis produces"],
@@ -217,10 +220,14 @@ const ytResults = q => ytPage(`<ytd-search><div><ytd-section-list-renderer>${[["
   `<ytd-video-renderer><a id="video-title" href="/watch?v=${id}">${t}</a><ytd-channel-name><a href="/@${c.replace(/ /g, "")}">${c}</a></ytd-channel-name>
    <div id="metadata-line">120K views · 2 years ago</div><div class="metadata-snippet-text">How to replace it step by step</div></ytd-video-renderer>`).join("")}
 </ytd-section-list-renderer></div></ytd-search>`);
+const ytWatch = id => ytPage(`<ytd-watch-flexy video-id="${id}"><ytd-watch-metadata><h1 class="ytd-watch-metadata"><yt-formatted-string>Video ${id}</yt-formatted-string></h1>
+  <div id="owner"><div id="channel-name"><a href="/@chan">Chan</a></div></div></ytd-watch-metadata>
+  <div id="movie_player"><video class="html5-main-video" muted></video></div><div id="secondary"><div id="related">related</div></div></ytd-watch-flexy>`);
 await ctx.route(/^https:\/\/www\.youtube\.com\//, route => {
   const u = new URL(route.request().url());
   if (u.pathname === "/oembed") return route.fulfill({ contentType: "application/json", body: '{"title":"x","author_name":"y","author_url":"https://www.youtube.com/@y"}' });
   const body = u.pathname === "/results" ? ytResults(u.searchParams.get("search_query") || "")
+    : u.pathname === "/watch" ? ytWatch(u.searchParams.get("v"))
     : ytPage(`<ytd-browse page-subtype="home"><div id="primary"><ytd-rich-grid-renderer></ytd-rich-grid-renderer></div></ytd-browse>`);
   route.fulfill({ contentType: "text/html", body, headers: { "content-security-policy": "require-trusted-types-for 'script'" } });
 });
@@ -267,6 +274,68 @@ await yt.fill(".wp-lib-input", "what socket size do I need for the tensioner bol
 await yt.press(".wp-lib-input", "Enter");
 await yt.waitForURL(/search_query=what%20socket%20size/);
 step("if the librarian fails, the request is searched on YouTube as typed", true);
+
+// ---------- a study session ----------
+srv.ask.push({ target: "Cellular respiration exam Friday", kind: "learn", note: "Start with glycolysis, then the Krebs cycle.",
+  searches: ["cellular respiration explained"], question: "", options: [], same_target: false });
+await yt.goto("https://www.youtube.com/results?search_query=serpentine%20belt");
+await yt.waitForSelector(".wp-lib-input");
+await yt.fill(".wp-lib-input", "I'm struggling with cellular respiration and have an exam Friday");
+await yt.press(".wp-lib-input", "Enter");
+await yt.waitForURL(/search_query=cellular%20respiration%20explained/);
+await yt.waitForSelector("button:text-is('Organize a study session')");
+step("a learning goal offers a study session (Plus)", (await yt.textContent("#wp-results-bar")).includes("Studying this?"));
+await yt.click("button:text-is('Organize a study session')");
+await yt.fill(".wp-dialog textarea", "Unit 3\n- glycolysis\n- Krebs cycle");
+await yt.click(".wp-dialog button:text-is('Start')");
+await yt.waitForURL(/search_query=glycolysis%20explained/);
+step("the study guide shapes the plan", srv.studyPrompt.includes("Unit 3\n- glycolysis"));
+await yt.waitForSelector(".wp-study-bar");
+bar = await yt.textContent("#wp-results-bar");
+step("a topic's results lead with the topic and its brief", bar.includes("Topic 1 of 2") && bar.includes("Glucose is split into pyruvate"));
+await yt.waitForSelector("#wp-picks .wp-pick");
+await yt.waitForTimeout(400);
+let study = (await sw.evaluate(() => chrome.storage.local.get("purpose").then(d => d.purpose))).study;
+step("the librarian's picks become the topic's videos", study.topics[0].videos.map(v => v.id).join() === "alt1aaa,alt2bbb", JSON.stringify(study.topics[0].videos));
+await yt.goto("https://www.youtube.com/watch?v=alt1aaa");
+await yt.waitForSelector("#wp-study");
+const panel = await yt.textContent("#wp-study");
+step("on the video, the study plan replaces Up next", panel.includes("Study session") && panel.includes("Topic 1 of 2") && panel.includes("Krebs cycle") &&
+  !(await yt.$("#wp-upnext")));
+if (process.env.SHOTS) { await yt.setViewportSize({ width: 1100, height: 700 }); await yt.addStyleTag({ content: "ytd-watch-flexy{display:grid;grid-template-columns:1fr 380px;gap:24px;padding:24px} #movie_player{aspect-ratio:16/9;background:#000;border-radius:12px} #secondary{grid-column:2;grid-row:1/4}" });
+  await yt.screenshot({ path: `${process.env.SHOTS}/study-panel.png` }); }
+srv.director.push({ evaluation: ev("sound", "pyruvate in the cytoplasm"), next: { action: "finish", objective: 0, student: "milo", kind: "question", question: "" } });
+const [check] = await Promise.all([ctx.waitForEvent("page"), yt.click("#wp-study button:text-is('Check yourself')")]);
+await check.waitForSelector("#tbTopic");
+step("Check yourself opens TeachBack on the topic, with its brief as notes", (await check.inputValue("#tbTopic")).startsWith("Glycolysis") &&
+  (await check.inputValue("#tbNotes")).includes("Glucose is split into pyruvate"));
+await check.click("#tbStart");
+await check.waitForSelector("#tbQuestion");
+await check.fill("#tbAnswer", "Glucose becomes pyruvate in the cytoplasm.");
+check.on("dialog", d => d.accept());
+await check.click("#tbSend");
+await check.waitForFunction(() => /Question 2/.test(document.getElementById("tbProgress")?.textContent || ""));
+await check.click("button:text-is('End session')");
+await check.waitForSelector("h1:text-is('What you showed')");
+await check.waitForTimeout(500);
+study = (await sw.evaluate(() => chrome.storage.local.get("purpose").then(d => d.purpose))).study;
+step("the check's result goes back to the study session", !!study.topics[0].check && study.topics[0].check.objectives.length === 3, JSON.stringify(study.topics[0].check));
+await check.close();
+await yt.waitForTimeout(300);
+await yt.click("#wp-study button:has-text('Next topic')");
+await yt.waitForURL(/search_query=krebs%20cycle%20explained/);
+await yt.waitForSelector(".wp-study-bar");
+step("Next topic moves on", (await yt.textContent(".wp-study-bar")).includes("Topic 2 of 2"));
+const [overview] = await Promise.all([ctx.waitForEvent("page"), yt.click(".wp-study-bar button:text-is('See summary')")]);
+await overview.waitForSelector("h1:text-is('Cellular respiration')");
+const ov = await overview.textContent("main");
+step("the summary shows topics, videos, checks and what to review", ov.includes("2 topics · 1 checked") && ov.includes("Glycolysis") &&
+  ov.includes("What your check showed") && ov.includes("Worth reviewing") && !/null|\[object/.test(ov), ov.slice(0, 200));
+overview.on("dialog", d => d.accept());
+await overview.click("button:text-is('End study session')");
+await overview.waitForSelector("text=Session ended");
+step("ending the session keeps the summary", true);
+await overview.close();
 await yt.close();
 
 // An expired access token refreshes quietly, once, even with calls racing.

@@ -92,6 +92,7 @@ function purposeBar(p, lib) {
       el("button", { class: "wp-link", onclick: openRefineDialog }, "Edit")),
     left !== null ? el("span", { class: "wp-muted" }, `${fmtMin(left)} left`) : null,
     el("button", { class: "wp-btn wp-btn-tonal", onclick: askDone }, icon("check2"), "Target complete"),
+    activeStudy(p) ? studyBarBlock(p) : null,
     lib ? librarianBlock(p) : null);
 }
 

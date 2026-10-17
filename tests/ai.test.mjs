@@ -402,6 +402,25 @@ test("librarian: ranking keeps only videos YouTube showed, once each, in at most
   assert.deepStrictEqual(none.body.groups, []);
 });
 
+test("study sessions: Plus only; the student's notes keep their structure; topics are tidied", async () => {
+  let prompt = "";
+  const deps = makeDeps({ plan: "plus", claude: req => {
+    prompt = req.prompt;
+    return { ok: true, model: "main", inputTokens: 10, outputTokens: 5, text: JSON.stringify({ title: "Cellular respiration", scope_note: "",
+      topics: [{ title: "Glycolysis", brief: "Glucose is split in the cytoplasm.", searches: ["glycolysis explained", "glycolysis steps", "extra"] },
+        { title: "Krebs cycle", brief: "In the mitochondria.", searches: [] }, { title: "", brief: "dropped", searches: [] }] }) };
+  } });
+  const r = await call(deps, { task: "study-plan", input: { objective: "Cellular respiration exam Friday", notes: "Unit 3\n- glycolysis\n- Krebs cycle" } });
+  assert.strictEqual(r.status, 200);
+  assert.match(prompt, /Unit 3\n- glycolysis/);
+  assert.deepStrictEqual(r.body.topics.map(t => t.title), ["Glycolysis", "Krebs cycle"]);
+  assert.deepStrictEqual(r.body.topics[0].searches, ["glycolysis explained", "glycolysis steps"]);
+  assert.deepStrictEqual(r.body.topics[1].searches, ["Krebs cycle explained"], "a topic always has a search");
+  assert.strictEqual(deps.calls[0].tier, "main");
+  const free = makeDeps({ plan: "free" });
+  assert.strictEqual((await call(free, { task: "study-plan", input: { objective: "x y" } })).status, 403);
+});
+
 test("the one-file dashboard version is up to date with supabase/functions/ai", async () => {
   const fs = await import("node:fs");
   const { build, OUT } = await import("../tools/bundle-ai.mjs");
@@ -410,6 +429,11 @@ test("the one-file dashboard version is up to date with supabase/functions/ai", 
   const names = [...build().matchAll(/^(?:export )?(?:const|let|function|class|async function) (\w+)/gm)].map(m => m[1]);
   const dupes = names.filter((n, i) => names.indexOf(n) !== i);
   assert.deepStrictEqual(dupes, [], "top-level names repeat in the one-file version");
+  // Imports between the files disappear when they're merged, so they can't rename anything.
+  for (const f of ["handler.ts", "index.ts", "librarian.ts", "study.ts"]) {
+    const src = fs.readFileSync(new URL(`../supabase/functions/ai/${f}`, import.meta.url), "utf8");
+    assert.doesNotMatch(src, /^import [^\n]*\bas\b[^\n]*from "\.\//m, `${f}: no "as" in local imports`);
+  }
 });
 
 let failed = 0;

@@ -158,7 +158,17 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] Free accounts: after about 40 requests in a day, requests fall back to plain YouTube searches with a note.
 - [ ] Studying ("I have a biology exam Friday on cellular respiration") on Plus shows "Studying this? Test my understanding".
 
-### 15. TeachBack (Aim Plus account on the plus plan)
+### 15. Study sessions (Aim Plus)
+
+- [ ] A learning request ("I'm struggling with cellular respiration and have an exam Friday") shows "Studying this? Organize a study session · Test my understanding" in the results bar. A repair request doesn't.
+- [ ] Organize a study session → paste a study guide → Start: "Planning…", then results for topic 1, headed "Topic 1 of N", with its brief. Aim's picks appear; the top ones become the topic's videos.
+- [ ] Open one: the sidebar shows the study plan instead of Up next, with Check yourself, Next topic and the topic list. After it plays a little, the topic counts it as watched.
+- [ ] Check yourself opens TeachBack with the topic and its brief filled in. After the results, the topic shows Checked or Review.
+- [ ] Next topic goes to the next topic's results; the last topic offers See summary.
+- [ ] The summary page (also "Overview" in the sidebar) shows each topic's videos (✓ watched), its check, Review links for weak spots, and Worth reviewing. End study session keeps the summary; the sidebar returns to Up next.
+- [ ] Set the Target aside and resume it: the study session comes back where it was.
+
+### 16. TeachBack (Aim Plus account on the plus plan)
 
 - [ ] Settings → Aim Plus → **Test my understanding** opens TeachBack in a new tab. On YouTube, **Target complete?** shows "Learned something? Test my understanding" (Plus only; not when signed out or on Free).
 - [ ] Start with a topic (and optionally notes): Milo asks a first, basic question within a few seconds.
@@ -168,7 +178,7 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] Reload the TeachBack tab mid-session: the same question comes back. Reload on results: results come back.
 - [ ] In Supabase, `assessments`, `assessment_turns` and `progress_events` have rows for the session; `ai_usage` has one row per AI call.
 
-### 16. Sync and reload
+### 17. Sync and reload
 
 - [ ] Target complete from the popup while a YouTube tab is on a video: that tab shows the "What brings you here?" card on the player within a few seconds.
 - [ ] Two YouTube tabs: starting a break or setting a Target in one updates the other's indicator, and a card waiting on the other tab's player clears if the new state allows its video.

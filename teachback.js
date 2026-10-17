@@ -45,7 +45,7 @@ async function call(task, input, errorBox) {
 }
 
 let session = null;   // what the server last said about this session
-let notes = "";       // kept for "Try again"
+let notes = params.get("notes") || ""; // kept for "Try again"; prefilled from a study session
 
 async function reload() {
   const id = session?.id || params.get("id");
@@ -169,7 +169,18 @@ async function finishing(end) {
 
 const ytSearch = q => "https://www.youtube.com/results?search_query=" + encodeURIComponent(q);
 
+// Opened from a study session: report this topic's result back to it, once.
+let reported = false;
+function reportToStudy(s) {
+  const topicId = params.get("study");
+  if (!topicId || reported || !s.result) return;
+  reported = true;
+  chrome.runtime.sendMessage({ type: "study-update", topicId, check: { assessmentId: s.id, endedEarly: s.result.endedEarly,
+    objectives: s.result.objectives.map(o => ({ text: o.text, status: o.status, search: o.review?.search || "" })) } }).catch(() => {});
+}
+
 function results(s) {
+  reportToStudy(s);
   const R = s.result;
   const weak = R.objectives.filter(o => o.review);
   const cards = R.objectives.map(o => node("div", { className: "card" },

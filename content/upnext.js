@@ -12,7 +12,9 @@ function renderUpNext() {
   const existing = $("#wp-upnext");
   const p = activePurpose();
   const host = p && !brk && location.pathname === "/watch" ? sidebarHost() : null;
-  if (!host) { existing?.remove(); return; }
+  if (!host) { existing?.remove(); $("#wp-study")?.remove(); return; }
+  if (activeStudy(p)) return renderStudyPanel(p, host);
+  $("#wp-study")?.remove();
   const items = upNextItems(p);
   const lastQ = p.searches?.[p.searches.length - 1]?.q;
   const key = `${currentId}|${lastQ}|${items.map(v => v.id).join(",")}`;

@@ -179,6 +179,34 @@ test("set-aside Targets: newest first, at most 20, removable, and searches never
   assert.strictEqual(env.local.purpose.searches.length, 2);
 });
 
+test("study sessions: a plan on the Target, topic videos become watchable, watching and checks are recorded", async () => {
+  const env = fresh();
+  assert.strictEqual((await env.run(`startStudy({ title: "x", topics: [] })`)).result, "error", "needs a Target");
+  await env.run(`startPurpose({ text: "Cellular respiration exam Friday" })`);
+  const r = await env.run(`startStudy({ title: "Cellular respiration", topics: [
+    { title: "Glycolysis", brief: "In the cytoplasm.", searches: ["glycolysis explained"] },
+    { title: "Krebs cycle", brief: "In the mitochondria.", searches: ["krebs cycle explained", "citric acid cycle"] },
+    { title: "", searches: ["dropped"] }], notes: "Unit 3" })`);
+  assert.strictEqual(r.url, "https://www.youtube.com/results?search_query=glycolysis%20explained");
+  const st = env.local.purpose.study;
+  assert.deepStrictEqual(st.topics.map(t => t.title), ["Glycolysis", "Krebs cycle"]);
+  assert.strictEqual((await env.run(`checkSearch("citric acid cycle")`)).fits, true, "topic searches are part of the Target");
+  const t1 = st.topics[0].id;
+  await env.run(`updateStudy({ topicId: ${JSON.stringify(t1)}, videos: [{ id: "gly1", title: "Glycolysis in 5 minutes", reason: "Short and clear" }] })`);
+  assert.ok(env.local.purpose.allowed.some(v => v.id === "gly1"), "a topic's videos are watchable");
+  await env.tick(10, { id: "gly1", title: "Glycolysis in 5 minutes", t: 30 });
+  assert.deepStrictEqual(env.local.purpose.study.topics[0].watched, ["gly1"]);
+  await env.run(`updateStudy({ topicId: ${JSON.stringify(t1)}, current: 1, check: { assessmentId: "a1", objectives: [
+    { text: "Explain where glycolysis happens", status: "demonstrated" }, { text: "Explain its products", status: "bogus", search: "glycolysis products" }] } })`);
+  const after = env.local.purpose.study;
+  assert.strictEqual(after.current, 1);
+  assert.deepStrictEqual(after.topics[0].check.objectives.map(o => o.status), ["demonstrated", "not_assessed"]);
+  await env.run(`updateStudy({ end: true })`);
+  assert.ok(env.local.purpose.study.endedAt, "ended, but kept for the summary");
+  await env.tick(10, { id: "gly2", title: "x" });
+  assert.deepStrictEqual(env.local.purpose.study.topics[0].watched, ["gly1"], "an ended session stops recording");
+});
+
 test("migrating to v5 adds the set-aside list and when the Target was last active", async () => {
   const env = makeEnv({ schemaVersion: 4, purpose: { id: "p1", text: "learn sourdough", startedAt: 1000, usedSec: 0, searches: [], videos: [], allowed: [] } });
   await env.run(`migrateStorage()`);

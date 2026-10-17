@@ -88,8 +88,9 @@ function librarianBlock(p) {
     others.length ? el("div", { class: "wp-lib-refine" },
       el("span", { class: "wp-muted" }, "Also try"),
       ...others.map(q => el("button", { class: "wp-chip", onclick: () => goSearch(q) }, q))) : null,
-    L?.kind === "learn" && account.plus ? el("div", { class: "wp-lib-refine" },
+    L?.kind === "learn" && account.plus && !activeStudy(p) ? el("div", { class: "wp-lib-refine" },
       el("span", { class: "wp-muted" }, "Studying this?"),
+      studyOffer(p),
       el("button", { class: "wp-chip", onclick: () => send({ type: "open-teachback", topic: p.text }) }, "Test my understanding")) : null,
     el("div", { class: "wp-lib-ask" }, input, go));
 }
@@ -100,10 +101,12 @@ let picksInFlight = null;
 async function librarianPicks() {
   const p = activePurpose();
   const query = searchQuery();
-  if (location.pathname !== "/results" || !p?.librarian || brk || searchPending || !query) return removePicks();
-  if (!p.librarian.searches.some(q => q.toLowerCase() === query.toLowerCase())) return removePicks();
+  if (location.pathname !== "/results" || !(p?.librarian || activeStudy(p)) || brk || searchPending || !query) return removePicks();
+  // Picks run for the librarian's searches and for a study session's topic searches.
+  const topic = activeStudy(p)?.topics.find(t => t.searches.some(q => q.toLowerCase() === query.toLowerCase())) || null;
+  if (!topic && !(p.librarian?.searches || []).some(q => q.toLowerCase() === query.toLowerCase())) return removePicks();
   if (!(await librarianOn())) return removePicks();
-  let groups = p.librarian.picks?.[query];
+  let groups = p.librarian?.picks?.[query] || p._picks?.[query];
   if (!groups) {
     if (picksInFlight === query) return;
     picksInFlight = query;
@@ -111,13 +114,18 @@ async function librarianPicks() {
     for (let i = 0; i < 12 && results.length < 3; i++) { await sleep(400); results = searchResults().videos; }
     if (searchQuery() !== query) { picksInFlight = null; return; }
     const r = await send({ type: "librarian", task: "librarian-rank",
-      input: { target: p.text, query, results: results.slice(0, 24).map(v => ({ id: v.id, title: v.title, channel: v.channel, length: v.length, meta: v.meta, snippet: v.snippet })) } });
+      input: { target: topic ? `${topic.title}, as part of: ${p.text}` : p.text, query, results: results.slice(0, 24).map(v => ({ id: v.id, title: v.title, channel: v.channel, length: v.length, meta: v.meta, snippet: v.snippet })) } });
     picksInFlight = null;
     if (!r || r.error || !r.groups?.length || searchQuery() !== query) return;
     const byId = new Map(results.map(v => [v.id, v]));
     groups = r.groups.map(g => ({ label: g.label, videos: g.videos.map(v => ({ ...v, title: byId.get(v.id)?.title || "", channel: byId.get(v.id)?.channel || "" })) }));
-    send({ type: "librarian-picks", query, groups });
-    if (p.librarian) (p.librarian.picks ||= {})[query] = groups;
+    if (p.librarian) { send({ type: "librarian-picks", query, groups }); (p.librarian.picks ||= {})[query] = groups; }
+    else p._picks = { ...(p._picks || {}), [query]: groups };
+  }
+  // A topic's videos are the librarian's top picks for its search.
+  if (topic && !topic.videos.length) {
+    const videos = groups.flatMap(g => g.videos).slice(0, 3);
+    if (videos.length) { topic.videos = videos; send({ type: "study-update", topicId: topic.id, videos }); }
   }
   renderPicks(groups);
 }
