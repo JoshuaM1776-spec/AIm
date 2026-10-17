@@ -90,7 +90,45 @@ function accountView(st) {
   const out = node("button", { className: "btn tonal", type: "button", textContent: "Sign out" });
   out.onclick = async () => { if (await plusDo({ type: "plus-sign-out" })) { toast("Signed out."); renderPlus(); } };
   buttons.append(out);
-  return [...lines, buttons];
+  return [...lines, buttons, yourData()];
+}
+
+// Your data: download all of it, or delete the account. Deleting asks you to type DELETE.
+function yourData() {
+  const download = node("button", { className: "btn tonal", type: "button", id: "plusExport", textContent: "Download my data" });
+  download.onclick = async () => {
+    const r = await plusDo({ type: "plus-export" });
+    if (!r) return;
+    const blob = new Blob([JSON.stringify(r.data, null, 2)], { type: "application/json" });
+    const a = node("a", { href: URL.createObjectURL(blob), download: `aim-data-${new Date().toISOString().slice(0, 10)}.json` });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
+    plusMsg("Downloaded. The file has your account, AI use, TeachBack sessions and progress, and Aim's data in this browser.");
+    renderPlus(true);
+  };
+  const del = node("button", { className: "btn text danger", type: "button", id: "plusDelete", textContent: "Delete account…" });
+  const confirmBox = node("div", { className: "confirm", hidden: true });
+  const typed = node("input", { type: "text", id: "plusDeleteConfirm", placeholder: "Type DELETE", autocomplete: "off" });
+  typed.setAttribute("aria-label", "Type DELETE to confirm");
+  const really = node("button", { className: "btn", type: "button", id: "plusDeleteGo", textContent: "Delete my account", disabled: true });
+  typed.oninput = () => { really.disabled = typed.value.trim() !== "DELETE"; };
+  really.onclick = async () => {
+    if (!(await plusDo({ type: "plus-delete", confirm: typed.value.trim() }))) return;
+    plus.step = "email";
+    toast("Your account and its data on Aim's server are deleted.");
+    renderPlus();
+  };
+  const cancel = node("button", { className: "btn text", type: "button", textContent: "Cancel" });
+  cancel.onclick = () => { confirmBox.hidden = true; typed.value = ""; really.disabled = true; };
+  del.onclick = () => { confirmBox.hidden = false; setTimeout(() => typed.focus()); };
+  confirmBox.append(
+    node("p", { className: "note", textContent: "This permanently deletes your Aim account and everything stored with it on Aim's server: your plan, AI use, TeachBack sessions and progress. Aim's data in this browser (Targets, history, settings) stays. It can't be undone." }),
+    node("div", { className: "form" }, typed, really, cancel));
+  return node("div", { className: "row", style: "display:block" },
+    node("div", { className: "what" }, node("b", { textContent: "Your data" }),
+      node("span", { textContent: "Download everything Aim has stored for you, or delete your account." })),
+    node("div", { className: "form", style: "margin-top:8px" }, download, del),
+    confirmBox);
 }
 
 // keepMsg leaves the last message in place (for "Connected." and "Sent.").

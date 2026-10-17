@@ -117,6 +117,30 @@ const db: TeachbackDb = {
   }
 };
 
+// Your data. Deleting the auth user removes everything else too: every table references it
+// (or a learner that does) with "on delete cascade".
+const account: NonNullable<Deps["account"]> = {
+  async exportData(userId) {
+    const profile = must(await admin.from("profiles").select("plan, created_at").eq("id", userId).maybeSingle());
+    const usage = must(await admin.from("ai_usage").select("created_at, task, model, input_tokens, output_tokens, ok")
+      .eq("user_id", userId).order("created_at"));
+    const learners = must(await admin.from("learners").select("id, name, is_self, created_at").eq("account_id", userId));
+    const ids = (learners || []).map(l => l.id);
+    const assessments = ids.length ? must(await admin.from("assessments")
+      .select("id, learner_id, kind, topic, notes, objectives, status, result, created_at, finished_at").in("learner_id", ids).order("created_at")) : [];
+    const aIds = (assessments || []).map(a => a.id);
+    const turns = aIds.length ? must(await admin.from("assessment_turns")
+      .select("assessment_id, seq, objective, student, kind, question, status, answer, hints, evaluation, created_at").in("assessment_id", aIds).order("seq")) : [];
+    const progress = ids.length ? must(await admin.from("progress_events")
+      .select("learner_id, source, kind, topic, objective, evidence, assessment_id, created_at").in("learner_id", ids).order("created_at")) : [];
+    return { profile, aiUsage: usage, learners, assessments, assessmentTurns: turns, progress };
+  },
+  async deleteUser(userId) {
+    const { error } = await admin.auth.admin.deleteUser(userId);
+    if (error) throw new Error(error.message);
+  }
+};
+
 const deps: Deps = {
   async getUser(token) {
     const { data, error } = await admin.auth.getUser(token);
@@ -147,6 +171,7 @@ const deps: Deps = {
   },
   callClaude,
   db,
+  account,
   now: () => new Date(),
   config: {
     origins: env("AIM_EXTENSION_ORIGINS").split(",").map(s => s.trim()).filter(Boolean),

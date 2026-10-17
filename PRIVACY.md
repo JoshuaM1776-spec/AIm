@@ -57,7 +57,9 @@ Signing in is optional, and Aim Free works the same without it. If you sign in u
 - **TeachBack** (Aim Plus only): when you test your understanding, the topic, any notes you paste, the questions and your answers are stored on Aim's server with the results, so you can come back to them. Your answers are sent to the AI to evaluate them. Results are estimates, never shared, and deleted with your account.
 - **Your Targets, searches, watch history and settings stay in your browser** as described above. They aren't uploaded unless a future feature asks you first.
 - The sign-in session is kept in the extension's own storage on your computer, not readable by web pages.
-- **Signing out** ends the session on this computer and on the server. To delete your account and everything stored with it, email us (below).
+- **Signing out** ends the session on this computer and on the server.
+- **Download my data** (Settings → Aim Plus) gives you one file with everything Aim's server holds for your account, plus what Aim keeps in your browser.
+- **Delete account** (same place) permanently deletes your account and everything stored with it on Aim's server, right away. Aim's data in your browser stays until you clear it or remove the extension. Usage records Anthropic or Supabase keep under their own policies (for example for abuse prevention) follow their terms.
 
 Aim Plus data is processed by Supabase (account service and database) and Anthropic (AI), each under their own privacy terms.
 

@@ -421,6 +421,29 @@ test("study sessions: Plus only; the student's notes keep their structure; topic
   assert.strictEqual((await call(free, { task: "study-plan", input: { objective: "x y" } })).status, 403);
 });
 
+test("account: download everything, or delete only with DELETE typed; both need a sign-in", async () => {
+  const deleted = [];
+  const deps = makeDeps({ plan: "free" });
+  deps.account = {
+    exportData: async id => ({ profile: { plan: "free" }, aiUsage: [{ task: "librarian-ask" }], learners: [{ id: "l1" }], assessments: [], assessmentTurns: [], progress: [] }),
+    deleteUser: async id => { deleted.push(id); }
+  };
+  const ex = await call(deps, { task: "account-export" });
+  assert.strictEqual(ex.status, 200);
+  assert.deepStrictEqual(ex.body.account, { id: "u1", email: "a@example.com", plan: "free" });
+  assert.strictEqual(ex.body.aiUsage.length, 1);
+  assert.ok(ex.body.exportedAt);
+  assert.strictEqual(deps.calls.length, 0, "no AI involved");
+  assert.strictEqual((await call(deps, { task: "account-delete", input: {} })).body.error.code, "confirm");
+  assert.strictEqual((await call(deps, { task: "account-delete", input: { confirm: "delete" } })).status, 400, "exactly DELETE");
+  assert.deepStrictEqual(deleted, []);
+  const del = await call(deps, { task: "account-delete", input: { confirm: "DELETE" } });
+  assert.strictEqual(del.status, 200);
+  assert.deepStrictEqual(deleted, ["u1"]);
+  assert.strictEqual((await call(deps, { task: "account-export" }, { token: null })).status, 401);
+  assert.strictEqual((await call(deps, { task: "account-delete", input: { confirm: "DELETE" } }, { token: "bad" })).status, 401);
+});
+
 test("the one-file dashboard version is up to date with supabase/functions/ai", async () => {
   const fs = await import("node:fs");
   const { build, OUT } = await import("../tools/bundle-ai.mjs");

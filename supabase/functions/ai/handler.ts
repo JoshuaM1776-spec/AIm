@@ -35,6 +35,10 @@ export interface Deps {
   finish(usageId: number, model: string | null, inputTokens: number, outputTokens: number, ok: boolean): Promise<void>;
   callClaude(req: AiRequest): Promise<ClaudeResult>;
   db?: TeachbackDb;
+  account?: {
+    exportData(userId: string): Promise<Record<string, unknown>>; // everything stored for the account
+    deleteUser(userId: string): Promise<void>;                    // deletes the account; its data goes with it
+  };
   now(): Date;
   config: Config;
 }
@@ -70,6 +74,9 @@ export const TASKS: Record<string, Task> = {
   "librarian-ask": { run: ask },
   "librarian-rank": { run: rank }
 };
+
+// Handled directly in handle(), without AI.
+const ACCOUNT_TASKS = new Set(["status", "account-export", "account-delete"]);
 
 export function limitsFor(plan: Plan, config: Config): Limits {
   if (plan === "plus") return config.limits;
@@ -148,7 +155,7 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
   let body: { task?: unknown; input?: unknown };
   try { body = JSON.parse(raw || "{}"); } catch { return fail(400, "bad_json", "The request isn't valid JSON.", cors); }
   const name = typeof body?.task === "string" ? body.task : "";
-  if (name !== "status" && !Object.hasOwn(TASKS, name)) return fail(400, "task", "Unknown task.", cors);
+  if (!ACCOUNT_TASKS.has(name) && !Object.hasOwn(TASKS, name)) return fail(400, "task", "Unknown task.", cors);
 
   let user;
   try { user = await deps.getUser(token); } catch { user = null; }
@@ -161,6 +168,19 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
     const since = new Date(deps.now().getTime() - 24 * 3600 * 1000);
     const usage = await deps.usageSince(user.id, since);
     return json(200, { ok: true, email: user.email ?? null, plan, usage, limits: limitsFor(plan, deps.config) }, cors);
+  }
+
+  // Your data: download all of it, or delete the account and everything with it. No AI.
+  if (name === "account-export") {
+    if (!deps.account) return fail(500, "server", "Something went wrong. Try again.", cors);
+    const data = await deps.account.exportData(user.id);
+    return json(200, { ok: true, exportedAt: deps.now().toISOString(), account: { id: user.id, email: user.email ?? null, plan }, ...data }, cors);
+  }
+  if (name === "account-delete") {
+    if ((body.input as { confirm?: unknown } | undefined)?.confirm !== "DELETE") return fail(400, "confirm", "Type DELETE to confirm.", cors);
+    if (!deps.account) return fail(500, "server", "Something went wrong. Try again.", cors);
+    await deps.account.deleteUser(user.id);
+    return json(200, { ok: true, deleted: true }, cors);
   }
 
   const task = TASKS[name];

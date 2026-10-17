@@ -61,6 +61,12 @@
   .btn.tonal { background: var(--tonal); color: var(--text); }
   .btn.tonal:hover { background: var(--tonal-hover); opacity: 1; }
   .btn:disabled { opacity: .5; cursor: default; }
+  .btn.text { background: none; color: var(--text); padding: 0 12px; }
+  .btn.text:hover { background: var(--tonal); }
+  .btn.danger { color: #cc0000; }
+  @media (prefers-color-scheme: dark) { .btn.danger { color: #ff4e45; } }
+  .confirm { margin-top: 12px; }
+  .confirm[hidden] { display: none; }
   .msg { color: var(--muted); margin: 12px 0 0; min-height: 0; }
   .msg:empty { display: none; }
   #toast { position: fixed; left: 12px; bottom: 12px; background: var(--text); color: var(--bg); border-radius: 8px; padding: 14px 16px; max-width: 90vw; display: none; box-shadow: 0 4px 32px rgba(0,0,0,.1); }

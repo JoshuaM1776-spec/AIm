@@ -20,7 +20,7 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CODE = "123456";
 const LINK_TOKEN = "b3c1f0e2a9d84c7f9e6a5b4c3d2e1f00aabbccdd";
 const ev = (rating, evidence) => ({ rating, evidence, misconception: "", applied: false, note: "" });
-const srv = { rankCalls: 0, lastAskPrompt: "",
+const srv = { deletedUsers: [], rankCalls: 0, lastAskPrompt: "",
   ask: [
     { target: "Replace the alternator on my 2014 Tacoma", kind: "project", note: "The steps differ between the 2.7L and 4.0L engines.",
       searches: ["2014 tacoma alternator replacement", "tacoma alternator removal tools"], question: "Which engine does it have?",
@@ -68,6 +68,11 @@ const deps = {
     return { ok: true, text: reply, model: "test", inputTokens: 20, outputTokens: 5 };
   },
   db: memDb(),
+  account: {
+    exportData: async () => ({ profile: { plan: srv.plan }, aiUsage: usage.map(() => ({ task: "x" })), learners: [...deps.db.learners.keys()].map(id => ({ id })),
+      assessments: [...deps.db.assessments.values()], assessmentTurns: [], progress: deps.db.progress }),
+    deleteUser: async id => { srv.deletedUsers.push(id); for (const v of srv.sessions.values()) v.live = false; }
+  },
   now: () => new Date(),
   config: { origins: [], limits: { dayCalls: 300, dayTokens: 400000, minuteCalls: 20 }, maxBodyBytes: 16384 }
 };
@@ -401,6 +406,25 @@ await opt.click("button:text-is('Sign in')");
 await opt.waitForFunction(() => /didn't work/.test(document.getElementById("plusMsg").textContent));
 step("an old or used link explains itself", true);
 await landing.close();
+
+// ---------- your data ----------
+// Still on the code step from the expired link above.
+await opt.fill("#plusCode", CODE);
+await opt.click("button:text-is('Sign in')");
+await opt.waitForSelector("#plusExport");
+const [download] = await Promise.all([opt.waitForEvent("download"), opt.click("#plusExport")]);
+const exported = JSON.parse(fs.readFileSync(await download.path(), "utf8"));
+step("Download my data: account, server data and this browser's data in one file", exported.format === "aim-export-1" &&
+  exported.account.email === user.email && Array.isArray(exported.assessments) && exported.assessments.length > 0 &&
+  !!exported.browser.settings && "history" in exported.browser, Object.keys(exported).join());
+step("the download never includes the sign-in session", !/acc-\d|ref-\d/.test(JSON.stringify(exported)));
+await opt.click("#plusDelete");
+await opt.fill("#plusDeleteConfirm", "delete");
+step("Delete stays disabled until DELETE is typed exactly", await opt.isDisabled("#plusDeleteGo"));
+await opt.fill("#plusDeleteConfirm", "DELETE");
+await opt.click("#plusDeleteGo");
+await opt.waitForSelector("#plusEmail");
+step("deleting the account removes it on the server and signs out here", srv.deletedUsers.join() === user.id && (await sw.evaluate(() => loadSession())) === null);
 
 // Aim Free keeps working alongside: the regular settings still save.
 await opt.selectOption("#leisureMin", "30");

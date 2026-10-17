@@ -215,6 +215,24 @@ async function plusStatus() {
   }
 }
 
+// Your data: one file with everything on Aim's server for this account, plus what Aim keeps in this
+// browser (Targets, history, settings). The sign-in session itself is never included.
+async function plusExport() {
+  const server = await plusCall("account-export");
+  const browser = await chrome.storage.local.get(null);
+  const { ok, ...data } = server;
+  return { result: "ok", data: { format: "aim-export-1", ...data, browser } };
+}
+
+// Delete the account and everything on the server, then sign out here. Aim's data in this browser
+// stays (it was never on the server); "Clear history" and removing the extension cover it.
+async function plusDelete(confirm) {
+  await plusCall("account-delete", { confirm });
+  await clearSession();
+  await clearPending();
+  return { result: "deleted" };
+}
+
 // All a YouTube tab may learn about the account: whether someone is signed in (the librarian is
 // on) and whether Plus features can be offered.
 async function plusBrief() {
@@ -243,6 +261,8 @@ const plusHandlers = {
   "plus-verify": m => plusVerify(m.email, m.code),
   "plus-adopt": m => plusAdopt(m.search, m.hash),
   "plus-sign-out": () => plusSignOut(),
+  "plus-export": () => plusExport(),
+  "plus-delete": m => plusDelete(m.confirm),
   "plus-check": () => plusCall("check").then(r => ({ result: "ok", reply: r.reply })),
   "plus-call": async m => {
     if (!PLUS_TASKS.has(m.task)) throw new PlusError("Unknown request.");

@@ -833,6 +833,10 @@ export interface Deps {
   finish(usageId: number, model: string | null, inputTokens: number, outputTokens: number, ok: boolean): Promise<void>;
   callClaude(req: AiRequest): Promise<ClaudeResult>;
   db?: TeachbackDb;
+  account?: {
+    exportData(userId: string): Promise<Record<string, unknown>>; // everything stored for the account
+    deleteUser(userId: string): Promise<void>;                    // deletes the account; its data goes with it
+  };
   now(): Date;
   config: Config;
 }
@@ -868,6 +872,9 @@ export const TASKS: Record<string, Task> = {
   "librarian-ask": { run: ask },
   "librarian-rank": { run: rank }
 };
+
+// Handled directly in handle(), without AI.
+const ACCOUNT_TASKS = new Set(["status", "account-export", "account-delete"]);
 
 export function limitsFor(plan: Plan, config: Config): Limits {
   if (plan === "plus") return config.limits;
@@ -946,7 +953,7 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
   let body: { task?: unknown; input?: unknown };
   try { body = JSON.parse(raw || "{}"); } catch { return fail(400, "bad_json", "The request isn't valid JSON.", cors); }
   const name = typeof body?.task === "string" ? body.task : "";
-  if (name !== "status" && !Object.hasOwn(TASKS, name)) return fail(400, "task", "Unknown task.", cors);
+  if (!ACCOUNT_TASKS.has(name) && !Object.hasOwn(TASKS, name)) return fail(400, "task", "Unknown task.", cors);
 
   let user;
   try { user = await deps.getUser(token); } catch { user = null; }
@@ -959,6 +966,19 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
     const since = new Date(deps.now().getTime() - 24 * 3600 * 1000);
     const usage = await deps.usageSince(user.id, since);
     return json(200, { ok: true, email: user.email ?? null, plan, usage, limits: limitsFor(plan, deps.config) }, cors);
+  }
+
+  // Your data: download all of it, or delete the account and everything with it. No AI.
+  if (name === "account-export") {
+    if (!deps.account) return fail(500, "server", "Something went wrong. Try again.", cors);
+    const data = await deps.account.exportData(user.id);
+    return json(200, { ok: true, exportedAt: deps.now().toISOString(), account: { id: user.id, email: user.email ?? null, plan }, ...data }, cors);
+  }
+  if (name === "account-delete") {
+    if ((body.input as { confirm?: unknown } | undefined)?.confirm !== "DELETE") return fail(400, "confirm", "Type DELETE to confirm.", cors);
+    if (!deps.account) return fail(500, "server", "Something went wrong. Try again.", cors);
+    await deps.account.deleteUser(user.id);
+    return json(200, { ok: true, deleted: true }, cors);
   }
 
   const task = TASKS[name];
@@ -1093,6 +1113,30 @@ const db: TeachbackDb = {
   }
 };
 
+// Your data. Deleting the auth user removes everything else too: every table references it
+// (or a learner that does) with "on delete cascade".
+const account: NonNullable<Deps["account"]> = {
+  async exportData(userId) {
+    const profile = must(await admin.from("profiles").select("plan, created_at").eq("id", userId).maybeSingle());
+    const usage = must(await admin.from("ai_usage").select("created_at, task, model, input_tokens, output_tokens, ok")
+      .eq("user_id", userId).order("created_at"));
+    const learners = must(await admin.from("learners").select("id, name, is_self, created_at").eq("account_id", userId));
+    const ids = (learners || []).map(l => l.id);
+    const assessments = ids.length ? must(await admin.from("assessments")
+      .select("id, learner_id, kind, topic, notes, objectives, status, result, created_at, finished_at").in("learner_id", ids).order("created_at")) : [];
+    const aIds = (assessments || []).map(a => a.id);
+    const turns = aIds.length ? must(await admin.from("assessment_turns")
+      .select("assessment_id, seq, objective, student, kind, question, status, answer, hints, evaluation, created_at").in("assessment_id", aIds).order("seq")) : [];
+    const progress = ids.length ? must(await admin.from("progress_events")
+      .select("learner_id, source, kind, topic, objective, evidence, assessment_id, created_at").in("learner_id", ids).order("created_at")) : [];
+    return { profile, aiUsage: usage, learners, assessments, assessmentTurns: turns, progress };
+  },
+  async deleteUser(userId) {
+    const { error } = await admin.auth.admin.deleteUser(userId);
+    if (error) throw new Error(error.message);
+  }
+};
+
 const deps: Deps = {
   async getUser(token) {
     const { data, error } = await admin.auth.getUser(token);
@@ -1123,6 +1167,7 @@ const deps: Deps = {
   },
   callClaude,
   db,
+  account,
   now: () => new Date(),
   config: {
     origins: env("AIM_EXTENSION_ORIGINS").split(",").map(s => s.trim()).filter(Boolean),
