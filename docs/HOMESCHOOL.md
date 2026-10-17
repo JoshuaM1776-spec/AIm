@@ -48,6 +48,33 @@ Favor intrinsic motivation and real accomplishment over points and rewards.
 - An **established curriculum**, developed and reviewed against chosen standards, defines *what* is learned. **AI decides *how* to teach it.** Aim doesn't invent a curriculum each week.
 - Requirements differ by jurisdiction. Assume no single national standard.
 
+## The parent website
+
+The parents' side is a website, specified in [PARENT_WEBSITE.md](PARENT_WEBSITE.md):
+
+- **Navigation:** Overview, Curriculum, Weekly Plan, Projects & Materials, Progress, Portfolio, Library.
+- **Settings:** profiles, preferences and account.
+
+Where it refines this document, **the parent website spec wins**:
+
+- **Weekly approval is for the whole week,** after reviewing its essentials (objectives, videos, books, activities, TeachBack checkpoints, project, time). Parents can still replace, remove, reorder or edit lessons before approving, but they don't approve each lesson one by one. If the plan changes afterwards, it's clear what needs approving again.
+- **Preferred channels are per subject:**
+  - Setup suggests a small, reviewed shortlist of 3–5 per subject; nothing is approved automatically.
+  - "Prefer this channel for Science" is available right from the weekly review.
+  - **Coverage gaps are grouped into one weekly decision.** When no preferred channel has a suitable video, the parent can:
+    - use this video for this lesson only;
+    - prefer the channel for that subject;
+    - compare alternatives;
+    - choose a video manually;
+    - or let Aim choose suitable outside videos from now on.
+- **The big-picture curriculum** keeps a baseline to compare against, showing what was added, moved, replaced or omitted. Prerequisite and coverage warnings never block the parent's choice.
+- **Progress uses four words:** Not Assessed, Needs Review, Developing, Demonstrated. TeachBack's "Partly shown" corresponds to Developing.
+- **Projects & Materials:**
+  - a rolling 2–4-week preview;
+  - one consolidated shopping list, with items marked owned, needed, reusable or consumable;
+  - project statuses: proposed, approved, materials ready, completed.
+- **Parent and student access are separate,** with a student switcher for families with several children.
+
 ## Two levels of parent approval
 
 Parents direct the education at two levels. Aim proposes; the parent adjusts and approves, and nothing reaches the student without that approval.
@@ -82,7 +109,7 @@ Each approved version is kept, so parents can see what changed and when. For the
 ### 2. The weekly plan (the details, every week)
 
 - **Generated from the approved big-picture plan,** plus the student's progress, what needs review, upcoming projects, available materials and time. Described in detail below.
-- **Approval works two ways:** the parent approves the whole week, or lesson by lesson, and can edit, swap or ask for changes in plain words.
+- **Approval is for the whole week,** after reviewing its essentials. Parents can edit, swap, reorder or ask for changes in plain words first. See the parent website spec.
 
 ### How the levels connect
 
