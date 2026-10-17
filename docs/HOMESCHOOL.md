@@ -48,6 +48,62 @@ Favor intrinsic motivation and real accomplishment over points and rewards.
 - An **established curriculum**, developed and reviewed against chosen standards, defines *what* is learned. **AI decides *how* to teach it.** Aim doesn't invent a curriculum each week.
 - Requirements differ by jurisdiction. Assume no single national standard.
 
+## Two levels of parent approval
+
+Parents direct the education at two levels. Aim proposes; the parent adjusts and approves, and nothing reaches the student without that approval.
+
+### 1. The big-picture plan (approved at setup, editable any time)
+
+**Built from the parent setup:**
+
+- Aim's role (supplement, selected subjects or primary);
+- grade and subject levels, and the optional placement;
+- objectives and subjects;
+- time per day and week, and school days;
+- reading expectations;
+- projects and student interests.
+
+**What it shows, for each subject in the plan:**
+
+- the units and learning objectives for the term or year, drawn from the curriculum foundation;
+- their order and approximate pacing, in weeks;
+- the culmination project rotation;
+- the reading plan, both curriculum reading and reading for enjoyment;
+- expected time per day and week, and school days.
+
+**The parent:**
+
+- reviews the plan;
+- adjusts it: reorders units, changes pacing, drops or adds subjects or objectives, swaps projects or books;
+- approves it.
+
+Each approved version is kept, so parents can see what changed and when. For the Supplement and Selected subjects roles it covers only the parts Aim handles, alongside the family's existing curriculum.
+
+### 2. The weekly plan (the details, every week)
+
+- **Generated from the approved big-picture plan,** plus the student's progress, what needs review, upcoming projects, available materials and time. Described in detail below.
+- **Approval works two ways:** the parent approves the whole week, or lesson by lesson, and can edit, swap or ask for changes in plain words.
+
+### How the levels connect
+
+- **Weekly plans stay inside the approved big picture.** Aim never silently changes the big-picture objectives or pacing.
+- **When a week would change the big picture,** Aim shows the effect and asks first. For example, extra review of fractions might mean "This moves Unit 4 back one week." The parent then approves a new version of the big-picture plan, or keeps the original.
+- **Changes to the big-picture plan flow into the upcoming weeks,** not into weeks already approved, unless the parent asks.
+
+### Marketing and legal care
+
+How this is described matters legally as well as commercially.
+
+- **Describe it as parent-directed:** "Aim proposes, you decide." The parent remains the educator of record. This matches how homeschooling works in most places, and the two-level approval is what makes it true.
+- **Don't claim these without professional and legal review, per jurisdiction:**
+  - accreditation;
+  - "complete curriculum";
+  - "meets your state's requirements";
+  - grade placement or credit equivalence.
+
+  Homeschool law varies by state and country.
+- **Record keeping:** approved plans, completed lessons, TeachBack results and the portfolio form a record of what was taught and learned. This can help families who must keep records. Say "helps you keep records", not "satisfies your state's requirements".
+
 ## Weekly plans
 
 - **Aim proposes one week at a time,** not a whole year in detail. It uses:
@@ -294,7 +350,12 @@ Preferences are per student or per family, and parents can view and remove them.
 ## Groundwork already planned in Aim Plus (see ROADMAP.md → Decisions)
 
 - **Learners are separate from accounts,** so child learners can sit under a parent account without their own logins.
-- **One plan model** with ordered items of mixed types (video, reading, exercise, activity). Weekly plans add an approval state.
+- **One plan model** with ordered items of mixed types (video, reading, exercise, activity), nested for homeschool:
+  - a big-picture plan, versioned, made of units with objectives and pacing;
+  - weekly plans generated from it;
+  - their items.
+
+  Both levels carry an approval state: who approved what, and when.
 - **Evidence-based progress events,** which a portfolio and project assessment can build on.
 - **Content structures the plan model must allow** (`plan_items` with typed `content`), so these become item types rather than new systems:
   - a featured `project` (subject, deliverables, materials, rubric, parent guide, schedule);
