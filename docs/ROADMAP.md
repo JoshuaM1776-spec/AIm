@@ -202,7 +202,7 @@ Conversational assessment for Aim Plus: AI "students" ask questions, and the lea
 **Honest results** (no unsupported claims of mastery):
 - The **status for each objective comes from code, not the model:**
   - **Demonstrated** needs at least one answer rated sound *without* substantive help, plus one application or follow-up answer.
-  - Answers that needed help count as **Partial**.
+  - Answers that needed help count as **Developing**.
   - Objectives with no evidence are **Not assessed**.
 - **The model writes only the narrative,** and it may cite only recorded evidence quotes.
 - **Results are labeled as estimates.** There's no single overall score.

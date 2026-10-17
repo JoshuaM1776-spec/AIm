@@ -174,7 +174,7 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] Start with a topic (and optionally notes): Milo asks a first, basic question within a few seconds.
 - [ ] Answer well: a follow-up goes deeper. Answer vaguely: the next question comes from a different angle, without giving the answer away.
 - [ ] **Give me a hint** shows one sentence and counts down (two per question). **Skip** moves on.
-- [ ] After every objective is covered (or **End session**), results show each part as Demonstrated, Partly shown, Needs review or Not assessed, with your own words quoted, "With hints" where you used them, and Review on YouTube links.
+- [ ] After every objective is covered (or **End session**), results show each part as Demonstrated, Developing, Needs review or Not assessed, with your own words quoted, "With hints" where you used them, and Review on YouTube links.
 - [ ] Reload the TeachBack tab mid-session: the same question comes back. Reload on results: results come back.
 - [ ] In Supabase, `assessments`, `assessment_turns` and `progress_events` have rows for the session; `ai_usage` has one row per AI call.
 

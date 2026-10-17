@@ -9,7 +9,7 @@ const params = new URLSearchParams(location.search);
 
 const STATUS = {
   demonstrated: ["Demonstrated", "strong"],
-  partial: ["Partly shown", ""],
+  partial: ["Developing", ""],
   needs_review: ["Needs review", ""],
   not_assessed: ["Not assessed", ""]
 };

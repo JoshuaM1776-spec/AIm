@@ -381,7 +381,7 @@ const FINISH_SCHEMA = {
 };
 
 const STATUS_WORDS: Record<ObjectiveStatus, string> = {
-  demonstrated: "demonstrated", partial: "partly shown", needs_review: "needs review", not_assessed: "not assessed (no answers)"
+  demonstrated: "demonstrated", partial: "developing", needs_review: "needs review", not_assessed: "not assessed (no answers)"
 };
 
 // ---------- tasks ----------

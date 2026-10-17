@@ -68,7 +68,7 @@ Where it refines this document, **the parent website spec wins**:
     - choose a video manually;
     - or let Aim choose suitable outside videos from now on.
 - **The big-picture curriculum** keeps a baseline to compare against, showing what was added, moved, replaced or omitted. Prerequisite and coverage warnings never block the parent's choice.
-- **Progress uses four words:** Not Assessed, Needs Review, Developing, Demonstrated. TeachBack's "Partly shown" corresponds to Developing.
+- **Progress uses four words:** Not Assessed, Needs Review, Developing, Demonstrated. TeachBack, study sessions and the parent website all use these.
 - **Projects & Materials:**
   - a rolling 2–4-week preview;
   - one consolidated shopping list, with items marked owned, needed, reusable or consumable;

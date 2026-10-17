@@ -6,7 +6,7 @@ const BRAND = chrome.runtime.getManifest().name;
 for (const n of document.querySelectorAll("[data-brand]")) n.textContent = BRAND;
 const send = msg => chrome.runtime.sendMessage(msg).catch(() => null);
 const screen = document.getElementById("screen");
-const STATUS = { demonstrated: ["Demonstrated", "strong"], partial: ["Partly shown", ""], needs_review: ["Needs review", ""], not_assessed: ["Not assessed", ""] };
+const STATUS = { demonstrated: ["Demonstrated", "strong"], partial: ["Developing", ""], needs_review: ["Needs review", ""], not_assessed: ["Not assessed", ""] };
 const yt = path => `https://www.youtube.com${path}`;
 
 function node(tag, props = {}, ...kids) {
