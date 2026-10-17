@@ -224,6 +224,8 @@ Conversational assessment for Aim Plus: AI "students" ask questions, and the lea
 - No answers handed out. The students can clarify a question or give a small hint, and the hint is recorded.
 - The learner can skip a question or end early.
 
+**Difficulty adapts from the first answers:** questions run from level 1 (say it in plain words) to 5 (edge cases and transfer). A session starts at 2. Each sound answer without hints raises the level, a partly right one keeps it, and a wrong, unclear or skipped one lowers it. The level carries across objectives, so a strong start means harder questions on later parts too. The server computes the level and tells the AI which level to aim for depending on how it rates the answer.
+
 **Limits:**
 - At most 4 objectives, 3 follow-ups per objective and 15 turns per session.
 - Answers up to about 2,000 characters.

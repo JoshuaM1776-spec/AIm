@@ -3,6 +3,7 @@
 import assert from "node:assert";
 import { handle } from "../supabase/functions/ai/handler.ts";
 import { memDb } from "./helpers/memdb.mjs";
+import { difficulty } from "../supabase/functions/ai/teachback.ts";
 
 const EXT = "chrome-extension://" + "a".repeat(32);
 const LIMITS = { dayCalls: 3, dayTokens: 1000, minuteCalls: 2 };
@@ -310,6 +311,34 @@ test("TeachBack: results still come back if the written summary fails, and old s
   assert.strictEqual(old.status, "incomplete");
   assert.strictEqual(old.result.objectives.every(o => o.status === "not_assessed"), true);
   assert.strictEqual(deps.calls.length, calls, "closing an old session doesn't call the AI");
+});
+
+test("TeachBack: early answers set the difficulty, across objectives too", async () => {
+  const t = (rating, extra = {}) => ({ status: "answered", hints: 0, evaluation: ev(rating, "x"), ...extra });
+  assert.strictEqual(difficulty([]), 2, "starts at level 2");
+  assert.strictEqual(difficulty([t("sound"), t("sound")]), 4, "two strong answers: level 4");
+  assert.strictEqual(difficulty([t("sound"), t("sound"), t("sound"), t("sound")]), 5, "never above 5");
+  assert.strictEqual(difficulty([t("incorrect"), t("unclear")]), 1, "never below 1");
+  assert.strictEqual(difficulty([t("sound", { hints: 1 })]), 2, "a hinted answer doesn't raise it");
+  assert.strictEqual(difficulty([t("partial")]), 2, "partly right keeps it");
+  assert.strictEqual(difficulty([{ status: "skipped", hints: 0, evaluation: null }]), 1, "a skip lowers it");
+
+  const prompts = [];
+  const script = [
+    { evaluation: ev("sound", "glucose"), next: nx("follow_up", 1) },
+    { evaluation: ev("sound", "starch"), next: nx("next_objective", 2, "How do we know light matters?", "reese", "question") },
+    { evaluation: ev("partial", ""), next: nx("follow_up", 2) }
+  ];
+  const deps = tbDeps({ director: req => { prompts.push(req.prompt); return script.shift(); } });
+  let s = (await tb(deps, "teachback-start", { topic: "Photosynthesis" })).session;
+  s = (await tb(deps, "teachback-turn", { id: s.id, seq: 1, action: "answer", answer: "It makes glucose." })).session;
+  s = (await tb(deps, "teachback-turn", { id: s.id, seq: 2, action: "answer", answer: "It stores it as starch." })).session;
+  s = (await tb(deps, "teachback-turn", { id: s.id, seq: 3, action: "answer", answer: "Plants in the dark stop growing." })).session;
+  assert.match(prompts[0], /DIFFICULTY SO FAR: level 2 of 5/);
+  assert.match(prompts[0], /rated "sound": level 3/);
+  assert.match(prompts[1], /DIFFICULTY SO FAR: level 3 of 5/);
+  assert.match(prompts[2], /DIFFICULTY SO FAR: level 4 of 5/, "the new objective starts where the learner is, not at basics");
+  assert.match(prompts[2], /rated "incorrect" or "unclear": level 3/);
 });
 
 test("the one-file dashboard version is up to date with supabase/functions/ai", async () => {

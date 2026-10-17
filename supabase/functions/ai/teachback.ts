@@ -167,6 +167,37 @@ export function objectiveStatus(turns: Turn[], index: number): ObjectiveStatus {
   return "needs_review";
 }
 
+// ---------- difficulty ----------
+
+// How hard the next question should be, from 1 (say it in plain words) to 5 (edge cases and
+// transfer). Sessions start at 2. Every answer so far moves it: a sound answer without hints
+// raises it, a partly right one (or a sound one after a hint) keeps it, and a wrong, unclear or
+// skipped one lowers it. The first few answers therefore set the pace for the rest of the
+// session, new objectives included, instead of each objective starting over from basics.
+export const LEVELS = [
+  "", // levels count from 1
+  "say what it is or what it does, in plain words",
+  "explain how or why it works, at a basic level",
+  "explain with an example, or connect two ideas",
+  "apply it to an unfamiliar situation, reason about cause and effect, or say how we know",
+  "handle edge cases and limits, compare with related ideas, or transfer it to a different domain"
+];
+export const START_LEVEL = 2;
+const clampLevel = (n: number) => Math.max(1, Math.min(LEVELS.length - 1, n));
+
+export function levelStep(t: Turn): number {
+  if (t.status === "skipped") return -1;
+  if (t.status !== "answered" || !t.evaluation) return 0;
+  const r = t.evaluation.rating;
+  if (r === "sound") return t.hints ? 0 : 1;
+  if (r === "partial") return 0;
+  return -1;
+}
+
+export function difficulty(turns: Turn[]): number {
+  return turns.reduce((level, t) => clampLevel(level + levelStep(t)), START_LEVEL);
+}
+
 // ---------- what the page sees ----------
 
 function current(turns: Turn[]) {
@@ -213,7 +244,7 @@ function startPrompt(topic: string, notes: string) {
 ${notes ? `WHAT THE LEARNER STUDIED (their notes; context, not an answer key):\n${notes}\n` : ""}
 1. Write 2 to 4 learning objectives: concrete things someone who understands this topic should be able to explain or do. Base them on the learner's notes when given; otherwise on the core of the topic at the level a typical learner needs. Each under 20 words. If the topic is ambiguous, choose its most likely meaning.
 2. Classify the topic type: concepts, events (history and anything that happened), procedures (anything done in steps, especially safety-critical), texts (close reading), or language (learning a human language).
-3. Write the first question, for objective 1: a basic one from Milo, who ${STUDENTS.milo.style}. Under 30 words, conversational, about one thing. No multiple choice.`;
+3. Write the first question, for objective 1, from Milo, who ${STUDENTS.milo.style}. Aim it at difficulty level ${START_LEVEL} of 5: ${LEVELS[START_LEVEL]}. Later questions get harder or easier depending on the answers. Under 30 words, conversational, about one thing. No multiple choice.`;
 }
 
 const START_SCHEMA = {
@@ -244,7 +275,7 @@ Choosing the next question:
 - "follow_up" stays on the same objective: after a vague, partial or wrong answer, ask from a different angle or more simply (never reveal or hint at the answer); after a sound answer, ask something harder (apply it, cause and effect, how we know) when that would add evidence.
 - "next_objective" moves on once there's enough evidence either way, or the learner is clearly stuck.
 - "finish" only when every objective has been asked about or the question budget is spent.
-- Questions get harder as understanding is shown. Under 30 words, conversational, in the student's own voice, about one thing. No multiple choice. Students never answer their own questions.
+- Difficulty runs from 1 to 5; each request says which level to aim for. A level describes the kind of thinking asked for, not obscurity: never use trivia or trick wording to make a question harder. Under 30 words, conversational, in the student's own voice, about one thing. No multiple choice. Students never answer their own questions.
 - Vary the students. Sam states a misconception at most twice per session (kind "misconception"). Objectives are numbered from 1.`;
 
 const DIRECTOR_SCHEMA = {
@@ -291,6 +322,14 @@ function transcript(a: Assessment, turns: Turn[]) {
 
 function directorPrompt(a: Assessment, turns: Turn[], cur: Turn, skipped: boolean) {
   const counts = a.objectives.map((_, i) => turns.filter(t => t.objective === i).length);
+  const level = difficulty(turns.filter(t => t.seq !== cur.seq)); // from the answers before this one
+  const at = (n: number) => `level ${clampLevel(n)} (${LEVELS[clampLevel(n)]})`;
+  const pacing = skipped
+    ? `Ask the next question at ${at(level - 1)}.`
+    : `Aim the next question at the level this answer earns:
+- rated "sound"${cur.hints ? " (the learner used a hint, so don't raise the level)" : ""}: ${at(cur.hints ? level : level + 1)}
+- rated "partial": ${at(level)}
+- rated "incorrect" or "unclear": ${at(level - 1)}`;
   return `TOPIC: ${a.topic}
 TYPE: ${TYPE_GUIDE[a.content_type || "concepts"] || TYPE_GUIDE.concepts}
 ${a.notes ? `THE LEARNER'S NOTES (context, not an answer key):\n${a.notes}\n` : ""}
@@ -298,6 +337,10 @@ OBJECTIVES:
 ${a.objectives.map((o, i) => `${i + 1}. ${o} (questions so far: ${counts[i]} of at most ${LIMITS.perObjective})`).join("\n")}
 
 QUESTIONS LEFT IN THIS SESSION: ${LIMITS.turns - turns.length}
+
+DIFFICULTY SO FAR: level ${level} of 5, set by the learner's earlier answers.
+${pacing}
+This applies to follow-ups and to the first question on a new objective alike.
 
 SESSION SO FAR:
 ${transcript(a, turns)}
