@@ -77,8 +77,8 @@ Validate study sessions with real students before investing heavily in learning 
 | 0–3, A–D | **Aim Free.** Purpose from search, word check, allowed list, breaks with a daily leisure allowance, grace period, distractions hidden, Done and reflection, popup with a week view, Advanced settings | Built and tested against mock pages. **Real-YouTube run of TESTING.md still needed.** |
 | — | **Target wording** in every Aim Free screen (0.15.0) | Done, tests updated |
 | — | **Student-focused copy:** store summary, description, homepage line and example (0.16.0) | Done |
-| F2a | **TeachBack, text MVP (0.17.0):** questions only, five students, hints and skips recorded, results derived from quoted evidence, learners/assessments/progress tables. Entry: Settings and "Target complete?" (Plus) | Built and tested locally; needs `0002_teachback.sql` and the new function on the live project |
-| E | **Plus backend foundation.** Accounts with an emailed code, plans, AI endpoint with per-user limits, Settings sign-in | Built and tested locally. Needs a Supabase project to go live. |
+| F2a | **TeachBack, text MVP (0.17.0):** questions only, five students, hints and skips recorded, results derived from quoted evidence, learners/assessments/progress tables. Entry: Settings and "Target complete?" (Plus) | **Live:** sign-in (custom SMTP via Resend), Plus plan, AI connection and TeachBack confirmed working on the Supabase project (Oct 2026) |
+| E | **Plus backend foundation.** Accounts with an emailed code, plans, AI endpoint with per-user limits, Settings sign-in | **Live** on the Supabase project, verified end to end (Oct 2026). |
 
 ## The three learning experiences share one flow
 
