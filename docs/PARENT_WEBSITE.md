@@ -50,6 +50,17 @@ Parents review a year- or term-level curriculum by subject, unit, learning objec
 
 - Clearly distinguish curriculum coverage from demonstrated understanding.
 
+### Use your own curriculum
+
+A parent can upload a curriculum they already have the right to use (their own purchase, an openly licensed curriculum such as one for noncommercial use, or their own materials). Aim reads it to build the big picture and the weekly plans for that family only. The full rules are in HOMESCHOOL.md → "Bring your own curriculum"; for the website:
+
+- **Upload screen:** title, what it is (purchased / openly licensed / my own materials), the file, and a required checkbox: "I have the right to use this curriculum for my family. Aim uses it only to plan for my family and never shares it."
+- **Private to the household:** uploads and everything made from them appear only in that family's account. No shared library, no "families also used", no reuse across households.
+- **Aim never supplies the curriculum:** no pre-loaded third-party curricula, no download links, no fetching on the parent's behalf.
+- **Remove any time:** a Delete button on each upload removes the file and its extracted text.
+- **Wording:** "Use your own curriculum" or "Works alongside the curriculum you already use". No publisher names or logos implying a partnership.
+- **Legal pages before launch:** upload terms, a copyright complaint and takedown page (with counter-notice), a registered takedown agent, and a repeat-infringer policy, all reviewed by a lawyer.
+
 Homeschool regulations vary by jurisdiction. Do not claim legal compliance or accreditation without verified, location-specific support.
 
 ## 5. Weekly Plan — From Objectives to Lessons
@@ -152,7 +163,7 @@ Maintain a simple library of videos, books, experiments, and resources. Support 
 
 ### Initial setup
 
-Create parent account → add student and subject levels → choose curriculum role and subjects → review big-picture curriculum → optionally select preferred channels by subject → review and approve first week.
+Create parent account → add student and subject levels → choose curriculum role and subjects → optionally upload your own curriculum → review big-picture curriculum → optionally select preferred channels by subject → review and approve first week.
 
 ### Weekly review
 
@@ -213,6 +224,8 @@ Explicitly out of scope initially: ticket bookings, e-commerce checkout, complex
 - A parent can distinguish watched material from demonstrated understanding.
 
 - The system never silently changes parent-approved curriculum or lesson decisions.
+
+- A parent's uploaded curriculum, and everything built from it, is visible only to that household and can be deleted at any time.
 
 ## 15. Brand Note — Founder Story
 

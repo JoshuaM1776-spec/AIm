@@ -48,6 +48,26 @@ Favor intrinsic motivation and real accomplishment over points and rewards.
 - An **established curriculum**, developed and reviewed against chosen standards, defines *what* is learned. **AI decides *how* to teach it.** Aim doesn't invent a curriculum each week.
 - Requirements differ by jurisdiction. Assume no single national standard.
 
+### Bring your own curriculum (parent uploads)
+
+Besides a curriculum Aim develops with educators, a parent can upload a curriculum they already have the right to use. Many good curricula are free to read but licensed **for noncommercial use only**. A family homeschooling its own children is a noncommercial use, and Aim acts as the parent's tool when it reads that copy to plan their weeks. US courts have treated a paid service working for a noncommercial licensee this way: *Great Minds v. FedEx Office* (2d Cir. 2018) and *Great Minds v. Office Depot* (9th Cir. 2019). That protection depends on Aim staying the family's tool, never the distributor. These rules are requirements, not suggestions:
+
+1. **Private to the family.** An upload, and everything Aim makes from it (big-picture plan, weekly plans, lessons, questions), is visible only to that household. It is never shared with, shown to, or suggested to other families, and never collected into a shared or "community" library.
+2. **The parent brings it.** Aim doesn't ship, pre-load, host, link to a download of, or fetch any third-party curriculum. Uploading is always the parent's own action.
+3. **The license matters, not just whether it's free to read.** At upload, the parent confirms they're allowed to use it for their family and picks what it is (their own purchase, an openly licensed curriculum, their own materials). "Free to read" can still mean all rights reserved; that's the parent's call to make, and the upload terms say so.
+4. **Used only for that family's plan.** Uploads are never used to improve Aim's own curriculum, as examples for other households, or to train or fine-tune any model. Sending it to the AI to build that family's plan is fine (API data isn't used for training); PRIVACY.md must say so.
+5. **Deletable.** Removing an upload deletes the file and its extracted text. Plans already approved keep their objectives but stop quoting it. Deleting the account deletes everything (it cascades, like the rest of Aim's data).
+6. **Safe-harbor basics before launch** (as for any service that holds user uploads):
+   - terms of service in which the parent confirms they have the right to use what they upload;
+   - a published copyright complaint and takedown process, and a counter-notice process;
+   - a takedown agent registered with the US Copyright Office;
+   - a repeat-infringer policy;
+   - acting promptly on a valid complaint, and never encouraging uploads Aim knows aren't licensed.
+7. **No publisher names as endorsement.** Say "use your own curriculum" or "works alongside the curriculum you already use". Don't use a publisher's or curriculum's name or logo in marketing, listings or the product in a way that suggests a partnership, unless there is one.
+8. **Have a lawyer review** the upload terms, the takedown process and this design before the parent website launches.
+
+Data shape: a `curriculum_upload` row (household, title, kind, license note the parent gave, file reference, extracted text, created/deleted) with read and write limited to that household by RLS. Plans that use it reference it by ID and never copy it into shared tables.
+
 ## The parent website
 
 The parents' side is a website, specified in [PARENT_WEBSITE.md](PARENT_WEBSITE.md):
@@ -391,4 +411,5 @@ Preferences are per student or per family, and parents can view and remove them.
 - **Rotation is a household setting** (subject order, frequency), not hard-coded.
 - **Progress events take a `source`** (`teachback`, `instructor`, `parent`, `project`), so a parent's quick "understood" mark, TeachBack evidence and project results stay distinguishable.
 - **Channel preferences are their own table**, keyed by learner or household and channel ID.
+- **Curriculum uploads are household-private** (see "Bring your own curriculum"): their own table, RLS by household, never in shared tables, never used beyond that family's plans.
 - **Before any build:** a separate privacy and legal design for children (COPPA and equivalents), and curriculum development with qualified educators.
