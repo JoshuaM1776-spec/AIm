@@ -34,6 +34,8 @@ Chrome extension, Manifest V3, no build step.
 | `options.html/js` | Settings page |
 | `config.js`, `plus.js` | Aim Plus in the service worker: where the server is (empty = Free only), sign-in with an emailed code, calling Aim's AI endpoint. Only Aim's own pages can use it, never YouTube tabs. |
 | `options-plus.js` | The Aim Plus section of Settings (hidden until `config.js` is filled in) |
+| `signin.html/js` | Where the link in the sign-in email lands. It hands the session to the worker, which accepts it only for a sign-in this browser started. |
+| `teachback.html/js` | TeachBack, Aim Plus's conversational check of what you can explain |
 | `supabase/` | The Aim Plus server: database tables and the AI endpoint. Not part of the extension package. |
 | `tests/` | Automated tests (see TESTING.md) |
 
@@ -74,6 +76,8 @@ The name is Aim. It lives in one place, so it's easy to change if it ever has to
 - `PRIVACY.md` and `STORE_LISTING.md` mention the name in text.
 
 ## Stored data
+
+`manifest.json` has a `"key"` so Aim's development ID stays `fdebaflkeabmcggljcjmchnepgddbplp` wherever it's loaded from; Supabase's sign-in redirect depends on it. Remove it from the copy you upload to the Chrome Web Store.
 
 Everything lives in `chrome.storage.local`, except the Aim Plus sign-in session, which `plus.js` keeps in the service worker's IndexedDB so YouTube tabs can't read it. `schemaVersion` records the data format. When it changes, bump `SCHEMA_VERSION` in `store.js`, add a step to `migrateStorage()`, and add a test to `tests/store.test.js`.
 

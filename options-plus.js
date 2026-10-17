@@ -28,7 +28,7 @@ async function plusDo(msg) {
 function emailForm() {
   const input = node("input", { type: "email", id: "plusEmail", placeholder: "Email address", autocomplete: "email", value: plus.email });
   input.setAttribute("aria-label", "Email address");
-  const go = node("button", { className: "btn", type: "submit", textContent: "Send code" });
+  const go = node("button", { className: "btn", type: "submit", textContent: "Send sign-in email" });
   const form = node("form", { className: "form", noValidate: true }, input, go);
   form.onsubmit = async e => {
     e.preventDefault();
@@ -37,17 +37,19 @@ function emailForm() {
     plus.email = r.email;
     plus.step = "code";
     renderPlus();
+// Signing in from the emailed link happens in another tab; catch up when this one is looked at again.
+window.addEventListener("focus", () => { if (plus.step === "code" && !plus.busy) renderPlus(true); });
   };
   return [node("p", { className: "note", textContent: "Sign in to get AI-guided learning paths when Aim Plus launches. Aim Free stays free and keeps working the same, with or without an account." }), form];
 }
 
 function codeForm() {
-  const input = node("input", { type: "text", id: "plusCode", className: "code", placeholder: "Code", inputMode: "numeric", autocomplete: "one-time-code", maxLength: 10 });
-  input.setAttribute("aria-label", "Code from the email");
+  const input = node("input", { type: "text", id: "plusCode", placeholder: "Code, or paste the link", autocomplete: "one-time-code", maxLength: 2000 });
+  input.setAttribute("aria-label", "Code or sign-in link from the email");
   const go = node("button", { className: "btn", type: "submit", textContent: "Sign in" });
   const back = node("button", { className: "btn tonal", type: "button", textContent: "Use a different email" });
   back.onclick = () => { plus.step = "email"; plusMsg(""); renderPlus(); };
-  const resend = node("button", { className: "btn tonal", type: "button", textContent: "Send a new code" });
+  const resend = node("button", { className: "btn tonal", type: "button", textContent: "Send a new email" });
   resend.onclick = async () => { if (await plusDo({ type: "plus-send-code", email: plus.email })) { plusMsg("Sent. Check your email."); renderPlus(true); } };
   const form = node("form", { className: "form" }, input, go, back, resend);
   form.onsubmit = async e => {
@@ -56,9 +58,12 @@ function codeForm() {
     plus.step = "email";
     toast("Signed in.");
     renderPlus();
+// Signing in from the emailed link happens in another tab; catch up when this one is looked at again.
+window.addEventListener("focus", () => { if (plus.step === "code" && !plus.busy) renderPlus(true); });
   };
   setTimeout(() => input.focus());
-  return [node("p", { className: "note", textContent: `Enter the code we sent to ${plus.email}. It may take a minute to arrive.` }), form];
+  return [node("p", { className: "note", textContent: `We sent an email to ${plus.email}. It may take a minute to arrive. ` +
+    "Open it on this computer and click the sign-in link, or enter the code it shows. If the link opens in another browser, copy the link instead (right-click → Copy Link) and paste it here." }), form];
 }
 
 function accountView(st) {
@@ -94,8 +99,11 @@ async function renderPlus(keepMsg = false) {
   if (!st || !st.configured) { $("plus").hidden = true; return; }
   $("plus").hidden = false;
   if (!keepMsg) plusMsg(st.error && !st.signedIn ? st.error : "");
+  if (st.signedIn) plus.step = "email"; // signing out later starts from the email form
   const body = st.signedIn ? accountView(st) : plus.step === "code" ? codeForm() : emailForm();
   $("plusBody").replaceChildren(...body);
 }
 
 renderPlus();
+// Signing in from the emailed link happens in another tab; catch up when this one is looked at again.
+window.addEventListener("focus", () => { if (plus.step === "code" && !plus.busy) renderPlus(true); });

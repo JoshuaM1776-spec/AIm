@@ -18,6 +18,7 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 // ---------- stand-in server ----------
 const CODE = "123456";
+const LINK_TOKEN = "b3c1f0e2a9d84c7f9e6a5b4c3d2e1f00aabbccdd";
 const ev = (rating, evidence) => ({ rating, evidence, misconception: "", applied: false, note: "" });
 const srv = { director: [
     { evaluation: ev("sound", "glucose and oxygen"), next: { action: "follow_up", objective: 1, student: "ivy", kind: "application", question: "So what does the plant do with that glucose later?" } },
@@ -69,10 +70,24 @@ const server = http.createServer(async (req, res) => {
   const cors = { "Access-Control-Allow-Origin": req.headers.origin || "*", "Access-Control-Allow-Headers": "apikey, authorization, content-type, x-client-info", "Access-Control-Allow-Methods": "POST, OPTIONS" };
   if (req.method === "OPTIONS") { res.writeHead(204, cors); return res.end(); }
   const send = (status, data) => { res.writeHead(status, { ...cors, "Content-Type": "application/json" }); res.end(JSON.stringify(data)); };
-  if (req.headers.apikey !== "anon-test-key") return send(401, { message: "No API key found in request" });
+  const isEmailLink = url.pathname === "/auth/v1/verify" && req.method === "GET"; // opened from the email, no key
+  if (!isEmailLink && req.headers.apikey !== "anon-test-key") return send(401, { message: "No API key found in request" });
   const data = JSON.parse(body || "{}");
-  if (url.pathname === "/auth/v1/otp") { srv.sent.push(data.email); return send(200, {}); }
+  // Supabase's default email: a link to /auth/v1/verify, which redirects back with the session in the #fragment.
+  if (url.pathname === "/auth/v1/verify" && req.method === "GET") {
+    const to = url.searchParams.get("redirect_to");
+    if (url.searchParams.get("token") !== LINK_TOKEN) { res.writeHead(303, { Location: `${to}#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired` }); return res.end(); }
+    const t = issue();
+    res.writeHead(303, { Location: `${to}#access_token=${t.access_token}&refresh_token=${t.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink` });
+    return res.end();
+  }
+  if (url.pathname === "/auth/v1/user" && req.method === "GET") {
+    const t = (req.headers.authorization || "").replace("Bearer ", "");
+    return srv.sessions.get(t)?.live ? send(200, user) : send(401, { msg: "invalid JWT" });
+  }
+  if (url.pathname === "/auth/v1/otp") { srv.sent.push(data.email); srv.redirect = url.searchParams.get("redirect_to"); return send(200, {}); }
   if (url.pathname === "/auth/v1/verify") {
+    if (data.token_hash) return data.token_hash === LINK_TOKEN && data.type === "magiclink" ? send(200, issue()) : send(403, { code: 403, error_code: "otp_expired", msg: "Token has expired or is invalid" });
     return data.token === CODE && data.email === user.email ? send(200, issue()) : send(403, { code: 403, error_code: "otp_expired", msg: "Token has expired or is invalid" });
   }
   if (url.pathname === "/auth/v1/token" && url.searchParams.get("grant_type") === "refresh_token") {
@@ -113,12 +128,12 @@ await opt.waitForSelector("#plus:not([hidden]) #plusEmail");
 step("Settings shows Aim Plus when a server is configured", true);
 
 await opt.fill("#plusEmail", "not an email");
-await opt.click("button:text-is('Send code')");
+await opt.click("button:text-is('Send sign-in email')");
 await opt.waitForFunction(() => /Check the email/.test(document.getElementById("plusMsg").textContent));
 step("rejects a malformed email without contacting the server", srv.sent.length === 0);
 
 await opt.fill("#plusEmail", " Learner@Example.com ");
-await opt.click("button:text-is('Send code')");
+await opt.click("button:text-is('Send sign-in email')");
 await opt.waitForSelector("#plusCode");
 step("sends a code to the normalized address", srv.sent[0] === "learner@example.com", srv.sent.join());
 
@@ -197,7 +212,7 @@ step("a revoked session shows the sign-in form again", (await sw.evaluate(() => 
 
 // Sign in again, then sign out.
 await opt.fill("#plusEmail", user.email);
-await opt.click("button:text-is('Send code')");
+await opt.click("button:text-is('Send sign-in email')");
 await opt.fill("#plusCode", CODE);
 await opt.click("button:text-is('Sign in')");
 await opt.waitForSelector("button:text-is('Sign out')");
@@ -205,6 +220,47 @@ const revokedBefore = srv.revoked;
 await opt.click("button:text-is('Sign out')");
 await opt.waitForSelector("#plusEmail");
 step("sign out clears the session and revokes it on the server", (await sw.evaluate(() => loadSession())) === null && srv.revoked === revokedBefore + 1);
+
+// ---------- sign-in with the link in Supabase's default email ----------
+const emailLink = token => `${base}/auth/v1/verify?token=${token}&type=magiclink&redirect_to=${encodeURIComponent(srv.redirect)}`;
+await opt.fill("#plusEmail", user.email);
+await opt.click("button:text-is('Send sign-in email')");
+await opt.waitForSelector("#plusCode");
+step("the email asks Supabase to send the link back to Aim's sign-in page",
+  srv.redirect?.startsWith(`chrome-extension://${extId}/signin.html?state=`), srv.redirect);
+// Clicking the link: Supabase's page redirects to the extension, which finishes the sign-in.
+const landing = await ctx.newPage();
+await landing.goto(emailLink(LINK_TOKEN));
+await landing.waitForSelector("h1:text-is(\"You're signed in\")");
+step("clicking the emailed link signs in", (await sw.evaluate(() => loadSession()))?.email === user.email);
+step("the tokens don't stay in the address bar", !landing.url().includes("#") && !landing.url().includes("state="));
+await opt.bringToFront();
+await opt.evaluate(() => window.dispatchEvent(new Event("focus")));
+await opt.waitForSelector("button:text-is('Sign out')");
+step("Settings notices the sign-in from the other tab", true);
+// The same link can't sign in twice, and a link this browser didn't start is refused.
+await landing.goto(`chrome-extension://${extId}/signin.html?state=not-ours#access_token=x&refresh_token=y`);
+await landing.waitForSelector("h1:text-is(\"Sign-in didn't work\")");
+step("a link this browser didn't start is refused", (await landing.textContent("p")).includes("wasn't started here"));
+await opt.click("button:text-is('Sign out')");
+await opt.waitForSelector("#plusEmail");
+// Pasting the link instead (when the email opens in another browser).
+await opt.fill("#plusEmail", user.email);
+await opt.click("button:text-is('Send sign-in email')");
+await opt.waitForSelector("#plusCode");
+await opt.fill("#plusCode", emailLink(LINK_TOKEN));
+await opt.click("button:text-is('Sign in')");
+await opt.waitForSelector("button:text-is('Sign out')");
+step("pasting the emailed link signs in", (await sw.evaluate(() => loadSession()))?.email === user.email);
+await opt.click("button:text-is('Sign out')");
+await opt.waitForSelector("#plusEmail");
+await opt.fill("#plusEmail", user.email);
+await opt.click("button:text-is('Send sign-in email')");
+await opt.fill("#plusCode", emailLink("expired0000000000000000"));
+await opt.click("button:text-is('Sign in')");
+await opt.waitForFunction(() => /didn't work/.test(document.getElementById("plusMsg").textContent));
+step("an old or used link explains itself", true);
+await landing.close();
 
 // Aim Free keeps working alongside: the regular settings still save.
 await opt.selectOption("#leisureMin", "30");

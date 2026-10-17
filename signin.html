@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="light dark">
+<title>Signing in</title>
+<style>
+  :root { --bg:#fff; --text:#0f0f0f; --muted:#606060; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0f0f0f; --text:#f1f1f1; --muted:#aaa; } }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/20px Roboto, Arial, sans-serif; }
+  main { max-width: 480px; margin: 15vh auto 0; padding: 0 24px; text-align: center; }
+  img { width: 48px; height: 48px; }
+  .for-dark { display: none; }
+  @media (prefers-color-scheme: dark) { .for-dark { display: inline; } .for-light { display: none; } }
+  h1 { font-size: 22px; line-height: 30px; margin: 16px 0 8px; }
+  p { color: var(--muted); margin: 0 0 20px; }
+  button { height: 36px; padding: 0 16px; border-radius: 18px; border: 0; background: var(--text); color: var(--bg); font: 500 14px Roboto, Arial, sans-serif; cursor: pointer; }
+</style>
+</head>
+<body>
+<main>
+  <img class="for-light" src="icons/48.png" alt=""><img class="for-dark" src="icons/light/48.png" alt="">
+  <h1 id="title">Signing you in…</h1>
+  <p id="detail"></p>
+  <button id="settings" hidden>Open Settings</button>
+</main>
+<script src="signin.js"></script>
+</body>
+</html>

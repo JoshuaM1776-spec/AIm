@@ -32,6 +32,10 @@ async function kv(mode, fn) {
 const loadSession = () => kv("readonly", s => s.get("session")).then(v => v || null);
 const saveSession = s => kv("readwrite", st => st.put(s, "session"));
 const clearSession = () => kv("readwrite", st => st.delete("session"));
+// A sign-in waiting for its email: the address, and a random state that the emailed link must carry back.
+const loadPending = () => kv("readonly", st => st.get("pending")).then(v => v || null);
+const savePending = p => kv("readwrite", st => st.put(p, "pending"));
+const clearPending = () => kv("readwrite", st => st.delete("pending"));
 
 // ---------- Supabase Auth ----------
 
@@ -71,21 +75,79 @@ function sessionFrom(data) {
 
 const validEmail = e => typeof e === "string" && e.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
+// The email can carry a 6-digit code (with a customized email template) or a sign-in link (Supabase's
+// default email). The link comes back to signin.html in this extension, carrying `state`, so a link
+// can only finish a sign-in this browser started.
+const SIGNIN_PAGE = () => chrome.runtime.getURL("signin.html");
+const PENDING_MS = 60 * 60 * 1000;
+
 async function plusSendCode(email) {
   email = String(email || "").trim().toLowerCase();
   if (!validEmail(email)) throw new PlusError("Check the email address.");
-  await authCall("otp", { email, create_user: true });
+  const state = crypto.randomUUID();
+  await savePending({ email, state, at: Date.now() });
+  const back = encodeURIComponent(`${SIGNIN_PAGE()}?state=${state}`);
+  await authCall(`otp?redirect_to=${back}`, { email, create_user: true });
   return { result: "sent", email };
 }
 
-async function plusVerify(email, code) {
+// What was typed or pasted: a code, or the link from the email.
+async function plusVerify(email, entry) {
   email = String(email || "").trim().toLowerCase();
-  code = String(code || "").replace(/\s+/g, "");
   if (!validEmail(email)) throw new PlusError("Check the email address.");
-  if (!/^\d{6,10}$/.test(code)) throw new PlusError("Enter the code from the email.");
-  const s = sessionFrom(await authCall("verify", { type: "email", email, token: code }));
+  const raw = String(entry || "").trim();
+  let data;
+  const link = linkToken(raw);
+  if (link) {
+    data = await authCall("verify", { type: link.type, token_hash: link.token });
+  } else {
+    const code = raw.replace(/\s+/g, "");
+    if (!/^\d{6,10}$/.test(code)) throw new PlusError("Enter the code from the email, or paste its sign-in link.");
+    data = await authCall("verify", { type: "email", email, token: code });
+  }
+  const s = sessionFrom(data);
+  if (s.email && s.email.toLowerCase() !== email) throw new PlusError("That link is for a different email address.");
   await saveSession(s);
+  await clearPending();
   return { result: "signed-in", email: s.email };
+}
+
+// The token inside an emailed sign-in link (…/auth/v1/verify?token=…&type=magiclink), if `raw` is one.
+function linkToken(raw) {
+  let u;
+  try { u = new URL(raw); } catch { return null; }
+  if (u.origin !== new URL(PLUS.supabaseUrl).origin || !u.pathname.endsWith("/auth/v1/verify")) return null;
+  const token = u.searchParams.get("token") || "";
+  const type = u.searchParams.get("type") || "magiclink";
+  if (!/^[\w-]{10,}$/.test(token) || token.startsWith("pkce_")) return null;
+  return { token, type: ["magiclink", "signup", "email", "invite"].includes(type) ? type : "magiclink" };
+}
+
+// signin.html hands over what the link delivered: the state from its address, and the
+// session (or an error) from its #fragment.
+async function plusAdopt(search, hash) {
+  const q = new URLSearchParams(String(search || "").replace(/^\?/, ""));
+  const f = new URLSearchParams(String(hash || "").replace(/^#/, ""));
+  if (f.get("error") || f.get("error_code")) {
+    throw new PlusError(/expired|invalid/i.test(f.get("error_description") || f.get("error_code") || "")
+      ? "That link has expired or was already used. Send a new one from Settings." : "That sign-in link didn't work. Send a new one from Settings.");
+  }
+  const pending = await loadPending();
+  if (!pending || pending.state !== q.get("state") || Date.now() - pending.at > PENDING_MS) {
+    throw new PlusError("This sign-in link wasn't started here, or it's too old. Send a new one from Settings.");
+  }
+  const access = f.get("access_token"), refresh = f.get("refresh_token");
+  if (!access || !refresh) throw new PlusError("That sign-in link didn't work. Send a new one from Settings.");
+  // Ask Supabase who this session belongs to rather than trusting the link.
+  const { res, data: user } = await plusFetch(`${PLUS.supabaseUrl}/auth/v1/user`, {
+    headers: { apikey: PLUS.supabaseAnonKey, Authorization: `Bearer ${access}` }
+  });
+  if (!res.ok || !user?.id) throw new PlusError("That sign-in link didn't work. Send a new one from Settings.");
+  if ((user.email || "").toLowerCase() !== pending.email) throw new PlusError("That link is for a different email address.");
+  const expiresAt = Number(f.get("expires_at")) * 1000 || Date.now() + (Number(f.get("expires_in")) || 3600) * 1000;
+  await saveSession({ accessToken: access, refreshToken: refresh, expiresAt, email: user.email, userId: user.id });
+  await clearPending();
+  return { result: "signed-in", email: user.email };
 }
 
 // One refresh at a time: a refresh token works once, so two racing refreshes would sign the user out.
@@ -169,6 +231,7 @@ const plusHandlers = {
   "plus-status": () => plusStatus(),
   "plus-send-code": m => plusSendCode(m.email),
   "plus-verify": m => plusVerify(m.email, m.code),
+  "plus-adopt": m => plusAdopt(m.search, m.hash),
   "plus-sign-out": () => plusSignOut(),
   "plus-check": () => plusCall("check").then(r => ({ result: "ok", reply: r.reply })),
   "plus-call": async m => {

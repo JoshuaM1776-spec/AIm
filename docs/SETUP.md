@@ -58,22 +58,27 @@ Keep a note open as you go. You'll collect five things:
 
 > If you ever use the Supabase command line's `supabase db push` later, it may try to run this file again. Since you ran it here, skip `db push` for this file.
 
-## Part 4 — Turn on sign-in with an emailed code (in the browser)
+## Part 4 — Let the sign-in email bring you back to Aim (in the browser)
 
-1. **Check that email sign-in is on:** open **Authentication** (the people icon) → **Sign In / Providers** (in some layouts, **Providers**). Make sure **Email** is enabled. The defaults are fine; leave **Confirm email** on.
-2. **Make the emails show a code instead of a link:** open **Authentication → Emails** (in some layouts, **Email Templates**).
-   1. Open the **Magic Link** template.
-   2. Set the **Subject** to `Your Aim sign-in code`.
-   3. Replace the whole message body with:
-      ```html
-      <h2>Your Aim sign-in code</h2>
-      <p>Enter this code in Aim: <strong>{{ .Token }}</strong></p>
-      <p>It expires in an hour. If you didn't ask for it, you can ignore this email.</p>
-      ```
-   4. Choose **Save**.
-   5. Do the same for the **Confirm signup** template. Brand-new accounts may get this one.
-   - **If an email shows a link instead of a code,** the template hasn't been changed yet. Don't click the link: it leads to `localhost`, which doesn't exist on your computer. Fix the template and send a new code.
-3. **Sending limit:** Supabase's built-in email sends only a few messages an hour and is meant for testing, so that's fine for now. Before real users, set up your own email sending under **Authentication → Emails → SMTP Settings**, for example with Resend, Postmark or Amazon SES. Each has a Supabase guide.
+Aim signs you in with the link in Supabase's standard sign-in email. Supabase needs to know it may send people back to Aim:
+
+1. In Supabase, open **Authentication → URL Configuration**. In some layouts it's under **Authentication → Configuration**.
+2. Under **Redirect URLs**, choose **Add URL** and enter exactly:
+   ```
+   chrome-extension://fdebaflkeabmcggljcjmchnepgddbplp/**
+   ```
+   That's Aim's ID in Chrome. It stays the same wherever you unzip Aim.
+3. Choose **Save**. Leave **Site URL** as it is.
+4. While you're in Authentication, check that the **Email** provider is enabled (**Sign In / Providers**). It is by default.
+
+**How signing in works:** in Aim's Settings you enter your email and choose **Send sign-in email**. When it arrives:
+
+- **On the same computer, with Chrome as your browser:** click the link. A page opens saying **You're signed in**, and you can close it.
+- **If the link opens in Safari or another browser,** or you read email on your phone: don't click it. Copy the link instead (right-click or long-press → **Copy Link**), then paste it into Aim's Settings, in the box under the email, and choose **Sign in**.
+
+Each link works once and expires after an hour. If one fails, choose **Send a new email**.
+
+> **About codes and email templates.** Since mid-2026, new free Supabase projects can't edit their email templates unless they send email through their own provider (custom SMTP). That's why Aim uses the standard link email. Before real users, set up custom SMTP anyway: Supabase's built-in sender allows only a couple of emails an hour. Then you can also change the **Magic Link** and **Confirm signup** templates to show a 6-digit code (`{{ .Token }}`). Aim accepts codes too.
 
 ## Part 5 — Give the server your Claude key (in the browser)
 
@@ -142,10 +147,10 @@ Then load or reload the extension:
 
 1. **Open Aim's settings:** right-click Aim's toolbar icon → **Options**. A new **Aim Plus** section should appear.
 2. **Sign in:**
-   1. Enter your email and choose **Send code**.
-   2. Check your inbox, and the spam folder, for "Your Aim sign-in code".
-   3. Type the 6-digit code and choose **Sign in**.
-   4. You should see your email and **Plan: Aim Free**.
+   1. Enter your email and choose **Send sign-in email**.
+   2. Check your inbox, and the spam folder, for Supabase's email.
+   3. Click its link in Chrome, or copy it and paste it into Settings (see Part 4).
+   4. Settings shows your email and **Plan: Aim Free**.
 3. **Give yourself Plus:** in Supabase, open **SQL Editor → New query**, paste this (with your email) and choose **Run**:
    ```sql
    update public.profiles set plan = 'plus'
@@ -163,9 +168,11 @@ Then load or reload the extension:
 | No **Aim Plus** section in Settings | `config.js` is still empty, or the extension wasn't reloaded. Check both values, then press ↻ on `chrome://extensions`. |
 | "Couldn't reach Aim's server" | Check the Project URL in `config.js`: it starts with `https://` and ends with `.supabase.co`, with no slash at the end. |
 | No email arrives | Check spam. The built-in sender allows only a few emails an hour, so wait and try again, or set up SMTP (Part 4). |
-| The email has a link, not a code | The template still uses the default text. Redo Part 4 for **Magic Link** and **Confirm signup**. |
-| "That code didn't work" | Use the newest email's code; each new request replaces the old code. Codes expire after an hour. |
-| "Too many tries" | Supabase allows one code per address per minute. Wait a minute. |
+| Clicking the link shows "localhost refused to connect" | The redirect address from Part 4 is missing or mistyped, so Supabase fell back to its placeholder. Add it exactly as shown, then send a new email (that link was used up). |
+| Clicking the link opens Safari or another browser | Copy the link instead of clicking it, and paste it into Aim's Settings. |
+| "That link has expired or was already used" | Each link works once, for an hour. Send a new email. |
+| "That code didn't work" | Use the newest email; each new request replaces the old one. Links and codes expire after an hour. |
+| "Too many tries" | Supabase allows one email per address per minute, and its built-in sender only a couple an hour. Wait, then try again. |
 | Check connection: "The AI couldn't be reached" | Usually the Claude key or billing. In Supabase, open **Edge Functions → ai → Logs** for the reason. Check the `ANTHROPIC_API_KEY` secret (Part 5) holds a valid key, and that you have credit in the Claude Console. |
 | Check connection: "This needs Aim Plus" | Part 8, step 3 didn't match your email. Check the spelling, run it again, and reload Settings. |
 | "This origin isn't allowed" | You set `AIM_EXTENSION_ORIGINS` and the extension's ID changed. Loading the folder from a different place changes the ID. Delete that secret in **Edge Functions → Secrets**, or set it to the ID shown on `chrome://extensions`. |

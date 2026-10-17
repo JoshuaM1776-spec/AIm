@@ -69,6 +69,7 @@ Don't show YouTube's logo prominently in screenshots or promos, and don't make t
 ## Before submitting
 
 - [ ] **Decide Free-only or with Plus.** `config.js` now points at the Aim Plus project. For a Free-only release, empty both values first. For a release with Plus, update PRIVACY.md and the privacy answers above.
+- [ ] **Remove the `"key"` line from `manifest.json` in the uploaded copy.** It pins Aim's ID for development; the Chrome Web Store assigns its own ID. Then add `chrome-extension://<store ID>/**` to Supabase's Redirect URLs, and set `AIM_EXTENSION_ORIGINS` to the store ID.
 - [ ] Run `TESTING.md` on real YouTube (light and dark, wide and narrow windows).
 - [ ] Confirm the logo (`icons/`, see README → Rebranding). The name is Aim.
 - [ ] Fill in the contact email in `PRIVACY.md` and publish it.
