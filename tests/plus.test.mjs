@@ -20,7 +20,16 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CODE = "123456";
 const LINK_TOKEN = "b3c1f0e2a9d84c7f9e6a5b4c3d2e1f00aabbccdd";
 const ev = (rating, evidence) => ({ rating, evidence, misconception: "", applied: false, note: "" });
-const srv = { director: [
+const srv = { rankCalls: 0, lastAskPrompt: "",
+  ask: [
+    { target: "Replace the alternator on my 2014 Tacoma", kind: "project", note: "The steps differ between the 2.7L and 4.0L engines.",
+      searches: ["2014 tacoma alternator replacement", "tacoma alternator removal tools"], question: "Which engine does it have?",
+      options: ["2.7L four-cylinder", "4.0L V6"], same_target: true },
+    { target: "Replace the alternator on my 2014 Tacoma", kind: "project", note: "Here are V6-specific walkthroughs.",
+      searches: ["2014 tacoma 4.0 v6 alternator replacement"], question: "", options: [], same_target: true }
+  ],
+  rank: req => ({ groups: [{ label: "Start here", videos: [{ id: "alt1aaa", reason: "Covers the 2014 Tacoma specifically" }, { id: "alt2bbb", reason: "Shows the tools you need" }] }] }),
+  director: [
     { evaluation: ev("sound", "glucose and oxygen"), next: { action: "follow_up", objective: 1, student: "ivy", kind: "application", question: "So what does the plant do with that glucose later?" } },
     { evaluation: ev("partial", "stores the glucose as starch"), next: { action: "next_objective", objective: 2, student: "reese", kind: "question", question: "How do we know light is needed at all?" } },
     { evaluation: ev("unclear", ""), next: { action: "next_objective", objective: 3, student: "grant", kind: "question", question: "Which part of the cell, exactly?" } }
@@ -47,6 +56,8 @@ const deps = {
           objectives: ["Explain what photosynthesis produces", "Explain the role of light", "Explain where it happens in the cell"] }
       : props.includes("evaluation") ? srv.director.shift()
       : props.includes("hint") ? { hint: "Think about what the plant keeps for later." }
+      : props.includes("searches") ? (srv.lastAskPrompt = req.prompt, srv.ask.shift())
+      : props.includes("groups") ? (srv.rankCalls++, srv.rank(req))
       : { summary: "You explained what photosynthesis produces. Light and location weren't covered yet.", strengths: ["What photosynthesis produces"],
           objectives: [{ index: 1, note: "Clear and accurate.", explanation: "", search: "" },
             { index: 2, note: "Skipped.", explanation: "Light supplies the energy that drives the reactions.", search: "role of light in photosynthesis" }],
@@ -197,6 +208,66 @@ await tb.reload();
 await tb.waitForSelector("h1:text-is('What you showed')");
 step("results come back after reloading the page", true);
 await tb.close();
+
+// ---------- the librarian on a stand-in YouTube ----------
+const ytPage = body => `<!doctype html><html><head><title>YouTube</title></head><body>
+<ytd-masthead><div id="center"></div><div id="end"></div></ytd-masthead>${body}</body></html>`;
+const ytResults = q => ytPage(`<ytd-search><div><ytd-section-list-renderer>${[["alt1aaa", `Tacoma alternator replacement (${q})`, "Truck Shop"],
+  ["alt2bbb", "Alternator tools you need", "DIY Garage"], ["alt3ccc", "Funny truck fails", "Clips"]].map(([id, t, c]) =>
+  `<ytd-video-renderer><a id="video-title" href="/watch?v=${id}">${t}</a><ytd-channel-name><a href="/@${c.replace(/ /g, "")}">${c}</a></ytd-channel-name>
+   <div id="metadata-line">120K views · 2 years ago</div><div class="metadata-snippet-text">How to replace it step by step</div></ytd-video-renderer>`).join("")}
+</ytd-section-list-renderer></div></ytd-search>`);
+await ctx.route(/^https:\/\/www\.youtube\.com\//, route => {
+  const u = new URL(route.request().url());
+  if (u.pathname === "/oembed") return route.fulfill({ contentType: "application/json", body: '{"title":"x","author_name":"y","author_url":"https://www.youtube.com/@y"}' });
+  const body = u.pathname === "/results" ? ytResults(u.searchParams.get("search_query") || "")
+    : ytPage(`<ytd-browse page-subtype="home"><div id="primary"><ytd-rich-grid-renderer></ytd-rich-grid-renderer></div></ytd-browse>`);
+  route.fulfill({ contentType: "text/html", body, headers: { "content-security-policy": "require-trusted-types-for 'script'" } });
+});
+const yt = await ctx.newPage();
+await yt.goto("https://www.youtube.com/");
+await yt.waitForSelector("#wp-home");
+step("signed in, the homepage invites requests for the librarian", (await yt.textContent("#wp-home")).includes("It'll help you find it"));
+await yt.fill(".wp-home-input", "I need to replace the alternator on my 2014 Tacoma");
+await yt.press(".wp-home-input", "Enter");
+await yt.waitForURL(/results\?search_query=2014%20tacoma%20alternator%20replacement/);
+await yt.waitForSelector("#wp-lib .wp-lib-note");
+let bar = await yt.textContent("#wp-results-bar");
+step("the request becomes a Target and the librarian's best search runs on YouTube",
+  bar.includes("Replace the alternator on my 2014 Tacoma") && bar.includes("The steps differ between the 2.7L and 4.0L engines."), bar.slice(0, 160));
+step("one question, as choices, plus its other search", bar.includes("Which engine does it have?") && bar.includes("4.0L V6") && bar.includes("tacoma alternator removal tools"));
+await yt.waitForSelector("#wp-picks .wp-pick");
+const picks = await yt.textContent("#wp-picks");
+step("the librarian's picks from YouTube's results, with reasons", picks.includes("Start here") && picks.includes("Covers the 2014 Tacoma specifically") &&
+  !picks.includes("Funny truck fails"), picks.slice(0, 160));
+step("YouTube's own results stay below", await yt.isVisible("text=Funny truck fails"));
+if (process.env.SHOTS) { await yt.setViewportSize({ width: 1100, height: 760 }); await yt.screenshot({ path: `${process.env.SHOTS}/librarian-results.png` }); }
+const rankAfterFirst = srv.rankCalls;
+await yt.reload();
+await yt.waitForSelector("#wp-picks .wp-pick");
+step("picks are remembered for that search (no second AI call)", srv.rankCalls === rankAfterFirst);
+await yt.click("#wp-lib button:text-is('4.0L V6')");
+await yt.waitForURL(/search_query=2014%20tacoma%204\.0%20v6/);
+await yt.waitForSelector("#wp-lib .wp-lib-note:text('V6-specific')");
+step("answering the question continues the same Target, with context", srv.lastAskPrompt.includes("CURRENT TARGET: Replace the alternator on my 2014 Tacoma") &&
+  srv.lastAskPrompt.includes("Which engine does it have?") && srv.lastAskPrompt.includes("THE PERSON NOW SAYS: 4.0L V6"));
+const libState = await sw.evaluate(() => chrome.storage.local.get("purpose").then(d => d.purpose));
+step("the conversation is kept with the Target, in this browser", libState.librarian.thread.length === 4 && libState.text === "Replace the alternator on my 2014 Tacoma");
+const asksBefore = srv.ask.length, callsBefore = srv.aiCalls;
+await yt.fill(".wp-lib-input", "serpentine belt");
+await yt.press(".wp-lib-input", "Enter");
+await yt.waitForURL(/search_query=serpentine%20belt/);
+step("a plain search goes straight to YouTube, no AI", srv.aiCalls === callsBefore && srv.ask.length === asksBefore);
+// It shares no word with the Target, so Aim asks first, as with any search.
+await yt.click("button:text-is(\"Yes, it's part of it\")");
+// When the librarian can't help, the request still searches YouTube.
+srv.ask.push(undefined);
+await yt.waitForSelector(".wp-lib-input");
+await yt.fill(".wp-lib-input", "what socket size do I need for the tensioner bolt?");
+await yt.press(".wp-lib-input", "Enter");
+await yt.waitForURL(/search_query=what%20socket%20size/);
+step("if the librarian fails, the request is searched on YouTube as typed", true);
+await yt.close();
 
 // An expired access token refreshes quietly, once, even with calls racing.
 await sw.evaluate(async () => { const s = await loadSession(); s.expiresAt = Date.now() - 1000; await saveSession(s); });

@@ -6,7 +6,7 @@ let lastHandledSearch = null;
 
 async function onSearch(query) {
   query = query.trim();
-  if (!query || query === lastHandledSearch) { renderResultsBar(); return captureResults(); }
+  if (!query || query === lastHandledSearch) { await renderResultsBar(); captureResults(); return librarianPicks(); }
   lastHandledSearch = query;
   setSearchPending(null);
   if (brk || status.totalReached) return renderResultsBar(); // on a break, searching is just browsing
@@ -24,8 +24,9 @@ async function onSearch(query) {
     if (check && !check.fits) { setSearchPending(query); return renderResultsBar(); }
     await acceptSearch(query);
   }
-  renderResultsBar();
+  await renderResultsBar();
   captureResults();
+  librarianPicks();
 }
 
 async function acceptSearch(query) {
@@ -70,25 +71,28 @@ document.addEventListener("click", e => {
 async function renderResultsBar() {
   if (location.pathname !== "/results") return;
   const p = activePurpose();
-  if (!p || brk) { $("#wp-results-bar")?.remove(); setSearchPending(null); return; }
+  if (!p || brk) { $("#wp-results-bar")?.remove(); removePicks(); setSearchPending(null); return; }
+  const lib = await librarianOn();
   let anchor = null;
   for (let i = 0; i < 20 && !(anchor = resultsAnchor()); i++) await sleep(250);
   if (!anchor || location.pathname !== "/results" || !activePurpose()) return;
-  const bar = searchPending ? pendingBar(p, searchPending) : purposeBar(p);
+  if (searchPending) removePicks();
+  const bar = searchPending ? pendingBar(p, searchPending) : purposeBar(p, lib);
   const old = $("#wp-results-bar");
   if (old) old.replaceWith(bar);
   else anchor.parentElement.insertBefore(bar, anchor);
 }
 
-function purposeBar(p) {
+function purposeBar(p, lib) {
   const left = purposeLeft(p);
-  return el("div", { id: "wp-results-bar", class: "wp wp-results-bar" },
+  return el("div", { id: "wp-results-bar", class: `wp wp-results-bar${lib ? " wp-rb-lib" : ""}` },
     el("div", { class: "wp-rb-purpose" },
       el("div", { class: "wp-label" }, "Current Target"),
       el("div", { class: "wp-strong wp-ellipsis" }, p.text),
       el("button", { class: "wp-link", onclick: openRefineDialog }, "Edit")),
     left !== null ? el("span", { class: "wp-muted" }, `${fmtMin(left)} left`) : null,
-    el("button", { class: "wp-btn wp-btn-tonal", onclick: askDone }, icon("check2"), "Target complete"));
+    el("button", { class: "wp-btn wp-btn-tonal", onclick: askDone }, icon("check2"), "Target complete"),
+    lib ? librarianBlock(p) : null);
 }
 
 // The search shares no meaningful word with the purpose: ask once, results hidden meanwhile.

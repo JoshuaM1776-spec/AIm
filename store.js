@@ -446,13 +446,62 @@ function meaningfulWords(text) {
 function searchFits(purpose, query) {
   const q = meaningfulWords(query);
   if (!q.length) return true; // nothing to judge by
-  const known = [purpose.text, ...(purpose.searches || []).map(s => s.q)].flatMap(meaningfulWords);
+  // Searches the librarian suggested for this Target count as part of it too.
+  const known = [purpose.text, ...(purpose.searches || []).map(s => s.q), ...(purpose.librarian?.searches || [])].flatMap(meaningfulWords);
   const same = (a, b) => a === b || (a.length >= 5 && b.length >= 5 && a.slice(0, 5) === b.slice(0, 5));
   return q.some(w => known.some(k => same(w, k)));
 }
 async function checkSearch(query) {
   const s = await readAll();
   return { fits: !s.purpose || searchFits(s.purpose, clip(query, 200)) };
+}
+
+// ---------- the librarian's memory of a Target ----------
+// What the librarian said, kept with the Target in this browser (never on Aim's server), so a
+// follow-up like "explain that last part more clearly" has context, and resuming keeps it.
+// answer: { target, kind, note, searches, refine, sameTarget } from the librarian-ask task.
+async function applyLibrarian({ request, answer, newTarget }) {
+  request = clip(request, 500);
+  const a = answer || {};
+  const searches = (Array.isArray(a.searches) ? a.searches : []).map(q => clip(q, 150)).filter(Boolean).slice(0, 3);
+  if (!request || !searches.length) return { result: "error", message: "Nothing to apply." };
+  let s = await readAll();
+  let setAside = null;
+  if (!s.purpose || newTarget) {
+    const r = await startPurpose({ text: clip(a.target, 80) || request, search: null });
+    if (r.result !== "applied") return r;
+    setAside = r.setAside;
+    s = await readAll();
+  }
+  const p = s.purpose;
+  const prev = p.librarian || { thread: [], picks: {} };
+  p.librarian = {
+    kind: ["lookup", "learn", "project"].includes(a.kind) ? a.kind : "lookup",
+    note: clip(a.note, 260),
+    searches,
+    refine: a.refine?.options?.length >= 2 ? { question: clip(a.refine.question, 160), options: a.refine.options.slice(0, 4).map(o => clip(o, 60)) } : null,
+    thread: [...(prev.thread || []), { role: "person", text: request, at: Date.now() }, { role: "aim", text: clip(a.note, 260), at: Date.now() }].slice(-20),
+    picks: prev.picks || {}
+  };
+  await chrome.storage.local.set({ purpose: p });
+  return { result: "applied", purpose: p, setAside, url: `https://www.youtube.com/results?search_query=${encodeURIComponent(searches[0])}` };
+}
+
+// The librarian's picks for one search, so returning to it doesn't ask the AI again.
+async function savePicks({ query, groups }) {
+  const s = await readAll();
+  if (!s.purpose?.librarian) return { result: "error", message: "No librarian for this Target." };
+  query = clip(query, 150);
+  const picks = s.purpose.librarian.picks || {};
+  picks[query] = (Array.isArray(groups) ? groups : []).slice(0, 3).map(g => ({
+    label: clip(g.label, 40),
+    videos: (Array.isArray(g.videos) ? g.videos : []).slice(0, 4).map(v => ({ id: clip(v.id, 20), reason: clip(v.reason, 120), title: clip(v.title, 200), channel: clip(v.channel, 100) }))
+  }));
+  const keys = Object.keys(picks);
+  for (const k of keys.slice(0, Math.max(0, keys.length - 10))) delete picks[k]; // the last ten searches
+  s.purpose.librarian.picks = picks;
+  await chrome.storage.local.set({ purpose: s.purpose });
+  return { result: "applied" };
 }
 
 // Done. The record is also left as a reflection for the next YouTube page to show.

@@ -85,7 +85,8 @@ test("rejects unknown tasks, bad JSON and large bodies", async () => {
 test("status reports plan, usage and limits without calling the AI", async () => {
   const deps = makeDeps({ plan: "free" });
   const r = await call(deps, { task: "status" });
-  assert.deepStrictEqual(r.body, { ok: true, email: "a@example.com", plan: "free", usage: { calls: 0, tokens: 0 }, limits: LIMITS });
+  assert.deepStrictEqual(r.body, { ok: true, email: "a@example.com", plan: "free", usage: { calls: 0, tokens: 0 },
+    limits: { dayCalls: 1, dayTokens: 100, minuteCalls: 1 } }, "free accounts get a tenth of the Plus allowance");
   assert.strictEqual(deps.calls.length, 0);
 });
 
@@ -341,10 +342,74 @@ test("TeachBack: early answers set the difficulty, across objectives too", async
   assert.match(prompts[2], /rated "incorrect" or "unclear": level 3/);
 });
 
+// ---------- the librarian ----------
+
+function libDeps({ plan = "free", ask, rank } = {}) {
+  const deps = makeDeps({ plan, claude: req => {
+    const props = Object.keys(req.schema?.properties || {});
+    const reply = props.includes("searches") ? ask(req) : rank(req);
+    return { ok: true, text: JSON.stringify(reply), model: "fast", inputTokens: 10, outputTokens: 5 };
+  } });
+  deps.config.freeLimits = { dayCalls: 2, dayTokens: 1e9, minuteCalls: 99 };
+  return deps;
+}
+
+test("librarian: any signed-in account can ask, within its plan's allowance", async () => {
+  const deps = libDeps({ ask: () => ({ target: "Replace the alternator on my 2014 Tacoma", kind: "project",
+    note: "The procedure differs between the 2.7L and the 4.0L engine.", searches: ["2014 Tacoma alternator replacement 4.0 V6", "2014 tacoma alternator 2.7", "2014 Tacoma alternator replacement 4.0 V6"],
+    question: "Which engine does it have?", options: ["2.7L four-cylinder", "4.0L V6"], same_target: true }) });
+  const r = await call(deps, { task: "librarian-ask", input: { request: "I need to replace the alternator on my 2014 Tacoma" } });
+  assert.strictEqual(r.status, 200);
+  assert.deepStrictEqual(r.body.searches, ["2014 Tacoma alternator replacement 4.0 V6", "2014 tacoma alternator 2.7"], "duplicates removed");
+  assert.deepStrictEqual(r.body.refine, { question: "Which engine does it have?", options: ["2.7L four-cylinder", "4.0L V6"] });
+  assert.strictEqual(r.body.kind, "project");
+  assert.strictEqual(deps.calls[0].tier, "fast");
+  await call(deps, { task: "librarian-ask", input: { request: "jet engines" } });
+  const third = await call(deps, { task: "librarian-ask", input: { request: "jet engines" } });
+  assert.strictEqual(third.status, 429, "free allowance is smaller");
+  assert.strictEqual((await call(deps, { task: "librarian-ask", input: {} }, { token: null })).status, 401, "needs an account");
+});
+
+test("librarian: context goes in, one question at most, and an empty question means no choices", async () => {
+  let prompt = "";
+  const deps = libDeps({ plan: "plus", ask: req => { prompt = req.prompt; return { target: "", kind: "learn", note: "x".repeat(400),
+    searches: [], question: "", options: ["a", "b"], same_target: false }; } });
+  const r = await call(deps, { task: "librarian-ask", input: { request: "explain that last part more clearly", target: "Understand jet engines",
+    thread: [{ role: "person", text: "how do jet engines work" }, { role: "aim", text: "Start with airflow." }],
+    searches: ["how jet engines work"], watched: [{ title: "Turbofan basics", channel: "Engines 101" }], last: { title: "Turbofan basics" } } });
+  assert.match(prompt, /CURRENT TARGET: Understand jet engines/);
+  assert.match(prompt, /LAST VIDEO WATCHED: Turbofan basics/);
+  assert.match(prompt, /AIM: Start with airflow\./);
+  assert.strictEqual(r.body.refine, null);
+  assert.strictEqual(r.body.note.length <= 260, true);
+  assert.deepStrictEqual(r.body.searches, ["explain that last part more clearly"], "falls back to the request as a search");
+  assert.strictEqual(r.body.sameTarget, false);
+  assert.strictEqual(r.body.target, "explain that last part more clearly");
+});
+
+test("librarian: ranking keeps only videos YouTube showed, once each, in at most 3 groups", async () => {
+  const deps = libDeps({ rank: () => ({ groups: [
+    { label: "Start here", videos: [{ id: "abc123def", reason: "Covers the 4.0L V6 specifically" }, { id: "invented99", reason: "?" }] },
+    { label: "Step by step", videos: [{ id: "abc123def", reason: "dupe" }, { id: "xyz789ghi", reason: "Full walkthrough" }] },
+    { label: "Empty", videos: [] }, { label: "Fourth", videos: [{ id: "qqq111www", reason: "x" }] }] }) });
+  const r = await call(deps, { task: "librarian-rank", input: { target: "Replace the alternator on my 2014 Tacoma", query: "tacoma alternator",
+    results: [{ id: "abc123def", title: "Tacoma 4.0 alternator", channel: "Shop" }, { id: "xyz789ghi", title: "Alternator swap", channel: "DIY" },
+      { id: "qqq111www", title: "Other", channel: "x" }, { id: "bad id!", title: "nope" }] } });
+  assert.deepStrictEqual(r.body.groups, [
+    { label: "Start here", videos: [{ id: "abc123def", reason: "Covers the 4.0L V6 specifically" }] },
+    { label: "Step by step", videos: [{ id: "xyz789ghi", reason: "Full walkthrough" }] }]);
+  const none = await call(deps, { task: "librarian-rank", input: { target: "x", results: [] } });
+  assert.deepStrictEqual(none.body.groups, []);
+});
+
 test("the one-file dashboard version is up to date with supabase/functions/ai", async () => {
   const fs = await import("node:fs");
   const { build, OUT } = await import("../tools/bundle-ai.mjs");
   assert.ok(fs.readFileSync(OUT, "utf8") === build(), "out of date: run node tools/bundle-ai.mjs");
+  // The files are pasted together, so top-level names must not repeat across them.
+  const names = [...build().matchAll(/^(?:export )?(?:const|let|function|class|async function) (\w+)/gm)].map(m => m[1]);
+  const dupes = names.filter((n, i) => names.indexOf(n) !== i);
+  assert.deepStrictEqual(dupes, [], "top-level names repeat in the one-file version");
 });
 
 let failed = 0;

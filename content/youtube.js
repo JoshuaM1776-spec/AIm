@@ -27,6 +27,10 @@ const YT = {
   sidebarHost: "ytd-watch-flexy #secondary",   // where "Up next from your search" goes
   results: "ytd-search",
   resultVideos: "ytd-video-renderer, yt-lockup-view-model",
+  // What the librarian reads about each result. Missing pieces are simply left out.
+  resultLength: ["ytd-thumbnail-overlay-time-status-renderer", ".yt-badge-shape__text", "badge-shape .badge-shape-wiz__text"],
+  resultMeta: ["#metadata-line", ".yt-content-metadata-view-model-wiz__metadata-row", ".yt-content-metadata-view-model__metadata-row"],
+  resultSnippet: [".metadata-snippet-text", "#description-text", ".metadata-snippet-container"],
   resultPlaylists: "ytd-playlist-renderer, ytd-radio-renderer, yt-lockup-view-model",
   resultChannel: ["ytd-channel-name a", "#channel-name a", 'a[href^="/@"]'],
   sidebarItems: "ytd-compact-video-renderer, yt-lockup-view-model",
@@ -140,7 +144,9 @@ function searchResults() {
     if (list) lists.add(list);
     if (!id || seen.has(id)) continue;
     seen.add(id);
-    videos.push({ id, title: squash(first(YT.itemTitle, n)?.textContent || a.title), channel: squash(first(YT.resultChannel, n)?.textContent) });
+    videos.push({ id, title: squash(first(YT.itemTitle, n)?.textContent || a.title), channel: squash(first(YT.resultChannel, n)?.textContent),
+      length: squash(first(YT.resultLength, n)?.textContent).slice(0, 12), meta: squash(first(YT.resultMeta, n)?.textContent).slice(0, 80),
+      snippet: squash(first(YT.resultSnippet, n)?.textContent).slice(0, 200) });
   }
   for (const n of $$(YT.resultPlaylists, root)) {
     try { const l = new URL($('a[href*="list="]', n)?.href).searchParams.get("list"); if (l) lists.add(l); } catch {}

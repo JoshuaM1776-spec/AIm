@@ -102,6 +102,8 @@ Each link works once and expires after an hour. If one fails, choose **Send a ne
 5. Choose **Deploy function** and wait until it says it's deployed, usually under a minute.
 6. **Check:** **Edge Functions** now lists `ai`. Leave its settings as they are.
 
+> **AIM_FREE_DAY_CALLS** (default 40), **AIM_FREE_DAY_TOKENS** (80,000) and **AIM_FREE_MINUTE_CALLS** (10) set the librarian allowance for free accounts, as optional secrets like the others.
+
 > **Updating later:** when a new Aim version changes the server, open the `ai` function's **Code** tab, replace everything with the new `ai-dashboard.ts`, and choose **Deploy** again. Your secrets stay.
 
 <details>

@@ -155,6 +155,12 @@ const deps: Deps = {
       dayTokens: num("AIM_DAY_TOKENS", 400_000),
       minuteCalls: num("AIM_MINUTE_CALLS", 20)
     },
+    // Free accounts use only the librarian: a small daily allowance.
+    freeLimits: {
+      dayCalls: num("AIM_FREE_DAY_CALLS", 40),
+      dayTokens: num("AIM_FREE_DAY_TOKENS", 80_000),
+      minuteCalls: num("AIM_FREE_MINUTE_CALLS", 10)
+    },
     maxBodyBytes: 16 * 1024
   }
 };

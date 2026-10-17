@@ -44,6 +44,8 @@ const writes = {
   "purpose-allow": m => allowVideos({ query: m.query, videos: m.videos, lists: m.lists }),
   "purpose-done": m => finishPurpose(m.outcome),
   "purpose-pause": () => pausePurpose(),
+  "librarian-apply": m => applyLibrarian({ request: m.request, answer: m.answer, newTarget: !!m.newTarget }),
+  "librarian-picks": m => savePicks({ query: m.query, groups: m.groups }),
   "purpose-resume": m => resumePurpose(String(m.id || "")),
   "paused-drop": m => dropPaused(String(m.id || "")),
   "purpose-rate": m => ratePurpose(m.id, m.outcome),
@@ -78,6 +80,8 @@ const reads = {
   "open-targets": () => chrome.tabs.create({ url: chrome.runtime.getURL("targets.html") }).then(() => ({ result: "applied" })),
   // YouTube tabs may only learn whether to offer Plus features, and open TeachBack for a topic.
   "plus-brief": () => plusBrief(),
+  // The librarian's two tasks, which YouTube tabs may call for a signed-in account (see plus.js).
+  "librarian": m => plusLibrarian(m.task, m.input),
   "open-teachback": m => {
     const topic = typeof m.topic === "string" ? m.topic.trim().slice(0, 200) : "";
     const url = chrome.runtime.getURL("teachback.html" + (topic ? "?topic=" + encodeURIComponent(topic) : ""));

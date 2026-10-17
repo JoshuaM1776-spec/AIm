@@ -23,10 +23,11 @@ async function renderHome() {
   if (!host || location.pathname !== "/") return early.showFeed();
   document.documentElement.classList.add("wp-home");
   early.showFeed(); // the card's own rule (html.wp-home) hides the feed from here on
+  await librarianOn(); // signed in: the box also takes requests for the librarian
   const p = activePurpose();
   const others = status.paused || [];
   const key = status.totalReached ? "total"
-    : [p ? `p|${p.id}|${p.text}` : "idle", leisureUsedUp(), others.map(x => x.id).join(",")].join("|");
+    : [p ? `p|${p.id}|${p.text}` : "idle", leisureUsedUp(), others.map(x => x.id).join(","), account.on].join("|");
   if ($("#wp-home")?.dataset.key === key) return; // don't rebuild while someone is typing
   $("#wp-home")?.remove();
 
@@ -35,10 +36,19 @@ async function renderHome() {
   // Built like YouTube's own search box: a text field with an attached magnifier button.
   const findBtn = el("button", { class: "wp-home-go", "aria-label": "Search", title: "Search" }, icon("search"));
   const card = el("div", { id: "wp-home", class: "wp wp-home-card", "data-key": key });
+  const lib = account.on;
+  const hintText = p ? "Searching for something new? If it isn't part of your Target, Aim asks first."
+    : lib ? `Tell ${BRAND} what you want to accomplish. It'll help you find it.` : "Your search becomes your Target. Be specific.";
+  const hint = el("div", { class: "wp-muted wp-home-hint" }, hintText);
+  // Signed in, a request or goal goes to the librarian; a plain search goes straight to YouTube.
+  const busy = on => {
+    input.disabled = on; findBtn.disabled = on;
+    hint.textContent = on ? `${BRAND} is looking…` : hintText;
+  };
   const submit = () => {
     const q = input.value.trim();
     if (!q) { input.focus(); return; }
-    goSearch(q);
+    aimSearch(q, busy);
   };
   findBtn.onclick = submit;
   keepKeys(input, submit);
@@ -65,9 +75,7 @@ async function renderHome() {
     el("h1", { class: "wp-home-title" }, "What brings you here?"),
     p ? null : el("div", { class: "wp-muted wp-home-lede" }, `Whether you're preparing for an exam, learning a new skill, or finding a quick answer, ${BRAND} helps you stay focused on what you came to YouTube to accomplish.`),
     el("div", { class: "wp-home-search" }, input, findBtn),
-    el("div", { class: "wp-muted wp-home-hint" }, p
-      ? "Searching for something new? If it isn't part of your Target, Aim asks first."
-      : "Your search becomes your Target. Be specific."),
+    hint,
     resumeBlock,
     // Examples help a first visit; once there's something to pick up, they'd only add clutter.
     !p && !others.length ? el("div", { class: "wp-label" }, "Examples") : null,

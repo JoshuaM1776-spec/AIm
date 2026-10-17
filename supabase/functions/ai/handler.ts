@@ -5,6 +5,7 @@
 // Response: 200 { ok: true, ... } or an error status with { ok: false, error: { code, message } }
 
 import { type AiRequest, type TaskCtx, type TeachbackDb, TaskError, finishTask, get, start, turn } from "./teachback.ts";
+import { ask, rank } from "./librarian.ts";
 
 export type Plan = "free" | "plus";
 
@@ -16,7 +17,8 @@ export interface Limits {
 
 export interface Config {
   origins: string[];   // allowed extension origins; empty allows any chrome-extension:// origin
-  limits: Limits;
+  limits: Limits;      // Plus accounts
+  freeLimits?: Limits; // free accounts (the librarian only); defaults to a tenth of `limits`
   maxBodyBytes: number;
 }
 
@@ -60,8 +62,20 @@ export const TASKS: Record<string, Task> = {
   "teachback-start": { plan: "plus", run: start },
   "teachback-turn": { plan: "plus", run: turn },
   "teachback-finish": { plan: "plus", run: finishTask },
-  "teachback-get": { plan: "plus", run: get }
+  "teachback-get": { plan: "plus", run: get },
+  // The librarian: any signed-in account, within its plan's allowance. See librarian.ts.
+  "librarian-ask": { run: ask },
+  "librarian-rank": { run: rank }
 };
+
+export function limitsFor(plan: Plan, config: Config): Limits {
+  if (plan === "plus") return config.limits;
+  return config.freeLimits || {
+    dayCalls: Math.max(1, Math.round(config.limits.dayCalls / 10)),
+    dayTokens: Math.max(1, Math.round(config.limits.dayTokens / 10)),
+    minuteCalls: Math.max(1, Math.round(config.limits.minuteCalls / 2))
+  };
+}
 
 const LIMIT_MESSAGES: Record<string, string> = {
   minute: "Too many requests at once. Try again in a minute.",
@@ -94,8 +108,8 @@ function fail(status: number, code: string, message: string, cors: Record<string
 
 // One AI call on the user's behalf: checked against their limits first, recorded afterwards
 // (failed calls too, so retry loops can't run up a bill).
-async function useAI(deps: Deps, userId: string, task: string, req: AiRequest): Promise<string> {
-  const { usageId, limited } = await deps.begin(userId, task, deps.config.limits);
+async function useAI(deps: Deps, userId: string, task: string, req: AiRequest, limits: Limits): Promise<string> {
+  const { usageId, limited } = await deps.begin(userId, task, limits);
   if (usageId == null) throw new TaskError(429, "limit", LIMIT_MESSAGES[limited || ""] || LIMIT_MESSAGES.day_calls);
   let result: ClaudeResult;
   try {
@@ -143,7 +157,7 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
   if (name === "status") {
     const since = new Date(deps.now().getTime() - 24 * 3600 * 1000);
     const usage = await deps.usageSince(user.id, since);
-    return json(200, { ok: true, email: user.email ?? null, plan, usage, limits: deps.config.limits }, cors);
+    return json(200, { ok: true, email: user.email ?? null, plan, usage, limits: limitsFor(plan, deps.config) }, cors);
   }
 
   const task = TASKS[name];
@@ -152,7 +166,7 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
   const userId = user.id;
   const ctx: TaskCtx = {
     userId, input: body.input, now: deps.now(), db: deps.db || NO_DB,
-    ai: (taskName, req) => useAI(deps, userId, taskName, req)
+    ai: (taskName, req) => useAI(deps, userId, taskName, req, limitsFor(plan, deps.config))
   };
   try {
     return json(200, { ok: true, ...(await task.run(ctx)) }, cors);

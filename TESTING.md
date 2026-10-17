@@ -145,7 +145,20 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] Resuming never opens TeachBack or anything AI.
 - [ ] Popup: the Current card has "Set aside for later".
 
-### 14. TeachBack (Aim Plus account on the plus plan)
+### 14. The librarian (signed in to an Aim account, free or Plus)
+
+- [ ] Signed out: the homepage says "Your search becomes your Target", and nothing calls Aim's server (service worker Network panel).
+- [ ] Signed in: the homepage says "Tell Aim what you want to accomplish. It'll help you find it."
+- [ ] A plain search ("sourdough starter") goes straight to YouTube, as before.
+- [ ] A request ("I need to replace the alternator on my 2014 Tacoma") shows "Aim is looking…", then opens YouTube results for a better search. The results bar shows the Target in your words, a short note, and maybe one question as choices ("2.7L / 4.0L V6") and "Also try" searches.
+- [ ] Within a few seconds, "Aim's picks from these results" appears above YouTube's results: up to 3 groups, each video with a reason. YouTube's results are still below. Reloading shows the same picks immediately.
+- [ ] Tapping a choice refines: new searches, same Target. "Find something that explains that last part more clearly" after watching a video understands what "that last part" was.
+- [ ] A request for something unrelated starts a new Target and sets the old one aside.
+- [ ] The librarian never writes instructions or long answers, only short notes and searches. Check a medical or repair question.
+- [ ] Free accounts: after about 40 requests in a day, requests fall back to plain YouTube searches with a note.
+- [ ] Studying ("I have a biology exam Friday on cellular respiration") on Plus shows "Studying this? Test my understanding".
+
+### 15. TeachBack (Aim Plus account on the plus plan)
 
 - [ ] Settings → Aim Plus → **Test my understanding** opens TeachBack in a new tab. On YouTube, **Target complete?** shows "Learned something? Test my understanding" (Plus only; not when signed out or on Free).
 - [ ] Start with a topic (and optionally notes): Milo asks a first, basic question within a few seconds.
@@ -155,7 +168,7 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] Reload the TeachBack tab mid-session: the same question comes back. Reload on results: results come back.
 - [ ] In Supabase, `assessments`, `assessment_turns` and `progress_events` have rows for the session; `ai_usage` has one row per AI call.
 
-### 15. Sync and reload
+### 16. Sync and reload
 
 - [ ] Target complete from the popup while a YouTube tab is on a video: that tab shows the "What brings you here?" card on the player within a few seconds.
 - [ ] Two YouTube tabs: starting a break or setting a Target in one updates the other's indicator, and a card waiting on the other tab's player clears if the new state allows its video.

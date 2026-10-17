@@ -215,11 +215,21 @@ async function plusStatus() {
   }
 }
 
-// All a YouTube tab may learn about the account: whether Plus features can be offered.
+// All a YouTube tab may learn about the account: whether someone is signed in (the librarian is
+// on) and whether Plus features can be offered.
 async function plusBrief() {
-  if (!plusConfigured()) return { plus: false };
+  if (!plusConfigured()) return { plus: false, account: false };
   const s = await loadSession();
-  return { plus: s?.plan === "plus" };
+  return { plus: s?.plan === "plus", account: !!s };
+}
+
+// The librarian, for YouTube tabs: only its two tasks, only when signed in. Errors come back as
+// { error, code } so the tab can fall back to a plain YouTube search.
+const LIBRARIAN_TASKS = new Set(["librarian-ask", "librarian-rank"]);
+async function plusLibrarian(task, input) {
+  if (!LIBRARIAN_TASKS.has(task) || !plusConfigured()) return { error: "Unavailable.", code: "unavailable" };
+  try { return await plusCall(task, input); }
+  catch (e) { return { error: String(e.message || e), code: e.code || "" }; }
 }
 
 // Aim Plus features Aim's pages may call. Each is a task on Aim's server, which builds the prompts.
