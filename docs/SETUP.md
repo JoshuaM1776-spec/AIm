@@ -78,7 +78,7 @@ Aim signs you in with the link in Supabase's standard sign-in email. Supabase ne
 
 Each link works once and expires after an hour. If one fails, choose **Send a new email**.
 
-> **About codes and email templates.** Since mid-2026, new free Supabase projects can't edit their email templates unless they send email through their own provider (custom SMTP). That's why Aim uses the standard link email. Before real users, set up custom SMTP anyway: Supabase's built-in sender allows only a couple of emails an hour. Then you can also change the **Magic Link** and **Confirm signup** templates to show a 6-digit code (`{{ .Token }}`). Aim accepts codes too.
+> **About codes and email templates.** Since mid-2026, new free Supabase projects can't edit their email templates unless they send email through their own provider (custom SMTP). That's why Aim uses the standard link email. Before real users, set up custom SMTP anyway (see [Custom email sending](#custom-email-sending-smtp-with-resend)): Supabase's built-in sender allows only a couple of emails an hour. Then you can also change the **Magic Link** and **Confirm signup** templates to show a 6-digit code (`{{ .Token }}`). Aim accepts codes too.
 
 ## Part 5 — Give the server your Claude key (in the browser)
 
@@ -160,6 +160,44 @@ Then load or reload the extension:
 5. **Confirm it was recorded:** in **Table Editor → ai_usage**, there's now one row.
 
 **That's it: accounts and AI are working end to end.**
+
+## Custom email sending (SMTP) with Resend
+
+This lifts Supabase's limit of a couple of emails an hour, and lets you edit the email templates to show a 6-digit code.
+
+1. **Create a Resend account** at **resend.com**. The free plan is enough to start.
+2. **Create an API key:** **API Keys → Create API key**. Name it `supabase`, choose **Sending access**, then **Add**. Copy the key (it starts with `re_`); it's shown once. Keep it private.
+3. **Choose who the emails come from:**
+   - **Testing only, sending to yourself:** you can use `onboarding@resend.dev`. Resend only delivers these to the email address you signed up to Resend with, so sign in to Aim with that address.
+   - **For real users:** you need your own domain (about $10–15 a year from any registrar).
+     1. In Resend, open **Domains → Add Domain**. Using a subdomain is tidy, for example `mail.yourdomain.com`.
+     2. Resend shows a few DNS records. Add them at your domain registrar, then choose **Verify**. It can take from minutes to a few hours.
+     3. Then use a sender like `aim@mail.yourdomain.com`.
+4. **Fill in Supabase's SMTP settings:** in Supabase, open **Authentication → Emails → SMTP Settings** and turn on **Enable custom SMTP**. Fill in:
+
+   | Field | Value |
+   |---|---|
+   | Sender email | `onboarding@resend.dev` for testing, or your own (step 3) |
+   | Sender name | `Aim` |
+   | Host | `smtp.resend.com` |
+   | Port | `465` |
+   | Username | `resend` |
+   | Password | your Resend API key (`re_…`) |
+
+   Choose **Save**.
+5. **Raise the sending limit:** **Authentication → Rate Limits** now allows more emails an hour. The default with custom SMTP is fine to start.
+6. **Optional: show a code in the email.** Templates are editable now. In **Authentication → Emails → Templates**, edit **Magic Link** and **Confirm signup**. This version shows a code and keeps the link:
+   ```html
+   <h2>Sign in to Aim</h2>
+   <p>Enter this code in Aim: <strong>{{ .Token }}</strong></p>
+   <p>Or click this link in Chrome on the computer where Aim is installed: <a href="{{ .ConfirmationURL }}">Sign in to Aim</a></p>
+   <p>It expires in an hour. If you didn't ask for it, you can ignore this email.</p>
+   ```
+   Set the subject to `Your Aim sign-in code`. Aim accepts either the code or the link.
+7. **Test it:** in Aim's Settings, choose **Send sign-in email**. The email should arrive within seconds, from your sender. If it doesn't:
+   - check spam;
+   - in Resend, open **Emails** (or **Logs**) for the reason;
+   - check the API key and sender in step 4.
 
 ## If something goes wrong
 
