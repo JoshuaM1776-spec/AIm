@@ -51,7 +51,10 @@ Keep a note open as you go. You'll collect five things:
 1. In the left sidebar, open **SQL Editor** and choose **New query** (or the **+** button).
 2. On your computer, open `supabase/migrations/0001_init.sql` from the Aim source folder in TextEdit (or any text editor). Select all, copy, and paste it into the query box.
 3. Choose **Run**. You should see **Success. No rows returned**.
-4. **Check:** open **Table Editor** in the sidebar. You should see two tables, `profiles` and `ai_usage`, both empty for now.
+4. **Do the same for the second file,** `supabase/migrations/0002_teachback.sql`: open a **New query**, paste it, choose **Run**. It adds TeachBack's tables.
+5. **Check:** open **Table Editor** in the sidebar. You should see `profiles`, `ai_usage`, `learners`, `assessments`, `assessment_turns` and `progress_events`.
+
+> **Already did Part 3 before TeachBack existed?** Just run `0002_teachback.sql` now. It's safe on a project that already has accounts.
 
 > If you ever use the Supabase command line's `supabase db push` later, it may try to run this file again. Since you ran it here, skip `db push` for this file.
 
@@ -69,6 +72,7 @@ Keep a note open as you go. You'll collect five things:
       ```
    4. Choose **Save**.
    5. Do the same for the **Confirm signup** template. Brand-new accounts may get this one.
+   - **If an email shows a link instead of a code,** the template hasn't been changed yet. Don't click the link: it leads to `localhost`, which doesn't exist on your computer. Fix the template and send a new code.
 3. **Sending limit:** Supabase's built-in email sends only a few messages an hour and is meant for testing, so that's fine for now. Before real users, set up your own email sending under **Authentication → Emails → SMTP Settings**, for example with Resend, Postmark or Amazon SES. Each has a Supabase guide.
 
 ## Part 5 — Give the server your Claude key (in the browser)
@@ -92,6 +96,8 @@ Keep a note open as you go. You'll collect five things:
 4. **Name it:** set the function name to exactly `ai`, in lowercase. The name field is usually at the bottom of the editor. Aim looks for a function with this name.
 5. Choose **Deploy function** and wait until it says it's deployed, usually under a minute.
 6. **Check:** **Edge Functions** now lists `ai`. Leave its settings as they are.
+
+> **Updating later:** when a new Aim version changes the server, open the `ai` function's **Code** tab, replace everything with the new `ai-dashboard.ts`, and choose **Deploy** again. Your secrets stay.
 
 <details>
 <summary>Alternative for later: the command line (needs Homebrew or Node.js)</summary>

@@ -136,13 +136,16 @@ async function plusCall(task, input) {
   return data;
 }
 
-// What Settings shows.
+// What Settings shows. Also remembers the plan, so YouTube tabs can ask whether to offer Plus
+// features without a network request (see plusBrief).
 async function plusStatus() {
   if (!plusConfigured()) return { configured: false };
   const s = await loadSession();
   if (!s) return { configured: true, signedIn: false };
   try {
     const st = await plusCall("status");
+    const fresh = await loadSession();
+    if (fresh && fresh.plan !== st.plan) await saveSession({ ...fresh, plan: st.plan });
     return { configured: true, signedIn: true, email: st.email || s.email, plan: st.plan, usage: st.usage, limits: st.limits };
   } catch (e) {
     if (e.code === "auth") return { configured: true, signedIn: false, error: e.message };
@@ -150,12 +153,26 @@ async function plusStatus() {
   }
 }
 
-// Messages from Aim's own pages (Settings). Network calls don't go through serial(), so a slow
+// All a YouTube tab may learn about the account: whether Plus features can be offered.
+async function plusBrief() {
+  if (!plusConfigured()) return { plus: false };
+  const s = await loadSession();
+  return { plus: s?.plan === "plus" };
+}
+
+// Aim Plus features Aim's pages may call. Each is a task on Aim's server, which builds the prompts.
+const PLUS_TASKS = new Set(["teachback-start", "teachback-turn", "teachback-finish", "teachback-get"]);
+
+// Messages from Aim's own pages (Settings, TeachBack). Network calls don't go through serial(), so a slow
 // server never holds up the timer.
 const plusHandlers = {
   "plus-status": () => plusStatus(),
   "plus-send-code": m => plusSendCode(m.email),
   "plus-verify": m => plusVerify(m.email, m.code),
   "plus-sign-out": () => plusSignOut(),
-  "plus-check": () => plusCall("check").then(r => ({ result: "ok", reply: r.reply }))
+  "plus-check": () => plusCall("check").then(r => ({ result: "ok", reply: r.reply })),
+  "plus-call": async m => {
+    if (!PLUS_TASKS.has(m.task)) throw new PlusError("Unknown request.");
+    return plusCall(m.task, m.input);
+  }
 };

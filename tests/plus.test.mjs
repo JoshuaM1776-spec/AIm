@@ -1,6 +1,7 @@
 // Aim Plus end to end: loads a copy of the extension pointed at a local stand-in for Supabase
-// (Auth plus the real AI endpoint logic from supabase/functions/ai/handler.ts) and signs in
-// through the Settings page.
+// (Auth plus the real AI endpoint and TeachBack logic from supabase/functions/ai/, with a scripted
+// Claude and an in-memory database), signs in through Settings, and runs a TeachBack session.
+// Set SHOTS=/some/dir to save screenshots of the TeachBack page.
 // Run: node --experimental-strip-types tests/plus.test.mjs   (needs Playwright, like browser.test.js)
 import { createRequire } from "node:module";
 import http from "node:http";
@@ -9,6 +10,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { handle } from "../supabase/functions/ai/handler.ts";
+import { memDb } from "./helpers/memdb.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT || "playwright");
@@ -16,7 +18,12 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 // ---------- stand-in server ----------
 const CODE = "123456";
-const srv = { sent: [], refreshes: 0, revoked: 0, aiCalls: 0, plan: "free", expiresIn: 3600, sessions: new Map(), n: 0 };
+const ev = (rating, evidence) => ({ rating, evidence, misconception: "", applied: false, note: "" });
+const srv = { director: [
+    { evaluation: ev("sound", "glucose and oxygen"), next: { action: "follow_up", objective: 1, student: "ivy", kind: "application", question: "So what does the plant do with that glucose later?" } },
+    { evaluation: ev("partial", "stores the glucose as starch"), next: { action: "next_objective", objective: 2, student: "reese", kind: "question", question: "How do we know light is needed at all?" } },
+    { evaluation: ev("unclear", ""), next: { action: "next_objective", objective: 3, student: "grant", kind: "question", question: "Which part of the cell, exactly?" } }
+  ], sent: [], refreshes: 0, revoked: 0, aiCalls: 0, plan: "free", expiresIn: 3600, sessions: new Map(), n: 0 };
 const user = { id: "u1", email: "learner@example.com" };
 function issue() {
   const access = `acc-${++srv.n}`, refresh = `ref-${srv.n}`;
@@ -31,9 +38,23 @@ const deps = {
   usageSince: async () => ({ calls: usage.length, tokens: usage.length * 25 }),
   begin: async () => (usage.push(1), { usageId: usage.length, limited: null }),
   finish: async () => {},
-  callClaude: async () => (srv.aiCalls++, { ok: true, text: "ready", model: "test", inputTokens: 20, outputTokens: 5 }),
+  callClaude: async req => {
+    srv.aiCalls++;
+    const props = Object.keys(req.schema?.properties || {});
+    const reply = !req.schema ? "ready" : JSON.stringify(
+      props.includes("first_question") ? { type: "concepts", first_question: "What does a plant actually make during photosynthesis?",
+          objectives: ["Explain what photosynthesis produces", "Explain the role of light", "Explain where it happens in the cell"] }
+      : props.includes("evaluation") ? srv.director.shift()
+      : props.includes("hint") ? { hint: "Think about what the plant keeps for later." }
+      : { summary: "You explained what photosynthesis produces. Light and location weren't covered yet.", strengths: ["What photosynthesis produces"],
+          objectives: [{ index: 1, note: "Clear and accurate.", explanation: "", search: "" },
+            { index: 2, note: "Skipped.", explanation: "Light supplies the energy that drives the reactions.", search: "role of light in photosynthesis" }],
+          next_step: "Review the light-dependent reactions." });
+    return { ok: true, text: reply, model: "test", inputTokens: 20, outputTokens: 5 };
+  },
+  db: memDb(),
   now: () => new Date(),
-  config: { origins: [], limits: { dayCalls: 300, dayTokens: 400000, minuteCalls: 20 }, maxBodyBytes: 8192 }
+  config: { origins: [], limits: { dayCalls: 300, dayTokens: 400000, minuteCalls: 20 }, maxBodyBytes: 16384 }
 };
 
 const server = http.createServer(async (req, res) => {
@@ -122,6 +143,45 @@ step("plus plan shows AI use", (await opt.textContent("#plusBody")).includes("of
 await opt.click("button:text-is('Check connection')");
 await opt.waitForFunction(() => /Connected/.test(document.getElementById("plusMsg").textContent));
 step("Check connection reaches the AI endpoint", srv.aiCalls === 1);
+step("Settings offers TeachBack on the Plus plan", await opt.isVisible("button:text-is('Test my understanding')"));
+
+// ---------- TeachBack ----------
+step("YouTube tabs are told Plus features can be offered", (await sw.evaluate(() => plusBrief())).plus === true);
+const [tb] = await Promise.all([ctx.waitForEvent("page"), opt.click("button:text-is('Test my understanding')")]);
+tb.on("dialog", d => d.accept());
+await tb.waitForSelector("#tbTopic");
+await tb.fill("#tbTopic", "Photosynthesis");
+await tb.fill("#tbNotes", "Chapter 8: light reactions, Calvin cycle, chloroplasts");
+await tb.click("#tbStart");
+await tb.waitForSelector("#tbQuestion");
+step("TeachBack starts with Milo's first question", (await tb.textContent("#tbQuestion")).includes("What does a plant actually make") &&
+  (await tb.textContent("main")).includes("Milo"));
+step("the study notes reach the server", [...deps.db.assessments.values()][0]?.notes?.includes("Calvin cycle"));
+if (process.env.SHOTS) await tb.screenshot({ path: `${process.env.SHOTS}/teachback-question.png`, fullPage: true });
+await tb.fill("#tbAnswer", "It makes glucose and oxygen from carbon dioxide and water.");
+await tb.click("#tbSend");
+await tb.waitForFunction(() => /glucose later/.test(document.getElementById("tbQuestion")?.textContent || ""));
+step("a follow-up from Ivy, on the same objective", (await tb.textContent("#tbProgress")).includes("Objective 1 of 3 · Question 2"));
+await tb.click("button:text-is('Give me a hint')");
+await tb.waitForSelector("text=keeps for later");
+step("a hint appears and the button counts down", await tb.isVisible("button:text-is('Another hint')"));
+await tb.fill("#tbAnswer", "It stores the glucose as starch for energy.");
+await tb.click("#tbSend");
+await tb.waitForFunction(() => /How do we know/.test(document.getElementById("tbQuestion")?.textContent || ""));
+await tb.click("button:text-is('Skip')");
+await tb.waitForFunction(() => /Which part of the cell/.test(document.getElementById("tbQuestion")?.textContent || ""));
+step("skipping moves on", (await tb.textContent("#tbProgress")).includes("Objective 3 of 3"));
+await tb.click("button:text-is('End session')");
+await tb.waitForSelector("h1:text-is('What you showed')");
+const res = await tb.textContent("main");
+step("results: demonstrated with evidence in your own words", res.includes("Demonstrated") && res.includes("You said: “glucose and oxygen”"));
+step("results: hints and skipped parts are shown honestly", res.includes("With hints") && res.includes("Not assessed") && res.includes("Ended early"));
+step("results: review links and next actions", res.includes("Review this on YouTube") && res.includes("Review weak areas") && res.includes("Try again"));
+if (process.env.SHOTS) await tb.screenshot({ path: `${process.env.SHOTS}/teachback-results.png`, fullPage: true });
+await tb.reload();
+await tb.waitForSelector("h1:text-is('What you showed')");
+step("results come back after reloading the page", true);
+await tb.close();
 
 // An expired access token refreshes quietly, once, even with calls racing.
 await sw.evaluate(async () => { const s = await loadSession(); s.expiresAt = Date.now() - 1000; await saveSession(s); });

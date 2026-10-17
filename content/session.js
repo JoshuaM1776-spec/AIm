@@ -254,10 +254,12 @@ async function addPurposeTime(minutes) {
 
 // ---------------- Done ----------------
 // Done asks once, before ending: did you find what you were looking for? Or keep going.
-function askDone() {
+// With Aim Plus, it also offers TeachBack: a check of what you can now explain.
+async function askDone() {
   closeDropdown();
   const p = activePurpose() || purpose;
   if (!p) return;
+  const plus = (await send({ type: "plus-brief" }))?.plus === true;
   openModal(el("div", { class: "wp-dialog wp-done-dialog", role: "dialog", "aria-modal": "true" },
     el("div", { class: "wp-done-check" }, icon("check")),
     el("div", { class: "wp-title" }, "Target complete?"),
@@ -267,7 +269,10 @@ function askDone() {
       el("button", { class: "wp-btn wp-btn-primary", onclick: () => finishPurpose("yes") }, "Yes, I'm done"),
       el("button", { class: "wp-btn wp-btn-tonal", onclick: () => finishPurpose("partly") }, "Partly"),
       el("button", { class: "wp-btn wp-btn-tonal", onclick: () => finishPurpose("no") }, "Not really"),
-      el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Keep going"))));
+      el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Keep going")),
+    plus ? el("div", { class: "wp-done-teachback" },
+      el("span", { class: "wp-muted" }, "Learned something?"),
+      el("button", { class: "wp-btn wp-btn-tonal", onclick: () => send({ type: "open-teachback", topic: p.text }) }, "Test my understanding")) : null));
 }
 
 // Done never leaves you inside a video: you land back on "What brings you here?",

@@ -5,6 +5,7 @@
 import Anthropic from "npm:@anthropic-ai/sdk@0.135.0";
 import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 import { type ClaudeResult, corsHeaders, type Deps, handle } from "./handler.ts";
+import type { AiRequest, Assessment, TeachbackDb, Turn } from "./teachback.ts";
 
 const env = (k: string, d = "") => Deno.env.get(k) ?? d;
 const num = (k: string, d: number) => {
@@ -12,7 +13,11 @@ const num = (k: string, d: number) => {
   return Number.isFinite(n) && n > 0 ? n : d;
 };
 
-const MODEL = env("AIM_MODEL", "claude-opus-5-5");
+// "main" plans sessions and writes results; "fast" handles each answer, where speed matters.
+const MODELS = {
+  main: env("AIM_MODEL", "claude-opus-5-5"),
+  fast: env("AIM_MODEL_FAST", "claude-haiku-5-5")
+};
 
 const admin = createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), {
   auth: { persistSession: false, autoRefreshToken: false }
@@ -33,14 +38,14 @@ function tokens(usage: Anthropic.Beta.BetaUsage | undefined) {
   return { inputTokens: usage.input_tokens ?? 0, outputTokens: usage.output_tokens ?? 0 };
 }
 
-async function callClaude({ system, prompt, maxTokens }: { system: string; prompt: string; maxTokens: number }): Promise<ClaudeResult> {
+async function callClaude({ system, prompt, maxTokens, tier = "main", schema }: AiRequest): Promise<ClaudeResult> {
   try {
     const msg = await anthropic.beta.messages.create({
-      model: MODEL,
+      model: MODELS[tier],
       max_tokens: maxTokens,
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default", // if the model declines, the API retries on its default fallback model
-      output_config: { effort: "low" },
+      output_config: { effort: "low", ...(schema ? { format: { type: "json_schema" as const, schema } } : {}) },
       system,
       messages: [{ role: "user", content: prompt }]
     });
@@ -49,6 +54,7 @@ async function callClaude({ system, prompt, maxTokens }: { system: string; promp
       console.warn("refusal", msg.stop_details?.category ?? null);
       return { ok: false, kind: "refusal", model: msg.model, ...used };
     }
+    if (msg.stop_reason === "max_tokens") console.warn("reply cut off at max_tokens", tier);
     const text = msg.content.map(b => (b.type === "text" ? b.text : "")).join("");
     return { ok: true, text, model: msg.model, ...used };
   } catch (e) {
@@ -62,6 +68,54 @@ async function callClaude({ system, prompt, maxTokens }: { system: string; promp
     return { ok: false, kind: "error", inputTokens: 0, outputTokens: 0 };
   }
 }
+
+// TeachBack's storage. Only this server writes these tables; users can read their own rows (RLS).
+const must = <T>(r: { data: T; error: { message: string } | null }): T => {
+  if (r.error) throw new Error(r.error.message);
+  return r.data;
+};
+const db: TeachbackDb = {
+  async selfLearner(accountId) {
+    const found = must(await admin.from("learners").select("id").eq("account_id", accountId).eq("is_self", true).maybeSingle());
+    if (found) return found.id;
+    const made = await admin.from("learners").insert({ account_id: accountId, is_self: true }).select("id").single();
+    if (!made.error) return made.data.id;
+    // Created by a request running at the same moment.
+    return must(await admin.from("learners").select("id").eq("account_id", accountId).eq("is_self", true).single())!.id;
+  },
+  async createAssessment({ learnerId, topic, notes, contentType, objectives }) {
+    return must(await admin.from("assessments")
+      .insert({ learner_id: learnerId, topic, notes, content_type: contentType, objectives }).select("id").single())!.id;
+  },
+  async getAssessment(id) {
+    const a = must(await admin.from("assessments").select("*, learners!inner(account_id)").eq("id", id).maybeSingle());
+    if (!a) return null;
+    const turns = must(await admin.from("assessment_turns")
+      .select("seq, objective, student, kind, question, status, answer, hints, evaluation").eq("assessment_id", id).order("seq"));
+    const { learners, ...assessment } = a as Assessment & { learners: { account_id: string } };
+    return { assessment: assessment as Assessment, accountId: learners.account_id, turns: turns as Turn[] };
+  },
+  async addTurn(assessmentId, t) {
+    must(await admin.from("assessment_turns").insert({ assessment_id: assessmentId, ...t }));
+    must(await admin.from("assessments").update({ updated_at: new Date().toISOString() }).eq("id", assessmentId));
+  },
+  async updateTurn(assessmentId, seq, patch) {
+    must(await admin.from("assessment_turns").update(patch).eq("assessment_id", assessmentId).eq("seq", seq));
+    must(await admin.from("assessments").update({ updated_at: new Date().toISOString() }).eq("id", assessmentId));
+  },
+  async updateAssessment(id, { status, result, finished }) {
+    const now = new Date().toISOString();
+    must(await admin.from("assessments").update({
+      updated_at: now, ...(status ? { status } : {}), ...(result ? { result } : {}), ...(finished ? { finished_at: now } : {})
+    }).eq("id", id));
+  },
+  async addProgress(events) {
+    must(await admin.from("progress_events").insert(events.map(e => ({
+      learner_id: e.learnerId, source: "teachback", kind: e.kind, topic: e.topic,
+      objective: e.objective, evidence: e.evidence || null, assessment_id: e.assessmentId
+    }))));
+  }
+};
 
 const deps: Deps = {
   async getUser(token) {
@@ -92,6 +146,7 @@ const deps: Deps = {
     if (error) console.error("ai_finish failed", error.message);
   },
   callClaude,
+  db,
   now: () => new Date(),
   config: {
     origins: env("AIM_EXTENSION_ORIGINS").split(",").map(s => s.trim()).filter(Boolean),
@@ -100,7 +155,7 @@ const deps: Deps = {
       dayTokens: num("AIM_DAY_TOKENS", 400_000),
       minuteCalls: num("AIM_MINUTE_CALLS", 20)
     },
-    maxBodyBytes: 8 * 1024
+    maxBodyBytes: 16 * 1024
   }
 };
 

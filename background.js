@@ -68,7 +68,14 @@ const reads = {
   "theme": m => setToolbarTheme(!!m.dark),
   "status": () => tabState(),
   "state": () => fullState(),
-  "search-check": m => checkSearch(m.query)
+  "search-check": m => checkSearch(m.query),
+  // YouTube tabs may only learn whether to offer Plus features, and open TeachBack for a topic.
+  "plus-brief": () => plusBrief(),
+  "open-teachback": m => {
+    const topic = typeof m.topic === "string" ? m.topic.trim().slice(0, 200) : "";
+    const url = chrome.runtime.getURL("teachback.html" + (topic ? "?topic=" + encodeURIComponent(topic) : ""));
+    return chrome.tabs.create({ url }).then(() => ({ result: "applied" }));
+  }
 };
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -78,7 +85,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (p) {
     if (!sender.url?.startsWith(chrome.runtime.getURL(""))) return;
     if (msg.type !== "plus-status" && !plusConfigured()) { sendResponse({ error: "Aim Plus isn't available yet." }); return; }
-    p(msg).then(res => sendResponse(res ?? null), e => sendResponse({ error: String(e.message || e) }));
+    p(msg).then(res => sendResponse(res ?? null), e => sendResponse({ error: String(e.message || e), code: e.code || "" }));
     return true;
   }
   const w = writes[msg.type], r = reads[msg.type];

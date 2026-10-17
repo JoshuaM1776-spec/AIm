@@ -11,7 +11,7 @@ node --experimental-strip-types tests/ai.test.mjs     # Aim Plus AI endpoint log
 node --experimental-strip-types tests/plus.test.mjs   # Aim Plus sign-in in Chromium against a local stand-in server (needs Playwright)
 ```
 
-The database test needs a throwaway Postgres; see [supabase/README.md](supabase/README.md#tests).
+The database tests need a throwaway Postgres; see [supabase/README.md](supabase/README.md#tests).
 
 The browser test checks Aim's own wiring: the top-bar button, prompts, pause and resume, time-up, channel hiding, popup, settings and extension reload. It uses a stand-in page, so it can't tell you whether YouTube changed its page structure. That's what the manual checklist below is for.
 
@@ -134,7 +134,17 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] **Sign out** returns to the email form. Signing in again works.
 - [ ] YouTube behaves exactly as without an account.
 
-### 13. Sync and reload
+### 13. TeachBack (Aim Plus account on the plus plan)
+
+- [ ] Settings → Aim Plus → **Test my understanding** opens TeachBack in a new tab. On YouTube, **Target complete?** shows "Learned something? Test my understanding" (Plus only; not when signed out or on Free).
+- [ ] Start with a topic (and optionally notes): Milo asks a first, basic question within a few seconds.
+- [ ] Answer well: a follow-up goes deeper. Answer vaguely: the next question comes from a different angle, without giving the answer away.
+- [ ] **Give me a hint** shows one sentence and counts down (two per question). **Skip** moves on.
+- [ ] After every objective is covered (or **End session**), results show each part as Demonstrated, Partly shown, Needs review or Not assessed, with your own words quoted, "With hints" where you used them, and Review on YouTube links.
+- [ ] Reload the TeachBack tab mid-session: the same question comes back. Reload on results: results come back.
+- [ ] In Supabase, `assessments`, `assessment_turns` and `progress_events` have rows for the session; `ai_usage` has one row per AI call.
+
+### 14. Sync and reload
 
 - [ ] Target complete from the popup while a YouTube tab is on a video: that tab shows the "What brings you here?" card on the player within a few seconds.
 - [ ] Two YouTube tabs: starting a break or setting a Target in one updates the other's indicator, and a card waiting on the other tab's player clears if the new state allows its video.

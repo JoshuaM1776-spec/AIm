@@ -72,6 +72,9 @@ function accountView(st) {
   }
   const buttons = node("div", { className: "form" });
   if (st.plan === "plus") {
+    const tb = node("button", { className: "btn", type: "button", textContent: "Test my understanding" });
+    tb.onclick = () => chrome.tabs.create({ url: chrome.runtime.getURL("teachback.html") });
+    buttons.append(tb);
     const check = node("button", { className: "btn tonal", type: "button", textContent: "Check connection" });
     check.onclick = async () => {
       const r = await plusDo({ type: "plus-check" });

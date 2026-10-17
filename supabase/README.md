@@ -19,6 +19,10 @@ Aim Free needs none of this. It's the foundation for Aim Plus: accounts, plans, 
 |---|---|---|---|
 | `status` | any | no | `{ email, plan, usage: { calls, tokens }, limits }` for the last 24 hours |
 | `check` | plus | yes | `{ reply: "ready" }`. A tiny call that proves the whole path works. |
+| `teachback-start` | plus | yes | `{ session }`. Plans 2–4 objectives from `{ topic, notes? }` and asks the first question |
+| `teachback-turn` | plus | yes | `{ session, hint? }`. `{ id, seq, action: "answer" \| "skip" \| "hint", answer? }`: evaluates the answer and picks the next question |
+| `teachback-finish` | plus | yes | `{ session }` with `result`. `{ id, end? }`: statuses from the evidence, plus a written summary |
+| `teachback-get` | plus | no | `{ session }`, to resume or reload |
 
 Later steps add tasks (learning paths, curation) to the `TASKS` table in `handler.ts`. Each task builds its own prompt on the server, so the extension can't send arbitrary prompts on your key.
 
@@ -26,7 +30,7 @@ Later steps add tasks (learning paths, curation) to the `TASKS` table in `handle
 
 **Limits per user**, over rolling windows, set by secrets: 300 AI calls per 24 hours (`AIM_DAY_CALLS`), 400,000 tokens per 24 hours (`AIM_DAY_TOKENS`), 20 calls per minute (`AIM_MINUTE_CALLS`). Calls that fail still count, so retry loops can't run up a bill.
 
-**Model:** `AIM_MODEL`, default `claude-opus-5-5`. Requests use `effort: "low"` and server-side fallback (`fallbacks: "default"`): if the model declines a request for policy reasons, the API retries it on a fallback model. For cheaper Plus pricing, try a smaller model such as `claude-haiku-5-5` per task once real tasks exist, and check the results are good enough.
+**Models:** `AIM_MODEL` (default `claude-opus-5-5`) plans sessions and writes results; `AIM_MODEL_FAST` (default `claude-haiku-5-5`) handles each answer and hint, where speed matters. TeachBack replies use structured JSON output. Requests use `effort: "low"` and server-side fallback (`fallbacks: "default"`): if the model declines a request for policy reasons, the API retries it on a fallback model. For cheaper Plus pricing, try a smaller model such as `claude-haiku-5-5` per task once real tasks exist, and check the results are good enough.
 
 ## Set it up
 
@@ -82,4 +86,8 @@ node --experimental-strip-types tests/ai.test.mjs     # endpoint logic with fake
 node --experimental-strip-types tests/plus.test.mjs   # sign-in end to end in Chromium, against a local stand-in server
 # database: needs a throwaway Postgres (not your Supabase project)
 psql "$TEST_DB" -v ON_ERROR_STOP=1 -f tests/db/stub.sql -f supabase/migrations/0001_init.sql -f tests/db/test.sql
+# TeachBack tables, on a fresh database: an account that exists before 0002 must get a learner too
+psql "$TEST_DB2" -v ON_ERROR_STOP=1 -f tests/db/stub.sql -f supabase/migrations/0001_init.sql \
+  -c "insert into auth.users values ('00000000-0000-0000-0000-0000000000e1','e@example.com')" \
+  -f supabase/migrations/0002_teachback.sql -f tests/db/test_teachback.sql
 ```

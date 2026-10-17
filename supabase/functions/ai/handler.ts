@@ -4,6 +4,8 @@
 // Request:  POST { task, input? } with "Authorization: Bearer <user access token>"
 // Response: 200 { ok: true, ... } or an error status with { ok: false, error: { code, message } }
 
+import { type AiRequest, type TaskCtx, type TeachbackDb, TaskError, finishTask, get, start, turn } from "./teachback.ts";
+
 export type Plan = "free" | "plus";
 
 export interface Limits {
@@ -28,31 +30,37 @@ export interface Deps {
   usageSince(userId: string, since: Date): Promise<{ calls: number; tokens: number }>;
   begin(userId: string, task: string, limits: Limits): Promise<{ usageId: number | null; limited: string | null }>;
   finish(usageId: number, model: string | null, inputTokens: number, outputTokens: number, ok: boolean): Promise<void>;
-  callClaude(req: { system: string; prompt: string; maxTokens: number }): Promise<ClaudeResult>;
+  callClaude(req: AiRequest): Promise<ClaudeResult>;
+  db?: TeachbackDb;
   now(): Date;
   config: Config;
 }
 
-// What each task may do. Tasks without `ai` never reach Claude and are open to every plan.
+// What each task may do. Each one builds its own prompts here on the server, so the extension can
+// never send arbitrary prompts on Aim's key. Every AI call a task makes counts against the limits.
 interface Task {
   plan?: Plan;
-  ai?: (input: unknown) => { system: string; prompt: string; maxTokens: number };
-  reply?: (text: string) => Record<string, unknown>;
+  run(ctx: TaskCtx): Promise<Record<string, unknown>>;
 }
 
 export const TASKS: Record<string, Task> = {
-  // Account and usage for the signed-in user. No AI.
-  status: {},
   // A tiny AI call that proves the whole path works: account, plan, limits, server key, model.
   check: {
     plan: "plus",
-    ai: () => ({
-      system: "You are a connection test for the Aim browser extension. Follow the instruction exactly.",
-      prompt: "Reply with exactly one word: ready",
-      maxTokens: 1024
-    }),
-    reply: text => ({ reply: text.trim().slice(0, 40) })
-  }
+    run: async ctx => {
+      const text = await ctx.ai("check", {
+        system: "You are a connection test for the Aim browser extension. Follow the instruction exactly.",
+        prompt: "Reply with exactly one word: ready",
+        maxTokens: 1024, tier: "fast"
+      });
+      return { reply: text.trim().slice(0, 40) };
+    }
+  },
+  // TeachBack: see teachback.ts.
+  "teachback-start": { plan: "plus", run: start },
+  "teachback-turn": { plan: "plus", run: turn },
+  "teachback-finish": { plan: "plus", run: finishTask },
+  "teachback-get": { plan: "plus", run: get }
 };
 
 const LIMIT_MESSAGES: Record<string, string> = {
@@ -84,6 +92,28 @@ function fail(status: number, code: string, message: string, cors: Record<string
   return json(status, { ok: false, error: { code, message } }, cors);
 }
 
+// One AI call on the user's behalf: checked against their limits first, recorded afterwards
+// (failed calls too, so retry loops can't run up a bill).
+async function useAI(deps: Deps, userId: string, task: string, req: AiRequest): Promise<string> {
+  const { usageId, limited } = await deps.begin(userId, task, deps.config.limits);
+  if (usageId == null) throw new TaskError(429, "limit", LIMIT_MESSAGES[limited || ""] || LIMIT_MESSAGES.day_calls);
+  let result: ClaudeResult;
+  try {
+    result = await deps.callClaude(req);
+  } catch (e) {
+    result = { ok: false, kind: "error", inputTokens: 0, outputTokens: 0, detail: String((e as Error)?.message || e) };
+  }
+  await deps.finish(usageId, result.model ?? null, result.inputTokens, result.outputTokens, result.ok);
+  if (result.ok) return result.text;
+  if (result.kind === "refusal") throw new TaskError(422, "refusal", "The AI declined this request.");
+  if (result.kind === "busy") throw new TaskError(503, "busy", "The AI is busy right now. Try again shortly.");
+  throw new TaskError(502, "upstream", "The AI couldn't be reached. Try again shortly.");
+}
+
+const NO_DB: TeachbackDb = new Proxy({} as TeachbackDb, {
+  get: () => () => { throw new TaskError(500, "server", "Something went wrong. Try again."); }
+});
+
 export async function handle(req: Request, deps: Deps): Promise<Response> {
   const origin = req.headers.get("Origin");
   const cors = corsHeaders(origin, deps.config);
@@ -101,8 +131,7 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
   let body: { task?: unknown; input?: unknown };
   try { body = JSON.parse(raw || "{}"); } catch { return fail(400, "bad_json", "The request isn't valid JSON.", cors); }
   const name = typeof body?.task === "string" ? body.task : "";
-  const task = Object.hasOwn(TASKS, name) ? TASKS[name] : null;
-  if (!task) return fail(400, "task", "Unknown task.", cors);
+  if (name !== "status" && !Object.hasOwn(TASKS, name)) return fail(400, "task", "Unknown task.", cors);
 
   let user;
   try { user = await deps.getUser(token); } catch { user = null; }
@@ -110,31 +139,25 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
 
   const plan = await deps.getPlan(user.id);
 
+  // Account and usage for the signed-in user. No AI.
   if (name === "status") {
     const since = new Date(deps.now().getTime() - 24 * 3600 * 1000);
     const usage = await deps.usageSince(user.id, since);
     return json(200, { ok: true, email: user.email ?? null, plan, usage, limits: deps.config.limits }, cors);
   }
 
+  const task = TASKS[name];
   if (task.plan === "plus" && plan !== "plus") return fail(403, "plan", "This needs Aim Plus.", cors);
-  if (!task.ai) return fail(400, "task", "Unknown task.", cors);
 
-  let request;
-  try { request = task.ai(body.input); } catch (e) { return fail(400, "input", String((e as Error)?.message || e), cors); }
-
-  const { usageId, limited } = await deps.begin(user.id, name, deps.config.limits);
-  if (usageId == null) return fail(429, "limit", LIMIT_MESSAGES[limited || ""] || LIMIT_MESSAGES.day_calls, cors);
-
-  let result: ClaudeResult;
+  const userId = user.id;
+  const ctx: TaskCtx = {
+    userId, input: body.input, now: deps.now(), db: deps.db || NO_DB,
+    ai: (taskName, req) => useAI(deps, userId, taskName, req)
+  };
   try {
-    result = await deps.callClaude(request);
+    return json(200, { ok: true, ...(await task.run(ctx)) }, cors);
   } catch (e) {
-    result = { ok: false, kind: "error", inputTokens: 0, outputTokens: 0, detail: String((e as Error)?.message || e) };
+    if (e instanceof TaskError) return fail(e.status, e.code, e.message, cors);
+    throw e;
   }
-  await deps.finish(usageId, result.model ?? null, result.inputTokens, result.outputTokens, result.ok);
-
-  if (result.ok) return json(200, { ok: true, ...(task.reply ? task.reply(result.text) : { text: result.text }) }, cors);
-  if (result.kind === "refusal") return fail(422, "refusal", "The AI declined this request.", cors);
-  if (result.kind === "busy") return fail(503, "busy", "The AI is busy right now. Try again shortly.", cors);
-  return fail(502, "upstream", "The AI couldn't be reached. Try again shortly.", cors);
 }

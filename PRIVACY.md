@@ -52,7 +52,8 @@ Signing in is optional, and Aim Free works the same without it. If you sign in u
 - **Your email address** is sent to Aim's account service (Supabase, our hosting provider) to email you a sign-in code and to identify your account. We don't use it for marketing.
 - **Your account** stores your email, your plan (Free or Plus) and when it was created.
 - **AI use** (Aim Plus only): when you use an AI feature, Aim sends what that feature needs (for example the topic you want to learn) to Aim's server, which sends it to Anthropic's Claude API to produce the answer. The server records the time, the feature, the model and the amount of text processed, to apply fair-use limits. Under Anthropic's commercial terms, this content isn't used to train their models.
-- **Your purposes, searches, watch history and settings stay in your browser** as described above. They aren't uploaded unless a future feature asks you first.
+- **TeachBack** (Aim Plus only): when you test your understanding, the topic, any notes you paste, the questions and your answers are stored on Aim's server with the results, so you can come back to them. Your answers are sent to the AI to evaluate them. Results are estimates, never shared, and deleted with your account.
+- **Your Targets, searches, watch history and settings stay in your browser** as described above. They aren't uploaded unless a future feature asks you first.
 - The sign-in session is kept in the extension's own storage on your computer, not readable by web pages.
 - **Signing out** ends the session on this computer and on the server. To delete your account and everything stored with it, email us (below).
 
