@@ -27,6 +27,8 @@ async function render() {
   if (!st) return;
   const S = st.settings, t = st.today || { purpose: 0, leisure: 0, other: 0 };
   $("homeCard").checked = S.homeCard;
+  $("homeschoolPreview").checked = !!st.homeschool;
+  $("homeschoolResetRow").hidden = !st.homeschool;
   for (const k of TOGGLES) $(k).checked = S[k] !== false;
   for (const k of ["leisureMin", "graceMin", "totalMin", "purposeLimitMin"]) {
     const sel = $(k);
@@ -65,6 +67,15 @@ async function render() {
 }
 
 $("homeCard").onchange = () => setSetting("homeCard", $("homeCard").checked);
+$("homeschoolPreview").onchange = async () => {
+  const r = await send({ type: "homeschool-preview", on: $("homeschoolPreview").checked });
+  toast(r?.result === "applied" ? ($("homeschoolPreview").checked ? "Open YouTube's homepage to see Today." : "Preview off.") : "Couldn't change that.");
+  render();
+};
+$("homeschoolReset").onclick = async () => {
+  const r = await send({ type: "homeschool-preview", on: true });
+  toast(r?.result === "applied" ? "Sample plan reset." : "Couldn't reset it.");
+};
 for (const k of TOGGLES) $(k).onchange = () => setSetting(k, $(k).checked);
 if (location.hash === "#advanced") { $("advanced").open = true; $("advanced").scrollIntoView(); }
 for (const k of ["leisureMin", "graceMin", "totalMin", "purposeLimitMin"]) $(k).onchange = () => setSetting(k, parseInt($(k).value, 10));

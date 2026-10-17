@@ -187,7 +187,18 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] Reload the TeachBack tab mid-session: the same question comes back. Reload on results: results come back.
 - [ ] In Supabase, `assessments`, `assessment_turns` and `progress_events` have rows for the session; `ai_usage` has one row per AI call.
 
-### 18. Sync and reload
+### 18. Aim Homeschool preview (Settings → Advanced → Preview a student's Today screen)
+
+- [ ] YouTube's homepage shows Today instead of the usual card: Aim mark with "Homeschool", "Good morning/afternoon/evening, Alex!", Ask Aim, Today's Plan (date, about 2h, 0 of 6 done), Current Unit, Up next this week, My Dashboard. YouTube's own search box and left menu are unchanged.
+- [ ] Only the next item is highlighted, with the one blue button. The project shows "Do this together".
+- [ ] Start on a video lesson opens YouTube results for it; the results bar says "Today's plan". Watch a video: beside it, the plan replaces Up next (this lesson, Mark done, Next, Back to Today).
+- [ ] Back on Today, that lesson shows the video's thumbnail and **Continue**, which returns to where you left off. Playing it to about 90% (or Mark done) makes it quiet: a green check, "Done", "Watch again".
+- [ ] View guide on the project: materials, steps, the "do it together" note, Mark done. The circles on the left also mark items done or not done.
+- [ ] TeachBack's Start opens TeachBack on the topic (needs Aim Plus); finishing it marks the item done.
+- [ ] With everything done: "You're done for today.", Go deeper searches and break choices, and the last lesson is no longer the Target.
+- [ ] Dark theme and a narrow window (the side column moves below). "Turn off" brings back "What brings you here?". Reset sample plan (Settings) starts the day over.
+
+### 19. Sync and reload
 
 - [ ] Target complete from the popup while a YouTube tab is on a video: that tab shows the "What brings you here?" card on the player within a few seconds.
 - [ ] Two YouTube tabs: starting a break or setting a Target in one updates the other's indicator, and a card waiting on the other tab's player clears if the new state allows its video.

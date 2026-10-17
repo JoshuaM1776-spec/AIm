@@ -24,6 +24,7 @@ async function renderHome() {
   document.documentElement.classList.add("wp-home");
   early.showFeed(); // the card's own rule (html.wp-home) hides the feed from here on
   await librarianOn(); // signed in: the box also takes requests for the librarian
+  if (planOn() && !status.totalReached) return renderToday(host); // a Homeschool student's day
   const p = activePurpose();
   const others = status.paused || [];
   const key = status.totalReached ? "total"

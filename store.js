@@ -189,12 +189,13 @@ function totalReached(settings, today) {
 // What every page needs to draw itself. Infinity can't cross a message, so "no limit" is null.
 async function getStatus() {
   const s = await readAll(), settings = await getSettings();
+  const { homeschool = null } = await chrome.storage.local.get("homeschool");
   const today = s.usage[s.day];
   const left = leisureLeftSec(settings, today);
   return {
     purpose: s.purpose, brk: s.brk, stop: s.stop, today,
     leisureLeftMin: left === Infinity ? null : Math.floor(left / 60),
-    totalReached: totalReached(settings, today), settings
+    totalReached: totalReached(settings, today), settings, homeschool
   };
 }
 
@@ -643,6 +644,7 @@ async function recordTick(seconds, video) {
       for (const t of purpose.study.topics)
         if (t.videos.some(v => v.id === video.id) && !t.watched.includes(video.id)) t.watched.push(video.id);
     }
+    if (activity === purpose && video?.id && purpose.plan) await notePlanVideo(purpose.plan, video);
     if (video?.id) {
       let v = activity.videos.find(x => x.id === video.id);
       if (!v) {
@@ -675,6 +677,97 @@ async function recordTick(seconds, video) {
   }
   await chrome.storage.local.set({ usage: s.usage, usageLastAt: now, purpose, brk, stop, history: history.slice(-200) });
   return getStatus();
+}
+
+// ---------- Aim Homeschool preview ----------
+// A sample day's plan, so the student's Today screen can be tried on real YouTube before the
+// parent website exists. A real plan comes from the parent's approved week and names specific
+// videos; the sample's video lessons use a YouTube search, and the first video watched for a
+// lesson becomes its video. See docs/HOMESCHOOL.md → "Student home on YouTube".
+function samplePlan() {
+  const item = (id, kind, subject, title, desc, minutes, extra = {}) => ({ id, kind, subject, title, desc, minutes, doneAt: null, video: null, ...extra });
+  return {
+    preview: true, student: "Alex", createdAt: Date.now(),
+    unit: { subject: "Science", title: "Earth Systems", summary: "Volcanoes, earthquakes, and plate tectonics" },
+    items: [
+      item("sci1", "video", "Science", "How Volcanoes Form", "Learn how magma, pressure, and plate movement create volcanoes.", 15, { search: "how volcanoes form" }),
+      item("math1", "video", "Math", "Area and Volume Review", "Practice finding the area and volume of different shapes.", 15, { search: "area and volume of 3d shapes" }),
+      item("hist1", "video", "History", "Exploration and Trade", "See how exploration changed the world and led to new trade routes.", 15, { search: "age of exploration trade routes" }),
+      item("proj1", "project", "Project", "Build a Volcano Model", "Use simple materials to create a model and show how it works.", 45, { together: true, guide: {
+        materials: ["Modeling clay or salt dough", "A small plastic bottle", "Baking soda", "Vinegar", "Dish soap and red food coloring", "A tray or baking sheet"],
+        steps: ["Stand the bottle on the tray and build the volcano's cone around it with clay.", "Put 2 spoonfuls of baking soda, a squirt of dish soap and a few drops of coloring in the bottle.",
+          "Pour in a little vinegar and watch it erupt.", "Explain what the reaction stands for: pressure building under the surface until it escapes through a vent."],
+        show: "Take a photo of your model for Friday's check-in." } }),
+      item("read1", "reading", "English", "Reading Time", "Read for 20 minutes: chapter 4 of your class book, or anything you enjoy.", 20),
+      item("tb1", "teachback", "TeachBack", "Show What You Learned", "Explain how volcanoes form in your own words.", 10, { topic: "How volcanoes form" })
+    ],
+    upcoming: [
+      { kind: "trip", title: "Field Trip (Virtual)", desc: "Explore a live volcano cam", when: "Thursday" },
+      { kind: "check", title: "Project Check-In", desc: "Share a photo of your model", when: "Friday" },
+      { kind: "reflect", title: "Unit Reflection", desc: "What did you learn about the Earth this month?", when: "Next Monday" }
+    ],
+    deeper: ["how supervolcanoes work", "plate tectonics explained", "famous volcanic eruptions in history"]
+  };
+}
+
+async function setHomeschoolPreview(on) {
+  if (on) await chrome.storage.local.set({ homeschool: samplePlan() });
+  else await chrome.storage.local.remove("homeschool");
+  return { result: "applied" };
+}
+
+function planUrl(item) {
+  if (item.video?.id) return `https://www.youtube.com/watch?v=${encodeURIComponent(item.video.id)}${!item.doneAt && item.video.t > 5 ? `&t=${Math.floor(item.video.t)}s` : ""}`;
+  return `https://www.youtube.com/results?search_query=${encodeURIComponent(item.search || item.title)}`;
+}
+
+// Start (or continue) a video lesson: it becomes the Target. A plan lesson you were on is simply
+// archived (the plan is what you pick up again), any other Target is set aside as usual.
+async function planStart(id) {
+  const { homeschool: hs } = await chrome.storage.local.get("homeschool");
+  const item = hs?.items.find(i => i.id === id);
+  if (!item) return { result: "error", message: "That isn't in today's plan." };
+  if (item.kind !== "video") return { result: "error", message: "Only video lessons start a Target." };
+  const s = await readAll();
+  if (s.purpose?.plan === id && !s.brk) return { result: "applied", url: planUrl(item) };
+  const writes = {};
+  if (s.brk) { s.history = archive(s.history, breakRecord(s.brk)); writes.brk = null; }
+  if (s.purpose?.plan) s.history = archive(s.history, purposeRecord(s.purpose, null));
+  else if (s.purpose) park(s, s.purpose);
+  const purpose = newPurpose(`${item.subject}: ${item.title}`, item.search, 0);
+  purpose.plan = id;
+  if (item.video?.id) allow(purpose, [item.video], [], item.search || "");
+  await chrome.storage.local.set({ ...writes, purpose, paused: s.paused, history: s.history, stop: s.stop?.kind === "total" ? s.stop : null });
+  return { result: "applied", url: planUrl(item) };
+}
+
+async function planDone(id, done = true) {
+  const { homeschool: hs } = await chrome.storage.local.get("homeschool");
+  const item = hs?.items.find(i => i.id === id);
+  if (!item) return { result: "error", message: "That isn't in today's plan." };
+  item.doneAt = done ? Date.now() : null;
+  // The whole day done: the last lesson stops being the Target, so YouTube is just YouTube again.
+  const writes = { homeschool: hs };
+  if (hs.items.every(i => i.doneAt)) {
+    const s = await readAll();
+    if (s.purpose?.plan) Object.assign(writes, { purpose: null, history: archive(s.history, purposeRecord(s.purpose, "yes")) });
+  }
+  await chrome.storage.local.set(writes);
+  return { result: "applied", homeschool: hs };
+}
+
+// While a lesson plays: the first video watched for it becomes its video, with where you are in
+// it; playing to about 90% counts the lesson as done.
+async function notePlanVideo(id, video) {
+  const { homeschool: hs } = await chrome.storage.local.get("homeschool");
+  const item = hs?.items.find(i => i.id === id);
+  if (!item || item.kind !== "video") return;
+  if (!item.video || item.video.id === video.id) {
+    item.video = { id: clip(video.id, 20), title: clip(video.title, 300), channel: clip(video.channel, 200), t: Math.max(0, Number(video.t) || 0) };
+    const d = Number(video.d) || 0;
+    if (!item.doneAt && d > 30 && item.video.t >= d * 0.9) item.doneAt = Date.now();
+    await chrome.storage.local.set({ homeschool: hs });
+  }
 }
 
 // ---------- channels ----------

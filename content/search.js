@@ -101,7 +101,7 @@ function purposeBar(p, lib) {
   bar.append(...[
     el("div", { class: "wp-rb-purpose" },
       el("span", { class: "wp-rb-mark" }, icon("logo")),
-      el("span", { class: "wp-rb-label" }, "Target"),
+      el("span", { class: "wp-rb-label" }, p.plan ? "Today's plan" : "Target"),
       el("span", { class: "wp-strong wp-ellipsis wp-rb-text", title: p.text }, p.text),
       el("button", { class: "wp-link wp-rb-change", onclick: () => openPivotDialog() }, "Change")),
     left !== null ? el("span", { class: "wp-muted wp-rb-left" }, `${fmtMin(left)} left`) : null,

@@ -12,7 +12,9 @@ function renderUpNext() {
   const existing = $("#wp-upnext");
   const p = activePurpose();
   const host = p && !brk && location.pathname === "/watch" ? sidebarHost() : null;
-  if (!host) { existing?.remove(); $("#wp-study")?.remove(); return; }
+  if (!host) { existing?.remove(); $("#wp-study")?.remove(); $("#wp-plan-panel")?.remove(); return; }
+  if (p.plan && planOn()) return renderPlanPanel(p, host);
+  $("#wp-plan-panel")?.remove();
   if (activeStudy(p)) return renderStudyPanel(p, host);
   $("#wp-study")?.remove();
   const items = upNextItems(p);

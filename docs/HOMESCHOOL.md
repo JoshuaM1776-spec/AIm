@@ -68,6 +68,35 @@ Besides a curriculum Aim develops with educators, a parent can upload a curricul
 
 Data shape: a `curriculum_upload` row (household, title, kind, license note the parent gave, file reference, extracted text, created/deleted) with read and write limited to that household by RLS. Plans that use it reference it by ID and never copy it into shared tables.
 
+## Student home on YouTube
+
+For a student in an Aim Homeschool household, **YouTube's homepage becomes Today**: the day's approved plan, in the space where Aim already replaces the feed. Everyone else keeps the "What brings you here?" card. The tiers grow out of one screen: Free has the card, Plus adds today's study session, Homeschool replaces the card with Today.
+
+**On the screen**
+- The Aim mark and "Aim Homeschool" at the top, so it never reads as a YouTube feature.
+- A greeting ("Good morning, Alex!") and **Ask Aim**: the librarian, with topic examples (no "Explain this video" on a page with no video).
+- **Today's Plan**, the main column: date, about how long the day takes, and "N of M done". Each item shows its subject, title, one line, and one action.
+  - Done items are quiet: a check, "Done", and a small "Watch again".
+  - The **next** item is highlighted and has the one strong button (Start or Continue). Everything else has a quiet button.
+  - Kinds: video lesson, project (View guide), reading, TeachBack (Show what you learned). Items the parent marked carry **Do this together**.
+- A side column: **Current unit**, **Up next this week** (2–3 items), and **My dashboard** (Projects, Portfolio, Field trips, Achievements live on the student website, not on YouTube).
+- When everything is done: **"You're done for today."** Optional "Go deeper" searches for today's topics, from the parent's preferred channels, and break choices. No feed, no "recommended for you".
+
+**Not on the screen**
+- No changes to YouTube's own search box or left menu (trade dress, and the parts of YouTube most likely to change). Shorts are hidden with Aim's existing setting.
+- No mascot, scenic header, duplicate help banner, or recommendations row.
+- No single grade label; levels are per subject.
+- Progress counts are labelled for what they are ("done"), separate from what TeachBack showed.
+
+**Watching**
+- Start opens the lesson's video on YouTube's own watch page, as a Target. Aim's panel replaces Up next with the plan: this item, "Mark done", the next item, and Back to Today.
+- A video lesson counts as done once it has played to about 90%, or when marked done.
+- Colors: Homeschool's accent is blue; Aim red stays for the extension's "back to your Target" moments. Both follow YouTube's light and dark themes. (Ties to the open logo decision.)
+
+**Before release:** check how under-13 students can use this (Google requires supervised accounts; confirm YouTube access and parent-approved extensions under Family Link). Students who can't run the extension use the student website with embedded videos instead.
+
+**Preview build:** Settings → Advanced → "Preview Aim Homeschool" turns on a sample plan (Earth Systems, five items) so the screen can be tried on real YouTube before the parent website exists. Sample lessons use a YouTube search; the first video watched for a lesson becomes its video. Real plans will name specific parent-approved videos.
+
 ## The parent website
 
 The parents' side is a website, specified in [PARENT_WEBSITE.md](PARENT_WEBSITE.md):

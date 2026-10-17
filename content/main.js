@@ -16,7 +16,7 @@ const tickTimer = setInterval(async () => {
   const playing = !!v && !v.paused && !holding && (!id || cleared.has(id));
   const looking = document.visibilityState === "visible" && document.hasFocus();
   if (!playing && !looking) return;
-  const video = playing && id && currentInfo?.id === id ? { id, title: currentInfo.title, channel: currentInfo.channel, t: Math.floor(v.currentTime || 0) } : null;
+  const video = playing && id && currentInfo?.id === id ? { id, title: currentInfo.title, channel: currentInfo.channel, t: Math.floor(v.currentTime || 0), d: Math.floor(v.duration || 0) } : null;
   react(await send({ type: "tick", seconds: TICK, video }));
 }, TICK * 1000);
 
@@ -27,7 +27,7 @@ const countdownTimer = setInterval(() => { if (alive) tickCountdown(); }, 1000);
 // a purpose set or finished from the popup or another tab.
 function react(r) {
   if (!r) return;
-  const before = { purpose, brk, stop, total: status.totalReached };
+  const before = { purpose, brk, stop, total: status.totalReached, plan: planKey() };
   applyStatus(r);
   renderChip();
   syncFocus();
@@ -36,7 +36,7 @@ function react(r) {
   const purposeEnded = before.purpose && !purpose && !endingHere;
   const changed = (before.brk?.id !== brk?.id) || (before.purpose?.id !== purpose?.id) ||
     (before.purpose?.suspended !== purpose?.suspended) || (before.purpose?.timeUp !== purpose?.timeUp) ||
-    (before.purpose?.text !== purpose?.text) || before.total !== status.totalReached;
+    (before.purpose?.text !== purpose?.text) || before.total !== status.totalReached || before.plan !== planKey();
   // A break that ran out (not one you ended yourself) gets a card: back to your purpose, or more break.
   if (breakEnded && newStop && ["break", "leisure"].includes(stop.kind) && !graced(currentId)) showBreakOver(stop.kind);
   if (changed || newStop) route();
@@ -65,7 +65,7 @@ let syncTimer = null;
 chrome.storage.onChanged.addListener((ch, area) => {
   if (area !== "local" || !alive) return;
   if (ch.avoid) { settings.avoid = ch.avoid.newValue || {}; applyHidden(); }
-  if (!(ch.purpose || ch.brk || ch.stop || ch.settings)) return;
+  if (!(ch.purpose || ch.brk || ch.stop || ch.settings || ch.homeschool)) return;
   // Several keys change together; read the whole status once they've settled.
   clearTimeout(syncTimer);
   syncTimer = setTimeout(async () => react(await send({ type: "status" })), 50);

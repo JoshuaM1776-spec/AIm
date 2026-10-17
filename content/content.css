@@ -428,3 +428,111 @@ html.wp-boot ytd-browse[page-subtype="home"] ytd-feed-filter-chip-bar-renderer {
 .wp-home-card .wp-home-break-label { text-align: center; }
 .wp-home-card .wp-break-pick { align-items: center; }
 .wp-home-card .wp-break-pick .wp-chips { justify-content: center; }
+
+/* ---------- Aim Homeschool: the student's Today screen (content/plan.js) ----------
+   Homeschool's accent is a calm blue; Aim red stays the extension's "back to your Target" color.
+   Everything else uses YouTube's own light and dark theme colors, like the rest of Aim. */
+.wp-today, .wp-plan-panel, .wp-plan-guide { --wp-hs: #1a66d6; --wp-hs-hover: #1556b8; --wp-hs-soft: rgba(26, 102, 214, 0.07); --wp-on-hs: #ffffff;
+  --wp-sub-science: #e8590c; --wp-sub-math: #1a66d6; --wp-sub-history: #b7791f; --wp-sub-project: #2f9e44; --wp-sub-english: #7048e8; }
+html[dark] .wp-today, html[dark] .wp-plan-panel, html[dark] .wp-plan-guide { --wp-hs: #2f6fe0; --wp-hs-hover: #4a84ea; --wp-hs-soft: rgba(80, 140, 240, 0.13); --wp-on-hs: #ffffff; }
+html[dark] .wp-plan-subject, html[dark] .wp-plan-tag, html[dark] .wp-today-ask-mark, html[dark] .wp-plan-up-icon { --wp-hs: #7fb0fa; }
+
+.wp-today { width: min(1280px, calc(100% - 48px)); margin: 24px auto 48px; display: flex; flex-direction: column; gap: 12px; }
+.wp-today-brand { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.wp-today-preview { margin-left: 4px; }
+.wp-today-preview .wp-link { font-size: 12px; }
+.wp-today-hello { font-size: 32px; line-height: 40px; font-weight: 700; margin: 4px 0 0; }
+.wp-today-sub { font-size: 16px; line-height: 22px; margin-top: -6px; }
+.wp-today .wp-today-ask { margin: 8px 0 4px; height: 56px; border-radius: 28px; background: var(--wp-raised); box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+.wp-today-ask-mark { display: flex; color: var(--wp-hs); }
+.wp-today .wp-home-search:focus-within .wp-home-go { background: var(--wp-hs); color: var(--wp-on-hs); }
+.wp-today-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+@media (max-width: 1100px) { .wp-today-grid { grid-template-columns: minmax(0, 1fr); } }
+
+.wp-plan-card { background: var(--wp-raised); border: 1px solid var(--wp-card-border); border-radius: 16px; padding: 16px 20px; }
+.wp-plan-card h2 { font-size: 18px; line-height: 26px; font-weight: 700; margin: 0 0 12px; }
+.wp-plan-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.wp-plan-head-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.wp-plan-head-title h2 { margin: 0; font-size: 20px; }
+.wp-plan-head-title .wp-muted { font-size: 13px; }
+.wp-plan-progress { display: flex; align-items: center; gap: 10px; }
+.wp-plan-progress .wp-muted { font-size: 13px; }
+.wp-plan-bar { width: 120px; height: 6px; border-radius: 3px; background: var(--wp-tonal); overflow: hidden; display: block; }
+.wp-plan-bar i { display: block; height: 100%; border-radius: 3px; background: var(--wp-success); transition: width .3s; }
+
+.wp-plan-list { display: flex; flex-direction: column; position: relative; }
+.wp-plan-item { display: grid; grid-template-columns: 28px 160px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 10px 12px 10px 4px;
+  border-radius: 12px; position: relative; }
+.wp-plan-item + .wp-plan-item { border-top: 1px solid var(--wp-divider); }
+.wp-plan-next { background: var(--wp-hs-soft); border-top-color: transparent !important; }
+.wp-plan-next + .wp-plan-item { border-top-color: transparent; }
+.wp-plan-done .wp-plan-thumb { opacity: .55; }
+.wp-plan-done .wp-plan-title { color: var(--wp-muted); }
+.wp .wp-plan-dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--wp-muted); background: var(--wp-raised); padding: 0;
+  display: flex; align-items: center; justify-content: center; justify-self: center; color: var(--wp-success); }
+.wp .wp-plan-dot:hover { border-color: var(--wp-text); }
+.wp .wp-plan-done .wp-plan-dot { border: 0; background: none; }
+.wp .wp-plan-dot .wp-icon svg { width: 22px; height: 22px; }
+.wp .wp-plan-dot .wp-icon svg path, .wp .wp-plan-mini-dot svg path, .wp .wp-plan-panel-done svg path { stroke: #fff; }
+.wp-plan-thumb { width: 160px; aspect-ratio: 16 / 9; border-radius: 10px; background: var(--wp-tonal) center / cover no-repeat; position: relative;
+  display: flex; align-items: center; justify-content: center; flex: none; }
+.wp-plan-tile { color: #fff; background: var(--wp-sub, var(--wp-hs)); background-image: linear-gradient(135deg, rgba(255,255,255,.18), rgba(0,0,0,.12)); }
+.wp-plan-tile .wp-icon svg { width: 36px; height: 36px; }
+.wp-plan-tile[data-subject="Science"] { --wp-sub: var(--wp-sub-science); }
+.wp-plan-tile[data-subject="Math"] { --wp-sub: var(--wp-sub-math); }
+.wp-plan-tile[data-subject="History"] { --wp-sub: var(--wp-sub-history); }
+.wp-plan-tile[data-subject="Project"] { --wp-sub: var(--wp-sub-project); }
+.wp-plan-tile[data-subject="English"] { --wp-sub: var(--wp-sub-english); }
+.wp-plan-tile[data-subject="TeachBack"] { --wp-sub: var(--wp-hs); }
+html[dark] .wp-plan-tile { color: #fff; }
+.wp-plan-len { position: absolute; right: 6px; bottom: 6px; background: rgba(0,0,0,.75); color: #fff; font-size: 12px; font-weight: 500; line-height: 16px;
+  padding: 1px 5px; border-radius: 4px; }
+.wp-plan-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.wp-plan-subject { font-size: 13px; line-height: 18px; font-weight: 500; color: var(--wp-hs); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.wp-plan-title { font-size: 16px; line-height: 22px; font-weight: 500; }
+.wp-plan-desc { font-size: 14px; line-height: 20px; color: var(--wp-muted); }
+.wp-plan-tag { font-size: 12px; line-height: 18px; font-weight: 500; padding: 0 8px; border-radius: 9px; background: var(--wp-hs-soft); color: var(--wp-hs); }
+.wp-plan-tag-brand { background: var(--wp-tonal); color: var(--wp-text); }
+.wp .wp-plan-btn-strong { background: var(--wp-hs); color: var(--wp-on-hs); }
+.wp .wp-plan-btn-strong:hover { background: var(--wp-hs-hover); }
+.wp .wp-plan-btn-quiet { background: none; border: 1px solid var(--wp-divider); }
+.wp .wp-plan-btn-quiet:hover { background: var(--wp-tonal); }
+.wp-plan-item > .wp-btn { min-width: 112px; justify-content: center; }
+
+.wp-plan-finished { display: flex; flex-direction: column; gap: 8px; padding: 16px; margin: 4px 0 12px; border-radius: 12px; background: var(--wp-hs-soft); }
+.wp-plan-finished-title { font-size: 20px; line-height: 28px; font-weight: 700; }
+
+.wp-plan-side { display: flex; flex-direction: column; gap: 16px; }
+.wp-plan-unit-row { display: flex; gap: 12px; align-items: center; }
+.wp-plan-unit-row .wp-plan-thumb { width: 112px; }
+.wp-plan-unit-row .wp-muted { font-size: 13px; line-height: 18px; }
+.wp-plan-up { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; }
+.wp-plan-up-icon { width: 40px; height: 40px; border-radius: 10px; flex: none; display: flex; align-items: center; justify-content: center; background: var(--wp-hs-soft); color: var(--wp-hs); }
+.wp-plan-up-trip { background: rgba(232, 89, 12, .1); color: var(--wp-sub-science); }
+.wp-plan-up-reflect { background: rgba(183, 121, 31, .12); color: var(--wp-sub-history); }
+.wp-plan-up-text { flex: 1; min-width: 0; }
+.wp-plan-up-text .wp-muted { font-size: 13px; }
+.wp-plan-when { flex: none; font-size: 12px; }
+.wp .wp-plan-dash { display: flex; align-items: center; gap: 12px; text-align: left; width: 100%; background: var(--wp-hs-soft); border-color: transparent; color: var(--wp-text); }
+.wp .wp-plan-dash:hover { border-color: var(--wp-hs); }
+
+@media (max-width: 720px) {
+  .wp-plan-item { grid-template-columns: 28px 96px minmax(0, 1fr); }
+  .wp-plan-thumb { width: 96px; }
+  .wp-plan-item > .wp-btn { grid-column: 3; justify-self: start; }
+}
+
+/* Beside a lesson's video: the plan in place of Up next. */
+.wp-plan-panel { display: flex; flex-direction: column; gap: 12px; padding: 14px; margin-bottom: 16px; border-radius: 12px; border: 1px solid var(--wp-card-border); }
+.wp a.wp-link { text-decoration: none; }
+.wp-plan-panel-now { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.wp-plan-panel-now .wp-btn { margin-top: 6px; }
+.wp-plan-panel-done { display: flex; align-items: center; gap: 6px; color: var(--wp-success); font-weight: 500; font-size: 14px; margin-top: 6px; }
+.wp-plan-mini { list-style: none; margin: 0; padding: 8px 0 0; border-top: 1px solid var(--wp-divider); display: flex; flex-direction: column; gap: 6px; }
+.wp-plan-mini li { display: flex; align-items: center; gap: 8px; font-size: 13px; line-height: 18px; color: var(--wp-muted); }
+.wp-plan-mini li.here { color: var(--wp-text); font-weight: 500; }
+.wp .wp-plan-mini-dot { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--wp-muted); flex: none; display: flex; align-items: center; justify-content: center; color: var(--wp-success); }
+.wp-plan-mini li.done .wp-plan-mini-dot { border: 0; }
+.wp .wp-plan-mini-dot svg { width: 16px; height: 16px; }
+.wp-plan-guide .wp-plan-ul { margin: 0; padding-left: 20px; font-size: 14px; line-height: 20px; display: flex; flex-direction: column; gap: 4px; }
+.wp-plan-note { font-size: 14px; line-height: 20px; padding: 8px 12px; border-radius: 8px; background: var(--wp-hs-soft); margin: 0; }

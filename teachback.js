@@ -169,12 +169,15 @@ async function finishing(end) {
 
 const ytSearch = q => "https://www.youtube.com/results?search_query=" + encodeURIComponent(q);
 
-// Opened from a study session: report this topic's result back to it, once.
+// Opened from a study session: report this topic's result back to it, once. Opened from
+// today's Homeschool plan: mark that item done.
 let reported = false;
 function reportToStudy(s) {
-  const topicId = params.get("study");
-  if (!topicId || reported || !s.result) return;
+  if (reported || !s.result) return;
   reported = true;
+  if (params.get("plan")) chrome.runtime.sendMessage({ type: "plan-done", id: params.get("plan") }).catch(() => {});
+  const topicId = params.get("study");
+  if (!topicId) return;
   chrome.runtime.sendMessage({ type: "study-update", topicId, check: { assessmentId: s.id, endedEarly: s.result.endedEarly,
     objectives: s.result.objectives.map(o => ({ text: o.text, status: o.status, search: o.review?.search || "" })) } }).catch(() => {});
 }

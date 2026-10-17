@@ -366,6 +366,59 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await all.close();
   await sw.evaluate(() => serial(() => finishPurpose("yes")));
 
+  // ---------- Aim Homeschool preview: the student's Today screen ----------
+  await sw.evaluate(() => serial(() => setHomeschoolPreview(true)));
+  await p.goto("https://www.youtube.com/");
+  await p.waitForSelector("#wp-home.wp-today");
+  let todayText = (await text("#wp-home")).replace(/\s+/g, " ");
+  step("Today replaces the homepage card: greeting, Ask Aim, the plan, the unit, the week, the dashboard",
+    /Good (morning|afternoon|evening), Alex!/.test(todayText) && ["Homeschool", "Today's Plan", "0 of 6 done", "About 2h", "Do this together", "Current Unit", "Up next this week", "My Dashboard"].every(t => todayText.includes(t)) &&
+    (await p.getAttribute("#wp-home .wp-home-input", "placeholder")).startsWith("Ask Aim anything") && !todayText.includes("What brings you here?") && !/\bnull\b|undefined/.test(todayText), todayText.slice(0, 200));
+  step("only the next item is highlighted, with the one strong button", (await p.$$(".wp-plan-next")).length === 1 &&
+    (await p.getAttribute(".wp-plan-next", "data-id")) === "sci1" && (await p.$$("#wp-home .wp-plan-btn-strong")).length === 1);
+  await p.click('.wp-plan-item[data-id="sci1"] .wp-btn');
+  await p.waitForURL(/results\?search_query=how%20volcanoes%20form/);
+  await p.waitForSelector("#wp-results-bar");
+  st = await store();
+  step("Start makes the lesson the Target and searches for it", st.purpose?.plan === "sci1" && st.purpose.text === "Science: How Volcanoes Form" &&
+    (await text("#wp-results-bar")).includes("Today's plan"));
+  await sw.evaluate(() => serial(() => recordTick(10, { id: "vol1", title: "Volcanoes 101", channel: "Geo", t: 100, d: 600 })));
+  let hs = (await store()).homeschool;
+  step("the first video watched becomes the lesson's video, not done yet", hs.items[0].video?.id === "vol1" && !hs.items[0].doneAt);
+  await sw.evaluate(() => serial(() => recordTick(10, { id: "vol1", title: "Volcanoes 101", channel: "Geo", t: 560, d: 600 })));
+  hs = (await store()).homeschool;
+  step("playing to about 90% marks the lesson done", !!hs.items[0].doneAt);
+  await p.goto("https://www.youtube.com/");
+  await p.waitForSelector("#wp-home.wp-today");
+  step("a done item is quiet (Watch again) and the highlight moves on", (await p.getAttribute(".wp-plan-next", "data-id")) === "math1" &&
+    (await text('.wp-plan-item[data-id="sci1"]')).includes("Watch again") && (await text("#wp-home")).includes("1 of 6 done"));
+  await p.click('.wp-plan-item[data-id="proj1"] .wp-btn');
+  await p.waitForSelector(".wp-plan-guide");
+  step("a project opens its guide, with materials, steps and Do this together", (await text(".wp-plan-guide")).includes("Materials") && (await text(".wp-plan-guide")).includes("Steps") && (await text(".wp-plan-guide")).includes("Ask them to join you"));
+  await p.click('.wp-plan-guide button:has-text("Mark done")');
+  await p.waitForTimeout(400);
+  step("Mark done from the guide", !!(await store()).homeschool.items[3].doneAt);
+  await sw.evaluate(() => serial(() => planStart("math1")));
+  await sw.evaluate(() => serial(() => allowVideos({ query: "area and volume of 3d shapes", videos: [{ id: "mth1", title: "Area" }], lists: [] })));
+  await p.goto("https://www.youtube.com/watch?v=mth1");
+  await p.waitForSelector("#wp-plan-panel");
+  const panel = await text("#wp-plan-panel");
+  step("beside the video, the plan replaces Up next: this lesson, Mark done, what's next", panel.includes("Area and Volume Review") && panel.includes("Mark done") &&
+    panel.includes("Next: Exploration and Trade") && panel.includes("Back to Today") && !(await p.$("#wp-upnext")));
+  await p.click('#wp-plan-panel button:has-text("Mark done")');
+  await p.waitForTimeout(400);
+  step("Mark done beside the video", !!(await store()).homeschool.items[1].doneAt);
+  await sw.evaluate(() => serial(async () => { for (const id of ["hist1", "read1", "tb1"]) await planDone(id); }));
+  st = await store();
+  step("the whole day done: the last lesson stops being the Target", !st.purpose && st.homeschool.items.every(i => i.doneAt));
+  await p.goto("https://www.youtube.com/");
+  await p.waitForSelector(".wp-plan-finished");
+  step("You're done for today, with optional Go deeper and a break", (await text(".wp-plan-finished")).includes("You're done for today.") &&
+    (await text(".wp-plan-finished")).includes("Go deeper") && (await text("#wp-home")).includes("6 of 6 done"));
+  await p.click('.wp-today-preview button:text-is("Turn off")');
+  await p.waitForSelector("#wp-home.wp-home-card");
+  step("turning the preview off brings back the usual card", (await text("#wp-home")).includes("What brings you here?") && !(await store()).homeschool);
+
   const opt = await ctx.newPage();
   opt.on("pageerror", e => errors.push("options: " + e.message));
   await opt.goto(`chrome-extension://${extId}/options.html`);

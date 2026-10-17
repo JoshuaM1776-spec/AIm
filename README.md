@@ -29,6 +29,7 @@ Chrome extension, Manifest V3, no build step.
 | `content/upnext.js` | "Up next from your search" in the watch page's sidebar |
 | `content/home.js`, `channels.js` | Homepage card, hidden/warned channels |
 | `content/librarian.js` | The librarian for signed-in accounts: requests vs plain searches, the results bar's note/choices/ask box, and the picks above YouTube's results |
+| `content/plan.js` | Aim Homeschool: the student's Today screen on YouTube's homepage, and the day's plan beside a lesson's video (sample plan for now, turned on in Settings → Advanced) |
 | `content/study.js` | Study sessions on YouTube: the offer, the planning dialog, the topic header on results, the plan in the watch page's sidebar |
 | `study.html/js` | A study session's overview and summary |
 | `content/main.js` | Timer ticks, sync with other tabs, navigation, startup. Loads last. |

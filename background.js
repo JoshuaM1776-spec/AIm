@@ -60,7 +60,10 @@ const writes = {
   "save": m => saveForLater(m.video || {}),
   "saved-remove": m => removeSaved(m.id),
   "history-clear": () => clearHistory(),
-  "setting": m => setSetting(m.key, m.value)
+  "setting": m => setSetting(m.key, m.value),
+  "homeschool-preview": m => setHomeschoolPreview(!!m.on),
+  "plan-start": m => planStart(String(m.id || "")),
+  "plan-done": m => planDone(String(m.id || ""), m.done !== false)
 };
 
 // Chrome's dark toolbar hides the dark rings of the default icon, so pages that can see the
@@ -90,6 +93,7 @@ const reads = {
     if (typeof m.topic === "string" && m.topic.trim()) q.set("topic", m.topic.trim().slice(0, 200));
     if (typeof m.notes === "string" && m.notes.trim()) q.set("notes", m.notes.trim().slice(0, 3000));
     if (typeof m.study === "string" && /^[\w-]{8,64}$/.test(m.study)) q.set("study", m.study); // a study topic to report back to
+    if (typeof m.plan === "string" && /^[\w-]{1,64}$/.test(m.plan)) q.set("plan", m.plan); // a plan item to mark done
     const url = chrome.runtime.getURL("teachback.html" + (q.size ? "?" + q : ""));
     return chrome.tabs.create({ url }).then(() => ({ result: "applied" }));
   }
