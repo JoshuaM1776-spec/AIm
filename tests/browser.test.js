@@ -98,6 +98,31 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
 
   step("service worker started and migrated", (await store()).schemaVersion === 5);
 
+  // ---------- welcome tour (opens by itself on install) ----------
+  let welcome = ctx.pages().find(x => x.url().includes("/welcome.html"));
+  for (let i = 0; !welcome && i < 20; i++) { await new Promise(r => setTimeout(r, 250)); welcome = ctx.pages().find(x => x.url().includes("/welcome.html")); }
+  step("a new install opens the welcome tour", !!welcome);
+  if (welcome) {
+    welcome.on("pageerror", e => errors.push("welcome: " + e.message));
+    await welcome.waitForSelector("h1");
+    step("welcome: Aim's line, and a minute to learn it", (await welcome.textContent("main")).includes("Aim helps you find what you need") && (await welcome.textContent("#next")) === "Let's go");
+    await welcome.click("#next");
+    const howText = await welcome.textContent("main");
+    step("how it works: Target, staying on Target, breaks", ["Say what you're here for", "keeps YouTube on Target", "Take a break whenever you like"].every(t => howText.includes(t)));
+    await welcome.click("#next");
+    await welcome.click(".seg button:text-is('1 hour')");
+    await welcome.uncheck("#opt-hideShorts");
+    await welcome.waitForTimeout(300);
+    step("choices save as they're made", (await store()).settings.hideShorts === false);
+    await welcome.check("#opt-hideShorts");
+    await welcome.click("#skip");
+    step("Skip goes to the last screen, Open YouTube", (await welcome.textContent("main")).includes("Keep Aim one click away") && (await welcome.textContent("#next")) === "Open YouTube");
+    await welcome.click("#next");
+    await welcome.waitForURL("https://www.youtube.com/");
+    await welcome.close();
+    step("finishing marks the welcome done, with tips still to show", (await store()).onboarding?.welcomed === true && !(await store()).onboarding.tips.home);
+  }
+
   const p = await ctx.newPage();
   p.on("pageerror", e => errors.push("page: " + e.message));
   p.on("console", m => { if (m.type() === "error") errors.push("console: " + m.text()); });
@@ -110,6 +135,17 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("indicator invites a purpose", (await text("#wp-chip")).includes("Set Target") && !(await text("#wp-chip")).includes("null"));
   await p.waitForSelector("#wp-home", { timeout: 5000 });
   step("homepage card replaces the feed", await p.isHidden("ytd-rich-grid-renderer"));
+  // First-time tips: the box, then the Aim button. Once each.
+  await p.waitForSelector(".wp-coach", { timeout: 5000 }).catch(() => {});
+  step("first visit: a tip points at the box", (await text(".wp-coach")).includes("Start here") && (await text(".wp-coach")).includes("1 of 2"));
+  await p.click(".wp-coach-next");
+  await p.waitForSelector(".wp-coach:has-text('Your Target lives here')", { timeout: 3000 }).catch(() => {});
+  step("then one at the Aim button", (await text(".wp-coach")).includes("Your Target lives here"));
+  await p.click(".wp-coach-next");
+  await p.waitForTimeout(300);
+  await p.reload(); await p.waitForSelector("#wp-home"); await p.waitForTimeout(600);
+  step("tips don't come back", !(await p.$(".wp-coach")) && !!(await store()).onboarding.tips.chip);
+  await sw.evaluate(() => serial(() => setOnboarding({ seenAll: true }))); // the results tip and the student tour are checked later
   const card0 = await text("#wp-home");
   step("early hide hands over to the card", await p.evaluate(() =>
     !document.documentElement.classList.contains("wp-boot") && document.documentElement.classList.contains("wp-home")));
@@ -367,19 +403,34 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await sw.evaluate(() => serial(() => finishPurpose("yes")));
 
   // ---------- Aim Homeschool preview: the student's Today screen ----------
-  await sw.evaluate(() => serial(() => setHomeschoolPreview(true)));
+  await sw.evaluate(() => serial(async () => { await setHomeschoolPreview(true); await setOnboarding({ hsTour: false }); }));
   await p.goto("https://www.youtube.com/");
   await p.waitForSelector("#wp-home.wp-today");
+  await p.waitForSelector(".wp-coach-tour", { timeout: 5000 }).catch(() => {});
+  step("the first time Today appears, a spotlight tour starts", (await text(".wp-coach-tour")).includes("This is Today") && (await text(".wp-coach-tour")).includes("1 of 5") && !!(await p.$(".wp-coach-ring")));
+  for (let i = 0; i < 4; i++) { await p.click(".wp-coach-next"); await p.waitForTimeout(250); }
+  step("its last stop: what's coming, then Let's start", (await text(".wp-coach-tour")).includes("See what's coming") && (await text(".wp-coach-next")) === "Let's start");
+  await p.click(".wp-coach-next");
+  await p.waitForTimeout(300);
+  step("the tour ends and is remembered", !(await p.$(".wp-coach")) && (await store()).onboarding.hsTour === true);
+  await p.click(".wp-today-tour");
+  step("Take the tour replays it", !!(await p.$(".wp-coach-tour")));
+  await p.click(".wp-coach-skip");
+  await p.waitForTimeout(200);
   let todayText = (await text("#wp-home")).replace(/\s+/g, " ");
   step("Today replaces the homepage card: greeting, Ask Aim, the plan, the unit, the week, the dashboard",
     /Good (morning|afternoon|evening), Alex!/.test(todayText) && ["Homeschool", "Today's Plan", "0 of 6 done", "About 2h", "Do this together", "Current Unit", "Up next this week", "My Dashboard"].every(t => todayText.includes(t)) &&
     (await p.getAttribute("#wp-home .wp-home-input", "placeholder")).startsWith("Ask Aim anything") && !todayText.includes("What brings you here?") && !/\bnull\b|undefined/.test(todayText), todayText.slice(0, 200));
   step("only the next item is highlighted, with the one strong button", (await p.$$(".wp-plan-next")).length === 1 &&
     (await p.getAttribute(".wp-plan-next", "data-id")) === "sci1" && (await p.$$("#wp-home .wp-plan-btn-strong")).length === 1);
+  await patchLocal("onboarding", { tips: { home: true, chip: true } }); // the results tip not seen yet
   await p.click('.wp-plan-item[data-id="sci1"] .wp-btn');
   await p.waitForURL(/results\?search_query=how%20volcanoes%20form/);
   await p.waitForSelector("#wp-results-bar");
   st = await store();
+  await p.waitForSelector(".wp-coach", { timeout: 3000 }).catch(() => {});
+  step("the first search on Target gets one tip about the bar", (await text(".wp-coach")).includes("This search is on Target"));
+  await p.click(".wp-coach-next");
   step("Start makes the lesson the Target and searches for it", st.purpose?.plan === "sci1" && st.purpose.text === "Science: How Volcanoes Form" &&
     (await text("#wp-results-bar")).includes("Today's plan"));
   await sw.evaluate(() => serial(() => recordTick(10, { id: "vol1", title: "Volcanoes 101", channel: "Geo", t: 100, d: 600 })));

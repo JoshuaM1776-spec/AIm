@@ -139,6 +139,8 @@ const ctx = await chromium.launchPersistentContext(userData, {
 let [sw] = ctx.serviceWorkers();
 if (!sw) sw = await ctx.waitForEvent("serviceworker");
 const extId = sw.url().split("/")[2];
+await new Promise(r => setTimeout(r, 500));
+await sw.evaluate(() => serial(() => setOnboarding({ seenAll: true }))); // first-time tips are checked in browser.test.js
 const step = (name, ok, extra = "") => { console.log(`${ok ? "  ok  " : "  FAIL"} ${name}${extra ? "  — " + extra : ""}`); if (!ok) process.exitCode = 1; };
 
 const opt = await ctx.newPage();

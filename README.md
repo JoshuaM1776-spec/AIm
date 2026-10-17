@@ -30,6 +30,7 @@ Chrome extension, Manifest V3, no build step.
 | `content/home.js`, `channels.js` | Homepage card, hidden/warned channels |
 | `content/librarian.js` | The librarian for signed-in accounts: requests vs plain searches, the results bar's note/choices/ask box, and the picks above YouTube's results |
 | `content/plan.js` | Aim Homeschool: the student's Today screen on YouTube's homepage, and the day's plan beside a lesson's video (sample plan for now, turned on in Settings → Advanced) |
+| `content/onboarding.js` | First-time help on YouTube: one-time tips (the homepage box, the Aim button, the results bar) and the Homeschool student's spotlight tour of Today |
 | `content/study.js` | Study sessions on YouTube: the offer, the planning dialog, the topic header on results, the plan in the watch page's sidebar |
 | `study.html/js` | A study session's overview and summary |
 | `content/main.js` | Timer ticks, sync with other tabs, navigation, startup. Loads last. |
@@ -37,6 +38,7 @@ Chrome extension, Manifest V3, no build step.
 | `popup.html/js` | Toolbar popup |
 | `targets.html/js` | All Targets: current, set aside (Resume, Remove) and completed (Start again) |
 | `options.html/js` | Settings page |
+| `welcome.html/js` | The welcome tour: opens once on install (what Aim is, how it works, a few choices, pin it), and from Settings → "Show the welcome tour again" |
 | `config.js`, `plus.js` | Aim Plus in the service worker: where the server is (empty = Free only), sign-in with an emailed code, calling Aim's AI endpoint. Only Aim's own pages can use it, never YouTube tabs. |
 | `options-plus.js` | The Aim Plus section of Settings (hidden until `config.js` is filled in) |
 | `signin.html/js` | Where the link in the sign-in email lands. It hands the session to the worker, which accepts it only for a sign-in this browser started. |

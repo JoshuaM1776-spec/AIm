@@ -134,12 +134,14 @@ function renderToday(host) {
   const card = el("div", { id: "wp-home", class: "wp wp-today", "data-key": key },
     el("div", { class: "wp-today-brand" }, brandLine(), el("span", { class: "wp-plan-tag wp-plan-tag-brand" }, "Homeschool"),
       hs.preview ? el("span", { class: "wp-muted wp-today-preview" }, "Preview · sample plan · ",
-        el("button", { class: "wp-link", onclick: async () => { await send({ type: "homeschool-preview", on: false }); } }, "Turn off")) : null),
+        el("button", { class: "wp-link", onclick: async () => { await send({ type: "homeschool-preview", on: false }); } }, "Turn off")) : null,
+      el("button", { class: "wp-link wp-today-tour", onclick: () => startStudentTour(0) }, "Take the tour")),
     el("h1", { class: "wp-today-hello" }, `${greeting()}, ${hs.student}!`),
     el("div", { class: "wp-muted wp-today-sub" }, next ? "Let's keep the momentum going." : "That's everything for today."),
     el("div", { class: "wp-home-search wp-today-ask" }, el("span", { class: "wp-today-ask-mark" }, icon("ask")), input, go),
     el("div", { class: "wp-today-grid" }, planCard, side));
   host.prepend(card);
+  showTips();
 }
 
 // Beside a lesson's video, in place of Up next: this lesson, Mark done, what's next, and the day.

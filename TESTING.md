@@ -26,6 +26,10 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 
 ### 1. Install, upgrade and settings
 
+- [ ] **Fresh install** (remove Aim first, then load it): the welcome tour opens in a new tab. Let's go → How it works → Make it yours (changes save right away) → Want help finding the right video? (only when accounts are available) → You're all set → Open YouTube. Back, Skip and the arrow keys work; light and dark both look right.
+- [ ] First YouTube visit: a tip points at the box ("Start here", 1 of 2), then at the Aim button. Neither comes back after a reload. The first search on a Target gets one tip about the results bar.
+- [ ] **Updating** an existing Aim (reload over an older version): no welcome tab and no tips.
+- [ ] Settings → "Show the welcome tour again" opens it and brings the tips back.
 - [ ] Extension loads with no errors on the card.
 - [ ] Service worker console: `chrome.storage.local.get("schemaVersion")` returns `{ schemaVersion: 5 }`.
 - [ ] **Upgrade from 0.9** (same folder, then reload):
@@ -189,6 +193,7 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 
 ### 18. Aim Homeschool preview (Settings → Advanced → Preview a student's Today screen)
 
+- [ ] The first time Today shows, a spotlight tour runs: 5 stops, Back, Skip tour, "Let's start". It doesn't return; "Take the tour" on Today replays it.
 - [ ] YouTube's homepage shows Today instead of the usual card: Aim mark with "Homeschool", "Good morning/afternoon/evening, Alex!", Ask Aim, Today's Plan (date, about 2h, 0 of 6 done), Current Unit, Up next this week, My Dashboard. YouTube's own search box and left menu are unchanged.
 - [ ] Only the next item is highlighted, with the one blue button. The project shows "Do this together".
 - [ ] Start on a video lesson opens YouTube results for it; the results bar says "Today's plan". Watch a video: beside it, the plan replaces Up next (this lesson, Mark done, Next, Back to Today).

@@ -4,8 +4,16 @@
 
 importScripts("store.js", "config.js", "plus.js");
 
-// Fires on first install and on every update or reload of the extension.
-chrome.runtime.onInstalled.addListener(() => serial(ensureMigrated));
+// Fires on first install and on every update or reload of the extension. A new install opens the
+// welcome tour; an update from before onboarding existed skips it (see setOnboarding in store.js).
+chrome.runtime.onInstalled.addListener(details => serial(async () => {
+  await ensureMigrated();
+  const { onboarding } = await chrome.storage.local.get("onboarding");
+  if (details.reason === "install" && !onboarding) {
+    await setOnboarding({});
+    await chrome.tabs.create({ url: chrome.runtime.getURL("welcome.html") });
+  } else if (details.reason === "update" && !onboarding) await setOnboarding({ seenAll: true });
+}));
 
 // Also checked before the first message after the worker starts, in case an update
 // left a YouTube tab talking to the new worker before onInstalled finished.
@@ -62,6 +70,7 @@ const writes = {
   "history-clear": () => clearHistory(),
   "setting": m => setSetting(m.key, m.value),
   "homeschool-preview": m => setHomeschoolPreview(!!m.on),
+  "onboarding": m => setOnboarding({ welcomed: m.welcomed, tip: m.tip, hsTour: m.hsTour, reset: !!m.reset }),
   "plan-start": m => planStart(String(m.id || "")),
   "plan-done": m => planDone(String(m.id || ""), m.done !== false)
 };
@@ -76,13 +85,14 @@ async function setToolbarTheme(dark) {
 }
 
 const reads = {
-  "open-options": m => chrome.tabs.create({ url: chrome.runtime.getURL("options.html" + (m.section === "advanced" ? "#advanced" : "")) }).then(() => ({ result: "applied" })),
+  "open-options": m => chrome.tabs.create({ url: chrome.runtime.getURL("options.html" + ({ advanced: "#advanced", account: "#plus" }[m.section] || "")) }).then(() => ({ result: "applied" })),
   "theme": m => setToolbarTheme(!!m.dark),
   "status": () => tabState(),
   "state": () => fullState(),
   "search-check": m => checkSearch(m.query),
   "targets": () => readAll().then(resumable),
   "open-study": () => chrome.tabs.create({ url: chrome.runtime.getURL("study.html") }).then(() => ({ result: "applied" })),
+  "open-welcome": () => chrome.tabs.create({ url: chrome.runtime.getURL("welcome.html") }).then(() => ({ result: "applied" })),
   "open-targets": () => chrome.tabs.create({ url: chrome.runtime.getURL("targets.html") }).then(() => ({ result: "applied" })),
   // YouTube tabs may only learn whether to offer Plus features, and open TeachBack for a topic.
   "plus-brief": () => plusBrief(),

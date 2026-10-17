@@ -85,6 +85,7 @@ async function renderHome() {
     el("div", { class: "wp-label wp-home-break-label" }, p ? "Or take a break" : "Just browsing? Take a break"),
     breakChips(takeBreak)].filter(Boolean));
   host.prepend(card);
+  showTips();
 }
 
 // "Last active yesterday"

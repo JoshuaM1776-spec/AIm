@@ -81,6 +81,7 @@ async function renderResultsBar() {
   const old = $("#wp-results-bar");
   if (old) old.replaceWith(bar);
   else anchor.parentElement.insertBefore(bar, anchor);
+  showTips();
 }
 
 // One compact row: the Target, a small Change action, Done, and (signed in) the librarian, which

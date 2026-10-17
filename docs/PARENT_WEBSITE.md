@@ -159,11 +159,33 @@ Progress must represent evidence of understanding, not minutes watched or AI-gen
 
 Maintain a simple library of videos, books, experiments, and resources. Support both curriculum reading and independent pleasure reading. Not every book needs a quiz or measurable objective. Recommendations should not be distorted by affiliate incentives.
 
+## 10a. Onboarding walkthroughs
+
+Aim's extension already has a short welcome for everyone (what Aim is, how it works, a few choices, pin it) and one-time tips on YouTube. Homeschool adds two walkthroughs, one for each person:
+
+### The parent walkthrough (on this website, at setup)
+
+A calm, skippable, resumable sequence. Each step saves as it goes; the parent can stop and pick up later from Overview, which shows "Finish setting up" until it's done.
+
+1. **Welcome:** what Aim Homeschool is in one sentence ("You set the direction. Aim plans the week, finds the videos, and shows you what your child understood.") and what setup involves (about 15 minutes, 6 steps).
+2. **Your student:** name, and level per subject (not one grade). Optional quick placement later.
+3. **Aim's role:** supplement your curriculum, lead selected subjects, or (once validated) the full curriculum. Option to upload your own curriculum (see §4, "Use your own curriculum").
+4. **The big picture:** a guided first look at the year plan: units, objectives, what "approve" means, and that you can change anything later. One highlighted example edit so the parent sees impact warnings before they matter.
+5. **Trusted channels (optional):** pick a few per subject, or skip and let Aim suggest.
+6. **Your first week:** review it with a short guided pass (one lesson, one project, the TeachBack check, "Do this together"), then approve.
+7. **Set up your student's device:** install the extension, sign the student in, and a "Send the student a welcome" button. Explains what the student will see (Today on YouTube's homepage) and how to check progress.
+
+After setup, short contextual tips the first time the parent meets: the weekly review, a coverage-gap choice, the first TeachBack result ("watched" vs "showed they understood"), and the portfolio.
+
+### The student tour (in the extension, the first time Today appears)
+
+Built in the preview (`content/onboarding.js`): five spotlighted stops on Today: this is Today, start with the highlighted one, check things off, Ask Aim, see what's coming. Skippable, with Back, and replayable from "Take the tour" on Today. Student-friendly words, no account or setup questions: the parent did that.
+
 ## 11. Key User Flows
 
 ### Initial setup
 
-Create parent account → add student and subject levels → choose curriculum role and subjects → optionally upload your own curriculum → review big-picture curriculum → optionally select preferred channels by subject → review and approve first week.
+Create parent account → guided setup walkthrough (§10a) → add student and subject levels → choose curriculum role and subjects → optionally upload your own curriculum → review big-picture curriculum → optionally select preferred channels by subject → review and approve first week.
 
 ### Weekly review
 

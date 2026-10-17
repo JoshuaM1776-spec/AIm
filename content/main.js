@@ -73,6 +73,7 @@ chrome.storage.onChanged.addListener((ch, area) => {
 
 // ---------------- navigation ----------------
 function route() {
+  closeCoach();
   if (location.pathname === "/") renderHome(); else removeHome();
   if (location.pathname === "/results") onSearch(searchQuery());
   else { $("#wp-results-bar")?.remove(); setSearchPending(null); }

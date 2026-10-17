@@ -95,6 +95,8 @@ For a student in an Aim Homeschool household, **YouTube's homepage becomes Today
 
 **Before release:** check how under-13 students can use this (Google requires supervised accounts; confirm YouTube access and parent-approved extensions under Family Link). Students who can't run the extension use the student website with embedded videos instead.
 
+**First time:** a five-stop spotlight tour of Today (skippable, replayable from "Take the tour"). The parent's own setup walkthrough is in PARENT_WEBSITE.md §10a.
+
 **Preview build:** Settings → Advanced → "Preview Aim Homeschool" turns on a sample plan (Earth Systems, five items) so the screen can be tried on real YouTube before the parent website exists. Sample lessons use a YouTube search; the first video watched for a lesson becomes its video. Real plans will name specific parent-approved videos.
 
 ## The parent website

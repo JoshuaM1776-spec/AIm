@@ -189,13 +189,13 @@ function totalReached(settings, today) {
 // What every page needs to draw itself. Infinity can't cross a message, so "no limit" is null.
 async function getStatus() {
   const s = await readAll(), settings = await getSettings();
-  const { homeschool = null } = await chrome.storage.local.get("homeschool");
+  const { homeschool = null, onboarding = null } = await chrome.storage.local.get(["homeschool", "onboarding"]);
   const today = s.usage[s.day];
   const left = leisureLeftSec(settings, today);
   return {
     purpose: s.purpose, brk: s.brk, stop: s.stop, today,
     leisureLeftMin: left === Infinity ? null : Math.floor(left / 60),
-    totalReached: totalReached(settings, today), settings, homeschool
+    totalReached: totalReached(settings, today), settings, homeschool, onboarding
   };
 }
 
@@ -677,6 +677,25 @@ async function recordTick(seconds, video) {
   }
   await chrome.storage.local.set({ usage: s.usage, usageLastAt: now, purpose, brk, stop, history: history.slice(-200) });
   return getStatus();
+}
+
+// ---------- onboarding ----------
+// What the welcome tour and the one-time tips on YouTube have already shown. Missing means a new
+// install: everything is still to show. An update from a version without onboarding marks it all
+// seen, so people who already use Aim aren't walked through it again.
+const ONBOARDING_TIPS = ["home", "chip", "results"];
+const onboardingSeen = () => ({ welcomed: true, tips: Object.fromEntries(ONBOARDING_TIPS.map(k => [k, true])), hsTour: true });
+
+async function setOnboarding({ welcomed, tip, hsTour, reset, seenAll }) {
+  const { onboarding: cur } = await chrome.storage.local.get("onboarding");
+  let o = cur || { welcomed: false, tips: {}, hsTour: false };
+  if (reset) o = { welcomed: false, tips: {}, hsTour: false };
+  if (seenAll) o = onboardingSeen();
+  if (welcomed === true) o.welcomed = true;
+  if (ONBOARDING_TIPS.includes(tip)) o.tips = { ...o.tips, [tip]: true };
+  if (typeof hsTour === "boolean") o.hsTour = hsTour;
+  await chrome.storage.local.set({ onboarding: o });
+  return { result: "applied", onboarding: o };
 }
 
 // ---------- Aim Homeschool preview ----------

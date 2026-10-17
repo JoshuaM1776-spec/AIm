@@ -78,6 +78,8 @@ $("homeschoolReset").onclick = async () => {
 };
 for (const k of TOGGLES) $(k).onchange = () => setSetting(k, $(k).checked);
 if (location.hash === "#advanced") { $("advanced").open = true; $("advanced").scrollIntoView(); }
+if (location.hash === "#plus") setTimeout(() => $("plus").scrollIntoView({ block: "start" }), 300); // shown once the account check is done
+$("welcomeTour").onclick = async e => { e.preventDefault(); await send({ type: "onboarding", reset: true }); send({ type: "open-welcome" }); };
 for (const k of ["leisureMin", "graceMin", "totalMin", "purposeLimitMin"]) $(k).onchange = () => setSetting(k, parseInt($(k).value, 10));
 
 render();

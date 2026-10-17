@@ -536,3 +536,26 @@ html[dark] .wp-plan-tile { color: #fff; }
 .wp .wp-plan-mini-dot svg { width: 16px; height: 16px; }
 .wp-plan-guide .wp-plan-ul { margin: 0; padding-left: 20px; font-size: 14px; line-height: 20px; display: flex; flex-direction: column; gap: 4px; }
 .wp-plan-note { font-size: 14px; line-height: 20px; padding: 8px 12px; border-radius: 8px; background: var(--wp-hs-soft); margin: 0; }
+
+/* ---------- first-time tips and the student's tour (content/onboarding.js) ---------- */
+.wp-coach { position: fixed; z-index: 2300; width: min(320px, calc(100vw - 24px)); padding: 16px; border-radius: 16px;
+  background: var(--wp-raised); color: var(--wp-text); box-shadow: 0 8px 40px rgba(0,0,0,.22); border: 1px solid var(--wp-card-border);
+  display: flex; flex-direction: column; gap: 6px; animation: wp-coach-in .2s ease; }
+html[dark] .wp-coach { background: var(--wp-menu); }
+@keyframes wp-coach-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .wp-coach { animation: none; } }
+.wp-coach-arrow { position: absolute; top: -7px; width: 12px; height: 12px; background: inherit; border-left: 1px solid var(--wp-card-border);
+  border-top: 1px solid var(--wp-card-border); transform: rotate(45deg); }
+.wp-coach-above .wp-coach-arrow { top: auto; bottom: -7px; transform: rotate(225deg); }
+.wp-coach-left .wp-coach-arrow { left: auto !important; right: -7px; transform: rotate(135deg); }
+.wp-coach-right .wp-coach-arrow { left: -7px !important; transform: rotate(-45deg); }
+.wp-coach-step { font-size: 12px; line-height: 16px; color: var(--wp-muted); font-weight: 500; }
+.wp-coach-title { font-size: 16px; line-height: 22px; font-weight: 700; }
+.wp-coach-body { font-size: 14px; line-height: 20px; color: var(--wp-muted); }
+.wp-coach-actions { display: flex; justify-content: flex-end; align-items: center; gap: 4px; margin-top: 6px; }
+.wp-coach-skip { margin-right: auto; margin-left: -12px; color: var(--wp-muted); }
+.wp-coach-ring { position: fixed; z-index: 2299; border-radius: 14px; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45), 0 0 0 2px #fff inset;
+  transition: top .2s, left .2s, width .2s, height .2s; }
+@media (prefers-reduced-motion: reduce) { .wp-coach-ring { transition: none; } }
+.wp-coach-tour .wp-coach-step { color: var(--wp-hs, var(--wp-muted)); }
+.wp-today-tour { margin-left: auto; font-size: 12px; }
