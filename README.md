@@ -32,6 +32,7 @@ Chrome extension, Manifest V3, no build step.
 | `content/plan.js` | Aim Homeschool: the student's Today screen on YouTube's homepage, and the day's plan beside a lesson's video (sample plan for now, turned on in Settings → Advanced) |
 | `content/onboarding.js` | First-time help on YouTube: one-time tips (the homepage box, the Aim button, the results bar) and the Homeschool student's spotlight tour of Today |
 | `content/pathways.js` | Pathways on YouTube: "Want more of this?", "Where could this take me?" and the occasional theme offer |
+| `content/video.js` | "In this video" (Aim Plus): beside a video watched for a learning Target, the concepts it covers (from its title, description and chapters), chapter jumps, "See it in another context", and "Test me on this video" when it ends |
 | `content/study.js` | Study sessions on YouTube: the offer, the planning dialog, the topic header on results, the plan in the watch page's sidebar |
 | `study.html/js` | A study session's overview and summary |
 | `content/main.js` | Timer ticks, sync with other tabs, navigation, startup. Loads last. |

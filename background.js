@@ -73,6 +73,7 @@ const writes = {
   "interest": m => recordInterest({ topic: m.topic, subject: m.subject, source: m.source, answer: m.answer, note: m.note, ref: m.ref })
     .then(r => { if (r.refreshThemes) refreshThemes(); return r; }),
   "pathways-set": m => setPathways({ on: m.on, stage: m.stage, erase: !!m.erase }).then(r => { if (m.on) refreshThemes(); return r; }),
+  "video-concepts-save": m => saveVideoConcepts(String(m.id || ""), m.data),
   "pathways-theme-seen": m => pathwayThemeSeen(m.name, !!m.dismiss),
   "exploration-start": m => explorationStart({ career: m.career, theme: m.theme, kind: m.kind, what: m.what, related: m.related }),
   "exploration-update": m => explorationUpdate({ id: m.id, step: m.step, content: m.content, done: m.done, saved: m.saved, reflection: m.reflection, end: !!m.end }),
@@ -100,6 +101,7 @@ const reads = {
   "open-study": () => chrome.tabs.create({ url: chrome.runtime.getURL("study.html") }).then(() => ({ result: "applied" })),
   "open-welcome": () => chrome.tabs.create({ url: chrome.runtime.getURL("welcome.html") }).then(() => ({ result: "applied" })),
   "pathways": () => readPathways(),
+  "video-concepts-get": m => getVideoConcepts(String(m.id || "")),
   "pathways-refresh": () => refreshThemes(true),
   "open-pathways": m => {
     const q = new URLSearchParams();
@@ -117,6 +119,7 @@ const reads = {
     if (typeof m.notes === "string" && m.notes.trim()) q.set("notes", m.notes.trim().slice(0, 3000));
     if (typeof m.study === "string" && /^[\w-]{8,64}$/.test(m.study)) q.set("study", m.study); // a study topic to report back to
     if (typeof m.plan === "string" && /^[\w-]{1,64}$/.test(m.plan)) q.set("plan", m.plan); // a plan item to mark done
+    if (typeof m.video === "string" && /^[\w-]{6,20}$/.test(m.video)) q.set("video", m.video); // "Test me on this video"
     const url = chrome.runtime.getURL("teachback.html" + (q.size ? "?" + q : ""));
     return chrome.tabs.create({ url }).then(() => ({ result: "applied" }));
   }

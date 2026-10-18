@@ -585,3 +585,25 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 .wp-theme-offer-actions { display: flex; gap: 4px; flex-wrap: wrap; }
 .wp-plan-offer { padding: 4px; }
 .wp-plan-offer .wp-theme-offer { background: var(--wp-hs-soft); }
+
+/* ---------- "In this video" (content/video.js) ---------- */
+.wp-concepts { display: flex; flex-direction: column; gap: 8px; padding: 14px; margin-bottom: 16px; border-radius: 12px; border: 1px solid var(--wp-card-border); }
+.wp-concepts-basis { margin-top: -4px; }
+.wp-concepts-list { display: flex; flex-direction: column; }
+.wp-concept { border-top: 1px solid var(--wp-divider); }
+.wp-concept:first-child { border-top: 0; }
+.wp-concept > summary { list-style: none; display: flex; align-items: center; gap: 8px; padding: 8px 0; cursor: pointer; font-size: 14px; line-height: 20px; }
+.wp-concept > summary::-webkit-details-marker { display: none; }
+.wp-concept > summary::before { content: "›"; color: var(--wp-muted); width: 8px; transition: transform .15s; }
+.wp-concept[open] > summary::before { transform: rotate(90deg); }
+.wp-concept-name { flex: 1; min-width: 0; font-weight: 500; }
+.wp-concept-likely { font-size: 11px; line-height: 16px; padding: 0 6px; border-radius: 8px; background: var(--wp-tonal); color: var(--wp-muted); }
+.wp .wp-concept-time { border: 0; background: var(--wp-tonal); border-radius: 6px; padding: 0 6px; font-size: 12px; line-height: 20px; font-weight: 500; color: var(--wp-link); }
+.wp .wp-concept-time:hover { background: var(--wp-tonal-hover); }
+.wp-concept-body { display: flex; flex-direction: column; gap: 6px; padding: 0 0 10px 16px; }
+.wp-concept-summary { font-size: 13px; line-height: 18px; }
+.wp .wp-concept-context { display: flex; align-items: center; gap: 6px; font-size: 13px; line-height: 18px; color: var(--wp-text); text-decoration: none; padding: 4px 8px; margin-left: -8px; border-radius: 8px; }
+.wp .wp-concept-context:hover { background: var(--wp-tonal); }
+.wp-concept-context .wp-icon svg { width: 16px; height: 16px; color: var(--wp-muted); }
+.wp-concepts-note { font-size: 12px; line-height: 18px; color: var(--wp-muted); background: var(--wp-tonal); border-radius: 8px; padding: 8px 10px; }
+.wp-concepts-test { margin-top: 4px; height: 40px; font-size: 14px; }

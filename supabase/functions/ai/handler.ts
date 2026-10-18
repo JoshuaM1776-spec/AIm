@@ -8,6 +8,7 @@ import { type AiRequest, type TaskCtx, type TeachbackDb, TaskError, finishTask, 
 import { ask, rank } from "./librarian.ts";
 import { studyPlan } from "./study.ts";
 import { careers, step, themes, where } from "./pathways.ts";
+import { videoConcepts } from "./video.ts";
 
 export type Plan = "free" | "plus";
 
@@ -79,7 +80,9 @@ export const TASKS: Record<string, Task> = {
   "pathways-where": { run: where },
   "pathways-themes": { plan: "plus", run: themes },
   "pathways-careers": { plan: "plus", run: careers },
-  "pathways-step": { plan: "plus", run: step }
+  "pathways-step": { plan: "plus", run: step },
+  // "In this video": a video's concepts from its title, description and chapters. See video.ts.
+  "video-concepts": { plan: "plus", run: videoConcepts }
 };
 
 // Handled directly in handle(), without AI.

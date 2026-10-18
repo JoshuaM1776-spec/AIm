@@ -213,7 +213,16 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] After a few "Yes"/"Maybe" answers: a theme appears on the Pathways page, and once on YouTube's homepage (or Today) as "You've been exploring … Want to see …?". Not now and Don't suggest this both stop it showing.
 - [ ] Turn off Pathways and delete its data: everything goes, including the answers.
 
-### 20. Sync and reload
+### 20. In this video (Aim Plus, a learning Target)
+
+- [ ] Watch a video with chapters for a learning Target (or a study session or Today lesson): "In this video" appears beside it, says it's from the title, description and chapters, and lists the concepts. Chapter times jump the video; "likely" marks concepts not named on the page.
+- [ ] Open a concept: a one-line summary and "See it in another context" searches, which open in a new tab.
+- [ ] A regulated subject (a private pilot oral exam video) names its references (the FAA's Airman Certification Standards, the Pilot's Handbook of Aeronautical Knowledge) and says Aim doesn't replace a certified instructor.
+- [ ] Nothing appears for music or entertainment, or without a learning Target.
+- [ ] When the video ends: "Finished. Test yourself on this video?" → TeachBack on the video, with its concepts as the notes. In a study session the result goes back to the topic.
+- [ ] Reloading the video doesn't ask the AI again.
+
+### 21. Sync and reload
 
 - [ ] Target complete from the popup while a YouTube tab is on a video: that tab shows the "What brings you here?" card on the player within a few seconds.
 - [ ] Two YouTube tabs: starting a break or setting a Target in one updates the other's indicator, and a card waiting on the other tab's player clears if the new state allows its video.

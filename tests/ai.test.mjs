@@ -493,6 +493,31 @@ test("pathways: a path's steps, with Try it as a real brief and no Prepare for y
   assert.strictEqual((await call(deps, { task: "pathways-step", input: { step: "dance", career: "Architect" } })).status, 400);
 });
 
+test("video concepts: Plus only; chapters are evidence; descriptions keep their lines", async () => {
+  let prompt = "";
+  const deps = makeDeps({ plan: "plus", claude: req => {
+    prompt = req.prompt;
+    return { ok: true, model: "main", inputTokens: 10, outputTokens: 5, text: JSON.stringify({ subject: "Private pilot training", regulated: true,
+      references: ["FAA Airman Certification Standards: Private Pilot"],
+      concepts: [
+        { name: "Density altitude", summary: "How heat and elevation thin the air.", chapter: 1, basis: "listed",
+          contexts: [{ label: "Hot-day takeoff accident analysis", search: "density altitude accident analysis" }, { label: "", search: "dropped" }] },
+        { name: "Aeromedical factors", summary: "Hypoxia and fatigue.", chapter: 99, basis: "listed", contexts: [] },
+        { name: "", summary: "dropped", chapter: -1, basis: "likely", contexts: [] }] }) };
+  } });
+  const r = await call(deps, { task: "video-concepts", input: { id: "abc", title: "Private Pilot Oral Exam", channel: "Flight School",
+    description: "Mock checkride.\n0:00 Intro\n4:10 Density altitude", chapters: [{ t: 0, title: "Intro" }, { t: 250, title: "Density altitude" }], target: "Pass my checkride" } });
+  assert.strictEqual(r.status, 200);
+  assert.deepStrictEqual(r.body.concepts.map(c => [c.name, c.basis, c.chapter?.t ?? null]), [["Density altitude", "listed", 250], ["Aeromedical factors", "likely", null]],
+    "a made-up chapter is dropped, and without a chapter or mention a concept is only 'likely'");
+  assert.deepStrictEqual(r.body.concepts[0].contexts, [{ label: "Hot-day takeoff accident analysis", search: "density altitude accident analysis" }]);
+  assert.strictEqual(r.body.regulated, true);
+  assert.strictEqual(r.body.basis, "title, description and chapters");
+  assert.match(prompt, /1\. 4:10 Density altitude/);
+  assert.match(prompt, /Mock checkride\.\n0:00 Intro/);
+  assert.strictEqual((await call(makeDeps({ plan: "free" }), { task: "video-concepts", input: { title: "x y" } })).status, 403);
+});
+
 test("account: download everything, or delete only with DELETE typed; both need a sign-in", async () => {
   const deleted = [];
   const deps = makeDeps({ plan: "free" });
@@ -525,7 +550,7 @@ test("the one-file dashboard version is up to date with supabase/functions/ai", 
   const dupes = names.filter((n, i) => names.indexOf(n) !== i);
   assert.deepStrictEqual(dupes, [], "top-level names repeat in the one-file version");
   // Imports between the files disappear when they're merged, so they can't rename anything.
-  for (const f of ["handler.ts", "index.ts", "librarian.ts", "study.ts", "pathways.ts"]) {
+  for (const f of ["handler.ts", "index.ts", "librarian.ts", "study.ts", "pathways.ts", "video.ts"]) {
     const src = fs.readFileSync(new URL(`../supabase/functions/ai/${f}`, import.meta.url), "utf8");
     assert.doesNotMatch(src, /^import [^\n]*\bas\b[^\n]*from "\.\//m, `${f}: no "as" in local imports`);
   }

@@ -19,6 +19,9 @@ const YT = {
   watchFlexy: "ytd-watch-flexy",             // carries the current video's ID in its video-id attribute
   watchTitle: "h1.ytd-watch-metadata yt-formatted-string",
   watchDescription: "ytd-watch-metadata #description-inline-expander",
+  chapterItems: "ytd-macro-markers-list-item-renderer",   // the chapters panel, when YouTube has rendered it
+  chapterTitle: ["h4", "#details h4"],
+  chapterTime: ["#time", "#details #time"],
   videoChannelLink: [
     "ytd-watch-metadata #channel-name a", "#owner #channel-name a",
     "ytd-reel-player-overlay-renderer #channel-name a", "yt-reel-channel-bar-view-model a"
@@ -103,7 +106,7 @@ async function readVideoInfo(id) {
       info.title ||= pageTitle;
       info.channel ||= squash(link?.textContent);
       info.channelKey ||= hrefChannel(link);
-      if (isWatch) info.description = $(YT.watchDescription)?.innerText?.trim() || "";
+      if (isWatch) { const d = $(YT.watchDescription); info.description = (d?.innerText || d?.textContent || "").trim(); }
       break;
     }
     await sleep(200);

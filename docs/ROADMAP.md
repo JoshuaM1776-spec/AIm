@@ -357,6 +357,8 @@ The Data API allows about **100 searches a day for the whole app** (10,000 quota
   - reading the transcript from the page is a grey area under YouTube's terms.
 - **Decision:** the legal review is a **prelaunch dependency** for anything that retrieves, stores or processes transcripts. Qualified counsel reviews the specific implementation; a review isn't a guarantee of permission.
 - **Until then,** F2 and TeachBack work from metadata, chapters, the student's own notes and uploads, and other authorized material.
+- **"In this video" (built in 0.27.0, stage 1):** for a learning Target on Plus, the concepts a video covers, worked out from its title, description and chapters only, and labelled that way; chapter jumps; "See it in another context" (two searches per concept, run in the student's own tab); and "Test me on this video" (TeachBack with the concepts as notes) offered when the video ends, never during it. Regulated subjects name their authoritative references (for a private pilot checkride: the FAA Airman Certification Standards and the Pilot's Handbook of Aeronautical Knowledge).
+- **Stage 2, waiting on the transcript review:** the same features from the transcript: concepts with exact timestamps, quotes, and test questions about what the video actually said ("At 12:40 the examiner asks about…"). Nothing about transcripts is built until counsel has reviewed the specific implementation.
   - Addendum §4.6 ("summary or transcript" in homeschool lesson review) depends on the same review.
 
 ### 7. AI endpoint growth

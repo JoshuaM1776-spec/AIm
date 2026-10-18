@@ -60,6 +60,10 @@ const deps = {
           topics: [{ title: "Glycolysis", brief: "Glucose is split into pyruvate in the cytoplasm.", searches: ["glycolysis explained"] },
             { title: "Krebs cycle", brief: "Pyruvate's carbon is released as CO2 in the mitochondria.", searches: ["krebs cycle explained"] }] })
       // Pathways (pathways.ts), told apart by their schemas.
+      : props.includes("regulated") ? (srv.videoCalls = (srv.videoCalls || 0) + 1, srv.videoPrompt = req.prompt, { subject: "Biology", regulated: false, references: [],
+          concepts: [{ name: "Glycolysis", summary: "Glucose is split into two pyruvate.", chapter: 1, basis: "listed",
+              contexts: [{ label: "Glycolysis in sprinting muscles", search: "glycolysis during sprinting" }, { label: "Fermentation in bread dough", search: "yeast fermentation bread glycolysis" }] },
+            { name: "ATP yield", summary: "The energy glycolysis makes.", chapter: -1, basis: "likely", contexts: [] }] })
       : props.includes("uses") ? (srv.wherePrompt = req.prompt, { intro: "Algebra is how people find an unknown.",
           uses: [{ field: "Aviation", how: "Pilots plan fuel.", problem: "A plane burns 9 gallons an hour. How long do 45 gallons last?", hint: "Divide.", answer: "5 hours" }] })
       : props.includes("themes") ? { themes: [{ name: "aviation", offer: "You've been exploring aviation. Want to see some of the careers connected to it?",
@@ -245,7 +249,11 @@ const ytResults = q => ytPage(`<ytd-search><div><ytd-section-list-renderer>${[["
    <div id="metadata-line">120K views · 2 years ago</div><div class="metadata-snippet-text">How to replace it step by step</div></ytd-video-renderer>`).join("")}
 </ytd-section-list-renderer></div></ytd-search>`);
 const ytWatch = id => ytPage(`<ytd-watch-flexy video-id="${id}"><ytd-watch-metadata><h1 class="ytd-watch-metadata"><yt-formatted-string>Video ${id}</yt-formatted-string></h1>
-  <div id="owner"><div id="channel-name"><a href="/@chan">Chan</a></div></div></ytd-watch-metadata>
+  <div id="owner"><div id="channel-name"><a href="/@chan">Chan</a></div></div>
+  <div id="description-inline-expander" style="white-space:pre-line">How cells break down glucose.
+0:00 Intro
+2:15 Glucose comes in
+6:40 Pyruvate goes out</div></ytd-watch-metadata>
   <div id="movie_player"><video class="html5-main-video" muted></video></div><div id="secondary"><div id="related">related</div></div></ytd-watch-flexy>`);
 await ctx.route(/^https:\/\/www\.youtube\.com\//, route => {
   const u = new URL(route.request().url());
@@ -336,8 +344,27 @@ await yt.waitForSelector("#wp-study");
 const panel = await yt.textContent("#wp-study");
 step("on the video, the study plan replaces Up next", panel.includes("Study session") && panel.includes("Topic 1 of 2") && panel.includes("Krebs cycle") &&
   !(await yt.$("#wp-upnext")));
-if (process.env.SHOTS) { await yt.setViewportSize({ width: 1100, height: 700 }); await yt.addStyleTag({ content: "ytd-watch-flexy{display:grid;grid-template-columns:1fr 380px;gap:24px;padding:24px} #movie_player{aspect-ratio:16/9;background:#000;border-radius:12px} #secondary{grid-column:2;grid-row:1/4}" });
+// ---------- In this video ----------
+await yt.waitForSelector("#wp-concepts .wp-concept");
+const conceptsText = await yt.textContent("#wp-concepts");
+step("In this video: the concepts, from the title, description and chapters", conceptsText.includes("Glycolysis") && conceptsText.includes("2:15") &&
+  conceptsText.includes("not its audio") && conceptsText.includes("likely") && srv.videoPrompt.includes("1. 2:15 Glucose comes in") && srv.videoPrompt.includes("THE STUDENT'S GOAL:"));
+await yt.click("#wp-concepts .wp-concept >> nth=0");
+step("each concept: another context to see it in, as a YouTube search", (await yt.getAttribute("#wp-concepts .wp-concept-context >> nth=0", "href")).includes("search_query=glycolysis%20during%20sprinting"));
+if (process.env.SHOTS) { await yt.setViewportSize({ width: 1100, height: 760 }); await yt.addStyleTag({ content: "ytd-watch-flexy{display:grid;grid-template-columns:1fr 380px;gap:24px;padding:24px} #movie_player{aspect-ratio:16/9;background:#000;border-radius:12px} #secondary{grid-column:2;grid-row:1/4}" });
   await yt.screenshot({ path: `${process.env.SHOTS}/study-panel.png` }); }
+await yt.evaluate(() => document.querySelector("video").dispatchEvent(new Event("ended")));
+await yt.waitForSelector(".wp-notice:has-text('Test yourself on this video?')");
+step("when the video ends (never during it), Aim offers a test on it", (await yt.textContent(".wp-notice")).includes("glycolysis"));
+const [vtest] = await Promise.all([ctx.waitForEvent("page"), yt.click(".wp-notice button:text-is('Test me')")]);
+await vtest.waitForSelector("#tbTopic");
+step("Test me on this video: TeachBack on the video, its concepts as the notes", (await vtest.inputValue("#tbTopic")) === "Video alt1aaa" &&
+  (await vtest.inputValue("#tbNotes")).includes("- Glycolysis: Glucose is split") && vtest.url().includes("video=alt1aaa") && vtest.url().includes("study="));
+await vtest.close();
+const callsBeforeReload = srv.videoCalls;
+await yt.reload();
+await yt.waitForSelector("#wp-concepts .wp-concept");
+step("a video is looked at once (kept in this browser)", srv.videoCalls === callsBeforeReload);
 srv.director.push({ evaluation: ev("sound", "pyruvate in the cytoplasm"), next: { action: "finish", objective: 0, student: "milo", kind: "question", question: "" } });
 const [check] = await Promise.all([ctx.waitForEvent("page"), yt.click("#wp-study button:text-is('Check yourself')")]);
 await check.waitForSelector("#tbTopic");

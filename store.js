@@ -817,6 +817,24 @@ async function explorationUpdate({ id, step, content, done, saved, reflection, e
   return { result: "applied", exploration: x };
 }
 
+// ---------- "In this video" ----------
+// The concepts Aim found for a video (from its title, description and chapters), kept so a video is
+// only looked at once. The 40 most recent videos.
+async function getVideoConcepts(id) {
+  const { videoConcepts = {} } = await chrome.storage.local.get("videoConcepts");
+  return { data: videoConcepts[id]?.data || null };
+}
+
+async function saveVideoConcepts(id, data) {
+  id = clip(id, 20);
+  if (!id || !data || typeof data !== "object") return { result: "error", message: "Nothing to save." };
+  const { videoConcepts = {} } = await chrome.storage.local.get("videoConcepts");
+  videoConcepts[id] = { at: Date.now(), data };
+  const keep = Object.entries(videoConcepts).sort((a, b) => b[1].at - a[1].at).slice(0, 40);
+  await chrome.storage.local.set({ videoConcepts: Object.fromEntries(keep) });
+  return { result: "applied" };
+}
+
 // ---------- Aim Homeschool preview ----------
 // A sample day's plan, so the student's Today screen can be tried on real YouTube before the
 // parent website exists. A real plan comes from the parent's approved week and names specific

@@ -58,6 +58,7 @@ const pageObserver = new MutationObserver(() => {
     if (hiddenKeys().size) applyHidden();
     captureResults();
     renderUpNext();
+    renderConcepts();
   }, 400);
 });
 
@@ -79,6 +80,7 @@ function route() {
   if (location.pathname === "/results") onSearch(searchQuery());
   else { $("#wp-results-bar")?.remove(); setSearchPending(null); }
   renderUpNext();
+  renderConcepts();
 }
 
 // yt-navigate-finish fires for every in-app navigation, back and forward included.
