@@ -5,29 +5,19 @@
 <meta name="color-scheme" content="light dark">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Welcome to Aim</title>
+<link rel="stylesheet" href="aim.css">
 <style>
-  /* Aim's own page: YouTube's palette, following Chrome's light/dark mode. Aim red appears only in the mark. */
-  :root { --bg:#f9f9f9; --card:#fff; --text:#0f0f0f; --muted:#606060; --divider:rgba(0,0,0,.1); --tonal:rgba(0,0,0,.05); --tonal-hover:rgba(0,0,0,.1);
-          --link:#065fd4; --accent:#e5131f; --mock:#f2f2f2; --mock-line:rgba(0,0,0,.08); --shadow:0 4px 32px rgba(0,0,0,.08); --toggle-track:rgba(0,0,0,.25); }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg:#0f0f0f; --card:#1f1f1f; --text:#f1f1f1; --muted:#aaa; --divider:rgba(255,255,255,.1); --tonal:rgba(255,255,255,.1); --tonal-hover:rgba(255,255,255,.2);
-            --link:#3ea6ff; --mock:#2a2a2a; --mock-line:rgba(255,255,255,.08); --shadow:0 4px 32px rgba(0,0,0,.5); --toggle-track:rgba(255,255,255,.3); }
-  }
-  * { box-sizing: border-box; }
+  /* The welcome tour: one centered card on Aim's page background (tokens and controls: aim.css). */
   html, body { height: 100%; }
-  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/22px Roboto, Arial, sans-serif; -webkit-font-smoothing: antialiased;
-         display: flex; align-items: flex-start; justify-content: center; padding: max(24px, 8vh) 16px 24px; }
-  .card { width: min(640px, 100%); background: var(--card); border-radius: 24px; box-shadow: var(--shadow); padding: 32px 40px 28px; position: relative; }
-  @media (max-width: 560px) { .card { padding: 24px 20px 20px; } }
+  body { font-size: 15px; line-height: 22px; display: flex; align-items: flex-start; justify-content: center; padding: max(24px, 8vh) 16px 24px; }
+  main.card { width: min(640px, 100%); padding: 32px 40px 28px; position: relative; }
+  @media (max-width: 560px) { main.card { padding: 24px 20px 20px; } }
   .top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; min-height: 24px; }
-  .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; }
-  .brand img { width: 24px; height: 24px; }
-  .for-dark { display: none; }
-  @media (prefers-color-scheme: dark) { .for-dark { display: inline; } .for-light { display: none; } }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; }
+  .brand img { width: 28px; height: 28px; }
   .dots { display: flex; gap: 6px; }
   .dots i { width: 8px; height: 8px; border-radius: 4px; background: var(--tonal-hover); transition: width .2s, background .2s; }
   .dots i.on { width: 20px; background: var(--text); }
-  h1 { font-size: 28px; line-height: 36px; font-weight: 700; margin: 0 0 8px; }
   .lede { color: var(--muted); margin: 0 0 20px; }
   .hero { text-align: center; padding: 8px 0 4px; }
   .hero img.mark { width: 72px; height: 72px; margin-bottom: 16px; }
@@ -39,35 +29,24 @@
   .how b { display: block; font-weight: 500; font-size: 16px; }
   .how p { margin: 2px 0 8px; color: var(--muted); font-size: 14px; line-height: 20px; }
   /* Small drawings of what you'll see on YouTube. */
-  .mock { grid-column: 2; background: var(--mock); border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 18px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .mock .field { flex: 1; min-width: 180px; height: 34px; border-radius: 17px; background: var(--card); border: 1px solid var(--mock-line); display: flex; align-items: center; padding: 0 6px 0 14px; color: var(--text); }
+  .mock { grid-column: 2; background: var(--tonal); border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 18px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .mock .field { flex: 1; min-width: 180px; height: 34px; border-radius: 17px; background: var(--surface); border: 1px solid var(--card-border); display: flex; align-items: center; padding: 0 6px 0 14px; color: var(--text); }
   .mock .field > span:first-child { flex: 1; }
-  .mock .go { width: 24px; height: 24px; border-radius: 50%; background: var(--text); color: var(--card); display: grid; place-items: center; font-size: 13px; }
-  .mock .bar { flex: 1; height: 34px; border-radius: 17px; border: 1px solid var(--mock-line); background: var(--card); display: flex; align-items: center; gap: 8px; padding: 0 12px; }
+  .mock .go { width: 24px; height: 24px; border-radius: 50%; background: var(--text); color: var(--surface); display: grid; place-items: center; font-size: 13px; }
+  .mock .bar { flex: 1; height: 34px; border-radius: 17px; border: 1px solid var(--card-border); background: var(--surface); display: flex; align-items: center; gap: 8px; padding: 0 12px; }
   .mock .muted { color: var(--muted); } .mock .lnk { color: var(--link); font-weight: 500; }
-  .mock .pill { height: 28px; padding: 0 12px; border-radius: 8px; background: var(--card); border: 1px solid var(--mock-line); display: inline-flex; align-items: center; }
+  .mock .pill { height: 28px; padding: 0 12px; border-radius: 8px; background: var(--surface); border: 1px solid var(--card-border); display: inline-flex; align-items: center; }
   .mock svg { flex: none; }
   .grow { flex: 1; }
   /* Choices */
   .opt-label { font-weight: 500; margin: 4px 0 8px; }
-  .seg { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
-  .seg button { height: 36px; padding: 0 14px; border-radius: 8px; border: 0; background: var(--tonal); color: var(--text); font: 500 14px Roboto, Arial, sans-serif; cursor: pointer; }
-  .seg button:hover { background: var(--tonal-hover); }
-  .seg button[aria-pressed="true"] { background: var(--text); color: var(--card); }
+  .seg { margin-bottom: 4px; }
+  .setting { border-top: 1px solid var(--divider); }
   .hint { color: var(--muted); font-size: 13px; line-height: 18px; margin: 4px 0 16px; }
-  .row { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 0; border-top: 1px solid var(--divider); }
-  .row b { display: block; font-weight: 400; } .row span { color: var(--muted); font-size: 13px; line-height: 18px; }
-  .switch { position: relative; width: 36px; height: 20px; flex: none; }
-  .switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
-  .switch i { position: absolute; left: 0; right: 0; top: 3px; height: 14px; border-radius: 7px; background: var(--toggle-track); pointer-events: none; transition: background .15s; }
-  .switch i::after { content: ""; position: absolute; top: -3px; left: 0; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.4); transition: transform .15s, background .15s; }
-  .switch input:checked + i { background: color-mix(in srgb, var(--link) 50%, transparent); }
-  .switch input:checked + i::after { transform: translateX(16px); background: var(--link); }
-  .switch input:focus-visible + i { outline: 2px solid var(--text); outline-offset: 3px; }
-  .callout { background: var(--mock); border-radius: 12px; padding: 14px 16px; font-size: 14px; line-height: 20px; margin: 4px 0 8px; }
+  .callout { background: var(--tonal); border-radius: 12px; padding: 14px 16px; font-size: 14px; line-height: 20px; margin: 4px 0 8px; }
   .callout q { font-style: italic; }
-  .pin { display: flex; align-items: center; gap: 12px; background: var(--mock); border-radius: 12px; padding: 14px 16px; margin: 8px 0 4px; font-size: 14px; line-height: 20px; }
-  .pin .tb { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 18px; background: var(--card); border: 1px solid var(--mock-line); flex: none; }
+  .pin { display: flex; align-items: center; gap: 12px; background: var(--tonal); border-radius: 12px; padding: 14px 16px; margin: 8px 0 4px; font-size: 14px; line-height: 20px; }
+  .pin .tb { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 18px; background: var(--surface); border: 1px solid var(--card-border); flex: none; }
   .pin .tb img { width: 18px; height: 18px; }
   .pin .tb .muted { color: var(--muted); }
   .done-list { margin: 0 0 8px; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
@@ -76,11 +55,7 @@
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
   .nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 24px; }
   .nav .right { display: flex; gap: 8px; margin-left: auto; }
-  .btn { height: 40px; padding: 0 20px; border-radius: 20px; border: 0; background: var(--text); color: var(--card); font: 500 14px Roboto, Arial, sans-serif; cursor: pointer; }
-  .btn:hover { opacity: .85; }
-  .btn.tonal { background: var(--tonal); color: var(--text); } .btn.tonal:hover { background: var(--tonal-hover); opacity: 1; }
-  .btn.text { background: none; color: var(--muted); padding: 0 12px; } .btn.text:hover { background: var(--tonal); color: var(--text); opacity: 1; }
-  .btn:focus-visible, .seg button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+  .nav .btn.text { color: var(--muted); } .nav .btn.text:hover { color: var(--text); }
   .screen { animation: in .25s ease; }
   @keyframes in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
   @media (prefers-reduced-motion: reduce) { .screen { animation: none; } .dots i { transition: none; } }
@@ -94,8 +69,8 @@
   </div>
   <div id="screen" aria-live="polite"></div>
   <div class="nav">
-    <button class="btn text" id="back" type="button">Back</button>
-    <div class="right"><button class="btn text" id="skip" type="button">Skip</button><button class="btn" id="next" type="button">Next</button></div>
+    <button class="btn text lg" id="back" type="button">Back</button>
+    <div class="right"><button class="btn text lg" id="skip" type="button">Skip</button><button class="btn lg" id="next" type="button">Next</button></div>
   </div>
 </main>
 <script src="welcome.js"></script>

@@ -396,7 +396,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   const allText = await all.textContent("main");
   step("View all Targets lists set-aside and completed Targets", allText.includes("Study for my biology exam") && allText.includes("Start again") &&
     allText.includes("learn to sharpen a chisel"), allText.slice(0, 200));
-  await all.click(".row-item:has-text(\"Fix my truck's AC\") button:text-is('Resume')");
+  await all.click(".item:has-text(\"Fix my truck's AC\") button:text-is('Resume')");
   await all.waitForURL(/results\?search_query=truck/);
   step("resuming a Target without a video goes back to its last search", (await store()).purpose?.text === "Fix my truck's AC");
   await all.close();

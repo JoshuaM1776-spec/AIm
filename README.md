@@ -38,6 +38,7 @@ Chrome extension, Manifest V3, no build step.
 | `content/content.css` | Styles for all of the above |
 | `popup.html/js` | Toolbar popup |
 | `targets.html/js` | All Targets: current, set aside (Resume, Remove) and completed (Start again) |
+| `aim.css` | The shared look for all of Aim's own pages (see Design) |
 | `options.html/js` | Settings page |
 | `welcome.html/js` | The welcome tour: opens once on install (what Aim is, how it works, a few choices, pin it), and from Settings → "Show the welcome tour again" |
 | `config.js`, `plus.js` | Aim Plus in the service worker: where the server is (empty = Free only), sign-in with an emailed code, calling Aim's AI endpoint. Only Aim's own pages can use it, never YouTube tabs. |
@@ -80,7 +81,7 @@ YouTube helps you find something to watch. Aim helps you find what you need. Aim
 - **Shapes:** 16px-radius dialogs and cards with a centered brand line and a close button when dismissible, full-width buttons for the main decision, segmented choices (Take a Break) and a green check for Target complete.
 - **Placement:** the Aim button sits beside YouTube's search box on wide windows (1200px+) and beside the Create button otherwise.
 - **Behavior:** Escape or a click outside closes menus and dialogs, except prompts that are holding a video for your decision.
-- **Aim's own pages** use the same palette and accent, and follow Chrome's light/dark mode.
+- **Aim's own pages** (Settings, Targets, TeachBack, study sessions, Pathways, the welcome tour, sign-in) all use `aim.css`: one set of colors for light and dark, the same header (mark, "Aim", the page's name), cards on a soft gray page, and the same buttons, fields, switches and pills. A page adds only what's truly its own in a small `<style>`. Main buttons are neutral; Aim red is only for getting back to your Target; blue is a small learning accent (Homeschool, Pathways), never a page's main button. The popup keeps its compact layout but uses the same colors.
 - **Never** use YouTube's logo, icons, artwork or code. Aim's name and mark appear on every card, so nothing reads as YouTube's own feature.
 
 ## Rebranding

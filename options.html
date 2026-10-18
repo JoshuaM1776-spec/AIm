@@ -4,88 +4,30 @@
 <meta charset="utf-8">
 <meta name="color-scheme" content="light dark">
 <title>Aim — Settings</title>
+<link rel="stylesheet" href="aim.css">
 <style>
-  /* Same palette and shapes as YouTube's own settings pages, following Chrome's light/dark mode. */
-  :root { --bg:#fff; --text:#0f0f0f; --muted:#606060; --divider:rgba(0,0,0,.1); --tonal:rgba(0,0,0,.05); --tonal-hover:rgba(0,0,0,.1);
-          --field:#fff; --field-border:#ccc; --focus:#1c62b9; --link:#065fd4; --toggle-off:#717171; --toggle-track:rgba(0,0,0,.25); }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg:#0f0f0f; --text:#f1f1f1; --muted:#aaa; --divider:rgba(255,255,255,.1); --tonal:rgba(255,255,255,.1); --tonal-hover:rgba(255,255,255,.2);
-            --field:#121212; --field-border:#303030; --focus:#1c62b9; --link:#3ea6ff; --toggle-off:#aaa; --toggle-track:rgba(255,255,255,.3); }
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/20px Roboto, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
-  main { max-width: 720px; margin: 0 auto; padding: 32px 24px 80px; }
-  header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
-  header h1 { font-size: 24px; line-height: 32px; font-weight: 700; margin: 0; }
-  .logo { width: 32px; height: 32px; }
-  .for-dark { display: none; }
-  @media (prefers-color-scheme: dark) { .for-dark { display: block; } .for-light { display: none; } }
-  .lede { color: var(--muted); margin: 0 0 24px; }
-  section { padding: 24px 0; border-top: 1px solid var(--divider); }
-  h2 { font-size: 16px; line-height: 22px; font-weight: 500; margin: 0 0 4px; }
-  .note { color: var(--muted); margin: 0 0 12px; }
-  .row { display: flex; justify-content: space-between; align-items: center; gap: 24px; padding: 12px 0; }
-  .row + .row { border-top: 1px solid var(--divider); }
-  .row .what { min-width: 0; }
-  .row .what b { display: block; font-weight: 400; }
-  .row .what span { color: var(--muted); font-size: 12px; line-height: 18px; }
-  select, input[type=text], input[type=password], input[type=number] {
-    font: inherit; color: var(--text); background: var(--field); border: 1px solid var(--field-border); border-radius: 8px; padding: 8px 12px;
-  }
-  select { padding-right: 28px; cursor: pointer; }
-  select:focus, input:focus { outline: none; border-color: var(--focus); box-shadow: inset 0 0 0 1px var(--focus); }
-  input[type=number] { width: 88px; }
-  /* YouTube-style switch */
-  .switch { position: relative; width: 36px; height: 20px; flex: none; }
-  .switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
-  .switch i { position: absolute; left: 0; right: 0; top: 3px; height: 14px; border-radius: 7px; background: var(--toggle-track); transition: background .15s; pointer-events: none; }
-  .switch i::after { content: ""; position: absolute; top: -3px; left: 0; width: 20px; height: 20px; border-radius: 50%; background: #fff;
-                     box-shadow: 0 1px 3px rgba(0,0,0,.4); transition: transform .15s, background .15s; }
-  .switch input:checked + i { background: color-mix(in srgb, var(--link) 50%, transparent); }
-  .switch input:checked + i::after { transform: translateX(16px); background: var(--link); }
-  .switch input:focus-visible + i { outline: 2px solid var(--text); outline-offset: 3px; }
-  .btn { height: 36px; padding: 0 16px; border-radius: 18px; border: 0; background: var(--text); color: var(--bg); font: 500 14px Roboto, Arial, sans-serif; cursor: pointer; }
-  .btn:hover { opacity: .85; }
-  .stack { display: grid; gap: 12px; }
-  .empty { color: var(--muted); }
-  details { border-top: 1px solid var(--divider); }
-  summary { cursor: pointer; padding: 20px 0; font-size: 16px; font-weight: 500; list-style: none; display: flex; align-items: center; gap: 8px; }
-  summary::-webkit-details-marker { display: none; }
-  summary::before { content: "›"; display: inline-block; width: 12px; transition: transform .15s; color: var(--muted); }
-  details[open] summary::before { transform: rotate(90deg); }
-  details section { padding-top: 16px; }
-  a { color: var(--link); text-decoration: none; } a:hover { text-decoration: underline; }
-  .form { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
-  .form input { flex: 1 1 220px; min-width: 0; }
-  .form input.code { flex: 0 1 160px; letter-spacing: 2px; }
-  .btn.tonal { background: var(--tonal); color: var(--text); }
-  .btn.tonal:hover { background: var(--tonal-hover); opacity: 1; }
-  .btn:disabled { opacity: .5; cursor: default; }
-  .btn.text { background: none; color: var(--text); padding: 0 12px; }
-  .btn.text:hover { background: var(--tonal); }
-  .btn.danger { color: #cc0000; }
-  @media (prefers-color-scheme: dark) { .btn.danger { color: #ff4e45; } }
-  .confirm { margin-top: 12px; }
-  .confirm[hidden] { display: none; }
-  .msg { color: var(--muted); margin: 12px 0 0; min-height: 0; }
-  .msg:empty { display: none; }
-  #toast { position: fixed; left: 12px; bottom: 12px; background: var(--text); color: var(--bg); border-radius: 8px; padding: 14px 16px; max-width: 90vw; display: none; box-shadow: 0 4px 32px rgba(0,0,0,.1); }
+  /* Settings: Advanced holds several groups, each under a small heading. */
+  details .sub { padding-top: 16px; margin-top: 8px; border-top: 1px solid var(--divider); }
+  details .sub:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
+  details .sub h2 { font-size: 15px; font-weight: 500; }
+  .card > h2 { margin-bottom: 8px; }
 </style>
 </head>
 <body>
-<main>
-  <header>
-    <img class="logo for-light" src="icons/48.png" alt=""><img class="logo for-dark" src="icons/light/48.png" alt="">
-    <h1 data-brand>Aim</h1>
+<main class="page">
+  <header class="page-head">
+    <img class="for-light" src="icons/48.png" alt=""><img class="for-dark" src="icons/light/48.png" alt="">
+    <span class="brand" data-brand>Aim</span><span class="crumb">Settings</span>
   </header>
+  <h1>Settings</h1>
   <p class="lede">Set a Target. Stay on Target. Take a break when you want one. <a href="#" id="welcomeTour">Show the welcome tour again</a></p>
 
-  <section>
-    <div class="row">
+  <section class="card">
+    <div class="setting">
       <div class="what"><b>Replace the homepage feed</b><span>Show "What brings you here?" instead. The feed comes back during breaks.</span></div>
       <label class="switch"><input type="checkbox" id="homeCard" aria-label="Replace the homepage feed"><i></i></label>
     </div>
-    <div class="row">
+    <div class="setting">
       <div class="what"><b>Daily leisure time</b><span id="leisureNote">Breaks share this allowance. When it's used up, breaks are done for the day.</span></div>
       <select id="leisureMin" aria-label="Daily leisure time">
         <option value="15">15 minutes</option><option value="30">30 minutes</option><option value="45">45 minutes</option>
@@ -96,75 +38,75 @@
   </section>
 
   <!-- Shown only when config.js names Aim's server (see plus.js). -->
-  <section id="plus" hidden>
+  <section class="card" id="plus" hidden>
     <h2>Aim Plus</h2>
     <div id="plusBody"></div>
     <p class="msg" id="plusMsg" role="status"></p>
   </section>
 
-  <details id="advanced">
+  <details class="card" id="advanced">
     <summary>Advanced</summary>
 
-    <section>
+    <section class="sub">
       <h2>Time</h2>
-      <div class="row">
+      <div class="setting">
         <div class="what"><b>Finish the current video</b><span>When time runs out mid-video, let it finish for up to this long before Aim pauses it.</span></div>
         <select id="graceMin" aria-label="Grace period">
           <option value="0">Stop right away</option><option value="5">Up to 5 min</option><option value="10">Up to 10 min</option>
           <option value="15">Up to 15 min</option><option value="30">Up to 30 min</option>
         </select>
       </div>
-      <div class="row">
+      <div class="setting">
         <div class="what"><b>Daily YouTube limit</b><span>All YouTube time, Targets included. A hard stop until midnight.</span></div>
         <select id="totalMin" aria-label="Daily YouTube limit">
           <option value="0">Off</option><option value="60">1 hour</option><option value="90">1.5 hours</option><option value="120">2 hours</option>
           <option value="180">3 hours</option><option value="240">4 hours</option><option value="360">6 hours</option>
         </select>
       </div>
-      <div class="row">
+      <div class="setting">
         <div class="what"><b>Time limit for new Targets</b><span>Targets have no time limit unless you set one. You can always change it from Aim's menu.</span></div>
         <select id="purposeLimitMin" aria-label="Time limit for new Targets">
           <option value="0">None</option><option value="15">15 minutes</option><option value="30">30 minutes</option>
           <option value="45">45 minutes</option><option value="60">1 hour</option>
         </select>
       </div>
-      <div class="row"><div class="what"><span id="today"></span></div></div>
+      <div class="setting"><div class="what"><span id="today"></span></div></div>
     </section>
 
-    <section>
+    <section class="sub">
       <h2>Distractions</h2>
       <p class="note">Hidden whenever you're not on a break. A break shows YouTube as usual.</p>
-      <div class="row">
+      <div class="setting">
         <div class="what"><b>Hide Shorts</b><span>Shelves, results and the Shorts link. Opening a Short while you have a Target asks first.</span></div>
         <label class="switch"><input type="checkbox" id="hideShorts" aria-label="Hide Shorts"><i></i></label>
       </div>
-      <div class="row">
+      <div class="setting">
         <div class="what"><b>Hide recommendations</b><span>The sidebar next to a video and the suggestions at its end.</span></div>
         <label class="switch"><input type="checkbox" id="hideRecs" aria-label="Hide recommendations"><i></i></label>
       </div>
-      <div class="row">
+      <div class="setting">
         <div class="what"><b>Hide subscriptions and trending feeds</b><span>Replaced by a short note, like the homepage.</span></div>
         <label class="switch"><input type="checkbox" id="hideFeeds" aria-label="Hide feeds"><i></i></label>
       </div>
-      <div class="row">
+      <div class="setting">
         <div class="what"><b>Turn autoplay off</b><span>Aim switches YouTube's autoplay off, and back on during breaks if it was on.</span></div>
         <label class="switch"><input type="checkbox" id="noAutoplay" aria-label="Turn autoplay off"><i></i></label>
       </div>
     </section>
 
-    <section>
+    <section class="sub">
       <h2>Aim Homeschool preview</h2>
-      <div class="row">
+      <div class="setting">
         <div class="what"><b>Preview a student's Today screen</b><span>Shows a sample day's plan on YouTube's homepage, as a Homeschool student would see it. Nothing is sent anywhere.</span></div>
         <label class="switch"><input type="checkbox" id="homeschoolPreview" aria-label="Preview a student's Today screen"><i></i></label>
       </div>
-      <div class="row" id="homeschoolResetRow" hidden>
+      <div class="setting" id="homeschoolResetRow" hidden>
         <div class="what"><span>Start the sample day over: every item back to not done.</span></div>
         <button class="btn tonal" id="homeschoolReset" type="button">Reset sample plan</button>
       </div>
     </section>
 
-    <section>
+    <section class="sub">
       <h2>Hidden and warned channels</h2>
       <p class="note">Add a channel from the extension's menu on YouTube while watching it. Hide removes its videos from your homepage, search results and sidebar. Warn asks before you watch it without a Target.</p>
       <div id="avoid"></div>

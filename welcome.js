@@ -82,7 +82,7 @@ function choices() {
     const input = node("input", { type: "checkbox", checked: settings[key] !== false, ariaLabel: title });
     input.id = `opt-${key}`;
     input.onchange = () => setSetting(key, input.checked);
-    return node("div", { className: "row" }, node("div", {}, node("b", { textContent: title }), node("span", { textContent: sub })),
+    return node("div", { className: "setting" }, node("div", { className: "what" }, node("b", { textContent: title }), node("span", { textContent: sub })),
       node("label", { className: "switch" }, input, node("i")));
   };
   return node("div", {},

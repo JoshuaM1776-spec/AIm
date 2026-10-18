@@ -50,7 +50,7 @@ async function render() {
   }
   for (const [key, c] of entries) {
     const row = document.createElement("div");
-    row.className = "row";
+    row.className = "setting";
     const name = document.createElement("div");
     name.className = "what";
     name.textContent = c.name || key;

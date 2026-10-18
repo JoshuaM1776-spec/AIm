@@ -20,7 +20,8 @@ function node(tag, props = {}, ...kids) {
   return n;
 }
 // Like replaceChildren, but accepts lists and skips empty parts.
-const render = (...kids) => screen.replaceChildren(...kids.flat().filter(k => k != null && k !== false));
+// The conversation sits in one card; results are their own stack of cards (see results()).
+const render = (...kids) => { screen.classList.add("card"); screen.replaceChildren(...kids.flat().filter(k => k != null && k !== false)); };
 const btn = (label, cls, onclick) => node("button", { className: `btn ${cls}`.trim(), type: "button", textContent: label, onclick });
 
 function toast(msg) {
@@ -184,6 +185,8 @@ function reportToStudy(s) {
     objectives: s.result.objectives.map(o => ({ text: o.text, status: o.status, search: o.review?.search || "" })) } }).catch(() => {});
 }
 
+const renderPlain = (...kids) => { screen.classList.remove("card"); screen.replaceChildren(...kids.flat().filter(k => k != null && k !== false)); };
+
 function results(s) {
   reportToStudy(s);
   const R = s.result;
@@ -197,23 +200,26 @@ function results(s) {
     o.review?.explanation ? node("p", { className: "small", textContent: o.review.explanation }) : null,
     o.review ? node("a", { href: ytSearch(o.review.search), target: "_blank", rel: "noopener", textContent: "Review this on YouTube" }) : null));
 
-  render(
-    node("p", { className: "muted small", textContent: s.topic }),
-    node("h1", { textContent: "What you showed" }),
-    R.endedEarly ? node("p", {}, node("span", { className: "pill", textContent: "Ended early" })) : null,
-    node("p", { textContent: R.summary || "Here's what your answers showed for each part." }),
-    R.strengths.length ? [node("h2", { textContent: "Strengths" }), node("ul", {}, R.strengths.map(x => node("li", { textContent: x })))] : null,
-    node("h2", { textContent: "Each part" }),
+  // Three parts, each a card: what you showed overall, each part, and what's next.
+  renderPlain(
+    node("div", { className: "card" },
+      node("p", { className: "muted small", textContent: s.topic }),
+      node("h1", { textContent: "What you showed" }),
+      R.endedEarly ? node("p", {}, node("span", { className: "pill", textContent: "Ended early" })) : null,
+      node("p", { textContent: R.summary || "Here's what your answers showed for each part." }),
+      R.strengths.length ? [node("h2", { textContent: "Strengths" }), node("ul", {}, R.strengths.map(x => node("li", { textContent: x })))] : null),
+    node("h2", { textContent: "Each part", style: "margin:24px 0 12px" }),
     cards,
-    R.nextStep ? node("p", { className: "note", textContent: R.nextStep }) : null,
-    PW.interest({ topic: s.topic, source: "teachback" }),
-    PW.where(s.topic, "", stage),
-    node("div", { className: "row" },
-      weak.length ? btn("Review weak areas", "", () => window.open(ytSearch(weak[0].review.search), "_blank", "noopener")) : null,
-      btn("Try again", weak.length ? "tonal" : "", () => { session = null; params.delete("id"); history.replaceState(null, "", location.pathname); intro(s.topic); }),
-      btn("Continue learning", "text", () => { location.href = "https://www.youtube.com/"; })),
-    node("p", { className: "muted small", style: "margin-top:20px",
-      textContent: "These results are estimates from this conversation, based only on what you wrote. They aren't a grade or a certification." }));
+    node("div", { className: "card" },
+      R.nextStep ? node("p", { className: "note", style: "margin-top:0", textContent: R.nextStep }) : null,
+      PW.interest({ topic: s.topic, source: "teachback" }),
+      PW.where(s.topic, "", stage),
+      node("div", { className: "row" },
+        weak.length ? btn("Review weak areas", "", () => window.open(ytSearch(weak[0].review.search), "_blank", "noopener")) : null,
+        btn("Try again", weak.length ? "tonal" : "", () => { session = null; params.delete("id"); history.replaceState(null, "", location.pathname); intro(s.topic); }),
+        btn("Continue learning", "text", () => { location.href = "https://www.youtube.com/"; })),
+      node("p", { className: "muted small", style: "margin:16px 0 0",
+        textContent: "These results are estimates from this conversation, based only on what you wrote. They aren't a grade or a certification." })));
 }
 
 // ---------- start up ----------

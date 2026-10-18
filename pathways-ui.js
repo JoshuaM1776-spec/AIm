@@ -9,23 +9,7 @@ const PW = (() => {
     n.append(...kids.flat().filter(k => k != null && k !== false));
     return n;
   }
-  // Styles for these pieces, in the page's own colors (every page defines --text, --muted, --tonal…).
-  const style = document.createElement("style");
-  style.textContent = `
-    .pw-interest { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:12px 0; }
-    .pw-interest span { color:var(--muted); margin-right:4px; }
-    .pw-interest button { height:32px; padding:0 14px; border-radius:16px; border:1px solid var(--divider); background:none; color:var(--text); font:500 14px Roboto, Arial, sans-serif; cursor:pointer; }
-    .pw-interest button:hover { background:var(--tonal); }
-    .pw-interest button[aria-pressed="true"] { background:var(--text); color:var(--bg); border-color:transparent; }
-    .pw-where-btn { display:inline-flex; align-items:center; gap:6px; background:none; border:0; padding:4px 0; color:var(--link); font:500 14px Roboto, Arial, sans-serif; cursor:pointer; }
-    .pw-where-btn:hover { text-decoration:underline; }
-    .pw-where { border:1px solid var(--divider); border-radius:12px; padding:16px; margin:8px 0 16px; }
-    .pw-where h3 { font-size:16px; margin:0 0 4px; } .pw-where .pw-intro { margin:0 0 12px; }
-    .pw-use { border-top:1px solid var(--divider); padding:12px 0 4px; } .pw-use:first-of-type { border-top:0; }
-    .pw-use b.pw-field { display:block; font-size:15px; } .pw-use .pw-how { color:var(--muted); font-size:13px; }
-    .pw-use .pw-problem { margin:6px 0; } .pw-reveal { background:var(--tonal); border-radius:8px; padding:8px 10px; margin:6px 0; }
-    .pw-use .pw-links { display:flex; gap:16px; } .pw-use .pw-links button { background:none; border:0; padding:0; color:var(--link); font:500 13px Roboto, Arial, sans-serif; cursor:pointer; }`;
-  document.head.append(style);
+  // Styles for these pieces are in aim.css.
 
   // "Want more of this?" Yes / Maybe / Not really.
   function interest({ topic, subject = "", source }) {

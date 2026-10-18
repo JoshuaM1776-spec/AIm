@@ -42,9 +42,9 @@ async function resume(id) {
 }
 
 function row(t, actions, lead) {
-  return node("div", { className: "row-item" },
+  return node("div", { className: "item" },
     node("div", { className: "grow" }, node("b", { textContent: t.text, title: t.text }),
-      node("span", { className: "muted small", textContent: meta(t, lead) })),
+      node("span", { className: "sub", textContent: meta(t, lead) })),
     actions);
 }
 
@@ -53,9 +53,9 @@ async function render() {
   const list = document.getElementById("list");
   if (!d) { list.replaceChildren(node("p", { className: "error", textContent: "Couldn't load your Targets. Reload this page." })); return; }
   const sections = [];
-  if (d.current) sections.push(node("section", {}, node("h2", { textContent: "Current Target" }),
+  if (d.current) sections.push(node("section", { className: "card" }, node("h2", { textContent: "Current Target" }),
     row(d.current, btn("Continue", "", () => resume(d.current.id)), `Last active ${when(d.current.lastActiveAt)}`)));
-  if (d.paused.length) sections.push(node("section", {}, node("h2", { textContent: "Set aside" }),
+  if (d.paused.length) sections.push(node("section", { className: "card" }, node("h2", { textContent: "Set aside" }),
     d.paused.map(t => row(t, [
       btn("Resume", "", () => resume(t.id)),
       btn("Remove", "text", async () => {
@@ -63,7 +63,7 @@ async function render() {
         await send({ type: "paused-drop", id: t.id });
         render();
       })], `Last active ${when(t.lastActiveAt)}`))));
-  if (d.completed.length) sections.push(node("section", {}, node("h2", { textContent: "Completed" }),
+  if (d.completed.length) sections.push(node("section", { className: "card" }, node("h2", { textContent: "Completed" }),
     d.completed.map(t => row(t, btn("Start again", "tonal", () => resume(t.id)), `Finished ${when(t.lastActiveAt)}`))));
   if (!sections.length) sections.push(node("p", { className: "muted",
     textContent: "No Targets yet. Search on YouTube and your search becomes your Target." }));

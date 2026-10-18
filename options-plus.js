@@ -68,11 +68,11 @@ window.addEventListener("focus", () => { if (plus.step === "code" && !plus.busy)
 
 function accountView(st) {
   const planName = st.plan === "plus" ? "Aim Plus" : "Aim Free";
-  const lines = [node("div", { className: "row" },
+  const lines = [node("div", { className: "setting" },
     node("div", { className: "what" }, node("b", { textContent: st.email || "Signed in" }),
       node("span", { textContent: st.offline ? "Couldn't reach Aim's server just now." : `Plan: ${planName}` })))];
   if (st.plan === "plus" && st.usage && st.limits) {
-    lines.push(node("div", { className: "row" }, node("div", { className: "what" }, node("b", { textContent: "AI use, last 24 hours" }),
+    lines.push(node("div", { className: "setting" }, node("div", { className: "what" }, node("b", { textContent: "AI use, last 24 hours" }),
       node("span", { textContent: `${st.usage.calls} of ${st.limits.dayCalls} requests` }))));
   }
   const buttons = node("div", { className: "form" });
@@ -127,7 +127,7 @@ function yourData() {
   confirmBox.append(
     node("p", { className: "note", textContent: "This permanently deletes your Aim account and everything stored with it on Aim's server: your plan, AI use, TeachBack sessions and progress. Aim's data in this browser (Targets, history, settings) stays. It can't be undone." }),
     node("div", { className: "form" }, typed, really, cancel));
-  return node("div", { className: "row", style: "display:block" },
+  return node("div", { className: "setting", style: "display:block" },
     node("div", { className: "what" }, node("b", { textContent: "Your data" }),
       node("span", { textContent: "Download everything Aim has stored for you, or delete your account." })),
     node("div", { className: "form", style: "margin-top:8px" }, download, del),

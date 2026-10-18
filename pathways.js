@@ -50,8 +50,10 @@ async function ask(task, input, where) {
 function gate() {
   const msg = !account?.configured ? "Pathways isn't available in this version of Aim."
     : !account.signedIn ? `Sign in to ${BRAND} Plus in Settings to use Pathways.` : `Pathways is part of ${BRAND} Plus.`;
-  render(node("h1", { textContent: "Pathways" }), threeQuestions(), node("p", { className: "muted", textContent: msg }),
-    account?.configured ? btn("Open Settings", "", () => chrome.runtime.openOptionsPage()) : null);
+  render(node("div", { className: "card" }, node("h1", { textContent: "Pathways" }),
+    node("p", { className: "lede", textContent: "What interests me? → What could I do with it? → What would it take to get there?" }),
+    threeQuestions(), node("p", { className: "muted", textContent: msg }),
+    account?.configured ? btn("Open Settings", "", () => chrome.runtime.openOptionsPage()) : null));
 }
 
 function threeQuestions() {
@@ -87,7 +89,7 @@ function intro() {
         node("li", { textContent: "Nothing about who you are: not your gender, background, family or where you live. No scores." })),
       node("p", { className: "muted small", textContent: "It's kept in this browser. Turning Pathways off deletes all of it." }),
       err,
-      node("div", { className: "row" }, btn("Turn on Pathways", "blue", async () => {
+      node("div", { className: "row" }, btn("Turn on Pathways", "", async () => {
         if (!stage) { err.textContent = "Pick where you are first."; return; }
         const r = await send({ type: "pathways-set", on: true, stage });
         if (r?.result !== "applied") { err.textContent = "Couldn't turn it on. Try again."; return; }
@@ -115,7 +117,7 @@ function home() {
     node("div", { className: "stack" },
       node("section", { className: "card" },
         node("h2", { textContent: "Explore something you're curious about" }),
-        node("div", { className: "ask", style: "margin-top:10px" }, curious, btn(younger() ? "See the work" : "See careers", "blue", explore))),
+        node("div", { className: "ask", style: "margin-top:10px" }, curious, btn(younger() ? "See the work" : "See careers", "", explore))),
 
       node("section", { className: "stack" },
         node("div", { className: "row", style: "justify-content:space-between" },
@@ -191,7 +193,7 @@ async function themeView(theme) {
       node("h3", { textContent: c.title }),
       node("div", { className: "grow", textContent: c.what }),
       node("div", { className: "muted", textContent: c.connection }),
-      node("div", { className: "row", style: "margin-top:6px" }, btn("Explore this path", "blue", async () => {
+      node("div", { className: "row", style: "margin-top:6px" }, btn("Explore this path", "", async () => {
         const s = await send({ type: "exploration-start", career: c.title, theme, kind: r.kind, what: c.what, related: r.careers });
         if (s?.result !== "applied") return toast(s?.message || "Couldn't start that. Try again.");
         go({ path: s.exploration.id });
@@ -276,7 +278,7 @@ async function pathView(id, tab) {
       ov.enjoyIf?.length ? node("div", { className: "card enjoy" }, node("h2", { textContent: "You might enjoy this if…" }),
         node("ul", {}, ov.enjoyIf.map(s => node("li", { textContent: s }))),
         node("p", { className: "muted small", textContent: "Only you can say. Trying it is the best way to find out." }),
-        btn("Try it", "blue", () => go({ path: x.id, tab: "try" }))) : null,
+        btn("Try it", "", () => go({ path: x.id, tab: "try" }))) : null,
       relatedCard(x));
   }
   const show = { overview: overviewTab, see: seeTab, try: tryTab, meet: meetTab, prepare: prepareTab, related: () => body.replaceChildren(relatedCard(x, true)) }[tab];
@@ -312,7 +314,7 @@ async function overviewTab(x, body, err) {
         node("div", { className: "row", style: "justify-content:space-between" }, node("span", { className: "num", textContent: String(i + 1) }),
           x.done[s] ? node("span", { className: "pill ok", textContent: "Done" }) : s === "try" ? node("span", { className: "pill blue", textContent: "Most important" }) : null),
         node("h3", { textContent: CARDS[s][0] }), node("p", { textContent: CARDS[s][1] }),
-        btn(CARDS[s][2], s === "try" ? "blue" : "outline", () => go({ path: x.id, tab: s })))))),
+        btn(CARDS[s][2], s === "try" ? "" : "outline", () => go({ path: x.id, tab: s })))))),
     see);
   const c = await stepContent(x, "see", null);
   if (c?.searches?.length) see.replaceChildren(node("div", { className: "card" },
@@ -355,7 +357,7 @@ async function tryTab(x, body, err) {
       node("table", { className: "routes" }, c.rubric.map(r => node("tr", {}, node("td", {}, node("b", { textContent: r.criterion })), node("td", { textContent: r.good }))))] : null,
     c.skills.length ? node("p", { className: "muted small", style: "margin-top:12px", textContent: `Skills it uses: ${c.skills.join(", ")}` }) : null,
     node("div", { className: "row", style: "margin-top:12px" },
-      x.done.try ? node("span", { className: "pill ok", textContent: "Done" }) : btn("I did it", "blue", () => reflect(x, "try")),
+      x.done.try ? node("span", { className: "pill ok", textContent: "Done" }) : btn("I did it", "", () => reflect(x, "try")),
       node("span", { className: "muted small", textContent: "Afterwards, three quick questions about how it went." }))));
 }
 
@@ -410,7 +412,7 @@ function reflect(x, why) {
       node("label", { textContent: "Would you like to explore this further?" }), seg,
       node("p", { className: "muted small", style: "margin-top:8px", textContent: "Finding out something isn't for you is a success, not a failure." }),
       err,
-      node("div", { className: "row", style: "margin-top:12px" }, btn("Save", "blue", async () => {
+      node("div", { className: "row", style: "margin-top:12px" }, btn("Save", "", async () => {
         if (!further) { err.textContent = "Pick Yes, Maybe or Not for me."; return; }
         if (why === "try") await markDone(x, "try");
         const r = await send({ type: "exploration-update", id: x.id, reflection: { enjoyed: enjoyed.value, harder: harder.value, further }, end: further === "no" || why === "stop" });

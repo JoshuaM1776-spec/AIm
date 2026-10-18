@@ -53,8 +53,8 @@ async function render() {
   const s = await send({ type: "status" });
   const st = s?.purpose?.study;
   if (!st) {
-    screen.replaceChildren(node("h1", { textContent: "No study session" }),
-      node("p", { className: "muted", textContent: `Study sessions start from a learning Target's results on YouTube, with ${BRAND} Plus.` }));
+    screen.replaceChildren(node("div", { className: "card" }, node("h1", { textContent: "No study session" }),
+      node("p", { className: "muted", textContent: `Study sessions start from a learning Target's results on YouTube, with ${BRAND} Plus.` })));
     return;
   }
   const checked = st.topics.filter(t => t.check).length;
