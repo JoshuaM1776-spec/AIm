@@ -85,7 +85,7 @@ export function mark({ small = false, star: at, dest = "star" } = {}) {
   const summit = [BL, ...up, APEX];
   const foot = [...down, BR];
   // The trail: from the road's exit toward the star, thinning out.
-  const sc = at || (small ? [90, -116] : [94, -122]), sr = small ? 15 : 12;
+  const sc = at || (small ? [94, -114] : [96, -122]), sr = small ? 22 : 15;
   const exit = [(up.at(-1)[0] + down.at(-1)[0]) / 2, (up.at(-1)[1] + down.at(-1)[1]) / 2];
   const trailEnd = [sc[0] - (sc[0] - exit[0]) * 0.22, sc[1] - (sc[1] - exit[1]) * 0.22];
   const mid = [exit[0] + (trailEnd[0] - exit[0]) * 0.42, exit[1] + (trailEnd[1] - exit[1]) * 0.58];
