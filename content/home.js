@@ -102,7 +102,11 @@ function lastActive(ts) {
 
 function targetMeta(t) {
   const mins = Math.round((t.usedSec || 0) / 60);
-  return [lastActive(t.lastActiveAt), mins ? `${mins} min` : null, t.videos ? `${t.videos} video${t.videos > 1 ? "s" : ""}` : null]
+  // A study session says where it stands; the full Target (current) carries the session itself.
+  const st = t.study?.of ? t.study : t.study?.topics && !t.study.endedAt
+    ? { topic: Math.min(t.study.topics.length, (t.study.current || 0) + 1), of: t.study.topics.length, checked: t.study.topics.filter(x => x.check).length } : null;
+  return [lastActive(t.lastActiveAt), st ? `Study session: topic ${st.topic} of ${st.of}${st.checked ? `, ${st.checked} checked` : ""}` : null,
+    mins ? `${mins} min` : null, t.videos ? `${t.videos} video${t.videos > 1 ? "s" : ""}` : null]
     .filter(Boolean).join(" · ");
 }
 

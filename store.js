@@ -238,7 +238,14 @@ function resumable(s) {
 function summary(p, state) {
   return { id: p.id, text: p.text, state, lastActiveAt: p.lastActiveAt || p.pausedAt || p.endedAt || p.startedAt,
     usedSec: Math.round(p.usedSec || 0), videos: (p.videos || []).length, searches: (p.searches || []).length,
-    outcome: p.outcome || null, last: p.last || null };
+    outcome: p.outcome || null, last: p.last || null, study: studyProgress(p) };
+}
+
+// Where a study session stands, for "Pick up where you left off": topic 2 of 3, 1 checked.
+function studyProgress(p) {
+  const st = p.study;
+  if (!st || st.endedAt || !st.topics?.length) return null;
+  return { topic: Math.min(st.topics.length, (st.current || 0) + 1), of: st.topics.length, checked: st.topics.filter(t => t.check).length };
 }
 
 // Where to land when a Target is resumed: the last video, at the moment you left it; otherwise

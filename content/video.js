@@ -119,7 +119,8 @@ function renderConcepts() {
       : [el("div", { class: "wp-muted wp-concepts-basis" }, `From the video's ${d.basis}, not its audio.`),
         el("div", { class: "wp-concepts-list" }, ...d.concepts.map(conceptRow)),
         d.regulated ? el("div", { class: "wp-concepts-note" },
-          d.references.length ? [el("b", {}, "Study with: "), d.references.join("; "), ". "] : null,
+          d.references.length ? el("b", {}, "Study with: ") : null,
+          d.references.length ? `${d.references.join("; ")}. ` : null,
           `${BRAND} supports study; it doesn't replace a certified instructor.`) : null,
         el("button", { class: "wp-btn wp-btn-tonal wp-btn-block wp-concepts-test", onclick: testOnVideo }, icon("ask"), "Test me on this video")]));
   // Under today's plan or the study session, above Up next.
