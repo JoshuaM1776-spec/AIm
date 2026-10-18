@@ -425,6 +425,61 @@ Preferences are per student or per family, and parents can view and remove them.
 - When a student is fascinated by something, Aim may suggest books, videos, activities or projects about it.
 - The parent decides whether to schedule them, and curriculum coverage is preserved.
 
+## Pathways: interests, abilities and where they might lead
+
+An optional, ongoing look at what a student is drawn to and what they've shown they can do, and the kinds of work where the two meet. **One design, two places:** Aim Plus (students choose it for themselves, see ROADMAP.md → "I — Pathways") and Aim Homeschool (the parent turns it on, described here). Not before the core flows work well.
+
+### What it is, and isn't
+
+- **Paths to explore, not a verdict.** Never "you should be an engineer". Instead: "You keep choosing to build things and figure out how they work. Here are a few paths worth exploring, and why."
+- **Every suggestion shows its evidence** ("You chose Go deeper on volcanoes 4 times, said 'want more' after the volcano project, and showed strong understanding in 3 of 4 earth science checks") and **ends in something to try**: a project, a field trip, a video series from someone who does the work, a question to ask a professional.
+- **It stays open.** It updates as the student grows, and a younger student's view widens before it narrows.
+
+### Two signals, kept apart
+
+- **Interest** comes mostly from what the student says and chooses, not from quiet tracking:
+  - a one-tap **"Want more of this?"** (Yes / Maybe / Not really) after lessons, projects, study sessions and TeachBack;
+  - optional extras chosen (Go deeper, curiosity questions, extra projects);
+  - short reflection chats a few times a term ("What did you enjoy most this month? What surprised you?").
+
+  Watch time alone is a weak signal and is never used on its own.
+- **Ability** comes from evidence Aim already has: TeachBack results (demonstrated / developing), project rubrics, and parent marks, each kept with its `source`. Shown as growth ("developing → demonstrated"), never as a fixed trait.
+- **Where they meet:**
+  - high interest, strong ability: lean in;
+  - high interest, still developing: here's how to build it;
+  - strong ability, low interest: worth knowing, not a calling.
+
+### By age
+
+- **Up to about 13:** broad interest areas only ("building things", "helping people", "working with ideas", "making things people see", "organizing and leading", "being outdoors"). No job titles.
+- **About 14 and up:** interest areas plus example occupations, with what the work is like day to day, the training it takes (including trades and apprenticeships, not only college), and a way to try it now.
+- The parent can always see the student's view, and the student sees everything the parent sees about them.
+
+### Where the jobs come from
+
+Use **O*NET** (US Department of Labor), openly licensed: occupations, their interest profiles (the six RIASEC areas), skills, education and outlook. Aim doesn't invent its own job taxonomy, and it shows where each fact came from. Other countries' equivalents can be added later.
+
+### How it fits the rest of Homeschool
+
+- **Culmination projects double as career experiments** ("Design a small bridge" is a taste of engineering), and Pathways can ask the parent to schedule one that tests an emerging interest.
+- **Field trips and "Do this together"** can include meeting someone who does the work.
+- **Preferred channels** can include channels from working professionals in an area the student is exploring.
+- **The parent dashboard** gets a termly **Pathways summary**: a conversation starter for parent and student, not a score. It can go into the portfolio if the family chooses.
+
+### Safeguards (requirements)
+
+1. **Off by default.** The parent turns it on (Homeschool); in Plus, the student does. It can be turned off and its data deleted at any time.
+2. **No hidden profiles.** The student can see everything Pathways says about them, and why.
+3. **No sensitive inputs.** Gender, race, ethnicity, religion, disability, family income and location are never inputs. Suggestions are tested for skew across groups before launch and regularly after.
+4. **No stereotyped language** ("girls often like…"), no ranking of students against each other, no "aptitude score".
+5. **The family's data.** Never sold, never used for advertising, never shared with schools, colleges, employers or recruiters. A family can export it themselves.
+6. **Legal review before launch.** Profiling and guidance for minors draws regulatory attention (children's privacy laws; in the EU, the AI Act treats some education and vocational-guidance uses as high-risk). Part of the children's privacy design already required.
+
+### Groundwork now (small, useful on its own)
+
+- A one-tap **"Want more of this?"** on finished lessons, projects and TeachBack, stored as a progress event of type `interest` with its `source`.
+- TeachBack and project evidence tagged by **subject and skill**, so interest and ability can be lined up later.
+
 ## Groundwork already planned in Aim Plus (see ROADMAP.md → Decisions)
 
 - **Learners are separate from accounts,** so child learners can sit under a parent account without their own logins.
@@ -442,5 +497,6 @@ Preferences are per student or per family, and parents can view and remove them.
 - **Rotation is a household setting** (subject order, frequency), not hard-coded.
 - **Progress events take a `source`** (`teachback`, `instructor`, `parent`, `project`), so a parent's quick "understood" mark, TeachBack evidence and project results stay distinguishable.
 - **Channel preferences are their own table**, keyed by learner or household and channel ID.
+- **Interest is a progress event** (`type: interest`, with `source`), next to evidence of understanding, so Pathways can be built later from history that already exists.
 - **Curriculum uploads are household-private** (see "Bring your own curriculum"): their own table, RLS by household, never in shared tables, never used beyond that family's plans.
 - **Before any build:** a separate privacy and legal design for children (COPPA and equivalents), and curriculum development with qualified educators.

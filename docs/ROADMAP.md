@@ -169,6 +169,22 @@ Study sessions come **before** learning paths. They're smaller, they serve the s
 - Monitoring, cost dashboards and abuse controls.
 - Web app (Chrome side panel first; web later).
 
+### I — Pathways (Plus and Homeschool)
+
+The same optional, ongoing look at interests and abilities described in HOMESCHOOL.md → "Pathways", for students who use Aim Plus on their own. Many Plus users will be students, and they already generate the evidence: learning goals, study sessions and TeachBack.
+
+- **Opt-in by the user.** Off until they turn it on in Settings, with a plain explanation of what it uses. Off again deletes it.
+- **What feeds it:**
+  - "Want more of this?" (Yes / Maybe / Not really) at the end of a study session, a TeachBack check, and a learning Target marked complete;
+  - TeachBack results by topic (demonstrated / developing), already on the server;
+  - the topics of study sessions and of completed learning Targets the librarian classed as `learn`. Only topics and ratings leave the browser, never watch history, and only after opting in.
+- **Stage instead of age:** at opt-in, "middle school / high school / college / working / other", which sets the breadth: interest areas only for middle school, example occupations from high school on (Plus is 13+).
+- **What it shows:** a Pathways page with interest areas, the evidence behind each, where interest and ability meet, and something to try for each (a study session, a TeachBack topic, a search, a project idea). It refreshes when there's enough new evidence, or on request, never on a nag schedule.
+- **Adults too:** someone watching timber framing and cabinetmaking might want to know those are trades with apprenticeships. Same design; occupations shown for "college" and "working".
+- **Same safeguards as Homeschool:** no sensitive inputs, no hidden profile, evidence on every suggestion, no stereotyping, never shared or sold, and the legal review (Plus includes 13–17-year-olds).
+- **Data:** a `pathway_signals` view over progress events (`interest` and TeachBack evidence), and a `pathway_snapshots` table with each generated view, so the user can see how it changed. RLS read-own, deleted with the account.
+- **Order:** after F3, once study sessions and TeachBack have real history. Groundwork now: the "Want more of this?" tap and subject/skill tags on evidence.
+
 ## TeachBack
 
 Conversational assessment for Aim Plus: AI "students" ask questions, and the learner explains. *If you understand something, you should be able to explain it.* The AI instructor helps people learn; TeachBack checks what they can explain on their own. The two never share evidence.
