@@ -238,7 +238,7 @@ function resumable(s) {
 function summary(p, state) {
   return { id: p.id, text: p.text, state, lastActiveAt: p.lastActiveAt || p.pausedAt || p.endedAt || p.startedAt,
     usedSec: Math.round(p.usedSec || 0), videos: (p.videos || []).length, searches: (p.searches || []).length,
-    outcome: p.outcome || null, last: p.last || null, study: studyProgress(p) };
+    outcome: p.outcome || null, last: p.last || null, study: studyProgress(p), notes: p.notes || "" };
 }
 
 // Where a study session stands, for "Pick up where you left off": topic 2 of 3, 1 checked.
@@ -263,11 +263,11 @@ function archive(history, record) {
 }
 function purposeRecord(p, outcome) {
   return { type: "purpose", id: p.id, text: p.text, startedAt: p.startedAt, endedAt: Date.now(), usedSec: Math.round(p.usedSec),
-    outcome: outcome || null, path: p.path, searches: p.searches, videos: p.videos };
+    outcome: outcome || null, path: p.path, searches: p.searches, videos: p.videos, notes: p.notes || "" };
 }
 function breakRecord(b) {
   return { type: "break", id: b.id, startedAt: b.startedAt, endedAt: Date.now(), usedSec: Math.round(b.usedSec),
-    oneVideo: !!b.oneVideoId, videos: b.videos };
+    oneVideo: !!b.oneVideoId, videos: b.videos, theme: b.theme?.text || null };
 }
 
 // ---------- purpose ----------
@@ -345,6 +345,7 @@ async function resumePurpose(id) {
     const lastVideo = (done.videos || []).slice().sort((a, b) => (b.at || 0) - (a.at || 0))[0];
     next.last = lastVideo ? { id: lastVideo.id, title: lastVideo.title, t: 0, at: lastVideo.at } : null;
     next.restartedFrom = done.id;
+    next.notes = done.notes || "";
   }
   const writes = {};
   if (s.brk) { s.history = archive(s.history, breakRecord(s.brk)); writes.brk = null; }
@@ -584,7 +585,15 @@ async function ratePurpose(id, outcome) {
 
 // ---------- breaks ----------
 // minutes: a timed break. oneVideoId: a break for just that video, ending when it ends.
-async function startBreak({ minutes, oneVideoId }) {
+// A break can carry a theme ("Relax with a theme"): what you'd enjoy watching, the librarian's
+// searches for it and the videos those found, so Aim can keep a few on-theme picks beside you.
+// It's still a break: it counts against today's leisure time and YouTube is as usual.
+function breakTheme(t) {
+  if (!t || typeof t !== "object" || !clip(t.text, 80)) return null;
+  return { text: clip(t.text, 80), note: clip(t.note, 260), searches: (Array.isArray(t.searches) ? t.searches : []).map(q => clip(q, 150)).filter(Boolean).slice(0, 3), videos: [] };
+}
+
+async function startBreak({ minutes, oneVideoId, theme }) {
   const s = await readAll(), settings = await getSettings();
   const today = s.usage[s.day];
   if (totalReached(settings, today)) return { result: "error", message: "You've reached today's YouTube limit." };
@@ -598,10 +607,41 @@ async function startBreak({ minutes, oneVideoId }) {
   const writes = {};
   if (s.brk) s.history = archive(s.history, breakRecord(s.brk));
   if (s.purpose) { s.purpose.suspended = true; writes.purpose = s.purpose; }
-  const brk = { id: uid(), startedAt: Date.now(), durationMin, usedSec: 0, lastCountAt: 0, oneVideoId: clip(oneVideoId, 20) || null, videos: [] };
+  const brk = { id: uid(), startedAt: Date.now(), durationMin, usedSec: 0, lastCountAt: 0, oneVideoId: clip(oneVideoId, 20) || null, videos: [],
+    theme: oneVideoId ? null : breakTheme(theme) };
   const stop = s.stop && ["break", "leisure"].includes(s.stop.kind) ? null : s.stop;
   await chrome.storage.local.set({ ...writes, brk, stop, history: s.history });
   return { result: "applied", brk, capped: minutes && durationMin < minutes ? durationMin : null };
+}
+
+// Videos the theme's searches found (YouTube's own results, ads left out), for "More on your theme".
+async function addThemeVideos(videos) {
+  const s = await readAll();
+  const t = s.brk?.theme;
+  if (!t) return { result: "error", message: "No themed break." };
+  const known = new Map(t.videos.map(v => [v.id, v]));
+  for (const v of Array.isArray(videos) ? videos : []) {
+    const id = clip(v.id, 20);
+    if (!id || !clip(v.title, 300)) continue;
+    const old = known.get(id);
+    if (old) { old.length ||= videoLength(v.length); continue; }
+    const entry = { id, title: clip(v.title, 300), channel: clip(v.channel, 200), length: videoLength(v.length) };
+    known.set(id, entry);
+    t.videos.push(entry);
+  }
+  t.videos = t.videos.slice(-30);
+  await chrome.storage.local.set({ brk: s.brk });
+  return { result: "applied" };
+}
+
+// Notes on a Target: questions for a call, things to remember. They stay with the Target when it's
+// set aside, completed or resumed.
+async function setTargetNotes(text) {
+  const s = await readAll();
+  if (!s.purpose) return { result: "error", message: "No Target set." };
+  s.purpose.notes = String(text || "").slice(0, 4000);
+  await chrome.storage.local.set({ purpose: s.purpose });
+  return { result: "applied", notes: s.purpose.notes };
 }
 
 async function extendBreak(minutes) {

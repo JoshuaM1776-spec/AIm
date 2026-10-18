@@ -43,6 +43,7 @@ function setSearchPending(query) {
 
 // Results of an accepted search become part of the purpose. Called again as more load.
 function captureResults() {
+  if (theme()) return captureTheme();
   const p = activePurpose();
   if (location.pathname !== "/results" || !p || brk || searchPending) return;
   const { videos, lists } = searchResults();
@@ -72,6 +73,7 @@ document.addEventListener("click", e => {
 async function renderResultsBar() {
   if (location.pathname !== "/results") return;
   const p = activePurpose();
+  if (theme()) { removePicks(); setSearchPending(null); return renderThemeBar(); } // relaxing with a theme
   if (!p || brk) { $("#wp-results-bar")?.remove(); removePicks(); setSearchPending(null); return; }
   const lib = await librarianOn();
   let anchor = null;
@@ -107,6 +109,7 @@ function purposeBar(p, lib) {
       el("span", { class: "wp-strong wp-ellipsis wp-rb-text", title: p.text }, p.text),
       el("button", { class: "wp-link wp-rb-change", onclick: () => openPivotDialog() }, "Change")),
     left !== null ? el("span", { class: "wp-muted wp-rb-left" }, `${fmtMin(left)} left`) : null,
+    el("button", { class: `wp-rb-icon${p.notes ? " has" : ""}`, "aria-label": p.notes ? "Notes" : "Add notes", title: p.notes ? "Notes" : "Add notes", onclick: openNotesDialog }, icon("book")),
     el("button", { class: "wp-rb-icon", "aria-label": "Target complete", title: "Target complete", onclick: askDone }, icon("check2")),
     toggle,
     activeStudy(p) ? studyBarBlock(p) : null,

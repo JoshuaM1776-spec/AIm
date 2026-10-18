@@ -419,6 +419,39 @@ test("a result's length is kept, and filled in when YouTube shows it later", asy
   assert.deepStrictEqual(env.local.purpose.allowed.map(v => [v.id, v.title, v.length]), [["v1", "A", "12:34"], ["v2", "B", "1:02:03"], ["v3", "C", ""]]);
 });
 
+test("relax with a theme: a break that keeps its theme and the videos its searches found", async () => {
+  const env = fresh();
+  await env.run(`startPurpose({ text: "Prepare for my flight review" })`);
+  const r = await env.run(`startBreak({ minutes: 30, theme: { text: "Aviation engineering", note: "With your flight review in mind.", searches: ["how jet engines work", "aircraft design documentary"] } })`);
+  assert.strictEqual(r.result, "applied");
+  assert.strictEqual(env.local.brk.theme.text, "Aviation engineering");
+  assert.strictEqual(env.local.brk.durationMin, 30);
+  assert.strictEqual(env.local.purpose.suspended, true, "the Target waits, as with any break");
+  await env.run(`addThemeVideos([{ id: "j1", title: "How a Jet Engine Works", length: "11:30" }, { id: "ad", title: "" }, { id: "j1", title: "How a Jet Engine Works" }])`);
+  assert.deepStrictEqual(env.local.brk.theme.videos.map(v => [v.id, v.length]), [["j1", "11:30"]], "untitled (sponsored) entries and repeats are skipped");
+  await env.run(`endBreak()`);
+  assert.strictEqual(env.local.history.at(-1).theme, "Aviation engineering");
+  const one = fresh();
+  await one.run(`startBreak({ oneVideoId: "x", theme: { text: "Ignored" } })`);
+  assert.strictEqual(one.local.brk.theme, null, "a one-video break has no theme");
+});
+
+test("notes stay with a Target: set aside, resumed, completed and started again", async () => {
+  const env = fresh();
+  await env.run(`startPurpose({ text: "Research Gated Rentals before my call" })`);
+  await env.run(`setTargetNotes("- Ask about occupancy")`);
+  const id = env.local.purpose.id;
+  await env.run(`pausePurpose()`);
+  assert.strictEqual(env.local.paused[0].notes, "- Ask about occupancy");
+  await env.run(`resumePurpose("${id}")`);
+  assert.strictEqual(env.local.purpose.notes, "- Ask about occupancy");
+  await env.run(`finishPurpose("yes")`);
+  assert.strictEqual(env.local.history.at(-1).notes, "- Ask about occupancy");
+  await env.run(`resumePurpose("${id}")`);
+  assert.strictEqual(env.local.purpose.notes, "- Ask about occupancy", "starting a finished Target again brings its notes");
+  assert.strictEqual((await env.run(`setTargetNotes("x")`)).result, "applied");
+});
+
 test("a purpose set from a video, or a pivot from one, includes that video", async () => {
   const env = fresh();
   await env.run(`startPurpose({ text: "fix my faucet", video: { id: "f1", title: "Faucet fix" } })`);

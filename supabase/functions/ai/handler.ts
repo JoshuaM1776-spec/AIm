@@ -5,7 +5,7 @@
 // Response: 200 { ok: true, ... } or an error status with { ok: false, error: { code, message } }
 
 import { type AiRequest, type TaskCtx, type TeachbackDb, TaskError, finishTask, get, start, turn } from "./teachback.ts";
-import { ask, rank } from "./librarian.ts";
+import { ask, questions, rank } from "./librarian.ts";
 import { studyPlan } from "./study.ts";
 import { careers, step, themes, where } from "./pathways.ts";
 import { videoConcepts } from "./video.ts";
@@ -75,6 +75,7 @@ export const TASKS: Record<string, Task> = {
   // The librarian: any signed-in account, within its plan's allowance. See librarian.ts.
   "librarian-ask": { run: ask },
   "librarian-rank": { run: rank },
+  "librarian-questions": { run: questions },
   // Pathways: see pathways.ts. "Where could this take me?" uses nothing about the student, so any
   // signed-in account may ask; the rest is Aim Plus.
   "pathways-where": { run: where },

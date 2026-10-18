@@ -610,3 +610,15 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 .wp-concept-context .wp-icon svg { width: 16px; height: 16px; color: var(--wp-muted); }
 .wp-concepts-note { font-size: 12px; line-height: 18px; color: var(--wp-muted); background: var(--wp-tonal); border-radius: 8px; padding: 8px 10px; }
 .wp-concepts-test { margin-top: 4px; height: 40px; font-size: 14px; }
+
+/* ---------- Relax with a theme (content/relax.js) ---------- */
+.wp-rb-relax .wp-rb-mark { color: var(--wp-text); }
+.wp-rb-relax > .wp-lib { padding: 4px 8px 4px 0; }
+.wp-theme-panel { margin-bottom: 16px; }
+
+/* ---------- Notes on a Target (content/notes.js) ---------- */
+.wp-notes-dialog { width: min(560px, 100%); }
+.wp .wp-notes-input { width: 100%; min-height: 200px; resize: vertical; font: 400 14px/20px "Roboto", Arial, sans-serif; padding: 10px 12px; }
+.wp-notes-status:empty { display: none; }
+.wp-rb-icon.has { position: relative; }
+.wp-rb-icon.has::after { content: ""; position: absolute; top: 6px; right: 6px; width: 6px; height: 6px; border-radius: 50%; background: var(--wp-link); }

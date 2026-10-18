@@ -9,7 +9,7 @@ const shorten = (t, n) => (t.length > n ? t.slice(0, n - 1).trimEnd() + "…" : 
 
 function chipContent() {
   if (status.totalReached) return { label: "Done for today", time: null };
-  if (brk) return { label: "Break", time: brk.oneVideoId ? "1 video" : `${fmtClock((breakEndsAt - Date.now()) / 1000)} left` };
+  if (brk) return { label: brk.theme ? `Relax: ${shorten(brk.theme.text, 22)}` : "Break", time: brk.oneVideoId ? "1 video" : `${fmtClock((breakEndsAt - Date.now()) / 1000)} left` };
   const p = activePurpose();
   if (p) return { label: shorten(p.text, 28), time: p.timeUp ? "Time's up" : purposeLeft(p) !== null ? fmtMin(purposeLeft(p)) : null };
   return { label: "Set Target", time: null };
@@ -94,6 +94,7 @@ function purposeMenu() {
     menuItem("check2", "Target complete", askDone),
     menuItem("pivot", "Change Target", () => openPivotDialog()),
     menuItem("pause", "Set aside for later", setAsideTarget),
+    menuItem("book", p.notes ? "Notes" : "Add notes", openNotesDialog),
     left !== null ? menuItem("clock", "Change time limit", openLimitDialog) : null,
     ...videoItems())].filter(Boolean);
 }
@@ -102,12 +103,14 @@ function breakMenu() {
   const left = breakLeft(brk);
   const waiting = purpose?.suspended ? purpose : null;
   const head = el("div", { class: "wp-menu-block wp-menu-first" },
-    el("div", { class: "wp-label" }, "On a break"),
+    el("div", { class: "wp-label" }, brk.theme ? `Relaxing: ${brk.theme.text}` : "On a break"),
     el("div", { class: "wp-strong" }, brk.oneVideoId ? "Just this video" : `${fmtMin(left)} left`),
     left !== null ? el("div", { class: "wp-bar" }, el("i", { style: `width:${Math.min(100, (left / (brk.durationMin * 60)) * 100)}%` })) : null,
     waiting ? el("div", { class: "wp-muted wp-ellipsis", style: "margin-top:8px" }, `Your Target is waiting: ${waiting.text}`) : null);
   return [head, el("div", { class: "wp-menu-items" },
     waiting ? menuItem("play", "Back on Target", endBreakNow) : menuItem("pivot", "Set Target", () => openStartDialog()),
+    // The homepage card is hidden during a break, so set-aside Targets can be picked up from here.
+    ...(waiting ? [] : (status.paused || []).slice(0, 2).map(t => menuItem("play", `Resume: ${shorten(t.text, 34)}`, () => resumeTarget(t.id)))),
     !brk.oneVideoId && !leisureUsedUp() ? menuItem("clock", "Add 15 minutes", extendBreakNow) : null,
     menuItem("end", "End break", endBreakNow),
     ...videoItems())].filter(Boolean);

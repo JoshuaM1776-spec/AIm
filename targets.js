@@ -44,7 +44,8 @@ async function resume(id) {
 function row(t, actions, lead) {
   return node("div", { className: "item" },
     node("div", { className: "grow" }, node("b", { textContent: t.text, title: t.text }),
-      node("span", { className: "sub", textContent: meta(t, lead) })),
+      node("span", { className: "sub", textContent: meta(t, lead) }),
+      t.notes ? node("details", { className: "notes" }, node("summary", { textContent: "Notes" }), node("div", { textContent: t.notes })) : null),
     actions);
 }
 

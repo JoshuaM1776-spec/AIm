@@ -306,6 +306,15 @@ The prototype (`TeachBack.html`) is a complete single-page app: learn-by-teachin
 - **One model call per answer** (the director), plus one to start and one to finish. That fits Aim's limits: a 15-turn session is about 17 calls.
 - The prototype sends up to 9,000 characters of transcript per turn. The server keeps a running summary of evidence instead, to bound the tokens per turn.
 
+## YouTube's own AI (decided October 2026)
+
+YouTube now has two Gemini features: the per-video **Ask** button (questions about the video it's on, quizzes on some academic videos) and **Ask YouTube**, a conversational search across videos (both mostly for Premium members 18+ in the US so far, with no public API).
+
+- **Don't drive it.** Aim won't type into, click through or read YouTube's AI: there's no API, automating it would be fragile and likely against YouTube's terms, it only exists for some adults, and what it returns comes from the same transcripts that wait on legal review.
+- **Work alongside it.** When a person uses it themselves, Aim treats its searches and the videos it leads to like any other search toward the Target, and doesn't get in its way.
+- **Don't duplicate it.** Within-one-video Q&A and summaries are YouTube's job now; the transcript stage of "In this video" drops in priority, since anyone with YouTube's Ask already has exact answers about a single video.
+- **What Aim is for, that YouTube's AI isn't:** the person's goal across many videos and days (Targets, study sessions, Resume), keeping YouTube from pulling them off it (no feed, no recommendations, time limits, breaks that end), evidence of understanding in their own words (TeachBack), Pathways, and everything for under-18s and their parents (YouTube's AI is 18+). YouTube's AI is built to help you watch; Aim is built to help you do what you came for, and stop.
+
 ## Decisions needed now (to avoid rework)
 
 ### 1. Learners are separate from accounts (household-ready)

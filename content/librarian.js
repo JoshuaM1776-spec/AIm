@@ -25,8 +25,11 @@ function looksLikeRequest(text) {
 }
 
 // What the librarian knows about the current Target: kept in this browser, sent with each request.
+// Recent Targets (set aside or finished), so "something fun to watch" can lean toward them.
+const recentTargets = () => [...(status.paused || []).map(t => t.text), ...(status.recent || [])].filter(t => t !== activePurpose()?.text).slice(0, 5);
+
 function librarianContext(p) {
-  if (!p) return {};
+  if (!p) return { recent: recentTargets() };
   const L = p.librarian || {};
   const thread = (L.thread || []).slice(-8).map(m => ({ role: m.role, text: m.text }));
   if (L.refine) thread.push({ role: "aim", text: L.refine.question });
@@ -34,7 +37,8 @@ function librarianContext(p) {
     target: p.text, thread,
     searches: (p.searches || []).map(s => s.q).slice(-10),
     watched: (p.videos || []).slice(-8).map(v => ({ title: v.title, channel: v.channel })),
-    last: p.last?.title ? { title: p.last.title } : null
+    last: p.last?.title ? { title: p.last.title } : null,
+    recent: recentTargets()
   };
 }
 
@@ -55,6 +59,15 @@ async function librarianAsk(request, busy) {
     busy?.(false);
     if (r?.code === "limit") toast("That's today's Aim searches. Searching YouTube directly.");
     return goSearch(request);
+  }
+  // "I just want to enjoy…": a break with a theme. The Target, if any, waits, as with any break.
+  if (r.kind === "relax") {
+    const b = await send({ type: "break-start", minutes: 30, theme: { text: r.target, note: r.note, searches: r.searches } });
+    busy?.(false);
+    if (b?.result !== "applied") return toast(b?.message || "Couldn't start a break.");
+    toast(b.capped ? `Relaxing: ${r.target}. ${b.capped} min, what's left of today's leisure time.` : `Relaxing: ${r.target}. 30 min of leisure time; add more from ${BRAND}'s menu.`);
+    location.href = `/results?search_query=${encodeURIComponent(r.searches[0])}`;
+    return;
   }
   const applied = await send({ type: "librarian-apply", request, answer: r, newTarget: !!p && r.sameTarget === false });
   if (applied?.result !== "applied") { busy?.(false); return goSearch(r.searches?.[0] || request); }

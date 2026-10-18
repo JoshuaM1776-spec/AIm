@@ -77,6 +77,7 @@ const deps = {
           constraints: ["One hour per bike", "Every step logged"], deliverable: "A signed inspection log", materials: ["A bicycle", "A notebook"],
           steps: ["Write the checklist", "Inspect", "Log it"], rubric: [{ criterion: "Complete log", good: "Every item checked and signed" }],
           time: "One afternoon", together: true, together_reason: "Uses tools on a real bike.", skills: ["Attention to detail"] }
+      : props.length === 1 && props[0] === "questions" ? { questions: ["Which steps make the most ATP?", "Where does each stage happen?"] }
       : props.includes("questions") ? { questions: ["What surprised you most?", "What does a hard day look like?"], ways: ["Ask family friends"], searches: ["aircraft hangar tour"] }
       : props.includes("routes") ? { skills: ["Troubleshooting"], knowledge: ["Aircraft systems"], study_next: ["Basic electricity"],
           routes: [{ route: "Aviation maintenance school", what: "An approved program, then exams.", time: "18 to 24 months" }] }
@@ -472,6 +473,42 @@ await overview.click("button:text-is('End study session')");
 await overview.waitForSelector("text=Session ended");
 step("ending the session keeps the summary", true);
 await overview.close();
+
+// ---------- notes on a Target ----------
+await yt.click("#wp-chip .wp-pill");
+await yt.click(".wp-dropdown button:has-text('Add notes')");
+await yt.waitForSelector(".wp-notes-dialog textarea");
+await yt.fill(".wp-notes-dialog textarea", "Exam Friday 9am.\n");
+await yt.click(".wp-notes-dialog button:has-text('Suggest questions')");
+await yt.waitForFunction(() => /most ATP/.test(document.querySelector(".wp-notes-dialog textarea")?.value || ""));
+await yt.click(".wp-notes-dialog button:text-is('Done')");
+await yt.waitForTimeout(700);
+let notesNow = (await sw.evaluate(() => chrome.storage.local.get("purpose"))).purpose.notes;
+step("notes on a Target save as you type, and Suggest questions adds to them", notesNow.startsWith("Exam Friday 9am.") && notesNow.includes("- Which steps make the most ATP?"), JSON.stringify(notesNow));
+step("the results bar shows there are notes", !!(await yt.$("#wp-results-bar .wp-rb-icon.has[aria-label='Notes']")));
+
+// ---------- relax with a theme ----------
+srv.ask.push({ target: "Fun biology", kind: "relax", note: "Picked with your exam in mind.", searches: ["weird biology facts documentary", "amazing cells"], question: "", options: [], same_target: true });
+await yt.goto("https://www.youtube.com/");
+await yt.waitForSelector("#wp-home .wp-home-input");
+await yt.fill(".wp-home-input", "I just want to enjoy some fun videos");
+await yt.press(".wp-home-input", "Enter");
+await yt.waitForURL(/search_query=weird%20biology/);
+await yt.waitForSelector("#wp-results-bar.wp-rb-relax");
+let relaxState = await sw.evaluate(() => chrome.storage.local.get(["brk", "purpose"]));
+step("a request to relax starts a break with a theme, and the Target waits", relaxState.brk?.theme?.text === "Fun biology" && relaxState.brk.durationMin === 30 &&
+  relaxState.purpose?.suspended === true && (await yt.textContent("#wp-chip")).includes("Relax: Fun biology"));
+step("the librarian sees recent Targets, for a vague request", srv.lastAskPrompt.includes("THEIR RECENT TARGETS:"));
+step("relaxing: no study offers, no picks to work through", !(await yt.$("button:text-is('Organize a study session')")) && (await yt.textContent("#wp-results-bar")).includes("Relaxing"));
+await yt.waitForTimeout(500);
+await yt.goto("https://www.youtube.com/watch?v=alt2bbb");
+await yt.waitForSelector("#wp-theme-panel");
+step("beside a video: More on the theme, from its searches", (await yt.textContent("#wp-theme-panel")).includes("More on fun biology") && !(await yt.$("#wp-concepts")));
+await yt.click("#wp-chip .wp-pill");
+await yt.click(".wp-dropdown button:has-text('Back on Target')");
+await yt.waitForTimeout(600);
+relaxState = await sw.evaluate(() => chrome.storage.local.get(["brk", "history"]));
+step("back on Target: the themed break is over and recorded with its theme", !relaxState.brk && relaxState.history.some(h => h.type === "break" && h.theme === "Fun biology"));
 await yt.close();
 
 // An expired access token refreshes quietly, once, even with calls racing.

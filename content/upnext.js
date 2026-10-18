@@ -10,6 +10,7 @@ function upNextItems(p) {
 }
 
 function renderUpNext() {
+  renderThemePanel();
   const existing = $("#wp-upnext");
   const p = activePurpose();
   const host = p && !brk && location.pathname === "/watch" ? sidebarHost() : null;

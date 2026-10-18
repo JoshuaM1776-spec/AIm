@@ -605,7 +605,8 @@ Do:
 - Write a note of one or two short sentences (under 220 characters) that orients the person, for example the order to learn things in, or what matters for finding the right repair video.
 - Ask at most one clarifying question, and only when the right videos genuinely differ by the answer (an engine variant, a software version, beginner or advanced). Give 2 to 4 short options. Otherwise leave the question empty and the options empty.
 - Name the Target: the person's objective in a few words, in their own terms (under 80 characters).
-- Classify the goal: "lookup" (a quick answer or one task), "learn" (understanding a subject, studying), or "project" (a multi-step build, repair or skill).
+- Classify the goal: "lookup" (a quick answer or one task, including researching a company, product or person), "learn" (understanding a subject, studying), "project" (a multi-step build, repair or skill), or "relax" (they want to unwind and enjoy videos, not accomplish something: "I just want to enjoy…", "something fun to watch").
+- For "relax": the Target is the theme in a few words ("Aviation engineering"); the searches find enjoyable, well-made videos on it (documentaries, builds, stories), not lessons; the note is one light sentence. If the request is vague ("engineering videos", "something interesting") and their recent Targets are listed, lean the theme toward those and say so ("Picked with your flight review prep in mind.").
 
 Don't:
 - Answer the question, explain the subject, give instructions, steps, measurements, or medical, legal or safety advice yourself. Point to videos instead.
@@ -616,7 +617,7 @@ const ASK_SCHEMA = {
   type: "object",
   properties: {
     target: { type: "string" },
-    kind: { type: "string", enum: ["lookup", "learn", "project"] },
+    kind: { type: "string", enum: ["lookup", "learn", "project", "relax"] },
     note: { type: "string" },
     searches: { type: "array", items: { type: "string" } },
     question: { type: "string" },
@@ -640,8 +641,10 @@ export async function ask(ctx: TaskCtx) {
   const watched = list(input.watched).map(v => { const o = asObject(v); return `${clean(o.title, 200)}${o.channel ? ` (${clean(o.channel, 100)})` : ""}`; })
     .filter(Boolean).slice(-LIB_LIMITS.watched);
   const last = clean(asObject(input.last).title, 200);
+  // Recent Targets, so a vague request to relax can lean toward what they've been working on.
+  const recent = list(input.recent).map(s => clean(s, 100)).filter(Boolean).slice(0, 5);
 
-  const prompt = `${target ? `CURRENT TARGET: ${target}\n` : "No Target yet.\n"}${searches.length ? `SEARCHES SO FAR: ${searches.join(" | ")}\n` : ""}${watched.length ? `VIDEOS WATCHED FOR IT: ${watched.join(" | ")}\n` : ""}${last ? `LAST VIDEO WATCHED: ${last}\n` : ""}${thread.length ? `\nEARLIER IN THIS TARGET:\n${thread.join("\n")}\n` : ""}
+  const prompt = `${target ? `CURRENT TARGET: ${target}\n` : "No Target yet.\n"}${searches.length ? `SEARCHES SO FAR: ${searches.join(" | ")}\n` : ""}${watched.length ? `VIDEOS WATCHED FOR IT: ${watched.join(" | ")}\n` : ""}${last ? `LAST VIDEO WATCHED: ${last}\n` : ""}${recent.length ? `THEIR RECENT TARGETS: ${recent.join(" | ")}\n` : ""}${thread.length ? `\nEARLIER IN THIS TARGET:\n${thread.join("\n")}\n` : ""}
 THE PERSON NOW SAYS: ${request}
 
 ${target ? `Set same_target to true if this continues the current Target (a follow-up, a refinement, an answer to your question, "that last part"), false if it's a different objective. Resolve references like "that last part" from the context above.` : "Set same_target to true."}`;
@@ -654,11 +657,12 @@ ${target ? `Set same_target to true if this continues the current Target (a foll
   const options = question ? list(r.options).map(o => clean(o, 60)).filter(Boolean).slice(0, 4) : [];
   return {
     target: clean(r.target, 80) || request.slice(0, 80),
-    kind: ["lookup", "learn", "project"].includes(r.kind as string) ? r.kind : "lookup",
+    kind: ["lookup", "learn", "project", "relax"].includes(r.kind as string) ? r.kind : "lookup",
     note: clean(r.note, 260),
     searches: unique,
     refine: options.length >= 2 ? { question, options } : null,
-    sameTarget: target ? r.same_target !== false : true
+    // Relaxing is never the same Target: it's a break, and the Target waits.
+    sameTarget: r.kind === "relax" ? false : target ? r.same_target !== false : true
   };
 }
 
@@ -728,6 +732,34 @@ export async function rank(ctx: TaskCtx) {
     return { label: clean(o.label, 40) || "Picks", videos };
   }).filter(g => g.videos.length);
   return { groups };
+}
+
+// ---------- questions for a Target's notes ----------
+// "Suggest questions": what to ask or find out, for the Target's notes (a call with a business, a
+// meeting, an exam). Questions only; the librarian still doesn't answer them.
+const QUESTIONS_SYSTEM = `You help someone prepare, using what they're working on in Aim. Suggest questions they could ask (a person, a business, an instructor) or should find out the answers to, for their goal. ${LIB_SAFETY}
+
+- 5 to 7 questions, specific to the goal and to what they've watched and noted, most useful first. Plain, short, one line each.
+- Don't repeat questions already in their notes. Don't answer them.`;
+
+const QUESTIONS_SCHEMA = {
+  type: "object",
+  properties: { questions: { type: "array", items: { type: "string" } } },
+  required: ["questions"],
+  additionalProperties: false
+};
+
+export async function questions(ctx: TaskCtx) {
+  const input = asObject(ctx.input);
+  const target = clean(input.target, 300);
+  if (target.length < 2) throw new TaskError(400, "input", "Which Target?");
+  const notes = typeof input.notes === "string" ? input.notes.trim().slice(0, 4000) : "";
+  const watched = list(input.watched).map(v => clean(asObject(v).title, 200)).filter(Boolean).slice(-LIB_LIMITS.watched);
+  const searches = list(input.searches).map(s => clean(s, 200)).filter(Boolean).slice(-LIB_LIMITS.searches);
+  const r = parse(await ctx.ai("librarian-questions", { tier: "fast", maxTokens: 1500, schema: QUESTIONS_SCHEMA, system: QUESTIONS_SYSTEM,
+    prompt: `TARGET: ${target}\n${searches.length ? `SEARCHES: ${searches.join(" | ")}\n` : ""}${watched.length ? `VIDEOS WATCHED: ${watched.join(" | ")}\n` : ""}THEIR NOTES SO FAR:\n${notes || "(none)"}` }));
+  const have = notes.toLowerCase();
+  return { questions: list(r.questions).map(q => clean(q, 200)).filter(q => q && !have.includes(q.toLowerCase())).slice(0, 7) };
 }
 
 // ---------- study.ts ----------
@@ -1254,6 +1286,7 @@ export const TASKS: Record<string, Task> = {
   // The librarian: any signed-in account, within its plan's allowance. See librarian.ts.
   "librarian-ask": { run: ask },
   "librarian-rank": { run: rank },
+  "librarian-questions": { run: questions },
   // Pathways: see pathways.ts. "Where could this take me?" uses nothing about the student, so any
   // signed-in account may ask; the rest is Aim Plus.
   "pathways-where": { run: where },

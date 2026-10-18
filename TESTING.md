@@ -225,7 +225,16 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] When the video ends: "Finished. Test yourself on this video?" → TeachBack on the video, with its concepts as the notes. In a study session the result goes back to the topic.
 - [ ] Reloading the video doesn't ask the AI again.
 
-### 21. Sync and reload
+### 21. Relax with a theme, and notes (signed in)
+
+- [ ] With a Target, type "I just want to enjoy some engineering videos" on the homepage: a 30-minute break starts (the Aim button reads "Relax: …"), the Target waits, and the results have a slim "Relaxing" bar with the librarian's note and other searches. No study offers, no picks to work through, no "In this video".
+- [ ] A vague request ("engineering videos") leans toward recent Targets, and the note says so.
+- [ ] Beside a video: "More on <theme>" from the theme's searches, above YouTube's own suggestions (which show, as on any break). It counts against leisure time; Add 15 minutes works.
+- [ ] During any break, the Aim menu lists set-aside Targets as "Resume: …".
+- [ ] Aim menu → Add notes: type, close, reopen: the notes are there. Suggest questions adds a few, never answers. The results bar's notes icon gets a dot.
+- [ ] Notes stay with the Target through Set aside, Resume, Target complete and Start again, and show on the Targets page.
+
+### 22. Sync and reload
 
 - [ ] Target complete from the popup while a YouTube tab is on a video: that tab shows the "What brings you here?" card on the player within a few seconds.
 - [ ] Two YouTube tabs: starting a break or setting a Target in one updates the other's indicator, and a card waiting on the other tab's player clears if the new state allows its video.

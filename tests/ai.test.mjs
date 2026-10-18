@@ -518,6 +518,28 @@ test("video concepts: Plus only; chapters are evidence; descriptions keep their 
   assert.strictEqual((await call(makeDeps({ plan: "free" }), { task: "video-concepts", input: { title: "x y" } })).status, 403);
 });
 
+test("librarian: 'relax' is its own kind, never the same Target, and sees recent Targets", async () => {
+  let prompt = "";
+  const deps = makeDeps({ plan: "free", claude: req => {
+    prompt = req.prompt;
+    return { ok: true, model: "fast", inputTokens: 10, outputTokens: 5, text: JSON.stringify({ target: "Aviation engineering", kind: "relax",
+      note: "Picked with your flight review prep in mind.", searches: ["how jet engines work", "aircraft design documentary"], question: "", options: [], same_target: true }) };
+  } });
+  const r = await call(deps, { task: "librarian-ask", input: { request: "some engineering videos", target: "Research Gated Rentals", recent: ["Prepare for my flight review", "Research Gated Rentals"] } });
+  assert.strictEqual(r.body.kind, "relax");
+  assert.strictEqual(r.body.sameTarget, false, "relaxing never continues the current Target");
+  assert.match(prompt, /THEIR RECENT TARGETS: Prepare for my flight review \| Research Gated Rentals/);
+  assert.match(deps.calls[0].system, /"relax"/);
+});
+
+test("librarian: suggested questions skip ones already in the notes", async () => {
+  const deps = makeDeps({ plan: "free", claude: () => ({ ok: true, model: "fast", inputTokens: 10, outputTokens: 5,
+    text: JSON.stringify({ questions: ["What's the occupancy rate?", "How long is the minimum stay?", ""] }) }) });
+  const r = await call(deps, { task: "librarian-questions", input: { target: "Research Gated Rentals before my call", notes: "- how long is the minimum stay?", watched: [{ title: "Tour" }] } });
+  assert.deepStrictEqual(r.body.questions, ["What's the occupancy rate?"]);
+  assert.strictEqual((await call(deps, { task: "librarian-questions", input: { target: "" } })).status, 400);
+});
+
 test("account: download everything, or delete only with DELETE typed; both need a sign-in", async () => {
   const deleted = [];
   const deps = makeDeps({ plan: "free" });
