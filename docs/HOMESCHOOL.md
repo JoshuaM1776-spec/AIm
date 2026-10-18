@@ -459,6 +459,22 @@ An optional, ongoing look at what a student is drawn to and what they've shown t
 
 Use **O*NET** (US Department of Labor), openly licensed: occupations, their interest profiles (the six RIASEC areas), skills, education and outlook. Aim doesn't invent its own job taxonomy, and it shows where each fact came from. Other countries' equivalents can be added later.
 
+### Exploring a path
+
+When Pathways shows a possible fit, the student can choose **Explore this path**. A path is a learning path (ROADMAP.md → F3) built for that kind of work, in four steps that go from "what is this?" to "how would I get there?". The student can stop at any step, and **"Not for me" is a good result**: it's recorded as interest evidence and the view updates.
+
+1. **See it.** What the work is like day to day: a short study session of videos from people who do it (Aim's librarian, the student's preferred channels first), and the honest parts too (hours, physical demands, pay range, outlook, from O*NET and the Bureau of Labor Statistics).
+2. **Try it.** A small hands-on project or challenge that uses the work's core skills (for a structural engineer: design and test a paper bridge), then TeachBack on the main ideas. In Homeschool this can become the term's culmination project.
+3. **Meet it.** Ways to talk to or watch someone who does it: a virtual field trip, a "Do this together" visit to a local workplace, questions to ask a professional (Aim drafts them; the family makes the contact).
+4. **Prepare for it.** For about 14 and up: the skills and knowledge the work needs (O*NET), what to study next, and the routes in, side by side (apprenticeship, certificate, community college, university, military, starting your own business), with official sources (Apprenticeship.gov, CareerOneStop, the Occupational Outlook Handbook). Regulated and safety-critical fields cite authoritative sources and say plainly that Aim is educational support, not certified instruction.
+
+**Rules for paths**
+
+- **The student chooses** which path to explore, and can explore several at once. In Homeschool the parent approves before a path's steps enter the weekly plan, like any other plan change.
+- **No paid placement.** Schools, programs, courses and employers are never ranked or shown because someone paid. If partnerships ever exist, they're labeled and never affect order. No affiliate links in career content.
+- **Aim never contacts anyone** on the student's behalf (employers, schools, recruiters). It prepares; the family acts.
+- **Progress on a path is evidence like any other**: projects, TeachBack, "Want more of this?", and feeds back into Pathways.
+
 ### How it fits the rest of Homeschool
 
 - **Culmination projects double as career experiments** ("Design a small bridge" is a taste of engineering), and Pathways can ask the parent to schedule one that tests an emerging interest.
