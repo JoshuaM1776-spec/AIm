@@ -59,6 +59,23 @@ const deps = {
       : props.includes("topics") ? (srv.studyPrompt = req.prompt, { title: "Cellular respiration", scope_note: "",
           topics: [{ title: "Glycolysis", brief: "Glucose is split into pyruvate in the cytoplasm.", searches: ["glycolysis explained"] },
             { title: "Krebs cycle", brief: "Pyruvate's carbon is released as CO2 in the mitochondria.", searches: ["krebs cycle explained"] }] })
+      // Pathways (pathways.ts), told apart by their schemas.
+      : props.includes("uses") ? (srv.wherePrompt = req.prompt, { intro: "Algebra is how people find an unknown.",
+          uses: [{ field: "Aviation", how: "Pilots plan fuel.", problem: "A plane burns 9 gallons an hour. How long do 45 gallons last?", hint: "Divide.", answer: "5 hours" }] })
+      : props.includes("themes") ? { themes: [{ name: "aviation", offer: "You've been exploring aviation. Want to see some of the careers connected to it?",
+          evidence: [...req.prompt.matchAll(/^(\d+)\. [^\n]*: (yes|maybe)/gm)].map(m => Number(m[1])) }] }
+      : props.includes("careers") ? (srv.careersPrompt = req.prompt, { careers: [{ title: "Aircraft Mechanic", what: "Inspects and repairs aircraft.", connection: "You like how planes work." },
+          { title: "Air Traffic Controller", what: "Guides aircraft safely.", connection: "Flight, from the ground." }] })
+      : props.includes("tagline") ? { tagline: "Keep aircraft safe and ready to fly.", environment: "Hangars and shops", physical: "Moderate to high: lifting, ladders",
+          education: "Certificate, apprenticeship or military", enjoy_if: ["You enjoy hands-on problem solving", "You like tools and machinery", "You like exact, careful work"], overview_search: "aircraft mechanic explained" }
+      : props.includes("realities") ? { summary: "Inspections, repairs and a lot of paperwork.", realities: ["Every step is logged", "Night shifts happen"], searches: ["aircraft mechanic day in the life", "what I wish I knew before becoming an aircraft mechanic"] }
+      : props.includes("client") ? { title: "Inspect a bicycle like an aircraft", client: "A cycling club", brief: "They want every bike checked before a race.",
+          constraints: ["One hour per bike", "Every step logged"], deliverable: "A signed inspection log", materials: ["A bicycle", "A notebook"],
+          steps: ["Write the checklist", "Inspect", "Log it"], rubric: [{ criterion: "Complete log", good: "Every item checked and signed" }],
+          time: "One afternoon", together: true, together_reason: "Uses tools on a real bike.", skills: ["Attention to detail"] }
+      : props.includes("questions") ? { questions: ["What surprised you most?", "What does a hard day look like?"], ways: ["Ask family friends"], searches: ["aircraft hangar tour"] }
+      : props.includes("routes") ? { skills: ["Troubleshooting"], knowledge: ["Aircraft systems"], study_next: ["Basic electricity"],
+          routes: [{ route: "Aviation maintenance school", what: "An approved program, then exams.", time: "18 to 24 months" }] }
       : props.includes("searches") ? (srv.lastAskPrompt = req.prompt, srv.ask.shift())
       : props.includes("groups") ? (srv.rankCalls++, srv.rank(req))
       : { summary: "You explained what photosynthesis produces. Light and location weren't covered yet.", strengths: ["What photosynthesis produces"],
@@ -337,12 +354,87 @@ await check.waitForSelector("h1:text-is('What you showed')");
 await check.waitForTimeout(500);
 study = (await sw.evaluate(() => chrome.storage.local.get("purpose").then(d => d.purpose))).study;
 step("the check's result goes back to the study session", !!study.topics[0].check && study.topics[0].check.objectives.length === 3, JSON.stringify(study.topics[0].check));
+// ---------- Pathways pieces on TeachBack's results ----------
+await check.click(".pw-interest button:text-is('Yes')");
+await check.waitForTimeout(300);
+let interests = (await sw.evaluate(() => chrome.storage.local.get("interests"))).interests || [];
+step("Want more of this? is the student's own answer, kept in this browser", interests.length === 1 && interests[0].answer === "yes" && interests[0].source === "teachback" &&
+  interests[0].topic.startsWith("Glycolysis"));
+await check.click(".pw-where-btn:text-is('Where could this take me?')");
+await check.waitForSelector(".pw-where .pw-use");
+if (process.env.SHOTS) await check.screenshot({ path: `${process.env.SHOTS}/where-teachback.png`, fullPage: true });
+step("Where could this take me? shows where it's used, with a problem to try and the answer hidden", (await check.textContent(".pw-where")).includes("Aviation") &&
+  await check.isHidden(".pw-reveal >> nth=-1") && srv.wherePrompt.includes("SUBJECT OR TOPIC: Glycolysis"));
 await check.close();
 await yt.waitForTimeout(300);
 await yt.click("#wp-study button:has-text('Next topic')");
 await yt.waitForURL(/search_query=krebs%20cycle%20explained/);
 await yt.waitForSelector(".wp-study-bar");
 step("Next topic moves on", (await yt.textContent(".wp-study-bar")).includes("Topic 2 of 2"));
+
+// ---------- Pathways ----------
+const pw = await ctx.newPage();
+pw.on("pageerror", e => console.log("pathways page error:", e.message));
+pw.on("dialog", d => d.accept());
+await pw.goto(`chrome-extension://${extId}/pathways.html`);
+await pw.waitForSelector("button:text-is('Turn on Pathways')");
+step("Pathways starts off, explains what it uses, and asks where you are", (await pw.textContent("main")).includes("Never your watch history") &&
+  (await pw.textContent("main")).includes("What could I do with it?"));
+await pw.click(".seg button:text-is('High school')");
+await pw.click("button:text-is('Turn on Pathways')");
+await pw.waitForSelector("h2:has-text(\"Explore something\")");
+await pw.fill(".ask input", "aviation");
+await pw.click(".ask button");
+await pw.waitForSelector("button:text-is('Explore this path')");
+if (process.env.SHOTS) { await pw.setViewportSize({ width: 1280, height: 900 }); await pw.screenshot({ path: `${process.env.SHOTS}/careers.png`, fullPage: true }); }
+step("a typed interest shows connected careers", (await pw.textContent("main")).includes("Aircraft Mechanic") && srv.careersPrompt.includes("THE STUDENT'S INTEREST: aviation"));
+await pw.click(".career-card:has-text('Aircraft Mechanic') button:text-is('Explore this path')");
+await pw.waitForSelector(".hero h1");
+await pw.waitForSelector(".enjoy");
+const pathText = await pw.textContent("main");
+step("a path: hero, four steps with Try it marked most important, quick facts with official figures, and 'you might enjoy this if'",
+  pathText.includes("Aircraft Mechanic") && pathText.includes("Keep aircraft safe") && ["See it", "Try it", "Meet it", "Prepare for it", "Most important", "Hangars and shops", "See official figures on O*NET", "You might enjoy this if", "Related paths", "Air Traffic Controller"].every(t => pathText.includes(t)) &&
+  !/\$\d/.test(pathText));
+await pw.waitForSelector(".story");
+if (process.env.SHOTS) { await pw.setViewportSize({ width: 1280, height: 1000 });
+  for (const scheme of ["light", "dark"]) { await pw.emulateMedia({ colorScheme: scheme }); await pw.waitForTimeout(200); await pw.screenshot({ path: `${process.env.SHOTS}/path-${scheme}.png`, fullPage: true }); }
+  await pw.emulateMedia({ colorScheme: "light" }); }
+step("Real people, real stories: YouTube searches", (await pw.getAttribute(".story >> nth=0", "href")).includes("search_query=aircraft%20mechanic%20day%20in%20the%20life"));
+await pw.click(".tabs button:has-text('Try it')");
+await pw.waitForSelector(".brief");
+if (process.env.SHOTS) await pw.screenshot({ path: `${process.env.SHOTS}/path-try.png`, fullPage: true });
+const brief = await pw.textContent(".brief");
+step("Try it is a real brief: client, constraints, deliverable, a professional's rubric, Do this together", ["For: A cycling club", "Constraints", "Every step logged", "How a professional would judge it", "Do this together"].every(t => brief.includes(t)));
+await pw.click("button:text-is('I did it')");
+await pw.fill(".reflect textarea >> nth=0", "Finding the loose brake cable");
+await pw.fill(".reflect textarea >> nth=1", "Logging every single step got repetitive");
+await pw.click(".reflect .seg button:text-is('Not for me')");
+if (process.env.SHOTS) await pw.screenshot({ path: `${process.env.SHOTS}/path-reflect.png` });
+await pw.click(".reflect button:text-is('Save')");
+await pw.waitForSelector("h2:has-text(\"found out\")");
+const pwState = await sw.evaluate(() => chrome.storage.local.get(["pathways", "interests"]));
+const ex = pwState.pathways.explorations[0];
+step("'Not for me' is saved as a result, in the student's words", ex.reflection.further === "no" && ex.done.try && !!ex.endedAt && ex.reflection.harder.includes("repetitive") &&
+  pwState.interests.some(i => i.source === "path" && i.answer === "no") && (await pw.textContent("main")).includes("Not for me"));
+await sw.evaluate(() => serial(() => recordInterest({ topic: "How wings make lift", source: "study", answer: "yes" })));
+await pw.click("button:text-is('Look again')");
+await pw.waitForSelector(".theme-card");
+if (process.env.SHOTS) await pw.screenshot({ path: `${process.env.SHOTS}/pathways-home.png`, fullPage: true });
+step("themes come from what the student was keen on", (await pw.textContent(".theme-card")).includes("Aviation") && (await pw.textContent(".theme-card")).includes("How wings make lift"));
+await yt.goto("https://www.youtube.com/");
+await yt.waitForSelector(".wp-theme-offer");
+if (process.env.SHOTS) { await yt.setViewportSize({ width: 1100, height: 760 }); await yt.screenshot({ path: `${process.env.SHOTS}/theme-offer.png` }); }
+step("the homepage offers the theme once, lightly", (await yt.textContent(".wp-theme-offer")).includes("You've been exploring aviation"));
+await yt.click(".wp-theme-offer button:text-is('Not now')");
+await yt.waitForTimeout(500);
+step("Not now: offered, and not shown again", !(await yt.$(".wp-theme-offer")) && !!(await sw.evaluate(() => chrome.storage.local.get("pathways"))).pathways.themes[0].offeredAt);
+await pw.click("button:text-is('Turn off Pathways and delete its data')");
+await pw.waitForSelector("button:text-is('Turn on Pathways')");
+const gone = await sw.evaluate(() => chrome.storage.local.get(["pathways", "interests"]));
+step("turning Pathways off deletes all of it", !gone.pathways && !gone.interests);
+await pw.close();
+await yt.goto("https://www.youtube.com/results?search_query=krebs%20cycle%20explained");
+await yt.waitForSelector(".wp-study-bar");
 const [overview] = await Promise.all([ctx.waitForEvent("page"), yt.click(".wp-study-bar button:text-is('See summary')")]);
 await overview.waitForSelector("h1:text-is('Cellular respiration')");
 const ov = await overview.textContent("main");

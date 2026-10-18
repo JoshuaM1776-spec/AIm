@@ -6,7 +6,7 @@ import fs from "node:fs";
 
 const dir = new URL("../supabase/functions/ai/", import.meta.url);
 // Dependencies first, so everything is defined before index.ts runs.
-const FILES = ["teachback.ts", "librarian.ts", "study.ts", "handler.ts", "index.ts"];
+const FILES = ["teachback.ts", "librarian.ts", "study.ts", "pathways.ts", "handler.ts", "index.ts"];
 const localImport = /^import (type )?\{[^}]*\} from "\.\/[a-z]+\.ts";\n/gm;
 
 export const OUT = new URL("../supabase/functions/ai-dashboard.ts", import.meta.url);

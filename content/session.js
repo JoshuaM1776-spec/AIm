@@ -274,6 +274,8 @@ async function askDone() {
         el("button", { class: "wp-btn wp-btn-tonal", style: "flex:1", onclick: () => finishPurpose("partly") }, "Partly"),
         el("button", { class: "wp-btn wp-btn-tonal", style: "flex:1", onclick: () => finishPurpose("no") }, "Not really")),
       el("button", { class: "wp-btn wp-btn-text wp-btn-block", onclick: closeModal }, "Keep going")),
+    // With Pathways on, a learning Target asks once whether you'd like more of it.
+    status.pathways && (p.librarian?.kind === "learn" || p.study) ? interestChips({ topic: p.study?.title || p.text, source: "target" }) : null,
     plus ? el("div", { class: "wp-done-teachback" },
       el("span", { class: "wp-muted" }, "Learned something?"),
       el("button", { class: "wp-btn wp-btn-tonal", onclick: () => send({ type: "open-teachback", topic: p.text }) }, "Test my understanding")) : null));

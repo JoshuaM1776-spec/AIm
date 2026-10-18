@@ -70,6 +70,12 @@ const writes = {
   "history-clear": () => clearHistory(),
   "setting": m => setSetting(m.key, m.value),
   "homeschool-preview": m => setHomeschoolPreview(!!m.on),
+  "interest": m => recordInterest({ topic: m.topic, subject: m.subject, source: m.source, answer: m.answer, note: m.note, ref: m.ref })
+    .then(r => { if (r.refreshThemes) refreshThemes(); return r; }),
+  "pathways-set": m => setPathways({ on: m.on, stage: m.stage, erase: !!m.erase }).then(r => { if (m.on) refreshThemes(); return r; }),
+  "pathways-theme-seen": m => pathwayThemeSeen(m.name, !!m.dismiss),
+  "exploration-start": m => explorationStart({ career: m.career, theme: m.theme, kind: m.kind, what: m.what, related: m.related }),
+  "exploration-update": m => explorationUpdate({ id: m.id, step: m.step, content: m.content, done: m.done, saved: m.saved, reflection: m.reflection, end: !!m.end }),
   "onboarding": m => setOnboarding({ welcomed: m.welcomed, tip: m.tip, hsTour: m.hsTour, reset: !!m.reset }),
   "plan-start": m => planStart(String(m.id || "")),
   "plan-done": m => planDone(String(m.id || ""), m.done !== false)
@@ -93,6 +99,13 @@ const reads = {
   "targets": () => readAll().then(resumable),
   "open-study": () => chrome.tabs.create({ url: chrome.runtime.getURL("study.html") }).then(() => ({ result: "applied" })),
   "open-welcome": () => chrome.tabs.create({ url: chrome.runtime.getURL("welcome.html") }).then(() => ({ result: "applied" })),
+  "pathways": () => readPathways(),
+  "pathways-refresh": () => refreshThemes(true),
+  "open-pathways": m => {
+    const q = new URLSearchParams();
+    if (typeof m.theme === "string" && m.theme.trim()) q.set("theme", m.theme.trim().slice(0, 80));
+    return chrome.tabs.create({ url: chrome.runtime.getURL("pathways.html" + (q.size ? "?" + q : "")) }).then(() => ({ result: "applied" }));
+  },
   "open-targets": () => chrome.tabs.create({ url: chrome.runtime.getURL("targets.html") }).then(() => ({ result: "applied" })),
   // YouTube tabs may only learn whether to offer Plus features, and open TeachBack for a topic.
   "plus-brief": () => plusBrief(),
@@ -108,6 +121,23 @@ const reads = {
     return chrome.tabs.create({ url }).then(() => ({ result: "applied" }));
   }
 };
+
+// Pathways: look for themes in the student's "Want more of this?" answers (Aim Plus, and only once
+// Pathways is on). Runs outside the write queue, since it waits on the network.
+let themesRunning = null;
+function refreshThemes(force = false) {
+  themesRunning ||= (async () => {
+    const { pathways, interests } = await readPathways();
+    if (!pathways.on || !plusConfigured()) return { result: "skipped" };
+    const recent = interests.slice(-60);
+    const r = await plusCall("pathways-themes", { stage: pathways.stage || "other",
+      items: recent.map(x => ({ topic: x.topic, answer: x.answer, note: x.note })) }).catch(e => ({ error: String(e.message || e) }));
+    if (r.error) return { result: "error", message: r.error };
+    await serial(() => savePathwayThemes(r.themes, recent.map(x => x.id)));
+    return { result: "applied", themes: r.themes.length };
+  })().finally(() => { themesRunning = null; });
+  return force ? themesRunning : (themesRunning.catch(() => {}), { result: "started" });
+}
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id || !msg) return;

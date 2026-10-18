@@ -171,6 +171,8 @@ Study sessions come **before** learning paths. They're smaller, they serve the s
 
 ### I — Pathways (Plus and Homeschool)
 
+**Built in 0.26.0 (first version):** "Where could this take me?" (any signed-in account: TeachBack results, study sessions, Today's lessons), "Want more of this?" (TeachBack, study sessions, learning Targets marked complete, Today), and Pathways itself for Plus: themes, careers or kinds of work, a path's page with See it / Try it / Meet it / Prepare for it, reflections, theme offers on the homepage and Today. All of it stored in the browser for now (the server writes content and keeps nothing); moving it to server-side progress events comes with F1's data model. **Not yet:** adding a Try it to the Homeschool weekly plan with the parent's approval, and the parent's termly summary (both need the parent website).
+
 What interests me → what could I do with it → what would it take to get there. Designed in HOMESCHOOL.md → "Pathways"; this is the Plus version, for students who use Aim Plus on their own (many Plus users are students, and they already generate the evidence: learning goals, study sessions, TeachBack).
 
 - **"Where could this take me?" first, and for everyone.** A link on study session topics and TeachBack results (and an answer in the librarian to "why do I need to learn this?"): where the subject is used, each with a short real-world problem from that field. It uses no profile, so it needs no opt-in. It's the smallest piece and can ship before the rest.

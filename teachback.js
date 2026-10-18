@@ -45,6 +45,8 @@ async function call(task, input, errorBox) {
 }
 
 let session = null;   // what the server last said about this session
+let stage = "other";  // the Pathways stage, if set, for "Where could this take me?"
+chrome.runtime.sendMessage({ type: "pathways" }).then(r => { stage = r?.pathways?.stage || "other"; }).catch(() => {});
 let notes = params.get("notes") || ""; // kept for "Try again"; prefilled from a study session
 
 async function reload() {
@@ -204,6 +206,8 @@ function results(s) {
     node("h2", { textContent: "Each part" }),
     cards,
     R.nextStep ? node("p", { className: "note", textContent: R.nextStep }) : null,
+    PW.interest({ topic: s.topic, source: "teachback" }),
+    PW.where(s.topic, "", stage),
     node("div", { className: "row" },
       weak.length ? btn("Review weak areas", "", () => window.open(ytSearch(weak[0].review.search), "_blank", "noopener")) : null,
       btn("Try again", weak.length ? "tonal" : "", () => { session = null; params.delete("id"); history.replaceState(null, "", location.pathname); intro(s.topic); }),

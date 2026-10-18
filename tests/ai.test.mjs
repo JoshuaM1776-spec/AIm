@@ -421,6 +421,78 @@ test("study sessions: Plus only; the student's notes keep their structure; topic
   assert.strictEqual((await call(free, { task: "study-plan", input: { objective: "x y" } })).status, 403);
 });
 
+test("pathways: Where could this take me? is open to any account and keeps only complete uses", async () => {
+  let sys = "", prompt = "";
+  const deps = makeDeps({ plan: "free", claude: req => {
+    sys = req.system; prompt = req.prompt;
+    return { ok: true, model: "main", inputTokens: 10, outputTokens: 5, text: JSON.stringify({ intro: "Algebra is how people work out an unknown.",
+      uses: [{ field: "Aviation", how: "Pilots plan fuel.", problem: "A plane burns 9 gallons an hour. How long do 45 gallons last?", hint: "Divide.", answer: "5 hours" },
+        { field: "Construction", how: "Estimating.", problem: "", hint: "", answer: "" }] }) };
+  } });
+  const r = await call(deps, { task: "pathways-where", input: { topic: "Algebra", context: "Solving for x", stage: "middle" } });
+  assert.strictEqual(r.status, 200);
+  assert.deepStrictEqual(r.body.uses.map(u => u.field), ["Aviation"], "a use without its problem is dropped");
+  assert.match(prompt, /SUBJECT OR TOPIC: Algebra/);
+  assert.match(sys, /middle school/);
+  assert.match(sys, /No pay, salary/);
+  assert.strictEqual((await call(deps, { task: "pathways-where", input: { topic: "" } })).status, 400);
+});
+
+test("pathways: themes come only from what the student was keen on, with real evidence", async () => {
+  let prompt = "";
+  const deps = makeDeps({ plan: "plus", claude: req => {
+    prompt = req.prompt;
+    return { ok: true, model: "main", inputTokens: 10, outputTokens: 5, text: JSON.stringify({ themes: [
+      { name: "aviation", offer: "You've been exploring aviation. Want to see some of the careers connected to it?", evidence: [0, 1, 1, 9] },
+      { name: "cooking", offer: "", evidence: [2] },
+      { name: "weather", offer: "", evidence: [3, 4] }] }) };
+  } });
+  const items = [{ topic: "How wings make lift", answer: "yes" }, { topic: "Jet engines", answer: "maybe" }, { topic: "Baking bread", answer: "no" },
+    { topic: "Thunderstorms", answer: "yes", note: "loved the radar part" }, { topic: "Clouds", answer: "yes" }];
+  const r = await call(deps, { task: "pathways-themes", input: { stage: "high", items } });
+  assert.strictEqual(r.status, 200);
+  assert.deepStrictEqual(r.body.themes.map(t => [t.name, t.evidence]), [["aviation", [0, 1]], ["weather", [3, 4]]],
+    "made-up or repeated evidence is dropped, and a theme needs two items");
+  assert.match(r.body.themes[1].offer, /You've been exploring weather/, "a missing offer gets a plain one");
+  assert.match(prompt, /3\. Thunderstorms: yes \(“loved the radar part”\)/);
+  const few = await call(deps, { task: "pathways-themes", input: { items: [{ topic: "x", answer: "yes" }, { topic: "y", answer: "no" }] } });
+  assert.deepStrictEqual(few.body.themes, [], "too little to go on: no AI call, no themes");
+  assert.strictEqual(deps.calls.length, 1);
+  assert.strictEqual((await call(makeDeps({ plan: "free" }), { task: "pathways-themes", input: { items } })).status, 403);
+});
+
+test("pathways: careers skip what was 'not for me'; younger students get kinds of work", async () => {
+  let sys = "";
+  const deps = makeDeps({ plan: "plus", claude: req => {
+    sys = req.system;
+    return { ok: true, model: "main", inputTokens: 10, outputTokens: 5, text: JSON.stringify({ careers: [
+      { title: "Aircraft Mechanic", what: "Inspects and repairs.", connection: "Planes." }, { title: "Air Traffic Controller", what: "Guides aircraft.", connection: "Flight." }] }) };
+  } });
+  const r = await call(deps, { task: "pathways-careers", input: { theme: "aviation", stage: "high", notFor: ["aircraft mechanic"] } });
+  assert.deepStrictEqual(r.body.careers.map(c => c.title), ["Air Traffic Controller"]);
+  assert.strictEqual(r.body.kind, "careers");
+  const kid = await call(deps, { task: "pathways-careers", input: { theme: "aviation", stage: "middle" } });
+  assert.strictEqual(kid.body.kind, "work");
+  assert.match(sys, /not job titles/);
+});
+
+test("pathways: a path's steps, with Try it as a real brief and no Prepare for younger students", async () => {
+  const deps = makeDeps({ plan: "plus", claude: req => ({ ok: true, model: "main", inputTokens: 10, outputTokens: 5, text: JSON.stringify(
+    req.schema.properties.client ? { title: "Design a reading cabin", client: "A family", brief: "They want a small cabin.", constraints: ["Budget $8,000", "10 by 12 ft site"],
+      deliverable: "Floor plan and materials list", materials: ["Graph paper"], steps: ["Measure", "Sketch"], rubric: [{ criterion: "Fits the budget", good: "Costed list under $8,000" }],
+      time: "Two sittings", together: false, together_reason: "", skills: ["Spatial design"] }
+    : { summary: "Days at a desk and on site.", realities: ["Deadlines", "Lots of revisions"], searches: ["architect day in the life"] }) }) });
+  const t = await call(deps, { task: "pathways-step", input: { step: "try", career: "Architect", theme: "building things", stage: "high" } });
+  assert.strictEqual(t.status, 200);
+  assert.strictEqual(t.body.client, "A family");
+  assert.deepStrictEqual(t.body.rubric, [{ criterion: "Fits the budget", good: "Costed list under $8,000" }]);
+  assert.match(deps.calls[0].system, /most important step/);
+  const s = await call(deps, { task: "pathways-step", input: { step: "see", career: "Architect", stage: "high" } });
+  assert.deepStrictEqual(s.body.searches, ["architect day in the life"]);
+  assert.strictEqual((await call(deps, { task: "pathways-step", input: { step: "prepare", career: "Architect", stage: "middle" } })).status, 400);
+  assert.strictEqual((await call(deps, { task: "pathways-step", input: { step: "dance", career: "Architect" } })).status, 400);
+});
+
 test("account: download everything, or delete only with DELETE typed; both need a sign-in", async () => {
   const deleted = [];
   const deps = makeDeps({ plan: "free" });
@@ -453,7 +525,7 @@ test("the one-file dashboard version is up to date with supabase/functions/ai", 
   const dupes = names.filter((n, i) => names.indexOf(n) !== i);
   assert.deepStrictEqual(dupes, [], "top-level names repeat in the one-file version");
   // Imports between the files disappear when they're merged, so they can't rename anything.
-  for (const f of ["handler.ts", "index.ts", "librarian.ts", "study.ts"]) {
+  for (const f of ["handler.ts", "index.ts", "librarian.ts", "study.ts", "pathways.ts"]) {
     const src = fs.readFileSync(new URL(`../supabase/functions/ai/${f}`, import.meta.url), "utf8");
     assert.doesNotMatch(src, /^import [^\n]*\bas\b[^\n]*from "\.\//m, `${f}: no "as" in local imports`);
   }

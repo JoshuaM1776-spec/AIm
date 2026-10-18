@@ -189,13 +189,15 @@ function totalReached(settings, today) {
 // What every page needs to draw itself. Infinity can't cross a message, so "no limit" is null.
 async function getStatus() {
   const s = await readAll(), settings = await getSettings();
-  const { homeschool = null, onboarding = null } = await chrome.storage.local.get(["homeschool", "onboarding"]);
+  const { homeschool = null, onboarding = null, pathways = null } = await chrome.storage.local.get(["homeschool", "onboarding", "pathways"]);
   const today = s.usage[s.day];
   const left = leisureLeftSec(settings, today);
   return {
     purpose: s.purpose, brk: s.brk, stop: s.stop, today,
     leisureLeftMin: left === Infinity ? null : Math.floor(left / 60),
-    totalReached: totalReached(settings, today), settings, homeschool, onboarding
+    totalReached: totalReached(settings, today), settings, homeschool, onboarding,
+    // YouTube tabs only need whether Pathways is on, the stage, and the one theme to offer.
+    pathways: pathways?.on ? { on: true, stage: pathways.stage, offer: pathwayOffer(pathways) } : null
   };
 }
 
@@ -696,6 +698,123 @@ async function setOnboarding({ welcomed, tip, hsTour, reset, seenAll }) {
   if (typeof hsTour === "boolean") o.hsTour = hsTour;
   await chrome.storage.local.set({ onboarding: o });
   return { result: "applied", onboarding: o };
+}
+
+// ---------- Pathways ----------
+// What interests me → what could I do with it → what would it take. See docs/HOMESCHOOL.md →
+// "Pathways". Kept in this browser:
+//   interests  — the student's own answers to "Want more of this?" (and what they said), newest last;
+//   pathways   — { on, stage, themes, themesBasis, explorations }. Off by default; turning it off
+//                deletes all of it, interests included.
+const PATHWAY_STAGES = ["middle", "high", "college", "working", "other"];
+const PATHWAY_STEPS = ["overview", "see", "try", "meet", "prepare"];
+const emptyPathways = () => ({ on: false, stage: null, themes: [], themesBasis: 0, explorations: [] });
+
+async function readPathways() {
+  const { pathways, interests = [] } = await chrome.storage.local.get(["pathways", "interests"]);
+  return { pathways: { ...emptyPathways(), ...(pathways || {}) }, interests };
+}
+
+// "Want more of this?" Yes / Maybe / Not really, about something the student finished. One answer
+// per thing (answering again changes it). `ref` ties it to a plan item, which then shows the answer.
+async function recordInterest({ topic, subject, source, answer, note, ref }) {
+  topic = clip(topic, 160);
+  if (topic.length < 2 || !["yes", "maybe", "no"].includes(answer)) return { result: "error", message: "Unknown answer." };
+  const { pathways, interests } = await readPathways();
+  source = ["teachback", "study", "plan", "target", "path"].includes(source) ? source : "other";
+  const key = `${source}|${topic.toLowerCase()}`;
+  const old = interests.find(x => `${x.source}|${x.topic.toLowerCase()}` === key);
+  const it = old || { id: uid(), topic, source };
+  Object.assign(it, { subject: clip(subject, 60) || it.subject || "", answer, note: clip(note, 300) || it.note || "", at: Date.now() });
+  const list = [...interests.filter(x => x !== it), it].slice(-300);
+  const writes = { interests: list };
+  if (ref) {
+    const { homeschool: hs } = await chrome.storage.local.get("homeschool");
+    const item = hs?.items.find(i => i.id === ref);
+    if (item) { item.interest = answer; writes.homeschool = hs; }
+  }
+  await chrome.storage.local.set(writes);
+  // Enough new "yes" and "maybe" answers since themes were last looked for: look again.
+  const keen = list.filter(x => x.answer !== "no").length;
+  return { result: "applied", interest: it, refreshThemes: pathways.on && keen >= 2 && keen - pathways.themesBasis >= 2 };
+}
+
+async function setPathways({ on, stage, erase }) {
+  const { pathways } = await readPathways();
+  if (erase) {
+    await chrome.storage.local.remove(["pathways", "interests"]);
+    return { result: "applied", pathways: emptyPathways() };
+  }
+  if (typeof on === "boolean") pathways.on = on;
+  if (PATHWAY_STAGES.includes(stage)) pathways.stage = stage;
+  await chrome.storage.local.set({ pathways });
+  return { result: "applied", pathways };
+}
+
+// Themes from the server name interests by their place in the list that was sent (`basis`).
+async function savePathwayThemes(themes, sentIds) {
+  const { pathways, interests } = await readPathways();
+  if (!pathways.on) return { result: "applied", pathways };
+  const old = new Map(pathways.themes.map(t => [t.name.toLowerCase(), t]));
+  pathways.themes = (Array.isArray(themes) ? themes : []).slice(0, 3).map(t => {
+    const prev = old.get(String(t.name).toLowerCase());
+    return { name: clip(t.name, 40), offer: clip(t.offer, 200), evidence: (t.evidence || []).map(i => sentIds[i]).filter(Boolean),
+      offeredAt: prev?.offeredAt || null, dismissed: !!prev?.dismissed, at: prev?.at || Date.now() };
+  }).concat([...old.values()].filter(t => t.dismissed && !themes.some(n => String(n.name).toLowerCase() === t.name.toLowerCase())));
+  pathways.themesBasis = interests.filter(x => x.answer !== "no").length;
+  pathways.themesAt = Date.now();
+  await chrome.storage.local.set({ pathways });
+  return { result: "applied", pathways };
+}
+
+// A theme was offered ("Not now" keeps it on the Pathways page) or dismissed ("Don't suggest this").
+async function pathwayThemeSeen(name, dismiss) {
+  const { pathways } = await readPathways();
+  const t = pathways.themes.find(x => x.name.toLowerCase() === String(name).toLowerCase());
+  if (!t) return { result: "error", message: "Unknown theme." };
+  t.offeredAt ||= Date.now();
+  if (dismiss) t.dismissed = true;
+  await chrome.storage.local.set({ pathways });
+  return { result: "applied" };
+}
+
+// The theme Aim may offer next: one not offered yet. Offers happen once per theme.
+const pathwayOffer = p => (p?.on ? p.themes.find(t => !t.offeredAt && !t.dismissed) || null : null);
+
+// Exploring a path: the career (or kind of work), what each step said, which steps are done, and
+// the student's reflection in their own words. "Not for me" is a result like any other.
+async function explorationStart({ career, theme, kind, what, related }) {
+  career = clip(career, 80);
+  if (career.length < 2) return { result: "error", message: "Say which work to explore." };
+  const { pathways } = await readPathways();
+  let x = pathways.explorations.find(e => e.career.toLowerCase() === career.toLowerCase() && !e.endedAt);
+  if (!x) {
+    x = { id: uid(), career, theme: clip(theme, 80), kind: kind === "work" ? "work" : "careers", what: clip(what, 300),
+      related: (Array.isArray(related) ? related : []).slice(0, 6).map(r => ({ title: clip(r.title, 80), what: clip(r.what, 300) })).filter(r => r.title && r.title !== career),
+      startedAt: Date.now(), steps: {}, done: {}, saved: false, reflection: null, outcome: null, endedAt: null };
+    pathways.explorations = [x, ...pathways.explorations].slice(0, 40);
+    await chrome.storage.local.set({ pathways });
+  }
+  return { result: "applied", exploration: x };
+}
+
+async function explorationUpdate({ id, step, content, done, saved, reflection, end }) {
+  const { pathways } = await readPathways();
+  const x = pathways.explorations.find(e => e.id === id);
+  if (!x) return { result: "error", message: "Unknown path." };
+  if (PATHWAY_STEPS.includes(step) && content && typeof content === "object") x.steps[step] = content;
+  if (PATHWAY_STEPS.includes(step) && typeof done === "boolean") x.done[step] = done;
+  if (typeof saved === "boolean") x.saved = saved;
+  if (reflection && typeof reflection === "object") {
+    const further = ["yes", "maybe", "no"].includes(reflection.further) ? reflection.further : null;
+    x.reflection = { enjoyed: clip(reflection.enjoyed, 600), harder: clip(reflection.harder, 600), further, at: Date.now() };
+    x.outcome = further;
+  }
+  if (end) x.endedAt = Date.now();
+  await chrome.storage.local.set({ pathways });
+  // The reflection is the student's own record of interest, too.
+  if (x.reflection?.further) await recordInterest({ topic: x.career, subject: x.theme, source: "path", answer: x.reflection.further, note: x.reflection.enjoyed });
+  return { result: "applied", exploration: x };
 }
 
 // ---------- Aim Homeschool preview ----------

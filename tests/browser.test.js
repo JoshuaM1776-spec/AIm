@@ -443,6 +443,12 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.waitForSelector("#wp-home.wp-today");
   step("a done item is quiet (Watch again) and the highlight moves on", (await p.getAttribute(".wp-plan-next", "data-id")) === "math1" &&
     (await text('.wp-plan-item[data-id="sci1"]')).includes("Watch again") && (await text("#wp-home")).includes("1 of 6 done"));
+  step("a finished item asks once: Want more of this?", (await text('.wp-plan-item[data-id="sci1"]')).includes("Want more of this?"));
+  await p.click('.wp-plan-item[data-id="sci1"] .wp-interest-btn:text-is("Yes")');
+  await p.waitForTimeout(500);
+  st = await store();
+  step("the answer is kept, and the question goes away", st.homeschool.items[0].interest === "yes" && st.interests?.[0]?.topic === "How Volcanoes Form" &&
+    !(await text('.wp-plan-item[data-id="sci1"]')).includes("Want more of this?"));
   await p.click('.wp-plan-item[data-id="proj1"] .wp-btn');
   await p.waitForSelector(".wp-plan-guide");
   step("a project opens its guide, with materials, steps and Do this together", (await text(".wp-plan-guide")).includes("Materials") && (await text(".wp-plan-guide")).includes("Steps") && (await text(".wp-plan-guide")).includes("Ask them to join you"));

@@ -429,7 +429,7 @@ Preferences are per student or per family, and parents can view and remove them.
 
 **What interests me? → What could I do with it? → What would it take to get there?** Traditional education usually keeps these three questions apart; Pathways connects them. It suggests opportunities based on interests the student has chosen to share, and lets them **experience a small part of the work before committing to anything**. It never claims to know what career someone is suited for.
 
-**One design, two places:** Aim Homeschool (the parent turns it on, described here) and Aim Plus (students turn it on for themselves; ROADMAP.md → "I — Pathways"). Not before the core flows work well.
+**First version built in 0.26.0** (see ROADMAP.md → I for what's in it and what isn't). **One design, two places:** Aim Homeschool (the parent turns it on, described here) and Aim Plus (students turn it on for themselves; ROADMAP.md → "I — Pathways"). Not before the core flows work well.
 
 ### Interests lead to paths, naturally
 

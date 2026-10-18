@@ -28,7 +28,7 @@ async function renderHome() {
   const p = activePurpose();
   const others = status.paused || [];
   const key = status.totalReached ? "total"
-    : [p ? `p|${p.id}|${p.text}` : "idle", leisureUsedUp(), others.map(x => x.id).join(","), account.on].join("|");
+    : [p ? `p|${p.id}|${p.text}` : "idle", leisureUsedUp(), others.map(x => x.id).join(","), account.on, status.pathways?.offer?.name || ""].join("|");
   if ($("#wp-home")?.dataset.key === key) return; // don't rebuild while someone is typing
   $("#wp-home")?.remove();
 
@@ -77,6 +77,7 @@ async function renderHome() {
     p ? null : el("div", { class: "wp-muted wp-home-lede" }, `Whether you're preparing for an exam, learning a new skill, or finding a quick answer, ${BRAND} helps you stay focused on what you came to YouTube to accomplish.`),
     el("div", { class: "wp-home-search" }, input, findBtn),
     hint,
+    themeOfferBlock(),
     // Examples help a first visit; once there's something to pick up, they'd only add clutter.
     !p && !others.length ? el("div", { class: "wp-label" }, "Try asking") : null,
     !p && !others.length ? el("div", { class: "wp-home-examples" }, ...EXAMPLES.map(t =>

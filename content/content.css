@@ -559,3 +559,29 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 @media (prefers-reduced-motion: reduce) { .wp-coach-ring { transition: none; } }
 .wp-coach-tour .wp-coach-step { color: var(--wp-hs, var(--wp-muted)); }
 .wp-today-tour { margin-left: auto; font-size: 12px; }
+
+/* ---------- Pathways on YouTube (content/pathways.js) ---------- */
+.wp-interest { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.wp-interest-q { font-size: 13px; line-height: 18px; color: var(--wp-muted); margin-right: 2px; }
+.wp .wp-interest-btn { height: 28px; padding: 0 12px; border-radius: 14px; border: 1px solid var(--wp-divider); background: none; font-size: 13px; font-weight: 500; }
+.wp .wp-interest-btn:hover { background: var(--wp-tonal); }
+.wp .wp-interest-btn.on { background: var(--wp-text); color: var(--wp-text-inverse); border-color: transparent; }
+.wp-done-dialog .wp-interest { justify-content: center; }
+.wp .wp-where-link { display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; margin-top: 4px; font-size: 13px; }
+.wp .wp-where-link .wp-icon svg { width: 16px; height: 16px; }
+.wp-where { width: min(560px, 100%); max-height: min(86vh, 100%); }
+.wp-where-topic { font-size: 14px; color: var(--wp-muted); margin-top: -6px; }
+.wp-where-body { display: flex; flex-direction: column; gap: 10px; }
+.wp-where-intro { margin: 0; font-size: 15px; line-height: 22px; }
+.wp-where-use { border: 1px solid var(--wp-card-border); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.wp-where-field { font-weight: 700; font-size: 15px; }
+.wp-where-how { font-size: 13px; line-height: 18px; }
+.wp-where-problem { font-size: 14px; line-height: 20px; margin-top: 4px; }
+.wp-where-actions { display: flex; gap: 16px; margin-top: 2px; }
+.wp-where-reveal { font-size: 14px; line-height: 20px; background: var(--wp-tonal); border-radius: 8px; padding: 8px 10px; }
+.wp-theme-offer { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 14px; border-radius: 12px; background: var(--wp-tonal); text-align: left; }
+.wp-theme-offer-icon { display: flex; color: var(--wp-text); }
+.wp-theme-offer-text { flex: 1 1 220px; font-size: 14px; line-height: 20px; font-weight: 500; }
+.wp-theme-offer-actions { display: flex; gap: 4px; flex-wrap: wrap; }
+.wp-plan-offer { padding: 4px; }
+.wp-plan-offer .wp-theme-offer { background: var(--wp-hs-soft); }

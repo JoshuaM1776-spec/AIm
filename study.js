@@ -16,6 +16,13 @@ function node(tag, props = {}, ...kids) {
 }
 const btn = (label, cls, onclick) => node("button", { className: `btn ${cls}`.trim(), type: "button", textContent: label, onclick });
 
+// Kept across re-renders (the summary redraws as the session goes on in other tabs), so an open
+// "Where could this take me?" stays open.
+const pieces = new Map();
+const keep = (key, make) => pieces.get(key) || pieces.set(key, make()).get(key);
+let stage = "other";
+send({ type: "pathways" }).then(r => { stage = r?.pathways?.stage || "other"; });
+
 function topicCard(st, t, i) {
   const watched = t.videos.filter(v => t.watched.includes(v.id)).length;
   const weak = t.check?.objectives.filter(o => o.status !== "demonstrated") || [];
@@ -27,6 +34,7 @@ function topicCard(st, t, i) {
         t.check ? node("span", { className: `pill ${weak.length ? "" : "strong"}`, textContent: weak.length ? "Review" : "Checked" })
           : node("span", { className: "pill", textContent: "Not checked yet" }))),
     t.brief ? node("p", { className: "small", textContent: t.brief }) : null,
+    keep(`where|${t.id}`, () => PW.where(t.title, st.title, stage)),
     t.videos.length ? node("div", { className: "videos" }, t.videos.map(v =>
       node("a", { href: yt(`/watch?v=${encodeURIComponent(v.id)}`), textContent: `${t.watched.includes(v.id) ? "✓ " : ""}${v.title || "Video"}${v.channel ? ` · ${v.channel}` : ""}` })))
       : node("p", { className: "muted small", textContent: "Videos are picked when you open this topic." }),
@@ -59,6 +67,7 @@ async function render() {
     st.scopeNote ? node("p", { className: "note", textContent: st.scopeNote }) : null,
     review.length ? node("div", { className: "note" }, node("b", { textContent: "Worth reviewing: " }), review.map(t => t.title).join(", ")) : null,
     st.topics.map((t, i) => topicCard(st, t, i)),
+    keep(`interest|${st.id}`, () => PW.interest({ topic: st.title, source: "study" })),
     st.endedAt ? null : node("div", { className: "row" },
       btn("Continue studying", "", () => { const t = st.topics[st.current] || st.topics[0]; location.href = yt(`/results?search_query=${encodeURIComponent(t.searches[0])}`); }),
       btn("End study session", "text", async () => {

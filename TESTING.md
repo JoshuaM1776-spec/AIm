@@ -203,7 +203,17 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] With everything done: "You're done for today.", Go deeper searches and break choices, and the last lesson is no longer the Target.
 - [ ] Dark theme and a narrow window (the side column moves below). "Turn off" brings back "What brings you here?". Reset sample plan (Settings) starts the day over.
 
-### 19. Sync and reload
+### 19. Pathways (Aim Plus; signed in for "Where could this take me?")
+
+- [ ] After a TeachBack check and a study session's summary: "Want more of this?" (Yes / Maybe / Not really) and "Where could this take me?". The latter unfolds four fields, each with a short problem; Hint and Answer stay hidden until clicked.
+- [ ] On YouTube: "Where could this take me?" in a study topic's panel and on Today's lessons opens a dialog with the same.
+- [ ] Settings → Pathways (or the link at the end of "Where could this take me?"): off at first, explains what it uses, asks where you are. Turn it on.
+- [ ] Type an interest → careers (or kinds of work, for middle school) → Explore this path: hero, Overview with four step cards (Try it marked most important), Quick facts with an O*NET link instead of pay figures, "You might enjoy this if…", Related paths, and "Real people. Real stories." YouTube searches. No Prepare step for middle school.
+- [ ] Try it: a brief with a client, constraints, deliverable, materials, steps, a professional's rubric, and "Do this together" when it needs a parent. I did it → three reflection questions; "Not for me" ends the path and shows under "What you've found out".
+- [ ] After a few "Yes"/"Maybe" answers: a theme appears on the Pathways page, and once on YouTube's homepage (or Today) as "You've been exploring … Want to see …?". Not now and Don't suggest this both stop it showing.
+- [ ] Turn off Pathways and delete its data: everything goes, including the answers.
+
+### 20. Sync and reload
 
 - [ ] Target complete from the popup while a YouTube tab is on a video: that tab shows the "What brings you here?" card on the player within a few seconds.
 - [ ] Two YouTube tabs: starting a break or setting a Target in one updates the other's indicator, and a card waiting on the other tab's player clears if the new state allows its video.

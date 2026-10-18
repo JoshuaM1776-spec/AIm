@@ -4,7 +4,7 @@
 // (see setHomeschoolPreview in store.js and docs/HOMESCHOOL.md → "Student home on YouTube").
 
 const planOn = () => !!status.homeschool?.items?.length;
-const planKey = () => JSON.stringify(status.homeschool?.items?.map(i => [i.id, !!i.doneAt, i.video?.id || ""]) || null);
+const planKey = () => JSON.stringify(status.homeschool?.items?.map(i => [i.id, !!i.doneAt, i.video?.id || "", i.interest || ""]) || null);
 const planItem = id => status.homeschool?.items.find(i => i.id === id) || null;
 const planNext = hs => hs.items.find(i => !i.doneAt) || null;
 
@@ -73,14 +73,17 @@ function planRow(item, next) {
     el("div", { class: "wp-plan-text" },
       el("div", { class: "wp-plan-subject" }, item.subject, item.together && !item.doneAt ? el("span", { class: "wp-plan-tag" }, "Do this together") : null),
       el("div", { class: "wp-plan-title" }, item.title),
-      el("div", { class: "wp-plan-desc" }, item.doneAt ? "Done" : item.desc)),
+      el("div", { class: "wp-plan-desc" }, item.doneAt ? "Done" : item.desc),
+      // Finished: the student's own say on whether they want more of it, once.
+      item.doneAt && !item.interest ? interestChips({ topic: item.title, subject: item.subject, source: "plan", ref: item.id }) : null,
+      !item.doneAt && item.kind !== "teachback" ? whereLink(item.kind === "project" ? item.title : `${item.subject}: ${item.title}`, item.desc) : null),
     el("button", { class: cls, onclick: () => openPlanItem(item) },
       !item.doneAt && item.kind === "video" ? icon("play") : null, label));
 }
 
 function renderToday(host) {
   const hs = status.homeschool;
-  const key = `today|${planKey()}|${greeting()}|${purpose?.plan || ""}`;
+  const key = `today|${planKey()}|${greeting()}|${purpose?.plan || ""}|${account.on}|${status.pathways?.offer?.name || ""}`;
   if ($("#wp-home")?.dataset.key === key) return;
   $("#wp-home")?.remove();
   const next = planNext(hs);
@@ -113,7 +116,9 @@ function renderToday(host) {
     finished,
     el("div", { class: "wp-plan-list" }, ...hs.items.map(i => planRow(i, next))));
 
+  const offer = themeOfferBlock();
   const side = el("aside", { class: "wp-plan-side" },
+    offer ? el("section", { class: "wp-plan-card wp-plan-offer" }, offer) : null,
     el("section", { class: "wp-plan-card wp-plan-unit" },
       el("h2", {}, "Current Unit"),
       el("div", { class: "wp-plan-unit-row" },
@@ -162,6 +167,8 @@ function renderPlanPanel(p, host) {
       el("div", { class: "wp-plan-subject" }, item.subject),
       el("div", { class: "wp-strong" }, item.title),
       el("div", { class: "wp-muted" }, item.desc),
+      whereLink(`${item.subject}: ${item.title}`, item.desc),
+      item.doneAt && !item.interest ? interestChips({ topic: item.title, subject: item.subject, source: "plan", ref: item.id }) : null,
       item.doneAt ? el("div", { class: "wp-plan-panel-done" }, icon("check"), "Done")
         : el("button", { class: "wp-btn wp-plan-btn-quiet", onclick: () => setPlanDone(item, true) }, icon("check2"), "Mark done")) : null,
     after ? el("button", { class: `wp-btn ${item?.doneAt ? "wp-plan-btn-strong" : "wp-plan-btn-quiet"} wp-btn-block`, onclick: () => openPlanItem(after) },

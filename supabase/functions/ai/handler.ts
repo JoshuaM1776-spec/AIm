@@ -7,6 +7,7 @@
 import { type AiRequest, type TaskCtx, type TeachbackDb, TaskError, finishTask, get, start, turn } from "./teachback.ts";
 import { ask, rank } from "./librarian.ts";
 import { studyPlan } from "./study.ts";
+import { careers, step, themes, where } from "./pathways.ts";
 
 export type Plan = "free" | "plus";
 
@@ -72,7 +73,13 @@ export const TASKS: Record<string, Task> = {
   "study-plan": { plan: "plus", run: studyPlan },
   // The librarian: any signed-in account, within its plan's allowance. See librarian.ts.
   "librarian-ask": { run: ask },
-  "librarian-rank": { run: rank }
+  "librarian-rank": { run: rank },
+  // Pathways: see pathways.ts. "Where could this take me?" uses nothing about the student, so any
+  // signed-in account may ask; the rest is Aim Plus.
+  "pathways-where": { run: where },
+  "pathways-themes": { plan: "plus", run: themes },
+  "pathways-careers": { plan: "plus", run: careers },
+  "pathways-step": { plan: "plus", run: step }
 };
 
 // Handled directly in handle(), without AI.

@@ -68,6 +68,7 @@ function topicBlock(p, st, t) {
     el("div", { class: "wp-label" }, `Topic ${i + 1} of ${st.topics.length}`),
     el("div", { class: "wp-strong" }, t.title),
     t.brief ? el("div", { class: "wp-study-brief" }, t.brief) : null,
+    whereLink(t.title, st.title),
     el("div", { class: "wp-study-actions" },
       el("button", { class: "wp-btn wp-btn-tonal", onclick: () => checkTopic(p, st, t) }, t.check ? "Check again" : "Check yourself"),
       last ? el("button", { class: "wp-btn wp-btn-text", onclick: () => send({ type: "open-study" }) }, "See summary")

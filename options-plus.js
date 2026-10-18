@@ -80,6 +80,9 @@ function accountView(st) {
     const tb = node("button", { className: "btn", type: "button", textContent: "Test my understanding" });
     tb.onclick = () => chrome.tabs.create({ url: chrome.runtime.getURL("teachback.html") });
     buttons.append(tb);
+    const pw = node("button", { className: "btn tonal", type: "button", textContent: "Pathways" });
+    pw.onclick = () => chrome.tabs.create({ url: chrome.runtime.getURL("pathways.html") });
+    buttons.append(pw);
     const check = node("button", { className: "btn tonal", type: "button", textContent: "Check connection" });
     check.onclick = async () => {
       const r = await plusDo({ type: "plus-check" });
