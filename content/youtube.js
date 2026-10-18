@@ -30,6 +30,8 @@ const YT = {
   sidebarHost: "ytd-watch-flexy #secondary",   // where "Up next from your search" goes
   results: "ytd-search",
   resultVideos: "ytd-video-renderer, yt-lockup-view-model",
+  // Sponsored slots in results and feeds. Their videos aren't results, so Aim never counts them.
+  ads: "ytd-ad-slot-renderer, ytd-in-feed-ad-layout-renderer, ytd-promoted-video-renderer, ytd-promoted-sparkles-web-renderer, ytd-search-pyv-renderer, ytd-display-ad-renderer",
   // What the librarian reads about each result. Missing pieces are simply left out.
   resultLength: ["ytd-thumbnail-overlay-time-status-renderer", ".yt-badge-shape__text", "badge-shape .badge-shape-wiz__text"],
   resultMeta: ["#metadata-line", ".yt-content-metadata-view-model-wiz__metadata-row", ".yt-content-metadata-view-model__metadata-row"],
@@ -140,6 +142,7 @@ function searchResults() {
   const videos = [], lists = new Set(), seen = new Set();
   if (!root) return { videos, lists: [] };
   for (const n of $$(YT.resultVideos, root)) {
+    if (n.closest(YT.ads)) continue;
     const a = $(YT.itemWatchLink, n);
     if (!a) continue;
     let id = null, list = null;
@@ -147,7 +150,7 @@ function searchResults() {
     if (list) lists.add(list);
     if (!id || seen.has(id)) continue;
     seen.add(id);
-    videos.push({ id, title: squash(first(YT.itemTitle, n)?.textContent || a.title), channel: squash(first(YT.resultChannel, n)?.textContent),
+    videos.push({ id, title: squash(first(YT.itemTitle, n)?.textContent || a.title || a.getAttribute("aria-label")), channel: squash(first(YT.resultChannel, n)?.textContent),
       length: squash(first(YT.resultLength, n)?.textContent).slice(0, 12), meta: squash(first(YT.resultMeta, n)?.textContent).slice(0, 80),
       snippet: squash(first(YT.resultSnippet, n)?.textContent).slice(0, 200) });
   }

@@ -159,7 +159,11 @@ function allowLocal(videos, lists, query) {
   if (!p) return;
   p.allowed ||= [];
   p.allowedLists ||= [];
-  for (const v of videos) if (!p.allowed.some(x => x.id === v.id)) p.allowed.push({ ...v, q: query, at: Date.now() });
+  for (const v of videos) {
+    const old = p.allowed.find(x => x.id === v.id);
+    if (old) { old.length ||= v.length; old.title ||= v.title; }
+    else p.allowed.push({ ...v, q: query, at: Date.now() });
+  }
   for (const l of lists) if (!p.allowedLists.includes(l)) p.allowedLists.push(l);
 }
 

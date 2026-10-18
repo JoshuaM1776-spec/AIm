@@ -6,8 +6,10 @@ const aimEarly = (() => {
   const root = document.documentElement;
   const onVideoPage = () => location.pathname === "/watch" || location.pathname.startsWith("/shorts/");
   let holding = true;
+  // Pause only once the video is really playing ("playing"), never on "play": pausing while
+  // YouTube's player is still starting up interrupts it, and it can fail with "An error occurred".
   const onPlay = e => { if (holding && onVideoPage() && e.target.tagName === "VIDEO") e.target.pause(); };
-  document.addEventListener("play", onPlay, true);
+  document.addEventListener("playing", onPlay, true);
 
   // Hide the homepage feed (see html.wp-boot in content.css) unless Aim won't replace it,
   // and hide Shorts, recommendations and feeds unless you're on a break (see focus.js).
@@ -26,7 +28,7 @@ const aimEarly = (() => {
   const done = () => {
     if (!holding) return;
     holding = false;
-    document.removeEventListener("play", onPlay, true);
+    document.removeEventListener("playing", onPlay, true);
   };
   // Safety net in case the main scripts never start: never leave the page stuck.
   setTimeout(() => { done(); showFeed(); }, 10000);

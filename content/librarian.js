@@ -118,7 +118,7 @@ async function librarianPicks() {
     picksInFlight = null;
     if (!r || r.error || !r.groups?.length || searchQuery() !== query) return;
     const byId = new Map(results.map(v => [v.id, v]));
-    groups = r.groups.map(g => ({ label: g.label, videos: g.videos.map(v => ({ ...v, title: byId.get(v.id)?.title || "", channel: byId.get(v.id)?.channel || "" })) }));
+    groups = r.groups.map(g => ({ label: g.label, videos: g.videos.map(v => ({ ...v, title: byId.get(v.id)?.title || "", channel: byId.get(v.id)?.channel || "", length: byId.get(v.id)?.length || "" })) }));
     if (p.librarian) { send({ type: "librarian-picks", query, groups }); (p.librarian.picks ||= {})[query] = groups; }
     else p._picks = { ...(p._picks || {}), [query]: groups };
   }

@@ -5,7 +5,9 @@
 //   A limit ran out   → the video that was playing may finish within the grace period;
 //                       anything else waits for a decision.
 
-document.addEventListener("play", e => {
+// "playing", not "play": a video is paused only once it has really started, so YouTube's player is
+// never interrupted while it sets up (that can end in "An error occurred. Please try again later").
+document.addEventListener("playing", e => {
   if (holding && e.target.tagName === "VIDEO") e.target.pause();
 }, true);
 
@@ -16,7 +18,13 @@ document.addEventListener("ended", e => {
   if (stop?.videoId === currentId) endGrace();
 }, true);
 
-function hold() { holding = true; getVideoEl()?.pause(); }
+// Hold the video on screen. One that hasn't started yet is left alone: the "playing" listener above
+// pauses it the moment it does.
+function hold() {
+  holding = true;
+  const v = getVideoEl();
+  if (v && !v.paused && v.readyState >= 2) v.pause();
+}
 function release(id) {
   cleared.add(id);
   holding = false;

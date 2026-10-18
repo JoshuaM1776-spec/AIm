@@ -2,7 +2,8 @@
 // own searches found, in place of YouTube's recommendations. No AI: your search, YouTube's ranking.
 
 function upNextItems(p) {
-  const pool = (p.allowed || []).filter(v => v.id !== currentId);
+  // Untitled entries are sponsored slots captured before Aim knew to skip them.
+  const pool = (p.allowed || []).filter(v => v.id !== currentId && v.title);
   const lastQ = p.searches?.[p.searches.length - 1]?.q;
   const fromLast = pool.filter(v => v.q === lastQ);
   return (fromLast.length >= 3 ? fromLast : pool.slice().reverse()).slice(0, 12);
@@ -29,7 +30,8 @@ function renderUpNext() {
     ...(items.length
       ? items.map(v => el("a", { class: "wp-upnext-item", href: `/watch?v=${encodeURIComponent(v.id)}`, title: v.title || "" },
           // A background image: if the thumbnail can't load, a grey box remains, not a broken-image icon.
-          el("div", { class: "wp-upnext-thumb", style: `background-image: url("https://i.ytimg.com/vi/${encodeURIComponent(v.id)}/mqdefault.jpg")` }),
+          el("div", { class: "wp-upnext-thumb", style: `background-image: url("https://i.ytimg.com/vi/${encodeURIComponent(v.id)}/mqdefault.jpg")` },
+            v.length ? el("span", { class: "wp-upnext-len" }, v.length) : null),
           el("div", { class: "wp-upnext-text" },
             el("div", { class: "wp-upnext-title" }, v.title || "Video"),
             v.channel ? el("div", { class: "wp-muted" }, v.channel) : null)))

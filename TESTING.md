@@ -26,6 +26,8 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 
 ### 1. Install, upgrade and settings
 
+- [ ] **Opening a video in a new tab plays normally** (no "An error occurred. Please try again later"), with and without a Target. A video Aim holds starts for a split second, then pauses under the card.
+
 - [ ] **Fresh install** (remove Aim first, then load it): the welcome tour opens in a new tab. Let's go → How it works → Make it yours (changes save right away) → Want help finding the right video? (only when accounts are available) → You're all set → Open YouTube. Back, Skip and the arrow keys work; light and dark both look right.
 - [ ] First YouTube visit: a tip points at the box ("Start here", 1 of 2), then at the Aim button. Neither comes back after a reload. The first search on a Target gets one tip about the results bar.
 - [ ] **Updating** an existing Aim (reload over an older version): no welcome tab and no tips.
@@ -105,6 +107,7 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] Homepage with no Targets: "What brings you here?", one rounded field ("Tell me what you're looking for…") with a small arrow inside, three example requests, and no big Search YouTube button. Enter and the arrow both work.
 - [ ] Popup with a Target: Resume (red), Take a Break, Done, then small Change Target · Set aside · All Targets links. It shows "N min so far" (time left only with a limit). **Resume** on a YouTube tab goes to the last video at the moment you left; on another site it opens a new tab instead. "Your activity" is folded.
 - [ ] Results after a plain search, signed in: the librarian is folded behind the speech-bubble icon; clicking it opens the ask box. After a request it opens by itself.
+- [ ] Up next from your search shows each video's length on its thumbnail, and no untitled "Video" entries (sponsored results are skipped).
 - [ ] Recent in the popup (under Your activity) shows the Target (with its pivots), minutes, number of videos and your answer.
 
 ### 9. Step D details

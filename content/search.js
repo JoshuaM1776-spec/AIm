@@ -46,8 +46,9 @@ function captureResults() {
   const p = activePurpose();
   if (location.pathname !== "/results" || !p || brk || searchPending) return;
   const { videos, lists } = searchResults();
-  const known = new Set((p.allowed || []).map(v => v.id));
-  const fresh = videos.filter(v => !known.has(v.id));
+  // New results, and ones whose length or title YouTube has filled in since Aim last looked.
+  const known = new Map((p.allowed || []).map(v => [v.id, v]));
+  const fresh = videos.filter(v => { const k = known.get(v.id); return !k || (!k.length && v.length) || (!k.title && v.title); });
   const freshLists = lists.filter(l => !(p.allowedLists || []).includes(l));
   if (!fresh.length && !freshLists.length) return;
   const query = searchQuery();
@@ -59,7 +60,7 @@ function captureResults() {
 document.addEventListener("click", e => {
   if (location.pathname !== "/results" || !activePurpose() || brk || searchPending) return;
   const a = e.target.closest?.('a[href*="/watch?v="]');
-  if (!a) return;
+  if (!a || a.closest(YT.ads)) return;
   let id = null, list = null;
   try { const u = new URL(a.href); id = u.searchParams.get("v"); list = u.searchParams.get("list"); } catch {}
   if (!id && !list) return;

@@ -402,15 +402,22 @@ async function addSearch(query) {
 // During a purpose you watch what your own searches for it found: their results, playlists
 // among them, and the video you set the purpose from. No AI decides; you chose the searches.
 const MAX_ALLOWED = 500;
+// "12:34" or "1:02:03", as YouTube shows a video's length on its thumbnail; anything else is dropped.
+const videoLength = s => (/^\d{1,2}(:\d{2}){1,2}$/.test(String(s || "").trim()) ? String(s).trim() : "");
+
 function allow(p, videos, lists, query) {
   p.allowed ||= [];
   p.allowedLists ||= [];
-  const known = new Set(p.allowed.map(v => v.id));
+  const known = new Map(p.allowed.map(v => [v.id, v]));
   for (const v of videos) {
     const id = clip(v.id, 20);
-    if (!id || known.has(id)) continue;
-    known.add(id);
-    p.allowed.push({ id, title: clip(v.title, 300), channel: clip(v.channel, 200), q: clip(query, 200), at: Date.now() });
+    if (!id) continue;
+    // YouTube fills in a result's length (and sometimes its title) a moment after showing it.
+    const old = known.get(id);
+    if (old) { old.length ||= videoLength(v.length); old.title ||= clip(v.title, 300); old.channel ||= clip(v.channel, 200); continue; }
+    const entry = { id, title: clip(v.title, 300), channel: clip(v.channel, 200), length: videoLength(v.length), q: clip(query, 200), at: Date.now() };
+    known.set(id, entry);
+    p.allowed.push(entry);
   }
   p.allowed = p.allowed.slice(-MAX_ALLOWED);
   for (const l of lists) { const id = clip(l, 64); if (id && !p.allowedLists.includes(id)) p.allowedLists.push(id); }
@@ -535,7 +542,7 @@ async function updateStudy({ topicId, videos, current, check, end }) {
   if (end) st.endedAt = Date.now();
   if (Number.isInteger(current) && current >= 0 && current < st.topics.length) st.current = current;
   const t = st.topics.find(x => x.id === topicId);
-  if (t && Array.isArray(videos)) t.videos = videos.slice(0, 4).map(v => ({ id: clip(v.id, 20), title: clip(v.title, 200), channel: clip(v.channel, 100), reason: clip(v.reason, 120) })).filter(v => v.id);
+  if (t && Array.isArray(videos)) t.videos = videos.slice(0, 4).map(v => ({ id: clip(v.id, 20), title: clip(v.title, 200), channel: clip(v.channel, 100), length: videoLength(v.length), reason: clip(v.reason, 120) })).filter(v => v.id);
   if (t && check && typeof check === "object") {
     t.check = { assessmentId: clip(check.assessmentId, 64), at: Date.now(), endedEarly: !!check.endedEarly,
       objectives: (Array.isArray(check.objectives) ? check.objectives : []).slice(0, 4).map(o => ({

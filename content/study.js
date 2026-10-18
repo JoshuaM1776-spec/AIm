@@ -91,7 +91,8 @@ function renderStudyPanel(p, host) {
     topicBlock(p, st, t),
     t.videos.length ? el("div", { class: "wp-study-videos" }, ...t.videos.filter(v => v.id !== currentId).map(v =>
       el("a", { class: "wp-upnext-item", href: `/watch?v=${encodeURIComponent(v.id)}`, title: v.title || "" },
-        el("div", { class: "wp-upnext-thumb", style: `background-image: url("https://i.ytimg.com/vi/${encodeURIComponent(v.id)}/mqdefault.jpg")` }),
+        el("div", { class: "wp-upnext-thumb", style: `background-image: url("https://i.ytimg.com/vi/${encodeURIComponent(v.id)}/mqdefault.jpg")` },
+            v.length ? el("span", { class: "wp-upnext-len" }, v.length) : null),
         el("div", { class: "wp-upnext-text" }, el("div", { class: "wp-upnext-title" }, v.title || "Video"),
           v.reason ? el("div", { class: "wp-muted" }, v.reason) : null)))) : null,
     el("ol", { class: "wp-study-list" }, ...st.topics.map((x, i) => el("li", { class: x === t ? "wp-study-here" : "" },

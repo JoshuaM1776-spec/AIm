@@ -227,7 +227,10 @@ html[dark] .wp {
 .wp-upnext-head { padding: 0 0 4px; }
 .wp-upnext-item { display: flex; gap: 8px; color: var(--wp-text); text-decoration: none; border-radius: 8px; }
 .wp-upnext-item:hover .wp-upnext-title { text-decoration: underline; }
-.wp-upnext-thumb { width: 168px; height: 94px; flex: none; border-radius: 8px; background: var(--wp-tonal) center / cover no-repeat; }
+.wp-upnext-thumb { position: relative; width: 168px; height: 94px; flex: none; border-radius: 8px; background: var(--wp-tonal) center / cover no-repeat; }
+/* The video's length, bottom right of the thumbnail, as on YouTube. */
+.wp-upnext-len { position: absolute; right: 4px; bottom: 4px; background: rgba(0, 0, 0, .8); color: #fff; font-size: 12px; line-height: 16px; font-weight: 500;
+  padding: 1px 4px; border-radius: 4px; }
 .wp-upnext-text { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .wp-upnext-title { font-size: 14px; line-height: 20px; font-weight: 500; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .wp-upnext-empty { padding: 12px; border-radius: 12px; background: var(--wp-tonal); font-size: 14px; line-height: 20px; }

@@ -411,6 +411,14 @@ test("search results become what the purpose allows, without duplicates", async 
   assert.strictEqual(env.local.purpose.allowed[0].q, "sourdough starter");
 });
 
+test("a result's length is kept, and filled in when YouTube shows it later", async () => {
+  const env = fresh();
+  await env.run(`startPurpose({ text: "learn sourdough", search: "sourdough starter" })`);
+  await env.run(`allowVideos({ query: "sourdough starter", videos: [{ id: "v1", title: "A", length: "12:34" }, { id: "v2", title: "", length: "" }, { id: "v3", title: "C", length: "LIVE" }], lists: [] })`);
+  await env.run(`allowVideos({ query: "sourdough starter", videos: [{ id: "v2", title: "B", length: "1:02:03" }, { id: "v2", title: "B", length: "1:02:03" }], lists: [] })`);
+  assert.deepStrictEqual(env.local.purpose.allowed.map(v => [v.id, v.title, v.length]), [["v1", "A", "12:34"], ["v2", "B", "1:02:03"], ["v3", "C", ""]]);
+});
+
 test("a purpose set from a video, or a pivot from one, includes that video", async () => {
   const env = fresh();
   await env.run(`startPurpose({ text: "fix my faucet", video: { id: "f1", title: "Faucet fix" } })`);

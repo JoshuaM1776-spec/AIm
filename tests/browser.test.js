@@ -46,6 +46,23 @@ const WATCH = id => page(`<ytd-watch-flexy video-id="${id}">
     <button class="ytp-button"><div class="ytp-autonav-toggle-button" aria-checked="true"></div></button></div>
   <div id="secondary"><div id="related"><ytd-compact-video-renderer><a href="/watch?v=rel1">Related one</a></ytd-compact-video-renderer></div></div>
 </ytd-watch-flexy>`, `Video ${id} - YouTube`);
+// A watch page whose video really plays (a second of silence), started the way YouTube's player
+// starts it, recording whether that start was interrupted.
+const silentWav = (() => {
+  const n = 8000, b = Buffer.alloc(44 + n);
+  b.write("RIFF", 0); b.writeUInt32LE(36 + n, 4); b.write("WAVEfmt ", 8); b.writeUInt32LE(16, 16); b.writeUInt16LE(1, 20); b.writeUInt16LE(1, 22);
+  b.writeUInt32LE(8000, 24); b.writeUInt32LE(8000, 28); b.writeUInt16LE(1, 32); b.writeUInt16LE(8, 34); b.write("data", 36); b.writeUInt32LE(n, 40); b.fill(128, 44);
+  return "data:audio/wav;base64," + b.toString("base64");
+})();
+const REALPLAY = page(`<ytd-watch-flexy video-id="realplay">
+  <ytd-watch-metadata><h1 class="ytd-watch-metadata"><yt-formatted-string>Video realplay</yt-formatted-string></h1>
+  <div id="owner"><div id="channel-name"><a href="/@chanreal">Chan real</a></div></div></ytd-watch-metadata>
+  <div id="movie_player"><video class="html5-main-video" src="${silentWav}" muted></video></div><div id="secondary"></div></ytd-watch-flexy>
+  <script>
+    const v = document.querySelector("video");
+    window.__started = false;
+    v.play().then(() => { window.__started = true; }, e => { window.__abort = e.name; });
+  </script>`, "Video realplay - YouTube");
 const SHORTS = id => page(`<div id="shorts-player"><video class="html5-main-video"></video></div>
   <ytd-reel-player-overlay-renderer><div id="channel-name"><a href="/@short${id}">Short ${id}</a></div></ytd-reel-player-overlay-renderer>`);
 const SUBS = page(`<ytd-browse page-subtype="subscriptions"><ytd-rich-grid-renderer id="subsGrid">subs</ytd-rich-grid-renderer></ytd-browse>`);
@@ -74,7 +91,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
       const id = new URL(u.searchParams.get("url")).searchParams.get("v");
       return route.fulfill({ contentType: "application/json", body: JSON.stringify({ title: `Video ${id}`, author_name: `Chan ${id}`, author_url: `https://www.youtube.com/@chan${id}` }) });
     }
-    const body = u.pathname === "/watch" ? WATCH(u.searchParams.get("v")) : u.pathname === "/results" ? RESULTS
+    const body = u.pathname === "/watch" && u.searchParams.get("v") === "realplay" ? REALPLAY : u.pathname === "/watch" ? WATCH(u.searchParams.get("v")) : u.pathname === "/results" ? RESULTS
       : u.pathname.startsWith("/shorts/") ? SHORTS(u.pathname.split("/")[2]) : u.pathname === "/feed/subscriptions" ? SUBS : HOME;
     // Same Trusted Types policy YouTube sends, so string-to-HTML writes would fail here too.
     route.fulfill({ contentType: "text/html", body, headers: { "content-security-policy": "require-trusted-types-for 'script'" } });
@@ -158,6 +175,13 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   })());
   step("the mark (bullseye, no play triangle) renders as SVG under Trusted Types", (await p.$$("#wp-chip .wp-icon:first-child svg circle")).length === 1 && (await p.$$("#wp-chip .wp-icon:first-child svg path")).length === 4);
   step("toolbar icon follows dark mode", await sw.evaluate(async () => (await setToolbarTheme(true)).result === "applied" && (await setToolbarTheme(false)).result === "applied"));
+
+  // ---------- holding a video never interrupts YouTube's player ----------
+  await p.goto("https://www.youtube.com/watch?v=realplay");
+  await p.waitForSelector("#movie_player .wp-player-card", { timeout: 6000 });
+  await p.waitForTimeout(800);
+  const held = await p.evaluate(() => ({ abort: window.__abort || null, started: window.__started, paused: document.querySelector("video").paused }));
+  step("a held video lets the player's own start finish, then pauses (no 'An error occurred')", !held.abort && held.started && held.paused, JSON.stringify(held));
 
   // ---------- a video with neither a purpose nor a break ----------
   await p.goto("https://www.youtube.com/watch?v=aaa");
