@@ -171,20 +171,19 @@ Study sessions come **before** learning paths. They're smaller, they serve the s
 
 ### I — Pathways (Plus and Homeschool)
 
-The same optional, ongoing look at interests and abilities described in HOMESCHOOL.md → "Pathways", for students who use Aim Plus on their own. Many Plus users will be students, and they already generate the evidence: learning goals, study sessions and TeachBack.
+What interests me → what could I do with it → what would it take to get there. Designed in HOMESCHOOL.md → "Pathways"; this is the Plus version, for students who use Aim Plus on their own (many Plus users are students, and they already generate the evidence: learning goals, study sessions, TeachBack).
 
-- **Opt-in by the user.** Off until they turn it on in Settings, with a plain explanation of what it uses. Off again deletes it.
-- **What feeds it:**
-  - "Want more of this?" (Yes / Maybe / Not really) at the end of a study session, a TeachBack check, and a learning Target marked complete;
-  - TeachBack results by topic (demonstrated / developing), already on the server;
-  - the topics of study sessions and of completed learning Targets the librarian classed as `learn`. Only topics and ratings leave the browser, never watch history, and only after opting in.
-- **Stage instead of age:** at opt-in, "middle school / high school / college / working / other", which sets the breadth: interest areas only for middle school, example occupations from high school on (Plus is 13+).
-- **What it shows:** a Pathways page with interest areas, the evidence behind each, where interest and ability meet, and something to try for each (a study session, a TeachBack topic, a search, a project idea). It refreshes when there's enough new evidence, or on request, never on a nag schedule.
-- **Explore this path:** each possible fit opens a learning path in four steps (see it, try it, meet it, prepare for it), with "Not for me" as a valid result. Details and rules (student chooses, no paid placement, Aim never contacts anyone) in HOMESCHOOL.md → "Exploring a path". Built on F3's plan model, so a path is a learning path, not a new system.
-- **Adults too:** someone watching timber framing and cabinetmaking might want to know those are trades with apprenticeships. Same design; occupations shown for "college" and "working".
-- **Same safeguards as Homeschool:** no sensitive inputs, no hidden profile, evidence on every suggestion, no stereotyping, never shared or sold, and the legal review (Plus includes 13–17-year-olds).
-- **Data:** a `pathway_signals` view over progress events (`interest` and TeachBack evidence), and a `pathway_snapshots` table with each generated view, so the user can see how it changed. RLS read-own, deleted with the account.
-- **Order:** after F3, once study sessions and TeachBack have real history. Groundwork now: the "Want more of this?" tap and subject/skill tags on evidence.
+- **"Where could this take me?" first, and for everyone.** A link on study session topics and TeachBack results (and an answer in the librarian to "why do I need to learn this?"): where the subject is used, each with a short real-world problem from that field. It uses no profile, so it needs no opt-in. It's the smallest piece and can ship before the rest.
+- **Interests lead to paths.** No assessment to start. Once Pathways is on, Aim notices a theme in what the user chose to study and offers it once, lightly ("You've been studying aviation and weather. Want to see some careers connected to them?"), never during a video, easy to dismiss.
+- **Opt-in by the user.** The first such offer is also the opt-in, with a plain explanation of what it uses; it can be turned on or off in Settings, and off deletes it.
+- **What feeds it:** "Want more of this?" (Yes / Maybe / Not really) at the end of a study session, a TeachBack check and a completed learning Target; TeachBack results by topic; and the topics of study sessions and learning Targets the librarian classed as `learn`. Only topics and ratings leave the browser, never watch history, and only after opting in.
+- **Stage instead of age:** "middle school / high school / college / working / other" at opt-in. Middle school: kinds of work, See it and Try it. High school and up: specific occupations and Prepare for it (Plus is 13+).
+- **Explore a path:** See it, **Try it** (the heart: a realistic brief with real constraints and a deliverable), Meet it, Prepare for it. Built on F3's plan model, so a path is a learning path, not a new system.
+- **Reflection, not scores:** each Try It and each stopped path ends with "What did you enjoy? What was harder or less interesting than expected? Explore further?" "Not for me" is a success. No match percentages.
+- **Adults too:** someone learning timber framing and cabinetmaking might want to know those are trades with apprenticeships.
+- **Same rules and safeguards as Homeschool:** no sensitive inputs, no hidden profile, no scores, no paid placement, Aim never contacts anyone, never shared or sold, and the legal review (Plus includes 13–17-year-olds).
+- **Data:** a `pathway_signals` view over progress events (`interest`, reflections, TeachBack evidence), `pathway_explorations` (path, step, reflection in the user's words), RLS read-own, deleted with the account.
+- **Order:** "Where could this take me?" can come with or soon after F2. The rest after F3, once there's real history. Groundwork now: the "Want more of this?" tap and subject, skill and theme tags on evidence.
 
 ## TeachBack
 

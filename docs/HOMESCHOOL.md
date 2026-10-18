@@ -425,76 +425,95 @@ Preferences are per student or per family, and parents can view and remove them.
 - When a student is fascinated by something, Aim may suggest books, videos, activities or projects about it.
 - The parent decides whether to schedule them, and curriculum coverage is preserved.
 
-## Pathways: interests, abilities and where they might lead
+## Pathways: what interests me, what could I do with it, what would it take
 
-An optional, ongoing look at what a student is drawn to and what they've shown they can do, and the kinds of work where the two meet. **One design, two places:** Aim Plus (students choose it for themselves, see ROADMAP.md → "I — Pathways") and Aim Homeschool (the parent turns it on, described here). Not before the core flows work well.
+**What interests me? → What could I do with it? → What would it take to get there?** Traditional education usually keeps these three questions apart; Pathways connects them. It suggests opportunities based on interests the student has chosen to share, and lets them **experience a small part of the work before committing to anything**. It never claims to know what career someone is suited for.
 
-### What it is, and isn't
+**One design, two places:** Aim Homeschool (the parent turns it on, described here) and Aim Plus (students turn it on for themselves; ROADMAP.md → "I — Pathways"). Not before the core flows work well.
 
-- **Paths to explore, not a verdict.** Never "you should be an engineer". Instead: "You keep choosing to build things and figure out how they work. Here are a few paths worth exploring, and why."
-- **Every suggestion shows its evidence** ("You chose Go deeper on volcanoes 4 times, said 'want more' after the volcano project, and showed strong understanding in 3 of 4 earth science checks") and **ends in something to try**: a project, a field trip, a video series from someone who does the work, a question to ask a professional.
-- **It stays open.** It updates as the student grows, and a younger student's view widens before it narrows.
+### Interests lead to paths, naturally
 
-### Two signals, kept apart
+- **No aptitude test, no questionnaire to start.** Pathways notices a theme in what the student has *chosen* to explore (lessons they asked for more of, Go deeper picks, study sessions, projects, questions to Ask Aim) and offers it once, lightly:
 
-- **Interest** comes mostly from what the student says and chooses, not from quiet tracking:
-  - a one-tap **"Want more of this?"** (Yes / Maybe / Not really) after lessons, projects, study sessions and TeachBack;
-  - optional extras chosen (Go deeper, curiosity questions, extra projects);
-  - short reflection chats a few times a term ("What did you enjoy most this month? What surprised you?").
+  > "You've been exploring aviation. Want to see some of the careers connected to it?"
 
-  Watch time alone is a weak signal and is never used on its own.
-- **Ability** comes from evidence Aim already has: TeachBack results (demonstrated / developing), project rubrics, and parent marks, each kept with its `source`. Shown as growth ("developing → demonstrated"), never as a fixed trait.
-- **Where they meet:**
-  - high interest, strong ability: lean in;
-  - high interest, still developing: here's how to build it;
-  - strong ability, low interest: worth knowing, not a calling.
+  The student might discover aircraft maintenance, aerospace engineering, air traffic control, meteorology or piloting.
+- **Offers follow the same manners as Aim's other offers:** never during a video, once per theme, easy to dismiss ("Not now" / "Don't suggest this"), and never a nag.
+- **Evidence, not inference about the person.** Each offer says what it's based on ("You've finished 5 aviation lessons and asked for more of 3"). Watch time alone is never a reason.
+- **What a student has shown they can do** (TeachBack, project rubrics, parent marks) appears as useful context on a path ("You've already shown how lift works"), as growth, never as a gate or a fitness score.
 
-### By age
+### Exploring a path: See it, Try it, Meet it, Prepare for it
 
-- **Up to about 13:** broad interest areas only ("building things", "helping people", "working with ideas", "making things people see", "organizing and leading", "being outdoors"). No job titles.
-- **About 14 and up:** interest areas plus example occupations, with what the work is like day to day, the training it takes (including trades and apprenticeships, not only college), and a way to try it now.
-- The parent can always see the student's view, and the student sees everything the parent sees about them.
+Choosing a path opens a learning path (ROADMAP.md → F3) for that kind of work. The student can stop at any step.
+
+1. **See it.** What the work is really like: short videos from people who do it (preferred channels first), and the honest parts (hours, physical demands, pay range, outlook, from O*NET and the Bureau of Labor Statistics).
+2. **Try it: the heart of Pathways.** A realistic piece of the actual work, with the constraints professionals face. Doing it is far better evidence of genuine interest than watching or answering questions. Each Try It has a **brief** (who it's for, what they need), **real constraints** (budget, site, deadline, sources), **a deliverable**, and **how a professional would judge it** (the rubric). For example:
+   - **Architecture:** design a small building for a client brief on a given site and budget; present floor plan, materials list and costs.
+   - **Business:** find a real problem, interview a few potential customers, work out costs and price, and try to sell something.
+   - **Journalism:** investigate a local issue, evaluate sources, interview someone, publish an article.
+   - **Aviation maintenance:** follow a real-style inspection checklist on a model or bicycle, logging each step exactly, and see how the precision feels.
+
+   In Homeschool, a Try It **is a culmination project** (same `project` item type: deliverables, materials, rubric, parent guide). Anything involving strangers, money or publishing is marked **Do this together**, and the parent approves it first.
+3. **Meet it.** A virtual field trip, a "Do this together" visit to a workplace, or questions to ask a professional (Aim drafts them; the family makes the contact).
+4. **Prepare for it.** For older students: the skills and knowledge the work needs (O*NET), what to study next, and the routes in, side by side (apprenticeship, certificate, community college, university, military, starting a business), linked to official sources (Apprenticeship.gov, CareerOneStop, the Occupational Outlook Handbook). Regulated and safety-critical fields cite authoritative sources and say Aim is educational support, not certified instruction.
+
+### Reflection: discovering what you don't enjoy is a success
+
+Every Try It, and every path the student stops, ends with three questions:
+
+- **What did you enjoy?**
+- **What was harder or less interesting than you expected?**
+- **Would you like to explore this further?** (Yes / Maybe / Not for me)
+
+A student might love how airplanes work and discover they dislike the precision and repetition of aircraft maintenance. **That's an educational success, not a failed recommendation.** It's recorded as their own words, and it shapes what Pathways offers next (perhaps aerospace design instead).
+
+**There are no match scores.** Never "87% match for engineering", no rankings, no aptitude percentages. What the student sees is their own record: what they explored, what they tried, what they said about it.
+
+### By age: discover first, prepare later
+
+- **Younger students (up to about 13):** discovering interesting kinds of work. Broad areas ("building things", "helping people", "working with ideas", "making things people see", "organizing and leading", "working outdoors"), See it and Try it, no pressure to choose. No Prepare step.
+- **Older students (about 14 and up):** specific occupations and all four steps, including routes in.
+- **Nobody is asked to choose a career.** Exploring several paths at once, or none, is normal.
+
+### "Where could this take me?"
+
+The everyday side of Pathways, and possibly its most valuable. **It doesn't need a profile**, so it's available to every student, including those who never turn Pathways on.
+
+- A small **"Where could this take me?"** link on subjects, units, lessons, projects and TeachBack results. No new screen: it opens a short panel.
+- It answers the question students actually ask: **"Why do I have to learn algebra?"** It shows where the subject is used (aviation, engineering, construction, game development, running a business), each with **a short real-world problem from that field** to try right there (a pilot's fuel calculation, a contractor's materials estimate, a game's jump arc, a shop's break-even price).
+- Ask Aim answers the same question when the student types it.
+- From the panel, "See careers like this" opens Pathways (if it's on), or a one-line explanation of what Pathways is (if it's off; the parent or the Plus user decides).
+
+This ties to the philosophy of Aim Homeschool: an education that makes students want to learn more, because they can see where it leads.
 
 ### Where the jobs come from
 
-Use **O*NET** (US Department of Labor), openly licensed: occupations, their interest profiles (the six RIASEC areas), skills, education and outlook. Aim doesn't invent its own job taxonomy, and it shows where each fact came from. Other countries' equivalents can be added later.
-
-### Exploring a path
-
-When Pathways shows a possible fit, the student can choose **Explore this path**. A path is a learning path (ROADMAP.md → F3) built for that kind of work, in four steps that go from "what is this?" to "how would I get there?". The student can stop at any step, and **"Not for me" is a good result**: it's recorded as interest evidence and the view updates.
-
-1. **See it.** What the work is like day to day: a short study session of videos from people who do it (Aim's librarian, the student's preferred channels first), and the honest parts too (hours, physical demands, pay range, outlook, from O*NET and the Bureau of Labor Statistics).
-2. **Try it.** A small hands-on project or challenge that uses the work's core skills (for a structural engineer: design and test a paper bridge), then TeachBack on the main ideas. In Homeschool this can become the term's culmination project.
-3. **Meet it.** Ways to talk to or watch someone who does it: a virtual field trip, a "Do this together" visit to a local workplace, questions to ask a professional (Aim drafts them; the family makes the contact).
-4. **Prepare for it.** For about 14 and up: the skills and knowledge the work needs (O*NET), what to study next, and the routes in, side by side (apprenticeship, certificate, community college, university, military, starting your own business), with official sources (Apprenticeship.gov, CareerOneStop, the Occupational Outlook Handbook). Regulated and safety-critical fields cite authoritative sources and say plainly that Aim is educational support, not certified instruction.
-
-**Rules for paths**
-
-- **The student chooses** which path to explore, and can explore several at once. In Homeschool the parent approves before a path's steps enter the weekly plan, like any other plan change.
-- **No paid placement.** Schools, programs, courses and employers are never ranked or shown because someone paid. If partnerships ever exist, they're labeled and never affect order. No affiliate links in career content.
-- **Aim never contacts anyone** on the student's behalf (employers, schools, recruiters). It prepares; the family acts.
-- **Progress on a path is evidence like any other**: projects, TeachBack, "Want more of this?", and feeds back into Pathways.
+**O*NET** (US Department of Labor), openly licensed: occupations, their interest areas, skills, knowledge, education and outlook, plus the Bureau of Labor Statistics for pay and outlook. Aim doesn't invent its own job taxonomy, and it shows where each fact came from. Other countries' equivalents can be added later.
 
 ### How it fits the rest of Homeschool
 
-- **Culmination projects double as career experiments** ("Design a small bridge" is a taste of engineering), and Pathways can ask the parent to schedule one that tests an emerging interest.
+- **Try It projects are culmination projects,** so exploring a path and the curriculum strengthen each other. Pathways can ask the parent to schedule one that tests an emerging interest.
 - **Field trips and "Do this together"** can include meeting someone who does the work.
-- **Preferred channels** can include channels from working professionals in an area the student is exploring.
-- **The parent dashboard** gets a termly **Pathways summary**: a conversation starter for parent and student, not a score. It can go into the portfolio if the family chooses.
+- **Preferred channels** can include channels from working professionals in an area being explored.
+- **The parent dashboard** gets a termly **Pathways summary** in the student's own words: what they explored, tried and said about it. A conversation starter, not a score. It can go into the portfolio if the family chooses.
 
-### Safeguards (requirements)
+### Rules and safeguards (requirements)
 
-1. **Off by default.** The parent turns it on (Homeschool); in Plus, the student does. It can be turned off and its data deleted at any time.
-2. **No hidden profiles.** The student can see everything Pathways says about them, and why.
-3. **No sensitive inputs.** Gender, race, ethnicity, religion, disability, family income and location are never inputs. Suggestions are tested for skew across groups before launch and regularly after.
-4. **No stereotyped language** ("girls often like…"), no ranking of students against each other, no "aptitude score".
-5. **The family's data.** Never sold, never used for advertising, never shared with schools, colleges, employers or recruiters. A family can export it themselves.
-6. **Legal review before launch.** Profiling and guidance for minors draws regulatory attention (children's privacy laws; in the EU, the AI Act treats some education and vocational-guidance uses as high-risk). Part of the children's privacy design already required.
+1. **Off by default.** The parent turns it on (Homeschool); in Plus, the student does. It can be turned off, and its data deleted, at any time. ("Where could this take me?" uses no profile and needs no opt-in.)
+2. **The student chooses** which paths to explore, any number at once. In Homeschool the parent approves before a path's steps enter the weekly plan.
+3. **No hidden profiles.** The student sees everything Pathways says about them and why; the parent sees the same.
+4. **No sensitive inputs.** Gender, race, ethnicity, religion, disability, family income and location are never inputs. Offers are tested for skew across groups before launch and regularly after. No stereotyped language.
+5. **No scores:** no match percentages, aptitude scores or rankings against other students.
+6. **No paid placement.** Schools, programs, courses and employers are never ranked or shown because someone paid. Any future partnership is labeled and never affects order. No affiliate links in career content.
+7. **Aim never contacts anyone** on the student's behalf (employers, schools, recruiters). It prepares; the family acts.
+8. **The family's data.** Never sold, never used for advertising, never shared with schools, colleges, employers or recruiters. A family can export it themselves.
+9. **Legal review before launch.** Guidance and profiling for minors draws regulatory attention (children's privacy laws; in the EU, the AI Act treats some education and vocational-guidance uses as high-risk). Part of the children's privacy design already required.
 
 ### Groundwork now (small, useful on its own)
 
-- A one-tap **"Want more of this?"** on finished lessons, projects and TeachBack, stored as a progress event of type `interest` with its `source`.
-- TeachBack and project evidence tagged by **subject and skill**, so interest and ability can be lined up later.
+- A one-tap **"Want more of this?"** on finished lessons, projects, study sessions and TeachBack, stored as a progress event of type `interest` with its `source`.
+- Evidence tagged by **subject and skill**, and lessons and projects tagged with the **themes** they belong to (aviation, weather, mechanical systems), so themes can be noticed later.
+- The project item type already planned covers Try It (brief, constraints, deliverable, rubric, parent guide).
 
 ## Groundwork already planned in Aim Plus (see ROADMAP.md → Decisions)
 
