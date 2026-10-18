@@ -27,6 +27,7 @@
   --wp-accent-hover: #c03222;
   --wp-accent-soft: rgba(217, 59, 43, 0.08);
   --wp-on-accent: #ffffff;
+  --wp-mark: #1e3a32; /* the Aim mark: forest green, light in the dark theme */
   --wp-success: #2ba640;
   --wp-card-border: rgba(0, 0, 0, 0.08);
   font-family: "Roboto", "Arial", sans-serif;
@@ -51,6 +52,7 @@ html[dark] .wp {
   --wp-search-focus: #1c62b9;
   --wp-shadow: 0 4px 32px 0 rgba(0, 0, 0, 0.5);
   --wp-accent-soft: rgba(217, 59, 43, 0.18);
+  --wp-mark: #f1f1f1;
   --wp-card-border: rgba(255, 255, 255, 0.1);
 }
 

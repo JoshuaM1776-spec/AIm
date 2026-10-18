@@ -180,9 +180,9 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     await p.click('#wp-home .wp-home-example:has-text("biology exam")');
     return (await p.inputValue("#wp-home .wp-home-input")) === "Help me study for my biology exam.";
   })());
-  step("the mark (mountain and north star) renders as SVG under Trusted Types", await p.evaluate(() => {
-    const paths = [...document.querySelectorAll("#wp-chip .wp-icon:first-child svg path")].map(x => x.getAttribute("fill"));
-    return paths.filter(f => f === "currentColor").length === 2 && paths.filter(f => f === "#ff5446").length === 5;
+  step("the mark (triangle, road and arrowhead) renders as SVG under Trusted Types", await p.evaluate(() => {
+    const paths = [...document.querySelectorAll("#wp-chip .wp-icon:first-child svg path")];
+    return paths.filter(x => (x.getAttribute("style") || "").includes("--wp-mark")).length === 2 && paths.filter(x => x.getAttribute("fill") === "#ff5446").length === 1;
   }));
   step("toolbar icon follows dark mode", await sw.evaluate(async () => (await setToolbarTheme(true)).result === "applied" && (await setToolbarTheme(false)).result === "applied"));
 
