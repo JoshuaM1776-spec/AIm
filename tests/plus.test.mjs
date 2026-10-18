@@ -243,7 +243,7 @@ await tb.close();
 
 // ---------- the librarian on a stand-in YouTube ----------
 const ytPage = body => `<!doctype html><html><head><title>YouTube</title></head><body>
-<ytd-masthead><div id="center"></div><div id="end"></div></ytd-masthead>${body}</body></html>`;
+<ytd-masthead><div id="center"><input id="search" name="search_query" aria-label="Search"></div><div id="end"></div></ytd-masthead>${body}</body></html>`;
 const ytResults = q => ytPage(`<ytd-search><div><ytd-section-list-renderer>${[["alt1aaa", `Tacoma alternator replacement (${q})`, "Truck Shop"],
   ["alt2bbb", "Alternator tools you need", "DIY Garage"], ["alt3ccc", "Funny truck fails", "Clips"]].map(([id, t, c]) =>
   `<ytd-video-renderer><a id="video-title" href="/watch?v=${id}">${t}</a><ytd-channel-name><a href="/@${c.replace(/ /g, "")}">${c}</a></ytd-channel-name>
@@ -254,7 +254,7 @@ const ytWatch = id => ytPage(`<ytd-watch-flexy video-id="${id}"><ytd-watch-metad
   <div id="description-inline-expander" style="white-space:pre-line">How cells break down glucose.
 0:00 Intro
 2:15 Glucose comes in
-6:40 Pyruvate goes out</div></ytd-watch-metadata>
+6:40 Pyruvate goes out</div><div id="actions"><button aria-label="Like">Like</button><button aria-label="Ask">Ask</button></div></ytd-watch-metadata>
   <div id="movie_player"><video class="html5-main-video" muted></video></div><div id="secondary"><div id="related">related</div></div></ytd-watch-flexy>`);
 await ctx.route(/^https:\/\/www\.youtube\.com\//, route => {
   const u = new URL(route.request().url());
@@ -351,6 +351,18 @@ const conceptsText = await yt.textContent("#wp-concepts");
 step("In this video: the concepts, from the title, description and chapters", conceptsText.includes("Glycolysis") && conceptsText.includes("2:15") &&
   conceptsText.includes("not its audio") && conceptsText.includes("likely") && srv.videoPrompt.includes("1. 2:15 Glucose comes in") && srv.videoPrompt.includes("THE STUDENT'S GOAL:"));
 await yt.click("#wp-concepts .wp-concept >> nth=0");
+await ctx.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "https://www.youtube.com" });
+await yt.click("#wp-concepts .wp-concept-ask >> nth=0");
+await yt.waitForTimeout(300);
+step("Ask YouTube about this: the question is copied and YouTube's own Ask button is pointed out",
+  (await yt.evaluate(() => navigator.clipboard.readText())) === "What does this video say about glycolysis? Where in the video?" &&
+  await yt.evaluate(() => document.querySelector("#actions button[aria-label='Ask']").classList.contains("wp-point-here")));
+await yt.evaluate(() => document.querySelector("#actions button[aria-label='Ask']").remove());
+await yt.click("#wp-concepts .wp-concept-ask >> nth=0");
+await yt.waitForTimeout(300);
+step("without an Ask button (no Premium), it points to Ask in the search bar, with the video named",
+  (await yt.evaluate(() => navigator.clipboard.readText())).startsWith("In the YouTube video “Video alt1aaa”, what does it say about glycolysis") &&
+  await yt.evaluate(() => document.querySelector("input#search").classList.contains("wp-point-here")));
 step("each concept: another context to see it in, as a YouTube search", (await yt.getAttribute("#wp-concepts .wp-concept-context >> nth=0", "href")).includes("search_query=glycolysis%20during%20sprinting"));
 if (process.env.SHOTS) { await yt.setViewportSize({ width: 1100, height: 760 }); await yt.addStyleTag({ content: "ytd-watch-flexy{display:grid;grid-template-columns:1fr 380px;gap:24px;padding:24px} #movie_player{aspect-ratio:16/9;background:#000;border-radius:12px} #secondary{grid-column:2;grid-row:1/4}" });
   await yt.screenshot({ path: `${process.env.SHOTS}/study-panel.png` }); }

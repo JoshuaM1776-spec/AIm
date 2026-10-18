@@ -63,6 +63,13 @@ const REALPLAY = page(`<ytd-watch-flexy video-id="realplay">
     window.__started = false;
     v.play().then(() => { window.__started = true; }, e => { window.__abort = e.name; });
   </script>`, "Video realplay - YouTube");
+// Ask YouTube, as best Aim can guess it: an AI answer on the results page whose markup Aim doesn't
+// know, and a page of its own with videos to pick.
+const RESULTS_AI = page(`<ytd-search><div><ytd-section-list-renderer>
+  <div class="some-ai-answer"><p>Most drips come from a worn cartridge.</p><a href="/watch?v=ai1&t=95" aria-label="Why faucets drip, explained">Why faucets drip</a></div>
+  <ytd-video-renderer><a id="video-title" href="/watch?v=n1">Fixing a leaky faucet</a></ytd-video-renderer>
+</ytd-section-list-renderer></div></ytd-search>`);
+const ASKPAGE = page(`<div id="ask-answer">Here's a good one: <a href="/watch?v=ai2" aria-label="Faucet washer swap">Faucet washer swap</a></div>`, "Ask YouTube");
 const SHORTS = id => page(`<div id="shorts-player"><video class="html5-main-video"></video></div>
   <ytd-reel-player-overlay-renderer><div id="channel-name"><a href="/@short${id}">Short ${id}</a></div></ytd-reel-player-overlay-renderer>`);
 const SUBS = page(`<ytd-browse page-subtype="subscriptions"><ytd-rich-grid-renderer id="subsGrid">subs</ytd-rich-grid-renderer></ytd-browse>`);
@@ -91,7 +98,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
       const id = new URL(u.searchParams.get("url")).searchParams.get("v");
       return route.fulfill({ contentType: "application/json", body: JSON.stringify({ title: `Video ${id}`, author_name: `Chan ${id}`, author_url: `https://www.youtube.com/@chan${id}` }) });
     }
-    const body = u.pathname === "/watch" && u.searchParams.get("v") === "realplay" ? REALPLAY : u.pathname === "/watch" ? WATCH(u.searchParams.get("v")) : u.pathname === "/results" ? RESULTS
+    const body = u.pathname === "/watch" && u.searchParams.get("v") === "realplay" ? REALPLAY : u.pathname === "/watch" ? WATCH(u.searchParams.get("v")) : u.pathname === "/results" && /dripping/.test(u.searchParams.get("search_query") || "") ? RESULTS_AI : u.pathname === "/new" ? ASKPAGE : u.pathname === "/results" ? RESULTS
       : u.pathname.startsWith("/shorts/") ? SHORTS(u.pathname.split("/")[2]) : u.pathname === "/feed/subscriptions" ? SUBS : HOME;
     // Same Trusted Types policy YouTube sends, so string-to-HTML writes would fail here too.
     route.fulfill({ contentType: "text/html", body, headers: { "content-security-policy": "require-trusted-types-for 'script'" } });
@@ -327,6 +334,19 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.waitForTimeout(500);
   step("a related search continues silently", !(await text("#wp-results-bar")).includes("part of your Target?") &&
     (await store()).purpose.searches.some(s => s.q === "faucet cartridge replacement"));
+  // Ask YouTube: videos in an AI answer, and picked from its own page, count toward the Target.
+  await p.goto("https://www.youtube.com/results?search_query=why+is+my+faucet+dripping");
+  await p.waitForSelector("#wp-results-bar", { timeout: 5000 });
+  await p.waitForTimeout(800);
+  step("a video in an AI answer on the results page counts toward the Target", (await store()).purpose.allowed.some(v => v.id === "ai1" && v.title === "Why faucets drip, explained"));
+  await p.goto("https://www.youtube.com/new");
+  await p.waitForTimeout(600);
+  await p.click("#ask-answer a");
+  await p.waitForURL(/watch\?v=ai2/);
+  await p.waitForTimeout(1500);
+  st = await store();
+  step("a video picked from Ask YouTube's page counts too, and plays without asking", !(await p.$(".wp-player-card")) &&
+    st.purpose.allowed.some(v => v.id === "ai2" && v.q === "Ask YouTube"));
   await p.goto("https://www.youtube.com/results?search_query=gaming+laptop+deals");
   await p.waitForSelector("#wp-results-bar", { timeout: 5000 });
   await p.waitForTimeout(500);

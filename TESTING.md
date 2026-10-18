@@ -234,7 +234,13 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] Aim menu → Add notes: type, close, reopen: the notes are there. Suggest questions adds a few, never answers. The results bar's notes icon gets a dot.
 - [ ] Notes stay with the Target through Set aside, Resume, Target complete and Start again, and show on the Targets page.
 
-### 22. Sync and reload
+### 22. YouTube's own AI
+
+- [ ] "In this video" → open a concept → **Ask YouTube about this**: the question is copied. With YouTube's Ask button under the video, it's outlined for a few seconds; without it, the search bar is, and the question names the video. Paste it in: YouTube answers.
+- [ ] On a Target, use Ask in the search bar. Videos in its answer play without "Is this part of your Target?", and show up in Up next from your search. If Ask YouTube opens a page of its own, a video picked there plays too. Note the page's address and what Aim did, for selectors.
+- [ ] A video from the homepage feed, a channel page or the sidebar still asks first.
+
+### 23. Sync and reload
 
 - [ ] Target complete from the popup while a YouTube tab is on a video: that tab shows the "What brings you here?" card on the player within a few seconds.
 - [ ] Two YouTube tabs: starting a break or setting a Target in one updates the other's indicator, and a card waiting on the other tab's player clears if the new state allows its video.

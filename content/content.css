@@ -622,3 +622,10 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 .wp-notes-status:empty { display: none; }
 .wp-rb-icon.has { position: relative; }
 .wp-rb-icon.has::after { content: ""; position: absolute; top: 6px; right: 6px; width: 6px; height: 6px; border-radius: 50%; background: var(--wp-link); }
+
+/* "Ask YouTube about this": points at YouTube's own Ask for a few seconds. */
+.wp .wp-concept-ask { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; border: 0; background: none; padding: 4px 8px; margin-left: -8px;
+  border-radius: 8px; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--wp-link); }
+.wp .wp-concept-ask:hover { background: var(--wp-tonal); }
+.wp-concept-ask .wp-icon svg { width: 16px; height: 16px; }
+.wp-point-here { outline: 3px solid #1a66d6 !important; outline-offset: 3px; border-radius: 18px; transition: outline-color .3s; }

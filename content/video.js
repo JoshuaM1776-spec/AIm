@@ -94,7 +94,30 @@ function conceptRow(c) {
       el("div", { class: "wp-muted wp-concept-summary" }, c.summary),
       c.contexts.length ? el("div", { class: "wp-label" }, "See it in another context") : null,
       ...c.contexts.map(k => el("a", { class: "wp-concept-context", href: `/results?search_query=${encodeURIComponent(k.search)}`, target: "_blank", rel: "noopener" },
-        icon("search"), el("span", {}, k.label)))));
+        icon("search"), el("span", {}, k.label))),
+      el("button", { class: "wp-concept-ask", onclick: () => askYouTubeAbout(c) }, icon("ask"), "Ask YouTube about this")));
+}
+
+// YouTube's AI answers from the video's transcript, which Aim doesn't read. So Aim suggests the
+// question (it knows what's worth asking) and points to YouTube's Ask, which answers it: the button
+// under the video if there is one, otherwise Ask in the search bar. It copies the question; it
+// never types into YouTube's AI or reads its answer.
+async function askYouTubeAbout(c) {
+  const button = youTubeAskButton();
+  const title = concepts?.info?.title || "";
+  const question = button ? `What does this video say about ${c.name.toLowerCase()}? Where in the video?`
+    : `In the YouTube video “${title}”, what does it say about ${c.name.toLowerCase()}, and where?`;
+  let copied = false;
+  try { await navigator.clipboard.writeText(question); copied = true; } catch {}
+  const target = button || first(YT.searchBox);
+  if (target) {
+    target.scrollIntoView({ block: "center", behavior: "smooth" });
+    target.classList.add("wp-point-here");
+    setTimeout(() => target.classList.remove("wp-point-here"), 4000);
+    if (!button) target.focus();
+  }
+  toast(copied ? `Question copied. Paste it into ${button ? "YouTube's Ask, under the video" : "Ask in YouTube's search bar"}.`
+    : `Ask YouTube: “${question}”`);
 }
 
 function renderConcepts() {

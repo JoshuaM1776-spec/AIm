@@ -19,6 +19,11 @@ const YT = {
   watchFlexy: "ytd-watch-flexy",             // carries the current video's ID in its video-id attribute
   watchTitle: "h1.ytd-watch-metadata yt-formatted-string",
   watchDescription: "ytd-watch-metadata #description-inline-expander",
+  // YouTube's own AI. Aim never types into it or reads it; it only points the person to it.
+  // The per-video Ask button sits among the buttons under the player (not every video or
+  // account has it); Ask YouTube lives in the search bar.
+  watchActionButtons: "ytd-watch-metadata #actions button, ytd-watch-metadata #actions yt-button-view-model button",
+  searchBox: ["ytd-masthead input#search", "ytd-masthead input[name='search_query']", "yt-searchbox input", "input[name='search_query']"],
   chapterItems: "ytd-macro-markers-list-item-renderer",   // the chapters panel, when YouTube has rendered it
   chapterTitle: ["h4", "#details h4"],
   chapterTime: ["#time", "#details #time"],
@@ -74,6 +79,8 @@ const mastheadCenter = () => $(YT.mastheadCenter);
 const homeHost = () => $(YT.homePrimary) || $(YT.homeBrowse);
 const resultsAnchor = () => $(YT.resultsList);
 const channelLink = () => first(YT.videoChannelLink);
+// YouTube's per-video Ask button, if this video and account have it.
+const youTubeAskButton = () => $$(YT.watchActionButtons).find(b => /^ask\b/i.test(squash(b.getAttribute("aria-label") || b.textContent))) || null;
 const playerHost = () => first(YT.player);
 const autoplayToggle = () => $(YT.autoplayToggle);
 const isShortsPage = () => location.pathname.startsWith("/shorts/");
@@ -153,6 +160,16 @@ function searchResults() {
     videos.push({ id, title: squash(first(YT.itemTitle, n)?.textContent || a.title || a.getAttribute("aria-label")), channel: squash(first(YT.resultChannel, n)?.textContent),
       length: squash(first(YT.resultLength, n)?.textContent).slice(0, 12), meta: squash(first(YT.resultMeta, n)?.textContent).slice(0, 80),
       snippet: squash(first(YT.resultSnippet, n)?.textContent).slice(0, 200) });
+  }
+  // Anything else on the results page that links to a video counts too: an AI answer (Ask YouTube)
+  // or a module Aim doesn't know the markup of. Ads and Shorts aren't results.
+  for (const a of $$(YT.itemWatchLink, root)) {
+    if (a.closest(YT.ads)) continue;
+    let id = null;
+    try { id = new URL(a.href).searchParams.get("v"); } catch {}
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    videos.push({ id, title: squash(a.getAttribute("aria-label") || a.title || a.textContent).slice(0, 300), channel: "", length: "", meta: "", snippet: "" });
   }
   for (const n of $$(YT.resultPlaylists, root)) {
     try { const l = new URL($('a[href*="list="]', n)?.href).searchParams.get("list"); if (l) lists.add(l); } catch {}

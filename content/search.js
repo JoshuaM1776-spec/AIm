@@ -57,17 +57,23 @@ function captureResults() {
   send({ type: "purpose-allow", query, videos: fresh, lists: freshLists });
 }
 
-// A result clicked before it was captured still counts.
+// Pages that aren't search results but are a search the person ran: Ask YouTube's own page, if it
+// opens one. Feeds, channels, playlists and videos are not: a video found there still asks first.
+const askPage = () => !["/", "/results", "/watch", "/playlist"].includes(location.pathname) &&
+  !/^\/(shorts|feed|@|channel|c|user|gaming|music|premium|account|signin)\b/.test(location.pathname);
+
+// A result clicked before it was captured still counts; so does a video picked from Ask YouTube.
 document.addEventListener("click", e => {
-  if (location.pathname !== "/results" || !activePurpose() || brk || searchPending) return;
+  if (!(location.pathname === "/results" || askPage()) || !activePurpose() || brk || searchPending) return;
   const a = e.target.closest?.('a[href*="/watch?v="]');
   if (!a || a.closest(YT.ads)) return;
   let id = null, list = null;
   try { const u = new URL(a.href); id = u.searchParams.get("v"); list = u.searchParams.get("list"); } catch {}
   if (!id && !list) return;
-  const videos = id ? [{ id, title: squash(a.title || a.textContent) }] : [];
-  allowLocal(videos, list ? [list] : [], searchQuery());
-  send({ type: "purpose-allow", query: searchQuery(), videos, lists: list ? [list] : [] });
+  const videos = id ? [{ id, title: squash(a.getAttribute("aria-label") || a.title || a.textContent).slice(0, 300) }] : [];
+  const query = location.pathname === "/results" ? searchQuery() : "Ask YouTube";
+  allowLocal(videos, list ? [list] : [], query);
+  send({ type: "purpose-allow", query, videos, lists: list ? [list] : [] });
 }, true);
 
 async function renderResultsBar() {
