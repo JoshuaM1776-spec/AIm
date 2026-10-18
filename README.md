@@ -77,14 +77,14 @@ Aim doesn't block or alter YouTube's ads, and stays compatible with ad blockers 
 
 YouTube helps you find something to watch. Aim helps you find what you need. Aim should feel like it belongs inside YouTube, with calm, polished moments of decision:
 
-- **Colors** come from YouTube's own theme variables (`--yt-spec-*`) in `content/content.css`, so light and dark mode match exactly. Aim red (`--wp-accent`, #e5131f) is an accent, not the default: it marks the one way back to your Target (Continue, Resume, Back on Target), the time ring and the mark. Primary buttons are neutral (`.wp-btn-primary`, dark on light); use `.wp-btn-accent` only for that "back to it" action.
+- **Colors** come from YouTube's own theme variables (`--yt-spec-*`) in `content/content.css`, so light and dark mode match exactly. Aim coral (`--wp-accent`, #d93b2b) is an accent, not the default: it marks the one way back to your Target (Continue, Resume, Back on Target), the time ring and the mark. Primary buttons are neutral (`.wp-btn-primary`, dark on light); use `.wp-btn-accent` only for that "back to it" action.
 - **Homepage:** a conversation, not a search box. "What brings you here?", one rounded field ("Tell me what you're looking for…") with a small arrow inside it (Enter works too), example requests said the way you'd ask a librarian, then at most one current and two recent Targets to pick up.
 - **Results:** a compact one-row Target indicator above YouTube's results: the Target, a small Change action, a done check, and (signed in) a librarian icon. The librarian stays folded away unless it has something new to say about this search. Time left shows only when you set a limit. The videos stay the main event.
 - **Popup:** about the current Target: Resume, Take a Break, Done, with Change Target, Set aside and All Targets as small links. It shows time so far, or time left only when you set a limit. Activity is folded under "Your activity"; Daily limits and Settings are secondary.
 - **Shapes:** 16px-radius dialogs and cards with a centered brand line and a close button when dismissible, full-width buttons for the main decision, segmented choices (Take a Break) and a green check for Target complete.
 - **Placement:** the Aim button sits beside YouTube's search box on wide windows (1200px+) and beside the Create button otherwise.
 - **Behavior:** Escape or a click outside closes menus and dialogs, except prompts that are holding a video for your decision.
-- **Aim's own pages** (Settings, Targets, TeachBack, study sessions, Pathways, the welcome tour, sign-in) all use `aim.css`: one set of colors for light and dark, the same header (mark, "Aim", the page's name), cards on a soft gray page, and the same buttons, fields, switches and pills. A page adds only what's truly its own in a small `<style>`. Main buttons are neutral; Aim red is only for getting back to your Target; blue is a small learning accent (Homeschool, Pathways), never a page's main button. The popup keeps its compact layout but uses the same colors.
+- **Aim's own pages** (Settings, Targets, TeachBack, study sessions, Pathways, the welcome tour, sign-in) all use `aim.css`: one set of colors for light and dark, the same header (mark, "Aim", the page's name), cards on a soft gray page, and the same buttons, fields, switches and pills. A page adds only what's truly its own in a small `<style>`. Main buttons are neutral; Aim coral is only for getting back to your Target; blue is a small learning accent (Homeschool, Pathways), never a page's main button. The popup keeps its compact layout but uses the same colors.
 - **Never** use YouTube's logo, icons, artwork or code. Aim's name and mark appear on every card, so nothing reads as YouTube's own feature.
 
 ## Rebranding
@@ -92,8 +92,7 @@ YouTube helps you find something to watch. Aim helps you find what you need. Aim
 The name is Aim. It lives in one place, so it's easy to change if it ever has to:
 
 - **Name and descriptions:** `name`, `description` and `action.default_title` in `manifest.json`. The YouTube pages, popup and settings page all read the name from there.
-- **Icons:** `icons/16|32|48|128.png` (dark mark, for light toolbars) and `icons/light/` (light mark, for dark toolbars). The source drawing is `icons/mark.svg`.
-- **The mark on YouTube** is the same drawing, built in code: `ICON.logo` in `content/core.js`.
+- **The mark:** the A is a mountain; a road winds up it and leaves the summit for a north star, which also stands in for the dot on the i. Forest green (#1e3a32, or light on dark backgrounds) with a coral star (#ff5446). `tools/build-mark.mjs` draws it and writes everything made from it: `icons/mark.svg` (large), `icons/mark-small.svg` (16–32 px: a wider road, no trail), `icons/16|32|48|128.png` (dark mark, for light toolbars), `icons/light/` (light mark, for dark toolbars), `icons/wordmark.png` and `wordmark-light.png` (for the store and website), and `ICON.logo` in `content/core.js`, the mark on YouTube. Change the drawing there and run it (see the comment at its top), rather than editing the outputs.
 - `PRIVACY.md` and `STORE_LISTING.md` mention the name in text.
 
 ## Stored data

@@ -180,7 +180,10 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     await p.click('#wp-home .wp-home-example:has-text("biology exam")');
     return (await p.inputValue("#wp-home .wp-home-input")) === "Help me study for my biology exam.";
   })());
-  step("the mark (bullseye, no play triangle) renders as SVG under Trusted Types", (await p.$$("#wp-chip .wp-icon:first-child svg circle")).length === 1 && (await p.$$("#wp-chip .wp-icon:first-child svg path")).length === 4);
+  step("the mark (mountain and north star) renders as SVG under Trusted Types", await p.evaluate(() => {
+    const paths = [...document.querySelectorAll("#wp-chip .wp-icon:first-child svg path")].map(x => x.getAttribute("fill"));
+    return paths.filter(f => f === "currentColor").length === 2 && paths.filter(f => f === "#ff5446").length === 5;
+  }));
   step("toolbar icon follows dark mode", await sw.evaluate(async () => (await setToolbarTheme(true)).result === "applied" && (await setToolbarTheme(false)).result === "applied"));
 
   // ---------- holding a video never interrupts YouTube's player ----------

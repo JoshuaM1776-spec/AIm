@@ -1,7 +1,7 @@
 /* Aim — styled to sit naturally inside YouTube.
    Colors come from YouTube's own theme variables (--yt-spec-*), so Aim follows YouTube's light
    and dark themes exactly; the fallbacks only apply if YouTube ever renames them. Aim's one accent
-   is Aim red (--wp-accent, the red of the Aim mark, not YouTube's), used sparingly: getting back on
+   is Aim coral (--wp-accent, the color of the star in the Aim mark), used sparingly: getting back on
    Target (Continue, Resume, Back on Target), the selected choice and the break indicator. Other
    main buttons are YouTube's neutral dark. Cards and dialogs are a little rounder and roomier than
    YouTube's menus, so Aim's moments of decision read as calm and deliberate. */
@@ -23,9 +23,9 @@
   --wp-search-button: var(--ytd-searchbox-legacy-button-color, #f8f8f8);
   --wp-search-focus: #1c62b9;
   --wp-shadow: 0 4px 32px 0 rgba(0, 0, 0, 0.1);
-  --wp-accent: #e5131f;
-  --wp-accent-hover: #c8101b;
-  --wp-accent-soft: rgba(229, 19, 31, 0.08);
+  --wp-accent: #d93b2b;
+  --wp-accent-hover: #c03222;
+  --wp-accent-soft: rgba(217, 59, 43, 0.08);
   --wp-on-accent: #ffffff;
   --wp-success: #2ba640;
   --wp-card-border: rgba(0, 0, 0, 0.08);
@@ -50,7 +50,7 @@ html[dark] .wp {
   --wp-search-button: var(--ytd-searchbox-legacy-button-color, #222222);
   --wp-search-focus: #1c62b9;
   --wp-shadow: 0 4px 32px 0 rgba(0, 0, 0, 0.5);
-  --wp-accent-soft: rgba(229, 19, 31, 0.18);
+  --wp-accent-soft: rgba(217, 59, 43, 0.18);
   --wp-card-border: rgba(255, 255, 255, 0.1);
 }
 
@@ -433,7 +433,7 @@ html.wp-boot ytd-browse[page-subtype="home"] ytd-feed-filter-chip-bar-renderer {
 .wp-home-card .wp-break-pick .wp-chips { justify-content: center; }
 
 /* ---------- Aim Homeschool: the student's Today screen (content/plan.js) ----------
-   Homeschool's accent is a calm blue; Aim red stays the extension's "back to your Target" color.
+   Homeschool's accent is a calm blue; Aim coral stays the extension's "back to your Target" color.
    Everything else uses YouTube's own light and dark theme colors, like the rest of Aim. */
 .wp-today, .wp-plan-panel, .wp-plan-guide { --wp-hs: #1a66d6; --wp-hs-hover: #1556b8; --wp-hs-soft: rgba(26, 102, 214, 0.07); --wp-on-hs: #ffffff;
   --wp-sub-science: #e8590c; --wp-sub-math: #1a66d6; --wp-sub-history: #b7791f; --wp-sub-project: #2f9e44; --wp-sub-english: #7048e8; }

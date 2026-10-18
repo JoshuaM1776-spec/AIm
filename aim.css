@@ -2,7 +2,7 @@
    Pathways, the welcome tour, sign-in and the popup. YouTube's palette and shapes, following
    Chrome's light/dark mode. A page adds only what's truly its own, in its own <style>.
 
-   Color rules: buttons are neutral (dark on light, light on dark). Aim red (--accent) marks only
+   Color rules: buttons are neutral (dark on light, light on dark). Aim coral (--accent) marks only
    the way back to your Target (Resume, Continue). Blue (--blue) is the learning accent for
    Homeschool and Pathways details (pills, step markers), never a page's main button. */
 
@@ -11,7 +11,7 @@
   --divider: rgba(0, 0, 0, .1); --card-border: rgba(0, 0, 0, .08);
   --tonal: rgba(0, 0, 0, .05); --tonal-hover: rgba(0, 0, 0, .1);
   --field: #ffffff; --field-border: #cccccc; --focus: #1c62b9; --link: #065fd4;
-  --accent: #e5131f; --accent-hover: #c8101b; --blue: #1a66d6; --blue-soft: rgba(26, 102, 214, .08);
+  --accent: #d93b2b; --accent-hover: #c03222; --blue: #1a66d6; --blue-soft: rgba(26, 102, 214, .08);
   --ok: #2ba640; --ok-soft: rgba(43, 166, 64, .12); --danger: #cc0000;
   --toggle-track: rgba(0, 0, 0, .25);
   --shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 4px 16px rgba(0, 0, 0, .04);
