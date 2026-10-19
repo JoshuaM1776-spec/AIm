@@ -16,6 +16,16 @@ The database tests need a throwaway Postgres; see [supabase/README.md](supabase/
 
 The browser test checks Aim's own wiring: the top-bar button, prompts, pause and resume, time-up, channel hiding, popup, settings and extension reload. It uses a stand-in page, so it can't tell you whether YouTube changed its page structure. That's what the manual checklist below is for.
 
+## Real-YouTube check (automated)
+
+`tools/real-youtube-check.mjs` loads Aim on the real youtube.com and checks what breaks when YouTube changes its pages: the home card replacing the feed, results (links, titles, channels, lengths), the watch page (video id, title, channel, sidebar, Up next), every selector in `content/youtube.js` on its page, and every channel in Learn something's list (found, with videos). It writes `report.json` and screenshots.
+
+```sh
+PLAYWRIGHT=… CHROMIUM_PATH=… node tools/real-youtube-check.mjs ./real-youtube-report
+```
+
+From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`, `*.googlevideo.com`, `*.ggpht.com`, `*.gstatic.com`, `*.googleapis.com` and `accounts.google.com`. YouTube may challenge cloud servers ("confirm you're not a bot") and refuse playback there; the page-structure checks still mean something, but the manual checklist on a real computer is the final word.
+
 ## Manual checklist (real YouTube)
 
 ### Setup
