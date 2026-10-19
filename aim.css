@@ -1,36 +1,17 @@
 /* Aim — one look for all of Aim's own pages: Settings, Targets, TeachBack, study sessions,
-   Pathways, the welcome tour, sign-in and the popup. YouTube's palette and shapes, following
-   Chrome's light/dark mode. A page adds only what's truly its own, in its own <style>.
+   Pathways, the welcome tour, sign-in and the popup. Its colors come from the Aim mark: warm
+   parchment, green-black ink, deep forest green, and coral. Following Chrome's light/dark mode
+   (dark: deep green-black with cream). A page adds only what's truly its own, in its own <style>.
 
-   Color rules: buttons are neutral (dark on light, light on dark). Aim coral (--accent) marks only
-   the way back to your Target (Resume, Continue). Blue (--blue) is the learning accent for
-   Homeschool and Pathways details (pills, step markers), never a page's main button. */
+   Color rules: the main button is forest green (cream in dark mode). Aim coral (--accent) marks only
+   the way back to your Target (Resume, Continue), like the arrowhead in the mark. Green (--learn) is
+   the learning accent for Homeschool and Pathways details (pills, step markers).
+   Fonts and color tokens: tokens.css. */
 
-:root {
-  --bg: #f9f9f9; --surface: #ffffff; --text: #0f0f0f; --muted: #606060;
-  --divider: rgba(0, 0, 0, .1); --card-border: rgba(0, 0, 0, .08);
-  --tonal: rgba(0, 0, 0, .05); --tonal-hover: rgba(0, 0, 0, .1);
-  --field: #ffffff; --field-border: #cccccc; --focus: #1c62b9; --link: #065fd4;
-  --accent: #d93b2b; --accent-hover: #c03222; --blue: #1a66d6; --blue-soft: rgba(26, 102, 214, .08);
-  --ok: #2ba640; --ok-soft: rgba(43, 166, 64, .12); --danger: #cc0000;
-  --toggle-track: rgba(0, 0, 0, .25);
-  --shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 4px 16px rgba(0, 0, 0, .04);
-  --radius: 16px;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0f0f0f; --surface: #1f1f1f; --text: #f1f1f1; --muted: #aaaaaa;
-    --divider: rgba(255, 255, 255, .1); --card-border: rgba(255, 255, 255, .08);
-    --tonal: rgba(255, 255, 255, .1); --tonal-hover: rgba(255, 255, 255, .2);
-    --field: #121212; --field-border: #3a3a3a; --link: #3ea6ff;
-    --blue: #6aa5f8; --blue-soft: rgba(106, 165, 248, .13); --ok: #5fcf73; --ok-soft: rgba(95, 207, 115, .14); --danger: #ff4e45;
-    --toggle-track: rgba(255, 255, 255, .3);
-    --shadow: none;
-  }
-}
+@import url("tokens.css");
 
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--text); font: 14px/20px Roboto, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/20px var(--font); -webkit-font-smoothing: antialiased; }
 a { color: var(--link); text-decoration: none; } a:hover { text-decoration: underline; }
 p { margin: 0 0 12px; }
 ul, ol { margin: 0 0 12px; padding-left: 20px; } li { margin: 4px 0; }
@@ -43,12 +24,12 @@ ul, ol { margin: 0 0 12px; padding-left: 20px; } li { margin: 4px 0; }
 .page.wide { max-width: 1180px; }
 .page-head { display: flex; align-items: center; gap: 8px; height: 40px; margin-bottom: 20px; font-size: 15px; }
 .page-head img { width: 28px; height: 28px; }
-.page-head .brand { font-weight: 700; }
+.page-head .brand { font: 700 18px var(--font-display); letter-spacing: -.2px; }
 .page-head .crumb { color: var(--muted); }
 .page-head .crumb::before { content: "·"; margin: 0 8px 0 2px; }
 .page-head .end { margin-left: auto; }
-h1 { font-size: 28px; line-height: 36px; font-weight: 700; margin: 0 0 6px; letter-spacing: -.2px; }
-h2 { font-size: 18px; line-height: 26px; font-weight: 700; margin: 0 0 4px; }
+h1 { font: 700 30px/38px var(--font-display); margin: 0 0 6px; letter-spacing: -.5px; }
+h2 { font: 600 19px/26px var(--font-display); margin: 0 0 4px; letter-spacing: -.1px; }
 h3 { font-size: 15px; line-height: 22px; font-weight: 500; margin: 0 0 4px; }
 .lede { color: var(--muted); font-size: 15px; line-height: 22px; margin: 0 0 20px; }
 .muted { color: var(--muted); }
@@ -79,9 +60,9 @@ details.card[open] > summary::before { transform: rotate(90deg); }
 .item b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ---------- buttons ---------- */
-.btn { height: 36px; padding: 0 16px; border-radius: 18px; border: 0; background: var(--text); color: var(--surface); cursor: pointer;
-  font: 500 14px Roboto, Arial, sans-serif; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; text-decoration: none !important; }
-.btn:hover { opacity: .85; }
+.btn { height: 36px; padding: 0 16px; border-radius: 18px; border: 0; background: var(--primary); color: var(--on-primary); cursor: pointer;
+  font: 500 14px var(--font); display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; text-decoration: none !important; }
+.btn:hover { background: var(--primary-hover); }
 .btn.tonal { background: var(--tonal); color: var(--text); } .btn.tonal:hover { background: var(--tonal-hover); opacity: 1; }
 .btn.outline { background: none; color: var(--text); border: 1px solid var(--divider); } .btn.outline:hover { background: var(--tonal); opacity: 1; }
 .btn.text { background: none; color: var(--text); padding: 0 12px; } .btn.text:hover { background: var(--tonal); opacity: 1; }
@@ -89,10 +70,10 @@ details.card[open] > summary::before { transform: rotate(90deg); }
 .btn.danger { color: var(--danger); }
 .btn.lg { height: 40px; padding: 0 20px; border-radius: 20px; }
 .btn:disabled { opacity: .45; cursor: default; }
-.btn:focus-visible, .seg button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.btn:focus-visible, .seg button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
 .spread { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.back { display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; padding: 0; color: var(--muted); font: 500 14px Roboto, Arial, sans-serif; cursor: pointer; margin-bottom: 12px; }
+.back { display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; padding: 0; color: var(--muted); font: 500 14px var(--font); cursor: pointer; margin-bottom: 12px; }
 .back:hover { color: var(--text); }
 
 /* ---------- fields ---------- */
@@ -114,40 +95,40 @@ input::placeholder, textarea::placeholder { color: var(--muted); }
 .switch i { position: absolute; left: 0; right: 0; top: 3px; height: 14px; border-radius: 7px; background: var(--toggle-track); transition: background .15s; pointer-events: none; }
 .switch i::after { content: ""; position: absolute; top: -3px; left: 0; width: 20px; height: 20px; border-radius: 50%; background: #fff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, .4); transition: transform .15s, background .15s; }
-.switch input:checked + i { background: color-mix(in srgb, var(--link) 50%, transparent); }
-.switch input:checked + i::after { transform: translateX(16px); background: var(--link); }
-.switch input:focus-visible + i { outline: 2px solid var(--text); outline-offset: 3px; }
+.switch input:checked + i { background: color-mix(in srgb, var(--primary) 45%, transparent); }
+.switch input:checked + i::after { transform: translateX(16px); background: var(--primary); }
+.switch input:focus-visible + i { outline: 2px solid var(--focus); outline-offset: 3px; }
 /* Segmented choice */
 .seg { display: flex; gap: 8px; flex-wrap: wrap; }
-.seg button { height: 36px; padding: 0 14px; border-radius: 8px; border: 0; background: var(--tonal); color: var(--text); font: 500 14px Roboto, Arial, sans-serif; cursor: pointer; }
+.seg button { height: 36px; padding: 0 14px; border-radius: 8px; border: 0; background: var(--tonal); color: var(--text); font: 500 14px var(--font); cursor: pointer; }
 .seg button:hover { background: var(--tonal-hover); }
-.seg button[aria-pressed="true"] { background: var(--text); color: var(--surface); }
+.seg button[aria-pressed="true"] { background: var(--primary); color: var(--on-primary); }
 
 /* ---------- small pieces ---------- */
 .pill { display: inline-block; font-size: 12px; line-height: 20px; padding: 0 8px; border-radius: 10px; background: var(--tonal); white-space: nowrap; margin-right: 6px; }
-.pill.strong { background: var(--text); color: var(--surface); }
+.pill.strong { background: var(--primary); color: var(--on-primary); }
 .pill.ok { background: var(--ok-soft); color: var(--ok); font-weight: 500; }
-.pill.blue { background: var(--blue-soft); color: var(--blue); font-weight: 500; }
+.pill.blue { background: var(--learn-soft); color: var(--learn); font-weight: 500; }
 .note { background: var(--tonal); border-radius: 10px; padding: 10px 12px; margin: 12px 0; }
 .quote { border-left: 3px solid var(--divider); padding: 2px 0 2px 10px; margin: 8px 0; color: var(--muted); }
 .error { background: var(--tonal); border-radius: 10px; padding: 10px 12px; margin: 12px 0; } .error:empty { display: none; }
 .busy { color: var(--muted); margin-top: 12px; } .busy:empty { display: none; }
 .msg { color: var(--muted); margin: 12px 0 0; } .msg:empty { display: none; }
 .empty { color: var(--muted); }
-#toast { position: fixed; left: 12px; bottom: 12px; background: var(--text); color: var(--surface); border-radius: 8px; padding: 14px 16px; max-width: 90vw; display: none; z-index: 10;
+#toast { position: fixed; left: 12px; bottom: 12px; background: var(--primary); color: var(--on-primary); border-radius: 8px; padding: 14px 16px; max-width: 90vw; display: none; z-index: 10;
   box-shadow: 0 4px 32px rgba(0, 0, 0, .15); }
 
 /* ---------- Pathways pieces shared by TeachBack, study sessions and Pathways (pathways-ui.js) ---------- */
 .pw-interest { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 12px 0; }
 .pw-interest span { color: var(--muted); margin-right: 4px; }
-.pw-interest button { height: 32px; padding: 0 14px; border-radius: 16px; border: 1px solid var(--divider); background: none; color: var(--text); font: 500 14px Roboto, Arial, sans-serif; cursor: pointer; }
+.pw-interest button { height: 32px; padding: 0 14px; border-radius: 16px; border: 1px solid var(--divider); background: none; color: var(--text); font: 500 14px var(--font); cursor: pointer; }
 .pw-interest button:hover { background: var(--tonal); }
-.pw-interest button[aria-pressed="true"] { background: var(--text); color: var(--surface); border-color: transparent; }
-.pw-where-btn { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; padding: 4px 0; color: var(--link); font: 500 14px Roboto, Arial, sans-serif; cursor: pointer; }
+.pw-interest button[aria-pressed="true"] { background: var(--primary); color: var(--on-primary); border-color: transparent; }
+.pw-where-btn { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; padding: 4px 0; color: var(--link); font: 500 14px var(--font); cursor: pointer; }
 .pw-where-btn:hover { text-decoration: underline; }
 .pw-where { border: 1px solid var(--divider); border-radius: 12px; padding: 16px; margin: 8px 0 16px; background: var(--surface); }
 .pw-where h3 { margin: 0 0 4px; } .pw-where .pw-intro { margin: 0 0 12px; }
 .pw-use { border-top: 1px solid var(--divider); padding: 12px 0 4px; } .pw-use:first-of-type { border-top: 0; }
 .pw-use b.pw-field { display: block; font-size: 15px; } .pw-use .pw-how { color: var(--muted); font-size: 13px; }
 .pw-use .pw-problem { margin: 6px 0; } .pw-reveal { background: var(--tonal); border-radius: 8px; padding: 8px 10px; margin: 6px 0; }
-.pw-use .pw-links { display: flex; gap: 16px; } .pw-use .pw-links button { background: none; border: 0; padding: 0; color: var(--link); font: 500 13px Roboto, Arial, sans-serif; cursor: pointer; }
+.pw-use .pw-links { display: flex; gap: 16px; } .pw-use .pw-links button { background: none; border: 0; padding: 0; color: var(--link); font: 500 13px var(--font); cursor: pointer; }

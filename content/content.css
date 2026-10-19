@@ -1,10 +1,15 @@
 /* Aim — styled to sit naturally inside YouTube.
    Colors come from YouTube's own theme variables (--yt-spec-*), so Aim follows YouTube's light
    and dark themes exactly; the fallbacks only apply if YouTube ever renames them. Aim's one accent
-   is Aim coral (--wp-accent, the color of the star in the Aim mark), used sparingly: getting back on
-   Target (Continue, Resume, Back on Target), the selected choice and the break indicator. Other
-   main buttons are YouTube's neutral dark. Cards and dialogs are a little rounder and roomier than
-   YouTube's menus, so Aim's moments of decision read as calm and deliberate. */
+   is Aim coral (--wp-accent, the arrowhead in the Aim mark), used sparingly: getting back on
+   Target (Continue, Resume, Back on Target), the selected choice and the break indicator. Main
+   buttons are Aim's forest green (cream in the dark theme), Homeschool's accent is Aim's learning
+   green, and headlines use Inter Display, as on Aim's own pages (tokens.css). Cards and dialogs are
+   a little rounder and roomier than YouTube's menus, so Aim's moments of decision read as calm and
+   deliberate. */
+
+@font-face { font-family: "Aim Inter Display"; font-weight: 700; font-display: swap;
+  src: url("chrome-extension://__MSG_@@extension_id__/fonts/InterDisplay-Bold.woff2") format("woff2"); }
 
 .wp {
   --wp-text: var(--yt-spec-text-primary, #0f0f0f);
@@ -27,6 +32,8 @@
   --wp-accent-hover: #c03222;
   --wp-accent-soft: rgba(217, 59, 43, 0.08);
   --wp-on-accent: #ffffff;
+  --wp-primary: #193d31; --wp-primary-hover: #10291f; --wp-on-primary: #fffdf9;
+  --wp-display: "Aim Inter Display", "Roboto", "Arial", sans-serif;
   --wp-mark: #193d31; /* the Aim mark: forest green, light in the dark theme */
   --wp-success: #2ba640;
   --wp-card-border: rgba(0, 0, 0, 0.08);
@@ -53,6 +60,7 @@ html[dark] .wp {
   --wp-shadow: 0 4px 32px 0 rgba(0, 0, 0, 0.5);
   --wp-accent-soft: rgba(217, 59, 43, 0.18);
   --wp-mark: #f1f1f1;
+  --wp-primary: #ece5d4; --wp-primary-hover: #fffaf0; --wp-on-primary: #12201a;
   --wp-card-border: rgba(255, 255, 255, 0.1);
 }
 
@@ -95,7 +103,7 @@ html[dark] .wp {
 .wp-menu-head:hover, .wp-menu-item:hover { background: var(--wp-hover); }
 .wp-menu-block { padding: 12px 16px; border-top: 1px solid var(--wp-divider); }
 .wp-bar { height: 4px; border-radius: 2px; background: var(--wp-tonal); margin-top: 8px; overflow: hidden; }
-.wp-bar i { display: block; height: 100%; background: var(--wp-text); border-radius: 2px; }
+.wp-bar i { display: block; height: 100%; background: var(--wp-primary); border-radius: 2px; }
 .wp-menu-items { border-top: 1px solid var(--wp-divider); padding-top: 8px; }
 .wp-menu-item {
   display: flex; width: 100%; align-items: center; gap: 16px; min-height: 40px; padding: 0 36px 0 16px;
@@ -121,7 +129,7 @@ html[dark] .wp {
   padding: 24px; display: flex; flex-direction: column; gap: 12px; animation: wp-in .15s ease-out;
 }
 .wp-dialog-brand { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; color: var(--wp-muted); }
-.wp-title, .wp-q { font-size: 20px; line-height: 28px; font-weight: 700; }
+.wp-title, .wp-q { font-family: var(--wp-display); font-size: 20px; line-height: 28px; font-weight: 700; letter-spacing: -.2px; }
 .wp-q { display: block; margin: 4px 0 4px; }
 .wp-q-sm { font-size: 16px; line-height: 22px; font-weight: 500; margin: 8px 0 0; }
 .wp-input {
@@ -145,7 +153,7 @@ html[dark] .wp {
   background: var(--wp-tonal); color: var(--wp-text);
 }
 .wp-chip:hover, .wp-seg-btn:hover { background: var(--wp-tonal-hover); }
-.wp .wp-chip-on, .wp .wp-chip-on:hover, .wp .wp-seg-btn.on, .wp .wp-seg-btn.on:hover { background: var(--wp-text); color: var(--wp-text-inverse); }
+.wp .wp-chip-on, .wp .wp-chip-on:hover, .wp .wp-seg-btn.on, .wp .wp-seg-btn.on:hover { background: var(--wp-primary); color: var(--wp-on-primary); }
 
 /* Buttons (YouTube's button shapes: filled, tonal, text). */
 .wp-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
@@ -153,8 +161,8 @@ html[dark] .wp {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   height: 36px; padding: 0 16px; border-radius: 18px; border: 0; font-size: 14px; font-weight: 500; white-space: nowrap;
 }
-.wp .wp-btn-primary { background: var(--wp-text); color: var(--wp-text-inverse); }
-.wp-btn-primary:hover { opacity: .85; }
+.wp .wp-btn-primary { background: var(--wp-primary); color: var(--wp-on-primary); }
+.wp .wp-btn-primary:hover { background: var(--wp-primary-hover); }
 .wp-btn-tonal { background: var(--wp-tonal); }
 .wp-btn-tonal:hover { background: var(--wp-tonal-hover); }
 .wp-btn-text { background: none; }
@@ -277,12 +285,12 @@ html.wp-boot ytd-browse[page-subtype="home"] ytd-feed-filter-chip-bar-renderer {
   width: min(640px, calc(100% - 32px)); margin: 12vh auto 40px; padding: 0;
   display: flex; flex-direction: column; gap: 16px; align-items: stretch;
 }
-.wp-home-title { font-size: 28px; line-height: 36px; font-weight: 700; margin: 0; }
+.wp-home-title { font-family: var(--wp-display); font-size: 30px; line-height: 38px; font-weight: 700; margin: 0; letter-spacing: -.5px; }
 .wp-home-purpose { font-size: 22px; line-height: 30px; font-weight: 500; margin-top: -10px; }
 /* A conversation, not a search box: one rounded field with a small arrow button inside it. */
 .wp-home-search { display: flex; align-items: center; height: 52px; padding: 0 6px 0 20px; gap: 8px;
   border: 1px solid var(--wp-search-border); border-radius: 26px; background: var(--wp-base); }
-.wp-home-search:focus-within { border-color: var(--wp-search-focus); box-shadow: 0 0 0 1px var(--wp-search-focus); }
+.wp-home-search:focus-within { border-color: var(--wp-primary); box-shadow: 0 0 0 1px var(--wp-primary); }
 .wp-home-input {
   flex: 1; min-width: 0; height: 100%; padding: 0; margin: 0; border: 0; background: none; color: var(--wp-text); outline: 0;
   font: 400 16px/22px "Roboto", Arial, sans-serif;
@@ -292,8 +300,8 @@ html.wp-boot ytd-browse[page-subtype="home"] ytd-feed-filter-chip-bar-renderer {
   width: 40px; height: 40px; flex: none; border: 0; border-radius: 50%; padding: 0;
   background: var(--wp-tonal); color: var(--wp-text); display: flex; align-items: center; justify-content: center;
 }
-.wp-home-go:hover { background: var(--wp-tonal-hover); }
-.wp-home-search:focus-within .wp-home-go { background: var(--wp-text); color: var(--wp-text-inverse); }
+.wp .wp-home-go, .wp-home-search:focus-within .wp-home-go { background: var(--wp-primary); color: var(--wp-on-primary); }
+.wp .wp-home-go:hover { background: var(--wp-primary-hover); }
 .wp-home-go:disabled { opacity: .6; cursor: progress; }
 .wp-home-examples { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: -8px; }
 .wp .wp-home-example { border: 0; background: none; color: var(--wp-muted); font: 400 14px/20px "Roboto", Arial, sans-serif;
@@ -362,12 +370,10 @@ html.wp-boot ytd-browse[page-subtype="home"] ytd-feed-filter-chip-bar-renderer {
 .wp-study-bar { border-top: 1px solid var(--wp-divider); padding-top: 12px; }
 
 /* ======================================================================
-   Polish: YouTube-red primary actions, roomier cards, segmented choices.
+   Polish: Aim's primary actions, roomier cards, segmented choices.
    ====================================================================== */
-.wp .wp-btn-primary { background: var(--wp-text); color: var(--wp-text-inverse); }
-.wp .wp-btn-primary:hover { opacity: .85; }
 .wp .wp-btn-primary:disabled, .wp .wp-btn-accent:disabled { opacity: .5; cursor: default; }
-/* Red is for getting back on Target: Continue, Resume, Back on Target. */
+/* Coral is for getting back on Target: Continue, Resume, Back on Target. */
 .wp .wp-btn-accent { background: var(--wp-accent); color: var(--wp-on-accent); }
 .wp .wp-btn-accent:hover { background: var(--wp-accent-hover); }
 .wp-btn-block { width: 100%; height: 44px; border-radius: 22px; font-size: 15px; }
@@ -381,7 +387,7 @@ html.wp-boot ytd-browse[page-subtype="home"] ytd-feed-filter-chip-bar-renderer {
 .wp-dialog-close { position: absolute; top: 12px; right: 12px; color: var(--wp-muted); }
 .wp-dialog-center { align-items: center; text-align: center; }
 .wp-dialog-center .wp-title { margin-top: 2px; }
-.wp-dialog-brand { color: var(--wp-text); font-size: 18px; font-weight: 700; gap: 8px; }
+.wp-dialog-brand { color: var(--wp-text); font-family: var(--wp-display); font-size: 18px; font-weight: 700; gap: 8px; letter-spacing: -.2px; }
 .wp-dialog-center .wp-dialog-brand { justify-content: center; }
 .wp-dialog-brand .wp-icon { transform: scale(1.15); }
 .wp-sub { font-size: 14px; line-height: 20px; color: var(--wp-muted); margin: -6px 0 2px; }
@@ -435,22 +441,22 @@ html.wp-boot ytd-browse[page-subtype="home"] ytd-feed-filter-chip-bar-renderer {
 .wp-home-card .wp-break-pick .wp-chips { justify-content: center; }
 
 /* ---------- Aim Homeschool: the student's Today screen (content/plan.js) ----------
-   Homeschool's accent is a calm blue; Aim coral stays the extension's "back to your Target" color.
+   Homeschool's accent is Aim's learning green; Aim coral stays the extension's "back to your Target" color.
    Everything else uses YouTube's own light and dark theme colors, like the rest of Aim. */
-.wp-today, .wp-plan-panel, .wp-plan-guide { --wp-hs: #1a66d6; --wp-hs-hover: #1556b8; --wp-hs-soft: rgba(26, 102, 214, 0.07); --wp-on-hs: #ffffff;
+.wp-today, .wp-plan-panel, .wp-plan-guide { --wp-hs: #2b6e52; --wp-hs-hover: #22583f; --wp-hs-soft: rgba(43, 110, 82, 0.08); --wp-on-hs: #ffffff;
   --wp-sub-science: #e8590c; --wp-sub-math: #1a66d6; --wp-sub-history: #b7791f; --wp-sub-project: #2f9e44; --wp-sub-english: #7048e8; }
-html[dark] .wp-today, html[dark] .wp-plan-panel, html[dark] .wp-plan-guide { --wp-hs: #2f6fe0; --wp-hs-hover: #4a84ea; --wp-hs-soft: rgba(80, 140, 240, 0.13); --wp-on-hs: #ffffff; }
-html[dark] .wp-plan-subject, html[dark] .wp-plan-tag, html[dark] .wp-today-ask-mark, html[dark] .wp-plan-up-icon { --wp-hs: #7fb0fa; }
+html[dark] .wp-today, html[dark] .wp-plan-panel, html[dark] .wp-plan-guide { --wp-hs: #2f7a5a; --wp-hs-hover: #3a8b69; --wp-hs-soft: rgba(143, 202, 169, 0.13); --wp-on-hs: #ffffff; }
+html[dark] .wp-plan-subject, html[dark] .wp-plan-tag, html[dark] .wp-today-ask-mark, html[dark] .wp-plan-up-icon { --wp-hs: #8fcaa9; }
 
 .wp-today { width: min(1280px, calc(100% - 48px)); margin: 24px auto 48px; display: flex; flex-direction: column; gap: 12px; }
 .wp-today-brand { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .wp-today-preview { margin-left: 4px; }
 .wp-today-preview .wp-link { font-size: 12px; }
-.wp-today-hello { font-size: 32px; line-height: 40px; font-weight: 700; margin: 4px 0 0; }
+.wp-today-hello { font-family: var(--wp-display); font-size: 32px; line-height: 40px; font-weight: 700; margin: 4px 0 0; letter-spacing: -.6px; }
 .wp-today-sub { font-size: 16px; line-height: 22px; margin-top: -6px; }
 .wp-today .wp-today-ask { margin: 8px 0 4px; height: 56px; border-radius: 28px; background: var(--wp-raised); box-shadow: 0 1px 2px rgba(0,0,0,.04); }
 .wp-today-ask-mark { display: flex; color: var(--wp-hs); }
-.wp-today .wp-home-search:focus-within .wp-home-go { background: var(--wp-hs); color: var(--wp-on-hs); }
+.wp-today .wp-home-go, .wp-today .wp-home-search:focus-within .wp-home-go { background: var(--wp-hs); color: var(--wp-on-hs); }
 .wp-today-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
 @media (max-width: 1100px) { .wp-today-grid { grid-template-columns: minmax(0, 1fr); } }
 
@@ -505,7 +511,7 @@ html[dark] .wp-plan-tile { color: #fff; }
 .wp-plan-item > .wp-btn { min-width: 112px; justify-content: center; }
 
 .wp-plan-finished { display: flex; flex-direction: column; gap: 8px; padding: 16px; margin: 4px 0 12px; border-radius: 12px; background: var(--wp-hs-soft); }
-.wp-plan-finished-title { font-size: 20px; line-height: 28px; font-weight: 700; }
+.wp-plan-finished-title { font-family: var(--wp-display); font-size: 20px; line-height: 28px; font-weight: 700; }
 
 .wp-plan-side { display: flex; flex-direction: column; gap: 16px; }
 .wp-plan-unit-row { display: flex; gap: 12px; align-items: center; }
@@ -570,7 +576,7 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 .wp-interest-q { font-size: 13px; line-height: 18px; color: var(--wp-muted); margin-right: 2px; }
 .wp .wp-interest-btn { height: 28px; padding: 0 12px; border-radius: 14px; border: 1px solid var(--wp-divider); background: none; font-size: 13px; font-weight: 500; }
 .wp .wp-interest-btn:hover { background: var(--wp-tonal); }
-.wp .wp-interest-btn.on { background: var(--wp-text); color: var(--wp-text-inverse); border-color: transparent; }
+.wp .wp-interest-btn.on { background: var(--wp-primary); color: var(--wp-on-primary); border-color: transparent; }
 .wp-done-dialog .wp-interest { justify-content: center; }
 .wp .wp-where-link { display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; margin-top: 4px; font-size: 13px; }
 .wp .wp-where-link .wp-icon svg { width: 16px; height: 16px; }
@@ -630,4 +636,4 @@ html[dark] .wp-coach { background: var(--wp-menu); }
   border-radius: 8px; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--wp-link); }
 .wp .wp-concept-ask:hover { background: var(--wp-tonal); }
 .wp-concept-ask .wp-icon svg { width: 16px; height: 16px; }
-.wp-point-here { outline: 3px solid #1a66d6 !important; outline-offset: 3px; border-radius: 18px; transition: outline-color .3s; }
+.wp-point-here { outline: 3px solid #ff5446 !important; outline-offset: 3px; border-radius: 18px; transition: outline-color .3s; }
