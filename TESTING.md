@@ -302,6 +302,13 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] Videos you've watched aren't offered again; **Take out** a channel in Settings and its videos disappear; channels you marked Prefer join the row.
 - [ ] With a Target going, the row isn't shown. Light and dark themes.
 
+### 31. Plus page and subscribing (0.43–0.44, Plus)
+- [ ] With a Plus server configured, the popup shows **Aim Plus**; it opens the Plus page. With none configured, the link isn't there.
+- [ ] Signed out or on Free, the page lists the seven Plus features with no action buttons, and offers **Sign in to get started** or **Upgrade to Plus** (or "Subscriptions open soon" when billing isn't set up).
+- [ ] **Upgrade to Plus** opens Stripe Checkout (test mode: card 4242 4242 4242 4242). After paying, the Plus page opens once with **Welcome to Aim Plus**, and each feature now has its button and a live line (your current study session, record totals).
+- [ ] Settings → Aim Plus shows when it renews and **Manage subscription** (Stripe's portal). Cancelling there shows "Ends on …"; at the end, the plan goes back to Free.
+- [ ] Deleting the account cancels the subscription in Stripe.
+
 ## Known issues (not regressions)
 
 - The word check knows words, not meanings: synonyms ("tap" vs "faucet") get the question once; answering Yes teaches it that search.

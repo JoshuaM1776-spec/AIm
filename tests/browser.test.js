@@ -443,6 +443,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     const t = await o.textContent("body"), h = await o.$eval("#plus", n => n.hidden && !n.querySelector("input")); await o.close(); return [t, h]; })();
   step("no AI, no API key anywhere in settings", !/API key|Claude|AI check/i.test(optText));
   step("no Aim Plus section while config.js is empty", plusHidden);
+  step("no Aim Plus link in the popup when this copy has no Plus server", await pop.$eval("#plusPage", n => n.hidden));
   step("popup leads with the Target: Resume, Take a Break, Done; activity folded below",
     ["Current Target", "learn to sharpen a chisel", "so far", "Resume", "Take a Break", "Done", "Change Target", "Your activity", "This week", "Targets complete", "On Target", "Breaks", "Found it", "Daily limits"].every(t => popText.includes(t)) &&
     !popText.includes("left") && !(await pop.$eval("#activity", d => d.open)), popText.slice(0, 200));

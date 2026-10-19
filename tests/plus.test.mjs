@@ -102,7 +102,8 @@ const deps = {
     info: async () => ({ customer: srv.plan === "plus" ? "cus_test" : null, status: srv.plan === "plus" ? "active" : null,
       renewsAt: srv.plan === "plus" ? "2026-11-18T12:00:00Z" : null, cancelAtPeriodEnd: false }),
     checkout: async () => `${base}/stripe/checkout`,
-    portal: async () => `${base}/stripe/portal`
+    portal: async () => `${base}/stripe/portal`,
+    close: async customer => { srv.closedCustomers = [...(srv.closedCustomers || []), customer]; }
   },
   now: () => new Date(),
   config: { origins: [], limits: { dayCalls: 300, dayTokens: 400000, minuteCalls: 20 }, maxBodyBytes: 16384 }
@@ -202,12 +203,27 @@ step("free plan has no AI check", await opt.$("button:text-is('Check connection'
 const [checkout] = await Promise.all([ctx.waitForEvent("page"), opt.click("button:text-is('Upgrade to Plus')")]);
 step("Upgrade to Plus opens the payment page in a new tab (Stripe's, never Aim's)", checkout.url().endsWith("/stripe/checkout"), checkout.url());
 await checkout.close();
+const [front] = await Promise.all([ctx.waitForEvent("page"), opt.click("button:text-is(\"What's in Plus\")")]);
+await front.waitForSelector(".feature");
+const frontText = await front.textContent("main");
+step("the Plus page, before Plus: what it does and the way to upgrade", frontText.includes("helps you actually learn") && !!(await front.$("button:text-is('Upgrade to Plus')")) &&
+  (await front.$$(".feature")).length === 7 && !(await front.$(".feature .row")));
+await front.close();
 
 const local = await sw.evaluate(() => chrome.storage.local.get(null));
 step("the session isn't in chrome.storage.local (YouTube tabs can read that)", !/acc-|ref-/.test(JSON.stringify(local)));
 
 srv.plan = "plus";
+const [welcomePage] = await Promise.all([ctx.waitForEvent("page"), opt.reload()]);
+await welcomePage.waitForSelector("h1");
+step("becoming Plus opens the Plus page once, as a welcome, with a way into each feature",
+  welcomePage.url().includes("plus.html?welcome") && (await welcomePage.textContent("h1")).includes("Welcome to Aim Plus") &&
+  (await welcomePage.$$(".feature .row button")).length >= 4, welcomePage.url());
+if (process.env.SHOTS) { await welcomePage.setViewportSize({ width: 1200, height: 900 }); await welcomePage.screenshot({ path: `${process.env.SHOTS}/plus-welcome.png`, fullPage: true }); }
+await welcomePage.close();
 await opt.reload();
+await opt.waitForTimeout(800);
+step("the welcome opens only once", ctx.pages().every(pg => !pg.url().includes("plus.html")));
 await opt.waitForSelector("text=Renews");
 step("Plus shows the subscription and a way to manage it, and no Upgrade", (await opt.textContent("#plusBody")).includes("Renews November 18, 2026") &&
   !!(await opt.$("button:text-is('Manage subscription')")) && !(await opt.$("button:text-is('Upgrade to Plus')")));
@@ -649,7 +665,7 @@ step("Delete stays disabled until DELETE is typed exactly", await opt.isDisabled
 await opt.fill("#plusDeleteConfirm", "DELETE");
 await opt.click("#plusDeleteGo");
 await opt.waitForSelector("#plusEmail");
-step("deleting the account removes it on the server and signs out here", srv.deletedUsers.join() === user.id && (await sw.evaluate(() => loadSession())) === null);
+step("deleting the account cancels the subscription, removes it on the server and signs out here", (srv.closedCustomers || []).join() === "cus_test" && srv.deletedUsers.join() === user.id && (await sw.evaluate(() => loadSession())) === null);
 
 // Aim Free keeps working alongside: the regular settings still save.
 await opt.selectOption("#leisureMin", "30");

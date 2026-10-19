@@ -85,6 +85,8 @@ function accountView(st) {
       node("span", { textContent: `${st.usage.calls} of ${st.limits.dayCalls} requests` }))));
   }
   const buttons = node("div", { className: "form" });
+  const tour = node("button", { className: "btn tonal", type: "button", textContent: st.plan === "plus" ? "Everything in Plus" : "What's in Plus" });
+  tour.onclick = () => chrome.tabs.create({ url: chrome.runtime.getURL("plus.html") });
   if (st.plan !== "plus" && b?.available) {
     const up = node("button", { className: "btn accent", type: "button", textContent: "Upgrade to Plus" });
     up.onclick = async () => { if (await plusDo({ type: "plus-subscribe" })) plusMsg("Stripe's secure checkout opened in a new tab. When you're done, come back here."); };
@@ -109,6 +111,7 @@ function accountView(st) {
     };
     buttons.append(check);
   }
+  buttons.append(tour);
   const out = node("button", { className: "btn tonal", type: "button", textContent: "Sign out" });
   out.onclick = async () => { if (await plusDo({ type: "plus-sign-out" })) { toast("Signed out."); renderPlus(); } };
   buttons.append(out);

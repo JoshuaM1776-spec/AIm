@@ -237,6 +237,9 @@ async function render() {
 document.getElementById("settings").addEventListener("click", () => chrome.runtime.openOptionsPage());
 document.getElementById("limits").addEventListener("click", () => send({ type: "open-options", section: "advanced" }));
 document.getElementById("record").addEventListener("click", () => send({ type: "open-record" }));
+document.getElementById("plusPage").addEventListener("click", () => chrome.tabs.create({ url: chrome.runtime.getURL("plus.html") }));
+// Only when this copy of Aim has a Plus server to talk to.
+send({ type: "plus-brief" }).then(r => { document.getElementById("plusPage").hidden = !r?.configured; });
 document.getElementById("clear").addEventListener("click", async () => {
   if (!confirm("Clear your history of Targets and breaks?")) return;
   await send({ type: "history-clear" });

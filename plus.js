@@ -207,12 +207,23 @@ async function plusStatus() {
   try {
     const st = await plusCall("status");
     const fresh = await loadSession();
-    if (fresh && fresh.plan !== st.plan) await saveSession({ ...fresh, plan: st.plan });
+    if (fresh && fresh.plan !== st.plan) {
+      await saveSession({ ...fresh, plan: st.plan });
+      if (st.plan === "plus") await plusWelcome();
+    }
     return { configured: true, signedIn: true, email: st.email || s.email, plan: st.plan, usage: st.usage, limits: st.limits, billing: st.billing || null };
   } catch (e) {
     if (e.code === "auth") return { configured: true, signedIn: false, error: e.message };
     return { configured: true, signedIn: true, email: s.email, offline: true, error: e.message };
   }
+}
+
+// The first time this browser sees the account on Plus: the Plus page, once, as a welcome.
+async function plusWelcome() {
+  const { plusWelcomed } = await chrome.storage.local.get("plusWelcomed");
+  if (plusWelcomed) return;
+  await chrome.storage.local.set({ plusWelcomed: true });
+  chrome.tabs.create({ url: chrome.runtime.getURL("plus.html?welcome") });
 }
 
 // Your data: one file with everything on Aim's server for this account, plus what Aim keeps in this
@@ -236,9 +247,9 @@ async function plusDelete(confirm) {
 // All a YouTube tab may learn about the account: whether someone is signed in (the librarian is
 // on) and whether Plus features can be offered.
 async function plusBrief() {
-  if (!plusConfigured()) return { plus: false, account: false };
+  if (!plusConfigured()) return { plus: false, account: false, configured: false };
   const s = await loadSession();
-  return { plus: s?.plan === "plus", account: !!s };
+  return { plus: s?.plan === "plus", account: !!s, configured: true };
 }
 
 // The librarian, for YouTube tabs: only its tasks (planning a study session, and "Where could this

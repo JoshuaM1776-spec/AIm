@@ -52,6 +52,7 @@ Chrome extension, Manifest V3, no build step.
 | `options.html/js` | Settings page |
 | `welcome.html/js` | The welcome tour: opens once on install (what Aim is, how it works, a few choices, pin it), and from Settings → "Show the welcome tour again" |
 | `config.js`, `plus.js` | Aim Plus in the service worker: where the server is (empty = Free only), sign-in with an emailed code, calling Aim's AI endpoint. Only Aim's own pages can use it, never YouTube tabs. |
+| `plus.html`, `plus-home.js` | The Aim Plus page: what each Plus feature does, with a button to use it once you have Plus; the welcome page after subscribing |
 | `options-plus.js` | The Aim Plus section of Settings (hidden until `config.js` is filled in) |
 | `signin.html/js` | Where the link in the sign-in email lands. It hands the session to the worker, which accepts it only for a sign-in this browser started. |
 | `pathways.html/js` | Pathways (Aim Plus): themes from what you've explored, work connected to an interest, and a path's four steps (See it, Try it, Meet it, Prepare for it) with reflections |
