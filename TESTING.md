@@ -263,6 +263,11 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] Ask the librarian a quick question ("how do I reset my router?"): the Target's done button says **Got my answer** (home card, results bar, Aim menu) and ends it in one tap, with no questions.
 - [ ] While watching, Aim menu → **Prefer, warn about or hide this channel** → Prefer. Its videos show a **Your channel** badge in search results; it never warns or blocks. Signed in, the librarian's picks put a fitting video from it first. Settings → Advanced → **Your channels** lists it with Prefer / Warn / Hide / Remove.
 
+### 26. Your path, strict mode (0.38)
+- [ ] All Targets: a Target with two or more searches shows **Your path: first → second → third**.
+- [ ] Settings → Advanced → **Strict mode** on. "Add 15 minutes" (Time's up), "Continue" past a warned channel, and "Yes, it's part of it" for an unrelated search each ask why first; Continue stays disabled until you write a short sentence; "Never mind" changes nothing.
+- [ ] The popup → Your activity → **Reasons you gave** lists them, newest first, with the Target. Strict mode off: no questions.
+
 ## Known issues (not regressions)
 
 - The word check knows words, not meanings: synonyms ("tap" vs "faucet") get the question once; answering Yes teaches it that search.

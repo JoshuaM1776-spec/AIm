@@ -10,7 +10,8 @@ function openChannelWarning(info, action) {
     el("div", { class: "wp-muted" }, `Change this anytime in ${BRAND}'s settings.`),
     el("div", { class: "wp-actions wp-actions-start" },
       el("button", { class: "wp-btn wp-btn-primary", onclick: goBack }, "Go back"),
-      el("button", { class: "wp-btn wp-btn-text", onclick: () => { overridden.add(info.id); closePlayerCard(); continueAfterRules(info); } }, "Continue")));
+      el("button", { class: "wp-btn wp-btn-text", onclick: () => withReason("channel", `Why watch ${name} this time?`, name,
+        () => { overridden.add(info.id); closePlayerCard(); continueAfterRules(info); }) }, "Continue")));
 }
 
 // Optional channel rule, set from the dropdown while watching.

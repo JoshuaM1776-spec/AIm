@@ -187,6 +187,16 @@ function renderToday() {
     line("All YouTube", S.totalMin ? `${mins(all)} of ${S.totalMin} min` : `${mins(all)} min`));
 }
 
+// Strict mode's reasons, newest first: shown when there are any.
+const REASON_LABEL = { "more-time": "More time", channel: "Warned channel", search: "Search" };
+function renderReasons() {
+  const list = st.reasons || [], box = document.getElementById("reasons");
+  box.hidden = document.getElementById("reasonsHead").hidden = !list.length;
+  box.replaceChildren(...list.map(r => el("div", { class: "item" },
+    el("div", {}, `“${r.text}”`),
+    el("div", { class: "muted" }, [REASON_LABEL[r.kind], r.detail, r.target ? `for ${r.target}` : null].filter(Boolean).join(" · ")))));
+}
+
 function renderSaved() {
   const box = document.getElementById("saved");
   box.replaceChildren();
@@ -220,6 +230,7 @@ async function render() {
   renderWeek();
   renderToday();
   renderSaved();
+  renderReasons();
   renderHistory();
 }
 

@@ -536,6 +536,13 @@ test("a Target's recent videos: the one you'd continue first, then most recently
   assert.strictEqual(env.run(`recentVideos({}).length`), 0);
 });
 
+test("a Target's path: each search once, in order, the last six", async () => {
+  const env = fresh();
+  const trail = JSON.parse(env.run(`JSON.stringify(searchTrail({ searches: ["truck ac recharge", "refrigerant types", "Truck AC recharge", "ac compressor", "a", "b", "c", "d"].map(q => ({ q })) }))`));
+  assert.deepStrictEqual(trail, ["refrigerant types", "ac compressor", "a", "b", "c", "d"]);
+  assert.strictEqual(env.run(`searchTrail({}).length`), 0);
+});
+
 test("channel paths are normalized", async () => {
   const env = fresh();
   await env.run(`setAvoid("/@caf%C3%A9/videos", "Café", "hide")`);

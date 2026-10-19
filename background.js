@@ -26,9 +26,9 @@ async function ensureMigrated() {
 
 // What the popup and settings page show.
 async function fullState() {
-  const d = await chrome.storage.local.get(["saved", "history", "avoid", "usage"]);
+  const d = await chrome.storage.local.get(["saved", "history", "avoid", "usage", "reasons"]);
   const status = await getStatus(), history = d.history || [];
-  return { ...status, saved: d.saved || [], history, avoid: d.avoid || {},
+  return { ...status, saved: d.saved || [], history, avoid: d.avoid || {}, reasons: (d.reasons || []).slice(-10).reverse(),
     week: weekSummary(d.usage || {}, history), recent: recentPurposes(history, status.purpose?.text) };
 }
 
@@ -72,6 +72,7 @@ const writes = {
   "avoid": m => setAvoid(m.key, m.name, m.action),
   "save": m => saveForLater(m.video || {}),
   "saved-remove": m => removeSaved(m.id),
+  "reason": m => addReason({ kind: m.kind, text: m.text, detail: m.detail }),
   "history-clear": () => clearHistory(),
   "setting": m => setSetting(m.key, m.value),
   "homeschool-preview": m => setHomeschoolPreview(!!m.on),

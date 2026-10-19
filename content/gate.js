@@ -180,7 +180,7 @@ function showTimeUpCard() {
     el("div", { class: "wp-muted" }, `You set ${p.limitMin} minutes for: ${p.text}`),
     el("div", { class: "wp-actions wp-actions-start" },
       el("button", { class: "wp-btn wp-btn-primary", onclick: doneAction(p) }, doneLabel(p)),
-      el("button", { class: "wp-btn wp-btn-tonal", onclick: () => addPurposeTime(15) }, "Add 15 minutes")),
+      el("button", { class: "wp-btn wp-btn-tonal", onclick: () => withReason("more-time", "Why add 15 minutes?", p.text, () => addPurposeTime(15)) }, "Add 15 minutes")),
     el("div", { class: "wp-label" }, "Or take a break"),
     breakChips(takeBreak));
 }

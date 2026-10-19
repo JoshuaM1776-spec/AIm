@@ -74,6 +74,7 @@ function row(t, actions, lead) {
     node("div", { className: "grow" }, node("b", { textContent: t.text, title: t.text }),
       node("span", { className: "sub", textContent: meta(t, lead) }),
       v ? node("span", { className: "sub", textContent: `Last video: ${v.title}` }) : null,
+      t.trail?.length > 1 ? node("span", { className: "sub trail", title: t.trail.join(" → "), textContent: `Your path: ${t.trail.join(" → ")}` }) : null,
       videos(t),
       t.notes ? node("details", { className: "notes" }, node("summary", { textContent: "Notes" }), node("div", { textContent: t.notes })) : null),
     actions);

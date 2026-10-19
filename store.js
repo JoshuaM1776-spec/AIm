@@ -16,7 +16,9 @@ const SCHEMA_VERSION = 5;
 const DEFAULT_SETTINGS = {
   homeCard: true, leisureMin: 60, graceMin: 15, totalMin: 0, purposeLimitMin: 0,
   // Distractions, reduced whenever you're not on a break (see content.css and content/focus.js).
-  hideShorts: true, hideRecs: true, hideFeeds: true, noAutoplay: true
+  hideShorts: true, hideRecs: true, hideFeeds: true, noAutoplay: true,
+  // Strict mode: bending a rule (more time, a warned channel, a search that doesn't match) asks for a reason.
+  strict: false
 };
 const GRACE_CHOICES = [0, 5, 10, 15, 30];
 const minutesSetting = max => v => Number.isInteger(v) && v >= 0 && v <= max;
@@ -29,7 +31,8 @@ const SETTING_RULES = {
   hideShorts: v => typeof v === "boolean",
   hideRecs: v => typeof v === "boolean",
   hideFeeds: v => typeof v === "boolean",
-  noAutoplay: v => typeof v === "boolean"
+  noAutoplay: v => typeof v === "boolean",
+  strict: v => typeof v === "boolean"
 };
 
 // ---------- write queue ----------
@@ -238,7 +241,15 @@ function resumable(s) {
 function summary(p, state) {
   return { id: p.id, text: p.text, state, lastActiveAt: p.lastActiveAt || p.pausedAt || p.endedAt || p.startedAt,
     usedSec: Math.round(p.usedSec || 0), videos: (p.videos || []).length, searches: (p.searches || []).length,
-    outcome: p.outcome || null, last: p.last || null, study: studyProgress(p), notes: p.notes || "", recent: recentVideos(p) };
+    outcome: p.outcome || null, last: p.last || null, study: studyProgress(p), notes: p.notes || "", recent: recentVideos(p), trail: searchTrail(p) };
+}
+
+// The way a Target went, from its searches: "truck ac recharge → refrigerant types → ac compressor".
+// Each search once, in order; the last six.
+function searchTrail(p) {
+  const seen = new Set(), out = [];
+  for (const s of p.searches || []) { const q = String(s.q || "").trim(); if (q && !seen.has(q.toLowerCase())) { seen.add(q.toLowerCase()); out.push(q); } }
+  return out.slice(-6);
 }
 
 // The videos watched for a Target, most recently watched first (the one you'd continue leads),
@@ -1018,6 +1029,19 @@ async function setAvoid(key, name, action) {
   else delete avoid[key];
   await chrome.storage.local.set({ avoid });
   return { result: "applied", avoid };
+}
+
+// ---------- strict mode: the reasons you gave ----------
+// Kept in this browser (the last 100), with the Target they were for; the popup shows them.
+const REASON_KINDS = ["more-time", "channel", "search"];
+async function addReason({ kind, text, detail }) {
+  if (!REASON_KINDS.includes(kind)) return { result: "error", message: "Unknown reason." };
+  text = clip(String(text || "").replace(/\s+/g, " ").trim(), 300);
+  if (text.length < 8) return { result: "error", message: "Write a short sentence." };
+  const { reasons = [], purpose = null } = await chrome.storage.local.get(["reasons", "purpose"]);
+  reasons.push({ kind, text, detail: clip(detail, 200), target: purpose?.text || null, at: Date.now() });
+  await chrome.storage.local.set({ reasons: reasons.slice(-100) });
+  return { result: "applied" };
 }
 
 // ---------- save for later ----------

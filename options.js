@@ -30,6 +30,7 @@ async function render() {
   $("homeschoolPreview").checked = !!st.homeschool;
   $("homeschoolResetRow").hidden = !st.homeschool;
   for (const k of TOGGLES) $(k).checked = S[k] !== false;
+  $("strict").checked = S.strict === true;
   for (const k of ["leisureMin", "graceMin", "totalMin", "purposeLimitMin"]) {
     const sel = $(k);
     if (![...sel.options].some(o => o.value === String(S[k]))) sel.append(new Option(`${S[k]} minutes`, S[k]));
@@ -77,6 +78,7 @@ $("homeschoolReset").onclick = async () => {
   toast(r?.result === "applied" ? "Sample plan reset." : "Couldn't reset it.");
 };
 for (const k of TOGGLES) $(k).onchange = () => setSetting(k, $(k).checked);
+$("strict").onchange = () => setSetting("strict", $("strict").checked);
 if (location.hash === "#advanced") { $("advanced").open = true; $("advanced").scrollIntoView(); }
 if (location.hash === "#plus") setTimeout(() => $("plus").scrollIntoView({ block: "start" }), 300); // shown once the account check is done
 $("welcomeTour").onclick = async e => { e.preventDefault(); await send({ type: "onboarding", reset: true }); send({ type: "open-welcome" }); };

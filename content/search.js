@@ -154,11 +154,11 @@ function pendingBar(p, query) {
       el("div", { class: "wp-strong" }, `Is “${query}” part of your Target?`),
       el("div", { class: "wp-muted wp-ellipsis" }, `Current Target: ${p.text}`)),
     el("div", { class: "wp-actions wp-actions-start" },
-      el("button", { class: "wp-btn wp-btn-primary", onclick: async () => {
+      el("button", { class: "wp-btn wp-btn-primary", onclick: () => withReason("search", `How is “${query}” part of your Target?`, query, async () => {
         await acceptSearch(query);
         renderResultsBar();
         captureResults();
-      } }, "Yes, it's part of it"),
+      }) }, "Yes, it's part of it"),
       el("button", { class: "wp-btn wp-btn-tonal", onclick: () =>
         openPivotDialog(query, { afterConfirm: () => send({ type: "purpose-search", query }) }) }, "Change Target"),
       el("button", { class: "wp-btn wp-btn-text", onclick: () => history.back() }, "Back")),

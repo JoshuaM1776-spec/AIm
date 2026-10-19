@@ -404,6 +404,22 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await sw.evaluate(() => serial(() => finishPurpose("yes")));
   await setLocal({ avoid: { "/@hideme": { name: "Hide Me", action: "hide" } } });
 
+  // ---------- strict mode: bending a rule asks why ----------
+  await sw.evaluate(() => serial(async () => { await setSetting("strict", true); await startPurpose({ text: "fix a leaky faucet", search: "leaky faucet" }); }));
+  await p.goto("https://www.youtube.com/results?search_query=gaming+laptop+deals");
+  await p.waitForSelector(".wp-rb-pending");
+  await p.click('.wp-rb-pending button:text-is("Yes, it\'s part of it")');
+  await p.waitForSelector(".wp-reason-input");
+  const strictBlocked = await p.$eval('.wp-dialog button:text-is("Continue")', b => b.disabled);
+  await p.fill(".wp-reason-input", "My faucet guide is in a laptop review video");
+  await p.click('.wp-dialog button:text-is("Continue")');
+  await p.waitForSelector("#wp-results-bar:not(.wp-rb-pending)");
+  st = await store();
+  step("strict mode: an unrelated search asks why first, and keeps the reason with its Target", strictBlocked &&
+    st.reasons?.[0]?.kind === "search" && st.reasons[0].text.includes("laptop review") && st.reasons[0].target === "fix a leaky faucet" &&
+    st.purpose.searches.some(s => s.q === "gaming laptop deals"));
+  await sw.evaluate(() => serial(async () => { await setSetting("strict", false); await finishPurpose("yes"); }));
+
   // ---------- popup and settings ----------
   await sw.evaluate(() => startPurpose({ text: "learn to sharpen a chisel" }));
   const pop = await ctx.newPage();

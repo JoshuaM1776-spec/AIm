@@ -137,6 +137,28 @@ async function takeBreak(choice) {
     savedRow(saved, 3))]);
 }
 
+// Strict mode (Settings): bending a rule first asks for a short reason, kept in this browser and shown
+// in the popup. Off, it goes straight ahead.
+function withReason(kind, question, detail, then) {
+  if (!settings.strict) return then();
+  const input = el("textarea", { class: "wp-input wp-reason-input", rows: "2", maxlength: "300", placeholder: "A short sentence", "aria-label": question });
+  const go = el("button", { class: "wp-btn wp-btn-primary", disabled: true }, "Continue");
+  const err = el("div", { class: "wp-muted wp-reason-err" });
+  input.addEventListener("input", () => { go.disabled = input.value.trim().length < 8; });
+  go.onclick = async () => {
+    const r = await send({ type: "reason", kind, text: input.value, detail });
+    if (!r || r.result !== "applied") { err.textContent = r?.message || "Couldn't save that. Try again."; return; }
+    closeModal();
+    then();
+  };
+  openModal(el("div", { class: "wp-dialog", role: "dialog", "aria-modal": "true" },
+    el("div", { class: "wp-title" }, question),
+    el("div", { class: "wp-muted" }, "Strict mode is on. One sentence is enough; you can read your reasons later in the popup."),
+    input, err,
+    el("div", { class: "wp-actions" }, el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Never mind"), go)));
+  setTimeout(() => input.focus(), 50);
+}
+
 // A break ran out: back to your Target (already resumed), or more break while leisure time lasts.
 function showBreakOver(kind) {
   const p = activePurpose();

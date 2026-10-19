@@ -681,3 +681,7 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 [data-wp-preferred] { position: relative; }
 [data-wp-preferred]::before { content: "Your channel"; position: absolute; z-index: 2; top: 6px; left: 6px; padding: 0 6px; border-radius: 4px;
   background: var(--wp-primary, #193d31); color: var(--wp-on-primary, #fffdf9); font: 500 11px/18px Roboto, Arial, sans-serif; pointer-events: none; }
+
+/* Strict mode's reason prompt. */
+.wp .wp-reason-input { width: 100%; min-height: 64px; resize: vertical; padding: 10px 12px; line-height: 20px; }
+.wp-reason-err:empty { display: none; }
