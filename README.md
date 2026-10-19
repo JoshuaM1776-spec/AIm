@@ -35,6 +35,8 @@ Chrome extension, Manifest V3, no build step.
 | `content/video.js` | "In this video" (Aim Plus): beside a video watched for a learning Target, the concepts it covers (from its title, description and chapters), chapter jumps, "See it in another context", and "Test me on this video" when it ends |
 | `content/relax.js` | "Relax with a theme": a break with something you'd enjoy in mind (from a relax request to the librarian), with a slim bar on its results and "More on <theme>" beside each video |
 | `content/filetext.js` | Reads a study guide file (.txt, .docx, .pdf) in the browser for a study session (Aim Plus) |
+| `content/topics.js` | Learn something: the topics and their hand-picked channels (also loaded by Settings) |
+| `content/learn.js` | Learn something: six new videos from your topics on the home page, from YouTube's public channel feeds, cached a day |
 | `content/channels.js` | Your channels: Prefer (a "Your channel" badge; the librarian puts them first), Warn and Hide |
 | `content/notes.js` | Notes on a Target (Aim menu, or the notes icon in the results bar), saved as you type, with "Suggest questions" when signed in |
 | `content/study.js` | Study sessions on YouTube: the offer, the planning dialog, the topic header on results, the plan in the watch page's sidebar |

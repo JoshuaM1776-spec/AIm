@@ -18,7 +18,9 @@ const DEFAULT_SETTINGS = {
   // Distractions, reduced whenever you're not on a break (see content.css and content/focus.js).
   hideShorts: true, hideRecs: true, hideFeeds: true, noAutoplay: true,
   // Strict mode: bending a rule (more time, a warned channel, a search that doesn't match) asks for a reason.
-  strict: false
+  strict: false,
+  // "Learn something": topics you picked (content/topics.js), and curated channels you took out.
+  learnTopics: [], learnOff: []
 };
 const GRACE_CHOICES = [0, 5, 10, 15, 30];
 const minutesSetting = max => v => Number.isInteger(v) && v >= 0 && v <= max;
@@ -32,7 +34,9 @@ const SETTING_RULES = {
   hideRecs: v => typeof v === "boolean",
   hideFeeds: v => typeof v === "boolean",
   noAutoplay: v => typeof v === "boolean",
-  strict: v => typeof v === "boolean"
+  strict: v => typeof v === "boolean",
+  learnTopics: v => Array.isArray(v) && v.length <= 20 && v.every(x => typeof x === "string" && /^[a-z]{2,20}$/.test(x)),
+  learnOff: v => Array.isArray(v) && v.length <= 200 && v.every(x => typeof x === "string" && /^@[\w.-]{1,60}$/.test(x))
 };
 
 // ---------- write queue ----------
@@ -349,7 +353,7 @@ function newPurpose(text, search, limitMin) {
 
 // Starting a Target ends any break (the break is what you were doing instead), and sets aside
 // the Target you had, so you can pick it up again later.
-async function startPurpose({ text, search, limitMin, video }) {
+async function startPurpose({ text, search, limitMin, video, learn }) {
   text = clip(text, 300);
   if (text.length < 2) return { result: "error", message: "Write what you're here for." };
   const s = await readAll(), settings = await getSettings();
@@ -359,6 +363,11 @@ async function startPurpose({ text, search, limitMin, video }) {
   const limit = limitMin === undefined ? settings.purposeLimitMin : parseInt(limitMin, 10) || 0;
   const purpose = newPurpose(text, search, limit);
   if (video?.id) allow(purpose, [video], [], search || "");
+  // From "Learn something": the topic, and its other new videos for Up next.
+  if (learn?.topic) {
+    purpose.learn = clip(learn.topic, 60);
+    allow(purpose, (Array.isArray(learn.videos) ? learn.videos : []).slice(0, 24), [], `From your topics: ${purpose.learn}`);
+  }
   await chrome.storage.local.set({ ...writes, purpose, paused: s.paused, history: s.history, stop: s.stop?.kind === "total" ? s.stop : null });
   return { result: "applied", purpose, setAside: setAside ? setAside.text : null };
 }
@@ -817,8 +826,9 @@ async function recordTick(seconds, video) {
 // What the welcome tour and the one-time tips on YouTube have already shown. Missing means a new
 // install: everything is still to show. An update from a version without onboarding marks it all
 // seen, so people who already use Aim aren't walked through it again.
-const ONBOARDING_TIPS = ["home", "chip", "results"];
-const onboardingSeen = () => ({ welcomed: true, tips: Object.fromEntries(ONBOARDING_TIPS.map(k => [k, true])), hsTour: true });
+const ONBOARDING_TIPS = ["home", "chip", "results", "learn"];
+// "learn" is an invitation to a feature, not a first-run tip: people updating still see it once.
+const onboardingSeen = () => ({ welcomed: true, tips: Object.fromEntries(ONBOARDING_TIPS.filter(k => k !== "learn").map(k => [k, true])), hsTour: true });
 
 async function setOnboarding({ welcomed, tip, hsTour, reset, seenAll }) {
   const { onboarding: cur } = await chrome.storage.local.get("onboarding");
@@ -1083,6 +1093,29 @@ async function addReason({ kind, text, detail }) {
   reasons.push({ kind, text, detail: clip(detail, 200), target: purpose?.text || null, at: Date.now() });
   await chrome.storage.local.set({ reasons: reasons.slice(-100) });
   return { result: "applied" };
+}
+
+// ---------- "Learn something": the channel feed cache ----------
+// Per channel (by handle): its id once known, when it was fetched, and its newest videos. Written
+// here (the one writer); fetched by YouTube pages, since only they can read youtube.com's feeds.
+async function saveLearnCache(channels) {
+  const { learn = {} } = await chrome.storage.local.get("learn");
+  const cache = learn.channels || {};
+  for (const [handle, c] of Object.entries(channels || {}).slice(0, 80)) {
+    if (!/^@[\w.-]{1,60}$/.test(handle) || !c || typeof c !== "object") continue;
+    cache[handle] = { id: /^UC[\w-]{22}$/.test(c.id) ? c.id : null, at: Number(c.at) || Date.now(), failed: !!c.failed,
+      videos: (Array.isArray(c.videos) ? c.videos : []).slice(0, 8).map(v => ({ id: clip(v.id, 20), title: clip(v.title, 200), channel: clip(v.channel, 100),
+        published: Number(v.published) || 0 })).filter(v => /^[\w-]{6,20}$/.test(v.id) && v.title) };
+  }
+  await chrome.storage.local.set({ learn: { channels: cache } });
+  return { result: "applied" };
+}
+// Videos you've already watched (lately), so "Learn something" doesn't offer them again.
+async function learnSeen() {
+  const { history = [], paused = [], purpose = null } = await chrome.storage.local.get(["history", "paused", "purpose"]);
+  const ids = new Set();
+  for (const r of [purpose, ...paused, ...history.slice(-200)]) for (const v of r?.videos || []) ids.add(v.id);
+  return [...ids].slice(-1000);
 }
 
 // ---------- save for later ----------

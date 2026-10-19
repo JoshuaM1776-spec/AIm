@@ -98,6 +98,12 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
       const id = new URL(u.searchParams.get("url")).searchParams.get("v");
       return route.fulfill({ contentType: "application/json", body: JSON.stringify({ title: `Video ${id}`, author_name: `Chan ${id}`, author_url: `https://www.youtube.com/@chan${id}` }) });
     }
+    // "Learn something": channel feeds (one Short each, which Aim skips) and a channel page to look an id up on.
+    if (u.pathname === "/feeds/videos.xml") {
+      const f = FEEDS[u.searchParams.get("channel_id")];
+      return f ? route.fulfill({ contentType: "application/atom+xml", body: atom(f) }) : route.fulfill({ status: 404, body: "" });
+    }
+    if (u.pathname === "/@standupmaths") return route.fulfill({ contentType: "text/html", body: '<html><body><script>var x = {"externalId":"UCstandupmaths0000000000"};</script></body></html>' });
     const body = u.pathname === "/watch" && u.searchParams.get("v") === "realplay" ? REALPLAY : u.pathname === "/watch" ? WATCH(u.searchParams.get("v")) : u.pathname === "/results" && /dripping/.test(u.searchParams.get("search_query") || "") ? RESULTS_AI : u.pathname === "/new" ? ASKPAGE : u.pathname === "/results" ? RESULTS
       : u.pathname.startsWith("/shorts/") ? SHORTS(u.pathname.split("/")[2]) : u.pathname === "/feed/subscriptions" ? SUBS : HOME;
     // Same Trusted Types policy YouTube sends, so string-to-HTML writes would fail here too.
@@ -112,6 +118,12 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   const step = (name, ok, extra = "") => { console.log(`${ok ? "  ok  " : "  FAIL"} ${name}${extra ? "  — " + extra : ""}`); if (!ok) process.exitCode = 1; };
   await new Promise(r => setTimeout(r, 500));
 
+  const FEEDS = { "UCYO_jab_esuFRV4b17AJtAw": ["3Blue1Brown", "tbobvid", 18], "UCoxcjq-8xIDTYp3uz647V5A": ["Numberphile", "numbvid", 17],
+    "UC4a-Gbdw7vOaccHmFo40b9g": ["Khan Academy", "khanvid", 16], "UCstandupmaths0000000000": ["Stand-up Maths", "sumavid", 15] };
+  const atom = ([name, base, day]) => `<?xml version="1.0"?><feed xmlns:yt="http://www.youtube.com/xml/schemas/2015"><title>${name}</title>` +
+    `<entry><yt:videoId>${base}sh</yt:videoId><title>A quick one #shorts</title><link rel="alternate" href="https://www.youtube.com/shorts/${base}sh"/><author><name>${name}</name></author><published>2026-10-${day + 1}T10:00:00+00:00</published></entry>` +
+    [1, 2, 3].map(i => `<entry><yt:videoId>${base}${i}</yt:videoId><title>${name} lesson ${i} &amp; more</title><link rel="alternate" href="https://www.youtube.com/watch?v=${base}${i}"/>` +
+      `<author><name>${name}</name></author><published>2026-10-${String(day - i).padStart(2, "0")}T10:00:00+00:00</published></entry>`).join("") + `</feed>`;
   const setLocal = obj => sw.evaluate(o => chrome.storage.local.set(o), obj);
   const patchLocal = (key, fields) => sw.evaluate(async ([k, f]) => {
     const cur = (await chrome.storage.local.get(k))[k];
@@ -544,6 +556,44 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.waitForTimeout(800);
   st = await store();
   step("Got my answer ends the Target as found, with no questions", !st.purpose && st.history[st.history.length - 1].outcome === "yes" && !(await p.$(".wp-done-dialog")));
+
+  // ---------- Learn something ----------
+  await setLocal({ onboarding: { welcomed: true, tips: { home: true, chip: true, results: true }, hsTour: true }, learn: {} });
+  await p.goto("https://www.youtube.com/");
+  await p.waitForSelector("#wp-home .wp-learn-invite");
+  step("Learn something: an invitation to pick topics, when none are chosen", (await text(".wp-learn-invite")).includes("Choose topics"));
+  await p.click('.wp-learn-invite button:text-is("No thanks")');
+  await p.waitForTimeout(300);
+  step("No thanks puts the invitation away for good", !(await p.$(".wp-learn-invite")) && (await store()).onboarding.tips.learn === true);
+  await sw.evaluate(() => serial(() => setSetting("learnTopics", ["math"])));
+  await p.goto("https://www.youtube.com/");
+  await p.waitForSelector("#wp-home .wp-learn-row .wp-learn-item", { timeout: 15000 });
+  const learnIds = await p.$$eval(".wp-learn-row .wp-learn-item", ns => ns.map(n => n.querySelector(".wp-thumb").style.backgroundImage.match(/vi\/([^/]+)\//)[1]));
+  step("six new videos from the topic's channels: newest first, taking turns, no Shorts; an id looked up from the channel page",
+    learnIds.join() === "tbobvid1,numbvid1,khanvid1,sumavid1,tbobvid2,numbvid2", learnIds.join());
+  step("each says its channel and topic", (await text(".wp-learn-row .wp-learn-item")).includes("3Blue1Brown · Math") && (await text(".wp-learn-row")).includes("lesson 1 & more"));
+  st = await store();
+  step("the feeds are cached for a day; a channel that can't be found is noted", !!st.learn.channels["@3blue1brown"].videos.length &&
+    st.learn.channels["@standupmaths"].id === "UCstandupmaths0000000000" && st.learn.channels["@Mathologer"].failed === true);
+  await p.click(".wp-learn-row .wp-learn-item");
+  await p.waitForURL(/watch\?v=tbobvid1/);
+  st = await store();
+  step("picking one starts a light Target from your topics", st.purpose?.text === "Exploring: 3Blue1Brown lesson 1 & more" && st.purpose.learn === "Math" &&
+    st.purpose.allowed.length >= 6);
+  await p.waitForSelector("#wp-upnext");
+  step("Up next shows more from your topics", (await text("#wp-upnext")).includes("More from your topics") && (await text("#wp-upnext")).includes("Numberphile lesson 1"));
+  await sw.evaluate(() => serial(() => recordTick(10, { id: "tbobvid1", title: "3Blue1Brown lesson 1 & more", channel: "3Blue1Brown", t: 30, d: 600 })));
+  await sw.evaluate(() => serial(() => finishPurpose("yes")));
+  await sw.evaluate(() => serial(() => setSetting("learnOff", ["@numberphile"])));
+  await p.goto("https://www.youtube.com/");
+  await p.waitForSelector("#wp-home .wp-learn-row .wp-learn-item", { timeout: 15000 });
+  const learnIds2 = await p.$$eval(".wp-learn-row .wp-learn-item", ns => ns.map(n => n.querySelector(".wp-thumb").style.backgroundImage.match(/vi\/([^/]+)\//)[1]));
+  step("what you watched isn't offered again, and a channel you took out is gone", !learnIds2.includes("tbobvid1") && !learnIds2.some(id => id.startsWith("numb")), learnIds2.join());
+  await sw.evaluate(() => serial(async () => { await startPurpose({ text: "fix a leaky faucet" }); }));
+  await p.goto("https://www.youtube.com/");
+  await p.waitForSelector("#wp-home .wp-home-current");
+  step("with a Target going, Learn something stays out of the way", !(await p.$(".wp-learn")));
+  await sw.evaluate(() => serial(async () => { await finishPurpose("yes"); await setSetting("learnTopics", []); await setSetting("learnOff", []); }));
 
   // ---------- Aim Homeschool preview: the student's Today screen ----------
   await sw.evaluate(() => serial(async () => { await setHomeschoolPreview(true); await setOnboarding({ hsTour: false }); }));

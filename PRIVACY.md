@@ -23,6 +23,8 @@ Aim itself makes one kind of request: when you open a video, it asks YouTube's p
 
 A study guide file you upload for a study session (Aim Plus) is read in your browser; only its text, which you see and can edit first, is sent, exactly as if you had pasted it.
 
+"Learn something" reads the public video feeds of the channels for the topics you picked, from youtube.com, in your YouTube tab, about once a day. It sends nothing about you; which topics you picked stays in this browser.
+
 Strict mode (off unless you turn it on) keeps the reasons you give for bending a rule in this browser, with the Target they were for; they never leave it.
 
 The "Up next from your search" list, and the videos you've watched for a Target on the home screen and the Targets page, show thumbnails from YouTube's image server (i.ytimg.com), the same images YouTube itself shows.

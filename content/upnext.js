@@ -26,8 +26,8 @@ function renderUpNext() {
   existing?.remove();
   host.prepend(el("div", { id: "wp-upnext", class: "wp wp-upnext", "data-key": key },
     el("div", { class: "wp-upnext-head" },
-      el("div", { class: "wp-strong" }, "Up next from your search"),
-      el("div", { class: "wp-muted wp-ellipsis" }, lastQ ? `“${lastQ}”` : p.text)),
+      el("div", { class: "wp-strong" }, p.learn && !lastQ ? "More from your topics" : "Up next from your search"),
+      el("div", { class: "wp-muted wp-ellipsis" }, lastQ ? `“${lastQ}”` : p.learn ? p.learn : p.text)),
     ...(items.length
       ? items.map(v => el("a", { class: "wp-upnext-item", href: `/watch?v=${encodeURIComponent(v.id)}`, title: v.title || "" },
           // A background image: if the thumbnail can't load, a grey box remains, not a broken-image icon.

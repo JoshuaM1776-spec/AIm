@@ -31,7 +31,7 @@ function makeEnv(initial = {}) {
 const VIDEO = { id: "abc123", title: "Feeding a sourdough starter", channel: "Bread Co" };
 const fresh = () => makeEnv({ schemaVersion: 5 });
 const DEFAULTS = { homeCard: true, leisureMin: 60, graceMin: 15, totalMin: 0, purposeLimitMin: 0,
-  hideShorts: true, hideRecs: true, hideFeeds: true, noAutoplay: true, strict: false };
+  hideShorts: true, hideRecs: true, hideFeeds: true, noAutoplay: true, strict: false, learnTopics: [], learnOff: [] };
 
 const tests = [];
 const test = (name, fn) => tests.push([name, fn]);
@@ -559,6 +559,17 @@ test("the learning record: Targets with something to show, study sessions kept a
   assert.strictEqual(e.study.topics[0].check.objectives[1].status, "partial", "the study session is kept after the Target ends");
   assert.strictEqual(e.study.apply.note, "drew it");
   assert.deepStrictEqual(JSON.parse(JSON.stringify(r.totals)), { targets: 1, learningSec: e.usedSec, topicsChecked: 1, demonstrated: 1, projects: 1 });
+});
+
+test("Learn something: topics and taken-out channels are validated", async () => {
+  const env = fresh();
+  assert.strictEqual((await env.run(`setSetting("learnTopics", ["math", "science"])`)).result, "applied");
+  assert.strictEqual((await env.run(`setSetting("learnTopics", ["Math!"])`)).result, "error");
+  assert.strictEqual((await env.run(`setSetting("learnOff", ["@numberphile"])`)).result, "applied");
+  assert.strictEqual((await env.run(`setSetting("learnOff", ["numberphile"])`)).result, "error", "channels are @handles");
+  await env.run(`saveLearnCache({ "@ok": { id: "UCYO_jab_esuFRV4b17AJtAw", at: 1, videos: [{ id: "abcdefg", title: "T", channel: "C", published: 2 }, { id: "x", title: "bad id" }] }, "bad": { id: "x" } })`);
+  assert.deepStrictEqual(Object.keys(env.local.learn.channels), ["@ok"]);
+  assert.strictEqual(env.local.learn.channels["@ok"].videos.length, 1);
 });
 
 test("channel paths are normalized", async () => {

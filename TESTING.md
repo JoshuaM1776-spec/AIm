@@ -284,6 +284,14 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] A finished Target that had a study session still shows its topics, what each check showed, and the Put it to work project with your note.
 - [ ] **Study sessions** and **Completed** filter the list; **Print or save as PDF** prints just the record (no buttons).
 
+### 30. Learn something (0.42)
+- [ ] With no topics chosen and no Target, YouTube's home page invites you to **Choose topics** (Settings → Learn something); **No thanks** hides it for good.
+- [ ] Pick Math and Engineering: the home page shows **Learn something**, six new videos (three by two) from those channels, newest first, at most two per channel, no Shorts, each labeled with its channel and topic. The first visit takes a few seconds while feeds load; after that it's instant for a day.
+- [ ] **Check every curated channel loads** (Settings lists them, each linked): a channel that never shows up has a wrong handle in content/topics.js.
+- [ ] Clicking one starts the Target "Exploring: <title>"; the watch page's sidebar says **More from your topics** with the rest of the row.
+- [ ] Videos you've watched aren't offered again; **Take out** a channel in Settings and its videos disappear; channels you marked Prefer join the row.
+- [ ] With a Target going, the row isn't shown. Light and dark themes.
+
 ## Known issues (not regressions)
 
 - The word check knows words, not meanings: synonyms ("tap" vs "faucet") get the question once; answering Yes teaches it that search.

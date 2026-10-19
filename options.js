@@ -31,6 +31,7 @@ async function render() {
   $("homeschoolResetRow").hidden = !st.homeschool;
   for (const k of TOGGLES) $(k).checked = S[k] !== false;
   $("strict").checked = S.strict === true;
+  renderLearn(S);
   for (const k of ["leisureMin", "graceMin", "totalMin", "purposeLimitMin"]) {
     const sel = $(k);
     if (![...sel.options].some(o => o.value === String(S[k]))) sel.append(new Option(`${S[k]} minutes`, S[k]));
@@ -79,6 +80,39 @@ $("homeschoolReset").onclick = async () => {
 };
 for (const k of TOGGLES) $(k).onchange = () => setSetting(k, $(k).checked);
 $("strict").onchange = () => setSetting("strict", $("strict").checked);
+// "Learn something": topics as toggles; under each chosen topic, its channels, which you can take out.
+function renderLearn(S) {
+  const on = new Set(S.learnTopics || []), off = new Set(S.learnOff || []);
+  const save = (key, value) => setSetting(key, value);
+  $("learnTopics").replaceChildren(...LEARN_TOPICS.map(t => {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = t.name; b.setAttribute("aria-pressed", String(on.has(t.id)));
+    b.onclick = () => save("learnTopics", on.has(t.id) ? [...on].filter(x => x !== t.id) : [...on, t.id]);
+    return b;
+  }));
+  const box = $("learnChannels");
+  box.replaceChildren();
+  for (const t of LEARN_TOPICS.filter(t => on.has(t.id))) {
+    const h = document.createElement("h3");
+    h.textContent = t.name;
+    h.style.marginTop = "16px";
+    box.append(h);
+    for (const c of t.channels) {
+      const row = document.createElement("div"), name = document.createElement("div"), b = document.createElement("button");
+      row.className = "setting"; name.className = "what";
+      const link = document.createElement("a");
+      link.href = `https://www.youtube.com/${c.handle}`; link.target = "_blank"; link.textContent = c.name;
+      name.append(link);
+      if (off.has(c.handle)) { const s = document.createElement("span"); s.textContent = "Taken out"; name.append(s); }
+      b.type = "button"; b.className = "btn text"; b.textContent = off.has(c.handle) ? "Put back" : "Take out";
+      b.onclick = () => save("learnOff", off.has(c.handle) ? [...off].filter(x => x !== c.handle) : [...off, c.handle]);
+      row.append(name, b);
+      box.append(row);
+    }
+  }
+}
+
+if (location.hash === "#learn") setTimeout(() => $("learn").scrollIntoView({ block: "start" }), 200);
 if (location.hash === "#advanced") { $("advanced").open = true; $("advanced").scrollIntoView(); }
 if (location.hash === "#plus") setTimeout(() => $("plus").scrollIntoView({ block: "start" }), 300); // shown once the account check is done
 $("welcomeTour").onclick = async e => { e.preventDefault(); await send({ type: "onboarding", reset: true }); send({ type: "open-welcome" }); };

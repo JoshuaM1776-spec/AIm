@@ -47,7 +47,9 @@ async function tabState() {
 // Changes to stored data run one at a time (see serial in store.js).
 const writes = {
   "tick": m => recordTick(Math.min(30, Math.max(0, Number(m.seconds) || 0)), m.video?.id ? m.video : null),
-  "purpose-start": m => startPurpose({ text: m.text, search: m.search, limitMin: m.limitMin, video: m.video }),
+  "purpose-start": m => startPurpose({ text: m.text, search: m.search, limitMin: m.limitMin, video: m.video, learn: m.learn }),
+  "learn-cache": m => saveLearnCache(m.channels),
+  "learn-seen": () => learnSeen(),
   "purpose-pivot": m => pivotPurpose(m.text, m.limitMin, m.video),
   "purpose-limit": m => setPurposeLimit({ minutes: m.minutes, add: m.add }),
   "purpose-refine": m => refinePurpose(m.text),
@@ -98,7 +100,7 @@ async function setToolbarTheme(dark) {
 }
 
 const reads = {
-  "open-options": m => chrome.tabs.create({ url: chrome.runtime.getURL("options.html" + ({ advanced: "#advanced", account: "#plus" }[m.section] || "")) }).then(() => ({ result: "applied" })),
+  "open-options": m => chrome.tabs.create({ url: chrome.runtime.getURL("options.html" + ({ advanced: "#advanced", account: "#plus", learn: "#learn" }[m.section] || "")) }).then(() => ({ result: "applied" })),
   "theme": m => setToolbarTheme(!!m.dark),
   "status": () => tabState(),
   "state": () => fullState(),

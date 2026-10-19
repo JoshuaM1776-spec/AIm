@@ -695,3 +695,15 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 .wp-study-today-row { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 40px; font-size: 14px; line-height: 20px; }
 .wp-study-today-kind { font-size: 12px; font-weight: 500; color: var(--wp-muted); }
 .wp-study-today-kind.wp-review { color: var(--wp-accent); }
+
+/* "Learn something": six new videos from your topics, or the invitation to pick topics. */
+.wp-learn { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.wp-learn-invite { padding: 14px 16px; border-radius: 12px; background: var(--wp-tonal); gap: 4px; }
+.wp-learn-invite .wp-row { margin-top: 6px; }
+.wp .wp-learn-edit { font-size: 12px; }
+.wp-learn-loading { font-size: 13px; }
+.wp-learn-meta { font-size: 11px; line-height: 14px; color: var(--wp-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wp-learn-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 12px; overflow: visible; }
+.wp .wp-learn-row .wp-learn-item { width: auto; }
+.wp-learn-row .wp-thumb-sm { width: 100%; height: auto; aspect-ratio: 16 / 9; }
+@media (max-width: 560px) { .wp-learn-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

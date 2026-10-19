@@ -37,6 +37,13 @@
     </div>
   </section>
 
+  <section class="card" id="learn">
+    <h2>Learn something</h2>
+    <p class="muted">Pick topics you'd like to learn about. When you're not working on a Target, YouTube's home page shows six new videos from channels that teach them well, plus channels you marked Prefer. No feed and no autoplay; picking one starts a Target. The channels are hand-picked by Aim; take out any you don't want.</p>
+    <div class="seg" id="learnTopics" role="group" aria-label="Topics"></div>
+    <div id="learnChannels"></div>
+  </section>
+
   <!-- Shown only when config.js names Aim's server (see plus.js). -->
   <section class="card" id="plus" hidden>
     <h2>Aim Plus</h2>
@@ -119,6 +126,7 @@
   </details>
 </main>
 <div id="toast" role="status"></div>
+<script src="content/topics.js"></script>
 <script src="options.js"></script>
 <script src="options-plus.js"></script>
 </body>

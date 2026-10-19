@@ -30,7 +30,7 @@ async function renderHome() {
   const key = status.totalReached ? "total"
     : [p ? `p|${p.id}|${p.text}|${(status.currentVideos || []).map(v => v.id).join(",")}|${p.study ? `${p.study.current}:${p.study.topics.map(t => t.check?.at || 0).join(".")}:${p.study.apply?.doneAt || 0}` : ""}` : "idle", leisureUsedUp(),
       others.map(x => `${x.id}:${x.recent?.[0]?.id || ""}`).join(","), (status.saved || []).map(v => v.id).join(","),
-      account.on, status.pathways?.offer?.name || ""].join("|");
+      account.on, status.pathways?.offer?.name || "", (settings.learnTopics || []).join("+"), (settings.learnOff || []).length].join("|");
   if ($("#wp-home")?.dataset.key === key) return; // don't rebuild while someone is typing
   $("#wp-home")?.remove();
 
@@ -81,11 +81,12 @@ async function renderHome() {
     hint,
     themeOfferBlock(),
     // Examples help a first visit; once there's something to pick up, they'd only add clutter.
-    !p && !others.length ? el("div", { class: "wp-label" }, "Try asking") : null,
-    !p && !others.length ? el("div", { class: "wp-home-examples" }, ...EXAMPLES.map(t =>
+    !p && !others.length && !(settings.learnTopics || []).length ? el("div", { class: "wp-label" }, "Try asking") : null,
+    !p && !others.length && !(settings.learnTopics || []).length ? el("div", { class: "wp-home-examples" }, ...EXAMPLES.map(t =>
       el("button", { class: "wp-home-example", onclick: () => { input.value = t; input.focus(); } }, `“${t}”`))) : null,
     resumeBlock,
     savedBlock(),
+    learnBlock(),
     el("div", { class: "wp-label wp-home-break-label" }, p ? "Or take a break" : "Just browsing? Take a break"),
     breakChips(takeBreak)].filter(Boolean));
   host.prepend(card);
