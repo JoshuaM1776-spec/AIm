@@ -324,6 +324,16 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] Swiping to a Short YouTube picked: it waits behind **Only Shorts from your topics**, with **Next review**.
 - [ ] Turn the setting off: every Short waits again, and Quick review is gone.
 
+### 34. Your channels (0.46)
+- [ ] Settings → Your channels → **Sort your channels** opens the page: four columns, Not sorted, Learn from, For breaks, Keep out.
+- [ ] **Get my subscriptions from YouTube** (signed in to YouTube) opens your subscriptions page; Aim scrolls through it and says how many it found. Back on the page, they're all under Not sorted. Signed out, it says to sign in.
+- [ ] Channels Learn something already lists are suggested under their topic; one you watched for two Targets is suggested too. **Accept suggestions** sorts them.
+- [ ] Tap **Learn / Break / Out** on a card, or drag it to a column. Add a topic of your own (Woodworking) and drag a channel into it. × unsorts. Find a channel filters.
+- [ ] Learn something on YouTube's home page now includes Learn from channels, labeled with your topic.
+- [ ] On a Target, opening a video from a For breaks channel asks first, with **Just this video** as a break; on a break it just plays.
+- [ ] Keep out → Hide removes its videos from the homepage, results and sidebar; Ask first asks before watching without a Target.
+- [ ] Aim's menu while watching → **Sort this channel** offers Learn from, For breaks, Hide and **All your channels**.
+
 ## Known issues (not regressions)
 
 - The word check knows words, not meanings: synonyms ("tap" vs "faucet") get the question once; answering Yes teaches it that search.

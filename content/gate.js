@@ -81,9 +81,11 @@ async function gate(id, known = null) {
   currentInfo = info;
   if (graced(id)) { release(id); return showGraceNotice(); }
   if (status.totalReached) return showTotalCard();
-  // Hidden channels always ask; warned channels ask unless they fit your purpose.
+  // Hidden channels always ask; warned channels ask unless they fit your purpose; break channels ask
+  // while you're on a Target (on a break they're what you're there for).
   const a = avoidFor(info.channelKey);
-  if (a && !overridden.has(id) && (a.action === "hide" || (a.action === "warn" && !activePurpose()))) return openChannelWarning(info, a.action);
+  if (a && !overridden.has(id) && (a.action === "hide" || (a.action === "warn" && !activePurpose()) || (a.action === "break" && activePurpose() && !brk)))
+    return openChannelWarning(info, a.action);
   continueAfterRules(info);
 }
 

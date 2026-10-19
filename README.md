@@ -38,7 +38,8 @@ Chrome extension, Manifest V3, no build step.
 | `content/topics.js` | Learn something: the topics and their hand-picked channels (also loaded by Settings) |
 | `content/learn.js` | Learn something: six new videos from your topics on the home page, from YouTube's public channel feeds, cached a day |
 | `content/shorts.js` | Shorts from your topics (a Learn something setting): the Quick review row, matched to what you've learned, and which Shorts may play |
-| `content/channels.js` | Your channels: Prefer (a "Your channel" badge; the librarian puts them first), Warn and Hide |
+| `content/channels.js` | Your channels on YouTube: Learn from (a "Your channel" badge; the librarian puts them first), For breaks (asks on a Target), Keep out (Hide or Ask first) |
+| `content/subs.js` | Reads your subscriptions on youtube.com/feed/channels (scrolling for the rest) for the Your channels page |
 | `content/notes.js` | Notes on a Target (Aim menu, or the notes icon in the results bar), saved as you type, with "Suggest questions" when signed in |
 | `content/study.js` | Study sessions on YouTube: the offer, the planning dialog, the topic header on results, the plan in the watch page's sidebar |
 | `study.html/js` | A study session's overview and summary |
@@ -46,6 +47,7 @@ Chrome extension, Manifest V3, no build step.
 | `content/content.css` | Styles for all of the above |
 | `popup.html/js` | Toolbar popup |
 | `record.html/js` | The learning record: totals, then each Target with its time, videos, study checks and projects; printable |
+| `channels.html/js` | Your channels: subscriptions sorted into Not sorted, Learn from (with your own topics), For breaks and Keep out, by tap or drag, with suggestions |
 | `targets.html/js` | All Targets: current, set aside (Resume, Remove) and completed (Start again) |
 | `aim.css` | The shared look for all of Aim's own pages (see Design) |
 | `tokens.css` | Aim's fonts and colors, from the mark (used by `aim.css` and the popup) |

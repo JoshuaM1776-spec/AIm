@@ -18,7 +18,7 @@ function learnChannels() {
   for (const [path, c] of channelsBy("prefer")) {
     const handle = path.startsWith("/@") ? path.slice(1) : null, id = path.match(/^\/channel\/(UC[\w-]{22})/)?.[1] || null;
     const key = handle || (id ? `@${id}` : null);
-    if (key && !out.has(key)) out.set(key, { name: c.name || key, handle: handle || key, id, topic: "Your channels" });
+    if (key && !out.has(key)) out.set(key, { name: c.name || key, handle: handle || key, id, topic: c.topic || "Your channels" });
   }
   return [...out.values()];
 }

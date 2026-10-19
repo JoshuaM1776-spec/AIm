@@ -12,7 +12,8 @@ Aim keeps the following in your browser's extension storage (`chrome.storage.loc
 - **Searches you made during a purpose,** and the search results those searches found. These decide which videos you can watch during that purpose.
 - **Videos you watched** during a purpose or a break: the video ID, title, channel and how long you watched.
 - **Time spent on YouTube** per day (on purpose, on breaks, in total), for the last 14 days.
-- **Your settings,** **saved-for-later videos,** and **channels you chose to hide or be warned about.**
+- **Your settings,** **saved-for-later videos,** and **how you sorted channels** (Learn from, with your own topics; For breaks; Keep out).
+- **Your YouTube subscriptions,** only if you ask Aim to read them (Your channels → Get my subscriptions): each channel's name, address and picture, read from YouTube's own subscriptions page in your YouTube tab.
 - **History** of your last 200 purposes and breaks.
 
 This data never leaves your computer. Aim does not sell, share or transfer it, and there is nothing to transfer it to.

@@ -73,7 +73,7 @@ function videoItems() {
   if (!currentId || !currentInfo) return [];
   return [
     menuItem("save", "Save this video for later", () => saveCurrent(false)),
-    menuItem("avoid", "Prefer, warn about or hide this channel", openAvoidDialog)
+    menuItem("avoid", "Sort this channel", openAvoidDialog)
   ];
 }
 

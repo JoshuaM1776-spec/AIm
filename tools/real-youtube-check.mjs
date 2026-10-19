@@ -109,6 +109,15 @@ try {
     check("watch: not stopped by a bot check", !(await page.getByText(/confirm you.re not a bot/i).count()));
   }
 
+  // ---------- channel rows ----------
+  // Your subscriptions page needs a signed-in account; channel search results use the same rows.
+  await page.goto("https://www.youtube.com/results?search_query=science&sp=EgIQAg%253D%253D", { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(4000);
+  await selectorsOn("channel rows", ["channelRow", "channelLink", "channelName"]);
+  const rows = await page.evaluate(([row, link, names]) => [...document.querySelectorAll(row)].slice(0, 5).map(n => ({
+    href: n.querySelector(link)?.getAttribute("href"), name: names.map(s => n.querySelector(s)?.textContent.trim()).find(Boolean) })), [YT.channelRow, YT.channelLink, sels(YT.channelName)]);
+  check("channel rows: each has an @handle and a name", rows.length >= 3 && rows.every(r => /^\/@/.test(r.href || "") && r.name), rows.map(r => `${r.href} ${r.name}`).join(", "));
+
   // ---------- Learn something: every curated channel, through Aim's own code ----------
   // Every topic and Shorts from your topics on; the home page then fetches each channel (feed, or
   // channel page when the feed fails) and the background caches what it found.

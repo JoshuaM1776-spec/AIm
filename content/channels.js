@@ -1,9 +1,21 @@
-// Aim — your channels: preferred (trusted), warned and hidden.
+// Aim — your channels: Learn from (preferred), For breaks, and Keep out (hidden or warned). Sorted on
+// the Your channels page (channels.html), or one at a time from the menu while watching.
 
-// A channel you chose to hide or be warned about: ask before watching, never force.
+// A channel you chose to hide or be warned about: ask before watching, never force. A break channel,
+// on a Target: take a break to watch it, or back to the Target.
 function openChannelWarning(info, action) {
   hold();
   const name = info.channel || "this channel";
+  if (action === "break") return showPlayerCard(
+    brandLine(),
+    el("div", { class: "wp-title" }, `${name} is one of your break channels.`),
+    el("div", { class: "wp-muted" }, `Take a break to watch it, or get back to your Target.`),
+    el("div", { class: "wp-actions wp-actions-start" },
+      el("button", { class: "wp-btn wp-btn-primary", onclick: goBack }, "Back on Target"),
+      el("button", { class: "wp-btn wp-btn-text", onclick: () => withReason("channel", `Why watch ${name} on your Target?`, name,
+        () => { overridden.add(info.id); closePlayerCard(); continueAfterRules(info); }) }, "It's for my Target")),
+    el("div", { class: "wp-label" }, "Or take a break"),
+    breakChips(takeBreak, { oneVideoId: info.id }));
   showPlayerCard(
     brandLine(),
     el("div", { class: "wp-title" }, action === "hide" ? `You chose to hide ${name}.` : `You asked to be warned about ${name}.`),
@@ -24,17 +36,17 @@ function openAvoidDialog() {
     if (!r) return toast("Couldn't save that. Try again.");
     settings.avoid = r.avoid;
     applyHidden();
-    toast(`${info.channel}: ${action === "hide" ? "hidden from your feeds" : action === "prefer" ? "one of your channels" : "you'll get a warning"}`);
+    toast(`${info.channel}: ${action === "hide" ? "hidden from your feeds" : action === "prefer" ? "one you learn from" : action === "break" ? "for breaks" : "you'll get a warning"}`);
   };
   openModal(el("div", { class: "wp-dialog", role: "dialog", "aria-modal": "true" },
     el("div", { class: "wp-title" }, `How should ${BRAND} treat ${info.channel || "this channel"}?`),
-    el("p", { class: "wp-muted" }, `Prefer: a channel you trust. Its videos get a “Your channel” badge in results${account.on ? `, and ${BRAND}'s librarian puts them first when they fit` : ""}. ` +
-      `Warn: ${BRAND} asks before you watch it without a Target. Hide: its videos disappear from your homepage, search results and sidebar. Change any of these in settings.`),
+    el("p", { class: "wp-muted" }, `Learn from: its new videos show in Learn something, and they get a “Your channel” badge in results${account.on ? `; ${BRAND}'s librarian puts them first when they fit` : ""}. ` +
+      `For breaks: watch it freely on a break; on a Target, ${BRAND} asks first. Hide: its videos disappear from your homepage, search results and sidebar.`),
     el("div", { class: "wp-actions" },
-      el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Cancel"),
+      el("button", { class: "wp-btn wp-btn-text", onclick: () => { closeModal(); send({ type: "open-channels" }); } }, "All your channels"),
       el("button", { class: "wp-btn wp-btn-tonal", onclick: pick("hide") }, "Hide"),
-      el("button", { class: "wp-btn wp-btn-tonal", onclick: pick("warn") }, "Warn me"),
-      el("button", { class: "wp-btn wp-btn-primary", onclick: pick("prefer") }, "Prefer"))));
+      el("button", { class: "wp-btn wp-btn-tonal", onclick: pick("break") }, "For breaks"),
+      el("button", { class: "wp-btn wp-btn-primary", onclick: pick("prefer") }, "Learn from"))));
 }
 
 // Channels you prefer, by path, and their names (for the librarian).

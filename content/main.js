@@ -81,6 +81,7 @@ function route() {
   else { $("#wp-results-bar")?.remove(); setSearchPending(null); }
   renderUpNext();
   renderConcepts();
+  renderSubsBar();
 }
 
 // yt-navigate-finish fires for every in-app navigation, back and forward included.

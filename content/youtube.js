@@ -42,6 +42,11 @@ const YT = {
   // The title link's spoken label ends with the length ("… 5 minutes, 1 second"); YouTube draws the time
   // badge only once a row has been on screen, so this is how the rest are known.
   resultTitleLabel: "a#video-title[aria-label]",
+  // Your subscriptions (youtube.com/feed/channels), one row per channel; the same rows as channel results.
+  channelRow: "ytd-channel-renderer",
+  channelLink: "a#main-link[href]",
+  channelName: ["#channel-title #text", "#text"],
+  channelAvatar: ["#avatar img", "yt-img-shadow img"],
   resultMeta: ["#metadata-line", ".yt-content-metadata-view-model-wiz__metadata-row", ".yt-content-metadata-view-model__metadata-row"],
   resultSnippet: [".metadata-snippet-text", "#description-text", ".metadata-snippet-container"],
   resultPlaylists: "ytd-playlist-renderer, ytd-radio-renderer, yt-lockup-view-model",

@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="light dark">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your channels</title>
+<link rel="stylesheet" href="aim.css">
+<style>
+  /* Your channels: four columns you sort channels into, by tapping or dragging. */
+  .page.wide { max-width: 1180px; }
+  .tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 16px 0; }
+  .tools input[type=search] { flex: 1 1 220px; height: 36px; padding: 0 12px; border-radius: 18px; border: 1px solid var(--field-border); background: var(--field); color: var(--text); font: 14px var(--font); }
+  .board { display: grid; gap: 16px; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: start; }
+  @media (max-width: 1000px) { .board { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 620px) { .board { grid-template-columns: minmax(0, 1fr); } }
+  .col { background: var(--surface); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow); min-width: 0; }
+  .col h2 { font-size: 16px; margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .col h2 .count { font: 500 13px var(--font); color: var(--muted); }
+  .col > p { color: var(--muted); font-size: 12px; line-height: 17px; margin: 4px 0 10px; }
+  .drop { display: flex; flex-direction: column; gap: 6px; min-height: 56px; border-radius: 12px; padding: 4px; transition: background .12s; }
+  .drop.over { background: var(--learn-soft); outline: 2px dashed var(--learn); outline-offset: -2px; }
+  .drop:empty::after { content: "Drop channels here"; color: var(--muted); font-size: 12px; padding: 16px 8px; text-align: center; }
+  .group + .group { margin-top: 10px; }
+  .group h3 { font: 600 12px var(--font); text-transform: uppercase; letter-spacing: .04em; color: var(--learn); margin: 4px 4px 2px; display: flex; justify-content: space-between; align-items: center; }
+  .group h3 button { background: none; border: 0; color: var(--muted); font: 12px var(--font); cursor: pointer; text-transform: none; letter-spacing: 0; }
+  .ch { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 4px 10px; align-items: center; padding: 8px; border-radius: 10px; background: var(--tonal); cursor: grab; }
+  .ch.dragging { opacity: .4; }
+  .ch .av { width: 32px; height: 32px; border-radius: 50%; background: var(--tonal-hover) center / cover no-repeat; display: grid; place-items: center; font: 600 14px var(--font); color: var(--muted); grid-row: span 2; overflow: hidden; }
+  .ch .av img { width: 100%; height: 100%; object-fit: cover; }
+  .ch .name { font-weight: 500; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); text-decoration: none; }
+  .ch .name:hover { text-decoration: underline; }
+  .ch .top { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .ch .top .name { flex: 1; min-width: 0; }
+  .ch .x { width: 22px; height: 22px; flex: none; border: 0; border-radius: 50%; background: none; color: var(--muted); font: 16px/1 var(--font); cursor: pointer; }
+  .ch .x:hover { background: var(--tonal-hover); color: var(--text); }
+  .ch .acts { display: flex; gap: 4px; align-items: center; min-width: 0; }
+  .ch .acts button { height: 24px; padding: 0 8px; border-radius: 12px; border: 0; background: var(--surface); color: var(--text); font: 500 12px var(--font); cursor: pointer; }
+  .ch .acts button:hover { background: var(--tonal-hover); }
+  .ch .acts select { height: 24px; padding: 0 4px 0 8px; border-radius: 12px; border: 1px solid var(--field-border); background: var(--field); color: var(--text); font: 12px var(--font); min-width: 0; flex: 1 1 auto; max-width: 130px; }
+  .ch .sugg { grid-column: 2; font-size: 12px; color: var(--learn); display: flex; gap: 6px; align-items: center; }
+  .ch .sugg button { height: 22px; padding: 0 8px; border-radius: 11px; border: 0; background: var(--learn); color: var(--surface); font: 500 12px var(--font); cursor: pointer; }
+  .addtopic { display: flex; gap: 6px; margin-top: 10px; }
+  .addtopic input { flex: 1; min-width: 0; height: 30px; padding: 0 10px; border-radius: 15px; border: 1px solid var(--field-border); background: var(--field); color: var(--text); font: 13px var(--font); }
+  .addtopic button { height: 30px; }
+</style>
+</head>
+<body>
+<main class="page wide">
+  <header class="page-head">
+    <img class="for-light" src="icons/48.png" alt=""><img class="for-dark" src="icons/light/48.png" alt="">
+    <span class="brand" data-brand>Aim</span><span class="crumb">Your channels</span>
+    <span class="end"><a href="options.html">Settings</a></span>
+  </header>
+  <h1>Your channels</h1>
+  <p class="lede">Sort the channels you follow so Aim knows which ones you learn from. Tap where each one goes, or drag it. Anything you leave unsorted works as it does now. All of this stays in this browser.</p>
+  <section class="card" id="import"></section>
+  <div class="tools">
+    <input type="search" id="filter" placeholder="Find a channel" aria-label="Find a channel">
+    <button class="btn" type="button" id="acceptAll" hidden></button>
+  </div>
+  <div class="board" id="board" aria-live="polite"></div>
+</main>
+<div id="toast" role="status"></div>
+<script src="content/topics.js"></script>
+<script src="channels.js"></script>
+</body>
+</html>

@@ -31,7 +31,7 @@ function makeEnv(initial = {}) {
 const VIDEO = { id: "abc123", title: "Feeding a sourdough starter", channel: "Bread Co" };
 const fresh = () => makeEnv({ schemaVersion: 5 });
 const DEFAULTS = { homeCard: true, leisureMin: 60, graceMin: 15, totalMin: 0, purposeLimitMin: 0,
-  hideShorts: true, hideRecs: true, hideFeeds: true, noAutoplay: true, strict: false, learnTopics: [], learnOff: [], learnShorts: false };
+  hideShorts: true, hideRecs: true, hideFeeds: true, noAutoplay: true, strict: false, learnTopics: [], learnOff: [], learnShorts: false, myTopics: [] };
 
 const tests = [];
 const test = (name, fn) => tests.push([name, fn]);
@@ -578,6 +578,38 @@ test("channel paths are normalized", async () => {
   assert.deepStrictEqual(Object.keys(env.local.avoid), ["/@café"]);
   await env.run(`setAvoid("/@café", "Café", null)`);
   assert.deepStrictEqual(env.local.avoid, {});
+});
+
+// ---------- your channels ----------
+test("your channels: Learn from with a topic, For breaks, Keep out; topics stay with Learn from only", async () => {
+  const env = fresh();
+  await env.run(`setAvoid("/@woodshop/videos", "The Wood Shop", "prefer", "Woodworking")`);
+  await env.run(`setAvoid("/@gamerguy", "Gamer Guy", "break", "Woodworking")`);
+  assert.deepStrictEqual(env.local.avoid["/@woodshop"], { name: "The Wood Shop", action: "prefer", topic: "Woodworking" });
+  assert.deepStrictEqual(env.local.avoid["/@gamerguy"], { name: "Gamer Guy", action: "break" }, "only Learn from has a topic");
+  await env.run(`setAvoid("/@woodshop", "The Wood Shop", "prefer")`);
+  assert.strictEqual(env.local.avoid["/@woodshop"].topic, "Woodworking", "kept when not given");
+  await env.run(`setAvoid("/@woodshop", "The Wood Shop", "hide")`);
+  assert.deepStrictEqual(env.local.avoid["/@woodshop"], { name: "The Wood Shop", action: "hide" });
+  await env.run(`setAvoid("/@woodshop", "", null)`);
+  assert.ok(!("/@woodshop" in env.local.avoid));
+  assert.strictEqual((await env.run(`setSetting("myTopics", ["Woodworking", "x".repeat(41)])`)).result, "error");
+});
+
+test("your channels: subscriptions are kept by channel; a complete read replaces the list", async () => {
+  const env = fresh();
+  await env.run(`saveSubs([{ key: "/@a/videos", name: "A", avatar: "https://yt3.ggpht.com/x" }, { key: "/watch?v=1", name: "not a channel" }, { key: "/@b", name: "B", avatar: "https://evil.example/x" }], false)`);
+  assert.deepStrictEqual(env.local.subs.channels, [{ key: "/@a", name: "A", avatar: "https://yt3.ggpht.com/x" }, { key: "/@b", name: "B", avatar: "" }]);
+  await env.run(`saveSubs([{ key: "/@c", name: "C" }], false)`);
+  assert.strictEqual(env.local.subs.channels.length, 3, "a partial read adds");
+  await env.run(`saveSubs([{ key: "/@a", name: "A" }], true)`);
+  assert.deepStrictEqual(env.local.subs.channels.map(c => c.key), ["/@a"], "a complete read replaces");
+  assert.strictEqual(env.local.subs.complete, true);
+  await env.run(`startPurpose({ text: "Turn a bowl" })`);
+  await env.tick(10, { id: "v1", title: "Bowl", channel: "A" });
+  const page = await env.run("channelsPage()");
+  assert.strictEqual(page.watched.A, 1);
+  assert.strictEqual(page.subs.channels.length, 1);
 });
 
 // ---------- sync across devices ----------

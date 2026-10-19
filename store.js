@@ -22,7 +22,9 @@ const DEFAULT_SETTINGS = {
   // "Learn something": topics you picked (content/topics.js), and curated channels you took out.
   learnTopics: [], learnOff: [],
   // Shorts from your Learn something channels only: a few at a time, as quick reviews of what you've learned.
-  learnShorts: false
+  learnShorts: false,
+  // Your own topics for channels you learn from (the Your channels page).
+  myTopics: []
 };
 const GRACE_CHOICES = [0, 5, 10, 15, 30];
 const minutesSetting = max => v => Number.isInteger(v) && v >= 0 && v <= max;
@@ -39,7 +41,8 @@ const SETTING_RULES = {
   strict: v => typeof v === "boolean",
   learnTopics: v => Array.isArray(v) && v.length <= 20 && v.every(x => typeof x === "string" && /^[a-z]{2,20}$/.test(x)),
   learnOff: v => Array.isArray(v) && v.length <= 200 && v.every(x => typeof x === "string" && /^@[\w.-]{1,60}$/.test(x)),
-  learnShorts: v => typeof v === "boolean"
+  learnShorts: v => typeof v === "boolean",
+  myTopics: v => Array.isArray(v) && v.length <= 30 && v.every(x => typeof x === "string" && x.trim().length >= 1 && x.length <= 40)
 };
 
 // ---------- write queue ----------
@@ -1073,17 +1076,49 @@ async function notePlanVideo(id, video) {
 }
 
 // ---------- channels ----------
-// action: "hide" | "warn" | null (remove)
-async function setAvoid(key, name, action) {
+// action: "prefer" (Learn from: a channel you learn from, optionally under a topic of yours) |
+// "break" (For breaks: free on a break; on a Target, Aim asks first) | "hide" | "warn" (Keep out:
+// hidden, or asked about) | null (remove: not sorted).
+const CHANNEL_ACTIONS = ["prefer", "break", "hide", "warn"];
+async function setAvoid(key, name, action, topic) {
   key = channelPath(key);
   if (!key) return { result: "error", message: "Unknown channel." };
   const { avoid = {} } = await chrome.storage.local.get("avoid");
-  // hide: gone from feeds; warn: ask before watching without a Target; prefer: trusted (a badge on
-  // results, and the librarian puts its videos first when they fit).
-  if (action === "hide" || action === "warn" || action === "prefer") avoid[key] = { name: clip(name, 200) || key, action };
-  else delete avoid[key];
+  if (CHANNEL_ACTIONS.includes(action)) {
+    const was = avoid[key];
+    const t = action === "prefer" ? clip(topic === undefined ? was?.topic : topic, 40) : "";
+    avoid[key] = { name: clip(name, 200) || was?.name || key, action, ...(t ? { topic: t } : {}) };
+  } else delete avoid[key];
   await chrome.storage.local.set({ avoid });
   return { result: "applied", avoid };
+}
+
+// Your YouTube subscriptions, as read from youtube.com/feed/channels (content/subs.js), for the
+// Your channels page. complete: the whole list was read, so channels no longer in it are dropped.
+async function saveSubs(channels, complete) {
+  const { subs = {} } = await chrome.storage.local.get("subs");
+  const byKey = new Map(complete ? [] : (subs.channels || []).map(c => [c.key, c]));
+  for (const c of (Array.isArray(channels) ? channels : []).slice(0, 3000)) {
+    const key = channelPath(c?.key);
+    if (!/^\/(@|channel\/)/.test(key)) continue;
+    const avatar = /^https:\/\/yt\d\.(ggpht|googleusercontent)\.com\//.test(c.avatar || "") ? clip(c.avatar, 400) : byKey.get(key)?.avatar || "";
+    byKey.set(key, { key, name: clip(c.name, 200) || key.slice(1), avatar });
+  }
+  const list = [...byKey.values()].slice(0, 3000);
+  await chrome.storage.local.set({ subs: { at: Date.now(), complete: !!complete || !!subs.complete, channels: list } });
+  return { result: "applied", count: list.length };
+}
+
+// What the Your channels page needs: subscriptions, your rules, your topics, and which channels
+// you've watched for Targets (to suggest Learn from).
+async function channelsPage() {
+  const { subs = {}, avoid = {}, history = [], paused = [], purpose = null } = await chrome.storage.local.get(["subs", "avoid", "history", "paused", "purpose"]);
+  const watched = {};
+  for (const p of [purpose, ...paused, ...history.filter(h => h.type === "purpose")]) {
+    const seen = new Set();
+    for (const v of p?.videos || []) if (v.channel && !seen.has(v.channel)) { seen.add(v.channel); watched[v.channel] = (watched[v.channel] || 0) + 1; }
+  }
+  return { subs, avoid, watched, settings: await getSettings() };
 }
 
 // ---------- strict mode: the reasons you gave ----------
@@ -1259,7 +1294,7 @@ async function syncMerge(items, first = false) {
     } else if (it.kind === "avoid" && data?.rules && typeof data.rules === "object") {
       const rules = {};
       for (const [k, c] of Object.entries(data.rules))
-        if (["hide", "warn", "prefer"].includes(c?.action)) rules[channelPath(k)] = { name: clip(c.name, 200) || k, action: c.action };
+        if (CHANNEL_ACTIONS.includes(c?.action)) rules[channelPath(k)] = { name: clip(c.name, 200) || k, action: c.action, ...(c.action === "prefer" && c.topic ? { topic: clip(c.topic, 40) } : {}) };
       avoid = first ? { ...rules, ...avoid } : rules;
     }
   }

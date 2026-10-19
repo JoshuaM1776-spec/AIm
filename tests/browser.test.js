@@ -72,6 +72,20 @@ const RESULTS_AI = page(`<ytd-search><div><ytd-section-list-renderer>
 const ASKPAGE = page(`<div id="ask-answer">Here's a good one: <a href="/watch?v=ai2" aria-label="Faucet washer swap">Faucet washer swap</a></div>`, "Ask YouTube");
 const SHORTS = id => page(`<div id="shorts-player"><video class="html5-main-video"></video></div>
   <ytd-reel-player-overlay-renderer><div id="channel-name"><a href="/@short${id}">Short ${id}</a></div></ytd-reel-player-overlay-renderer>`);
+// Your subscriptions (youtube.com/feed/channels): three rows, and three more each time you scroll to the
+// end, the way YouTube loads them, up to nine.
+const SUBROWS = [["@3blue1brown", "3Blue1Brown"], ["@gamerguy", "Gamer Guy"], ["@woodshop", "The Wood Shop"], ["@plumb", "Plumb Co"],
+  ["@sillycats", "Silly Cats"], ["@numberphile", "Numberphile"], ["@chanbrk1", "Chan brk1"], ["@dramanews", "Drama News"], ["@lathe", "Lathe Life"]];
+const SUBSLIST = page(`<ytd-browse page-subtype="channels"><div id="list"></div></ytd-browse><div style="height:3000px"></div>
+  <script>
+    const rows = ${JSON.stringify(SUBROWS)}; let shown = 0;
+    const more = () => { for (const [h, name] of rows.slice(shown, shown + 3)) {
+      const r = document.createElement("ytd-channel-renderer"), a = document.createElement("a"), t = document.createElement("div"), x = document.createElement("span");
+      a.id = "main-link"; a.setAttribute("href", "/" + h); t.id = "channel-title"; x.id = "text"; x.textContent = name;
+      t.append(x); a.append(t); r.append(a); document.getElementById("list").append(r); } shown += 3; };
+    more();
+    addEventListener("scroll", () => { if (innerHeight + scrollY >= document.documentElement.scrollHeight - 50) setTimeout(more, 200); });
+  </script>`, "Subscriptions - YouTube");
 const SUBS = page(`<ytd-browse page-subtype="subscriptions"><ytd-rich-grid-renderer id="subsGrid">subs</ytd-rich-grid-renderer></ytd-browse>`);
 const HOME = page(`<ytd-browse page-subtype="home"><div id="primary"><ytd-rich-grid-renderer>
   <ytd-rich-item-renderer id="i1"><a href="/watch?v=v1">One</a><a href="/@hideme">Hide Me</a></ytd-rich-item-renderer>
@@ -110,7 +124,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     // Stand-up Maths' feed fails (as YouTube's feeds have for weeks at a time), so Aim reads its Videos tab.
     if (u.pathname === "/@standupmaths/videos") return route.fulfill({ contentType: "text/html", body: CHANNEL_PAGE });
     const body = u.pathname === "/watch" && u.searchParams.get("v") === "realplay" ? REALPLAY : u.pathname === "/watch" ? WATCH(u.searchParams.get("v")) : u.pathname === "/results" && /dripping/.test(u.searchParams.get("search_query") || "") ? RESULTS_AI : u.pathname === "/new" ? ASKPAGE : u.pathname === "/results" ? RESULTS
-      : u.pathname.startsWith("/shorts/") ? SHORTS(u.pathname.split("/")[2]) : u.pathname === "/feed/subscriptions" ? SUBS : HOME;
+      : u.pathname.startsWith("/shorts/") ? SHORTS(u.pathname.split("/")[2]) : u.pathname === "/feed/subscriptions" ? SUBS : u.pathname === "/feed/channels" ? SUBSLIST : HOME;
     // Same Trusted Types policy YouTube sends, so string-to-HTML writes would fail here too.
     route.fulfill({ contentType: "text/html", body, headers: { "content-security-policy": "require-trusted-types-for 'script'" } });
   });
@@ -261,7 +275,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.click("#wp-chip .wp-pill");
   let menu = await text(".wp-dropdown");
   step("menu: purpose, no time limit, what's hidden, break choices, Done, Change Target",
-    ["Current Target", "No time limit", "Shorts, recommendations and feeds hidden · autoplay off", "Adjust", "Take a break", "Target complete", "Change Target", "Save this video", "Prefer, warn about or hide"].every(t => menu.includes(t)) &&
+    ["Current Target", "No time limit", "Shorts, recommendations and feeds hidden · autoplay off", "Adjust", "Take a break", "Target complete", "Change Target", "Save this video", "Sort this channel"].every(t => menu.includes(t)) &&
     !/Pause|Explore|Add 15/.test(menu), menu.slice(0, 200));
 
   // ---------- take a break and come back ----------
@@ -645,6 +659,67 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("with the setting off, every Short waits again", (await text(".wp-player-card")).includes("Shorts are hidden"));
   await sw.evaluate(() => serial(() => finishPurpose("yes")));
   await sw.evaluate(() => serial(async () => { await finishPurpose("yes"); await setSetting("learnTopics", []); await setSetting("learnOff", []); }));
+
+
+  // ---------- Your channels: subscriptions, sorted ----------
+  await setLocal({ avoid: { "/@hideme": { name: "Hide Me", action: "hide" } } });
+  await sw.evaluate(() => serial(async () => { await startPurpose({ text: "Turn a bowl on a lathe" }); await addSearch("lathe bowl turning");
+    await recordTick(10, { id: "lth1", title: "Bowl basics", channel: "Lathe Life" }); await finishPurpose("yes");
+    await startPurpose({ text: "Sharpen lathe tools" }); await recordTick(10, { id: "lth2", title: "Sharpening gouges", channel: "Lathe Life" }); await finishPurpose("yes"); }));
+  const chPage = await ctx.newPage();
+  await chPage.goto(`chrome-extension://${extId}/channels.html`);
+  await chPage.waitForSelector("#readSubs");
+  step("Your channels: before reading, it offers to get your subscriptions from YouTube", (await chPage.textContent("#readSubs")).includes("Get my subscriptions") &&
+    (await chPage.$$(".col")).length === 4 && (await chPage.textContent(".col:nth-child(4)")).includes("Hide Me"));
+  // Aim opens YouTube's subscriptions page in a new tab. Tabs the extension opens skip this test's
+  // stand-in YouTube, so that one is closed and the same address opened here.
+  const [opened] = await Promise.all([ctx.waitForEvent("page"), chPage.click("#readSubs")]);
+  await opened.close();
+  const subsTab = await ctx.newPage();
+  await subsTab.goto("https://www.youtube.com/feed/channels?aim=import");
+  await subsTab.waitForSelector(".wp-notice:has-text('9 channels found')", { timeout: 30000 });
+  step("on YouTube's subscriptions page, Aim reads them all (scrolling for the rest) and keeps them here", (await store()).subs.channels.length === 9 && (await store()).subs.complete === true);
+  await subsTab.close();
+  await chPage.bringToFront();
+  await chPage.waitForFunction(() => document.querySelectorAll(".ch").length >= 10);
+  const unsorted = await chPage.textContent(".col:nth-child(1)");
+  step("they arrive unsorted, with suggestions: Learn something's channels under their topic, and one you watched for two Targets",
+    unsorted.includes("Suggested: Learn from · Math") && unsorted.includes("You watched it for 2 Targets") && !unsorted.includes("Gamer Guy (Suggested") &&
+    (await chPage.textContent("#acceptAll")) === "Accept 3 suggestions", (await chPage.textContent("#acceptAll")));
+  await chPage.click("#acceptAll");
+  await chPage.waitForFunction(() => document.querySelector(".col:nth-child(2) .count").textContent === "3");
+  let av = (await store()).avoid;
+  step("accepting puts them under Learn from, with Math as a topic of yours", av["/@3blue1brown"]?.action === "prefer" && av["/@3blue1brown"].topic === "Math" &&
+    av["/@lathe"]?.action === "prefer" && (await store()).settings.myTopics.includes("Math") && (await chPage.textContent(".col:nth-child(2) .group h3")).startsWith("Math"));
+  // One tap: For breaks. Drag: Silly Cats into Keep out.
+  await chPage.click('.ch:has-text("Gamer Guy") button:text-is("Break")');
+  await chPage.waitForFunction(() => document.querySelector(".col:nth-child(3)").textContent.includes("Gamer Guy"));
+  await chPage.dragAndDrop('.ch:has-text("Silly Cats")', ".col:nth-child(4) .drop");
+  await chPage.waitForFunction(() => document.querySelector(".col:nth-child(4)").textContent.includes("Silly Cats"));
+  av = (await store()).avoid;
+  step("a tap puts a channel in For breaks; dragging one into Keep out hides it", av["/@gamerguy"]?.action === "break" && av["/@sillycats"]?.action === "hide");
+  // Your own topic, and a channel dragged into it.
+  await chPage.fill(".addtopic input", "Woodworking");
+  await chPage.click('.addtopic button:text-is("Add")');
+  await chPage.waitForSelector('.group h3:has-text("Woodworking")');
+  await chPage.dragAndDrop('.ch:has-text("The Wood Shop")', '.group:has(h3:has-text("Woodworking")) .drop');
+  await chPage.waitForFunction(() => [...document.querySelectorAll(".group")].some(g => g.textContent.includes("Woodworking") && g.textContent.includes("The Wood Shop")));
+  av = (await store()).avoid;
+  step("a topic of your own; a channel dropped into it learns under it", av["/@woodshop"]?.action === "prefer" && av["/@woodshop"].topic === "Woodworking");
+  await chPage.fill("#filter", "lathe");
+  step("Find a channel narrows every column", (await chPage.$$(".ch")).length === 1);
+  await chPage.fill("#filter", "");
+  if (process.env.SHOTS) { await chPage.setViewportSize({ width: 1280, height: 900 }); await chPage.screenshot({ path: `${process.env.SHOTS}/channels.png`, fullPage: true }); }
+  await chPage.close();
+  // A break channel, on a Target: Aim asks first, even for a video your search found.
+  await sw.evaluate(() => serial(async () => { await startPurpose({ text: "fix a leaky faucet" }); await allowVideos({ query: "x", videos: [{ id: "brk1", title: "Gaming", channel: "Chan brk1" }], lists: [] });
+    await setAvoid("/@chanbrk1", "Chan brk1", "break"); }));
+  await p.goto("https://www.youtube.com/watch?v=brk1");
+  await p.waitForSelector(".wp-player-card", { timeout: 8000 });
+  step("a For breaks channel on a Target: Aim asks, with a break as the way to watch it", (await text(".wp-player-card")).includes("is one of your break channels") &&
+    (await text(".wp-player-card")).includes("Just this video"));
+  await sw.evaluate(() => serial(() => finishPurpose("yes")));
+  await setLocal({ avoid: { "/@hideme": { name: "Hide Me", action: "hide" } } });
 
   // ---------- Aim Homeschool preview: the student's Today screen ----------
   await sw.evaluate(() => serial(async () => { await setHomeschoolPreview(true); await setOnboarding({ hsTour: false }); }));
