@@ -6,6 +6,7 @@ import Anthropic from "npm:@anthropic-ai/sdk@0.135.0";
 import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 import { type ClaudeResult, corsHeaders, type Deps, handle } from "./handler.ts";
 import type { AiRequest, Assessment, TeachbackDb, Turn } from "./teachback.ts";
+import type { SyncStore } from "./sync.ts";
 import { type BillingConfig, checkoutUrl, deleteCustomer, portalUrl, stripeApi } from "./billing.ts";
 
 const env = (k: string, d = "") => Deno.env.get(k) ?? d;
@@ -134,7 +135,8 @@ const account: NonNullable<Deps["account"]> = {
       .select("assessment_id, seq, objective, student, kind, question, status, answer, hints, evaluation, created_at").in("assessment_id", aIds).order("seq")) : [];
     const progress = ids.length ? must(await admin.from("progress_events")
       .select("learner_id, source, kind, topic, objective, evidence, assessment_id, created_at").in("learner_id", ids).order("created_at")) : [];
-    return { profile, aiUsage: usage, learners, assessments, assessmentTurns: turns, progress };
+    const synced = must(await admin.from("sync_items").select("kind, id, rev, data").eq("user_id", userId).order("seq"));
+    return { profile, aiUsage: usage, learners, assessments, assessmentTurns: turns, progress, synced };
   },
   async deleteUser(userId) {
     const { error } = await admin.auth.admin.deleteUser(userId);
@@ -155,6 +157,17 @@ const billing: Deps["billing"] = billingCfg.secretKey && billingCfg.pricePlus ? 
   portal: customer => portalUrl(stripeApi(billingCfg.secretKey), billingCfg, customer),
   close: customer => deleteCustomer(billingCfg.secretKey, customer)
 } : undefined;
+
+// Sync across devices: one database function applies a browser's changes and returns everyone else's
+// (migration 0004), so the newest change wins even when two browsers sync at once.
+const sync: SyncStore = {
+  async apply(userId, device, since, items) {
+    const r = must(await admin.rpc("sync_apply", { p_user: userId, p_device: device, p_since: since, p_items: items })) as
+      { items: { kind: string; id: string; rev: number; data: unknown }[]; cursor: number; more: boolean };
+    return { items: r.items, cursor: Number(r.cursor), more: !!r.more };
+  },
+  async erase(userId) { must(await admin.from("sync_items").delete().eq("user_id", userId)); }
+};
 
 const deps: Deps = {
   async getUser(token) {
@@ -188,6 +201,7 @@ const deps: Deps = {
   db,
   account,
   billing,
+  sync,
   now: () => new Date(),
   config: {
     origins: env("AIM_EXTENSION_ORIGINS").split(",").map(s => s.trim()).filter(Boolean),
@@ -202,7 +216,8 @@ const deps: Deps = {
       dayTokens: num("AIM_FREE_DAY_TOKENS", 80_000),
       minuteCalls: num("AIM_FREE_MINUTE_CALLS", 10)
     },
-    maxBodyBytes: 24 * 1024 // a pasted study guide can run to a few pages
+    maxBodyBytes: 24 * 1024, // a pasted study guide can run to a few pages
+    maxSyncBytes: 1024 * 1024
   }
 };
 

@@ -2,7 +2,7 @@
 // accounts, database and Claude. Run: node --experimental-strip-types tests/ai.test.mjs
 import assert from "node:assert";
 import { handle } from "../supabase/functions/ai/handler.ts";
-import { memDb } from "./helpers/memdb.mjs";
+import { memDb, memSync } from "./helpers/memdb.mjs";
 import { difficulty } from "../supabase/functions/ai/teachback.ts";
 import { checkoutUrl, handleStripeEvent, handleStripeWebhook, planForStatus, stripeApi, verifyStripeSignature } from "../supabase/functions/ai/billing.ts";
 
@@ -86,7 +86,7 @@ test("rejects unknown tasks, bad JSON and large bodies", async () => {
 test("status reports plan, usage and limits without calling the AI", async () => {
   const deps = makeDeps({ plan: "free" });
   const r = await call(deps, { task: "status" });
-  assert.deepStrictEqual(r.body, { ok: true, email: "a@example.com", plan: "free", usage: { calls: 0, tokens: 0 }, billing: { available: false, status: null, renewsAt: null, cancelAtPeriodEnd: false, manage: false },
+  assert.deepStrictEqual(r.body, { ok: true, email: "a@example.com", plan: "free", usage: { calls: 0, tokens: 0 }, billing: { available: false, status: null, renewsAt: null, cancelAtPeriodEnd: false, manage: false }, sync: false,
     limits: { dayCalls: 1, dayTokens: 100, minuteCalls: 1 } }, "free accounts get a tenth of the Plus allowance");
   assert.strictEqual(deps.calls.length, 0);
 });
@@ -694,6 +694,47 @@ test("account: download everything, or delete only with DELETE typed; both need 
   assert.strictEqual((await call(deps, { task: "account-delete", input: { confirm: "DELETE" } }, { token: "bad" })).status, 401);
 });
 
+// ---------- sync across devices ----------
+test("sync: Plus only; changes go between browsers, newest wins; erase removes the copy", async () => {
+  const free = makeDeps({ plan: "free" }); free.sync = memSync();
+  assert.strictEqual((await call(free, { task: "sync", input: { device: "device-aaaa", since: 0 } })).status, 403);
+  const d = makeDeps(); d.sync = memSync();
+  assert.strictEqual((await call(makeDeps(), { task: "sync", input: { device: "device-aaaa" } })).status, 503, "not set up");
+  assert.strictEqual((await call(d, { task: "status" })).body.sync, true);
+  const now = d.now().getTime();
+  const t1 = { kind: "target", id: "t1", rev: now - 1000, data: { state: "paused", record: { id: "t1", text: "Fix the sink" } } };
+  let a = await call(d, { task: "sync", input: { device: "device-aaaa", since: 0, items: [t1] } });
+  assert.strictEqual(a.status, 200);
+  assert.deepStrictEqual(a.body.items, [], "a browser doesn't get its own changes back");
+  let b = await call(d, { task: "sync", input: { device: "device-bbbb", since: 0 } });
+  assert.deepStrictEqual(b.body.items, [t1]);
+  // An older change loses; a newer one reaches the other browser.
+  await call(d, { task: "sync", input: { device: "device-bbbb", since: b.body.cursor, items: [{ ...t1, rev: now - 5000, data: { state: "completed", record: {} } }] } });
+  assert.strictEqual([...d.sync.rows.values()][0].data.state, "paused");
+  await call(d, { task: "sync", input: { device: "device-bbbb", since: b.body.cursor, items: [{ ...t1, rev: now, data: null }] } });
+  a = await call(d, { task: "sync", input: { device: "device-aaaa", since: a.body.cursor } });
+  assert.deepStrictEqual(a.body.items, [{ ...t1, rev: now, data: null }], "deletions sync too");
+  // Bad input is refused.
+  for (const input of [{ since: 0 }, { device: "device-aaaa", items: [{ kind: "history", id: "x", rev: 1, data: {} }] },
+    { device: "device-aaaa", items: [{ kind: "target", id: "../x", rev: 1, data: {} }] },
+    { device: "device-aaaa", items: [{ kind: "target", id: "x", rev: now + 2 * 864e5, data: {} }] },
+    { device: "device-aaaa", items: [{ kind: "target", id: "x", rev: 1, data: [1] }] }])
+    assert.strictEqual((await call(d, { task: "sync", input })).status, 400, JSON.stringify(input));
+  // Erasing works on any plan.
+  free.sync = d.sync;
+  assert.ok((await call(free, { task: "sync-erase" })).body.erased);
+  assert.strictEqual(d.sync.rows.size, 0);
+});
+
+test("sync: a round may be larger than other requests, but not without limit", async () => {
+  const d = makeDeps(); d.sync = memSync(); d.config = { ...d.config, maxSyncBytes: 200_000 };
+  const items = Array.from({ length: 20 }, (_, i) => ({ kind: "target", id: `t${i}`, rev: 1, data: { text: "x".repeat(5000) } }));
+  assert.strictEqual((await call(d, { task: "sync", input: { device: "device-aaaa", items } })).status, 200);
+  assert.strictEqual((await call(d, { task: "check", input: { pad: "x".repeat(10000) } })).status, 413, "other tasks keep the small limit");
+  const huge = Array.from({ length: 50 }, (_, i) => ({ kind: "target", id: `t${i}`, rev: 1, data: { text: "x".repeat(5000) } }));
+  assert.strictEqual((await call(d, { task: "sync", input: { device: "device-aaaa", items: huge } })).status, 413);
+});
+
 test("the one-file dashboard version is up to date with supabase/functions/ai", async () => {
   const fs = await import("node:fs");
   const { build, OUT, buildWebhook, OUT_WEBHOOK } = await import("../tools/bundle-ai.mjs");
@@ -704,7 +745,7 @@ test("the one-file dashboard version is up to date with supabase/functions/ai", 
   const dupes = names.filter((n, i) => names.indexOf(n) !== i);
   assert.deepStrictEqual(dupes, [], "top-level names repeat in the one-file version");
   // Imports between the files disappear when they're merged, so they can't rename anything.
-  for (const f of ["handler.ts", "index.ts", "librarian.ts", "study.ts", "pathways.ts", "video.ts"]) {
+  for (const f of ["handler.ts", "index.ts", "librarian.ts", "study.ts", "pathways.ts", "video.ts", "sync.ts"]) {
     const src = fs.readFileSync(new URL(`../supabase/functions/ai/${f}`, import.meta.url), "utf8");
     assert.doesNotMatch(src, /^import [^\n]*\bas\b[^\n]*from "\.\//m, `${f}: no "as" in local imports`);
   }

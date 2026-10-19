@@ -173,6 +173,7 @@ async function accessToken({ force = false } = {}) {
 async function plusSignOut() {
   const s = await loadSession();
   await clearSession();
+  await syncReset();
   // Revoke on the server too. Signed out locally either way.
   if (s) await authCall("logout", {}, s.accessToken).catch(() => {});
   return { result: "signed-out" };
@@ -211,7 +212,9 @@ async function plusStatus() {
       await saveSession({ ...fresh, plan: st.plan });
       if (st.plan === "plus") await plusWelcome();
     }
-    return { configured: true, signedIn: true, email: st.email || s.email, plan: st.plan, usage: st.usage, limits: st.limits, billing: st.billing || null };
+    const sy = await syncState();
+    return { configured: true, signedIn: true, email: st.email || s.email, plan: st.plan, usage: st.usage, limits: st.limits, billing: st.billing || null,
+      sync: { available: !!st.sync, on: sy.on, lastAt: sy.lastAt, error: sy.error } };
   } catch (e) {
     if (e.code === "auth") return { configured: true, signedIn: false, error: e.message };
     return { configured: true, signedIn: true, email: s.email, offline: true, error: e.message };
@@ -240,6 +243,7 @@ async function plusExport() {
 async function plusDelete(confirm) {
   await plusCall("account-delete", { confirm });
   await clearSession();
+  await syncReset();
   await clearPending();
   return { result: "deleted" };
 }
@@ -276,6 +280,10 @@ const plusHandlers = {
   "plus-sign-out": () => plusSignOut(),
   "plus-export": () => plusExport(),
   "plus-delete": m => plusDelete(m.confirm),
+  // Sync across devices (sync.js).
+  "plus-sync-set": m => syncSet(!!m.on),
+  "plus-sync-now": () => syncNow(),
+  "plus-sync-erase": () => syncErase(),
   "plus-check": () => plusCall("check").then(r => ({ result: "ok", reply: r.reply })),
   // Subscribe or manage: Stripe's own page, in a new tab. Card details never touch Aim.
   "plus-subscribe": () => plusCall("billing-checkout").then(r => chrome.tabs.create({ url: r.url })).then(() => ({ result: "ok" })),

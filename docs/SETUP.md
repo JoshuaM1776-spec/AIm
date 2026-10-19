@@ -237,6 +237,12 @@ Until this is done, Plus is given by hand: in Supabase's **Table Editor**, open 
 8. **Test it:** in Aim's Settings, signed in on a Free account, choose **Upgrade to Plus**. Pay with Stripe's test card `4242 4242 4242 4242`, any future date, any CVC. Back in Settings, the plan says Aim Plus with a renewal date, and **Manage subscription** opens Stripe's portal; cancel there and the plan goes back to Free when the period ends.
 9. **Going live:** repeat steps 2, 4 and 5 in Stripe's live mode (a live price, a live webhook endpoint, the live secret key and signing secret), replacing the test values.
 
+## Part 10 — Sync across devices (Aim Plus)
+
+1. **Add sync's table:** in Supabase, **SQL Editor** → **New query**, paste all of `supabase/migrations/0004_sync.sql`, and choose **Run**.
+2. **Update the `ai` function** with the current `ai-dashboard.ts` (Part 6, "Updating later").
+3. **Test it:** sign in to the same Plus account in two Chrome profiles, turn on **Sync across devices** in Settings → Aim Plus in both, and set a Target aside in one. **Sync now** in the other shows it under Set aside on the Targets page.
+
 ## Later, before real users
 
 - **Email sending:** set up your own SMTP (Part 4).

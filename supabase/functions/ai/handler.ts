@@ -9,6 +9,7 @@ import { ask, questions, rank } from "./librarian.ts";
 import { studyPlan, studyApply } from "./study.ts";
 import { careers, step, themes, where } from "./pathways.ts";
 import { videoConcepts } from "./video.ts";
+import { type SyncStore, SyncError, readSyncInput } from "./sync.ts";
 
 export type Plan = "free" | "plus";
 
@@ -23,6 +24,7 @@ export interface Config {
   limits: Limits;      // Plus accounts
   freeLimits?: Limits; // free accounts (the librarian only); defaults to a tenth of `limits`
   maxBodyBytes: number;
+  maxSyncBytes?: number; // a sync round carries more (up to 100 Targets); defaults to maxBodyBytes
 }
 
 export type ClaudeResult =
@@ -48,6 +50,7 @@ export interface Deps {
     portal(customer: string): Promise<string>;
     close(customer: string): Promise<void>; // deleting the account: cancels the subscription
   };
+  sync?: SyncStore;   // Plus sync across devices (sync.ts)
   now(): Date;
   config: Config;
 }
@@ -95,7 +98,7 @@ export const TASKS: Record<string, Task> = {
 };
 
 // Handled directly in handle(), without AI.
-const ACCOUNT_TASKS = new Set(["status", "account-export", "account-delete", "billing-checkout", "billing-portal"]);
+const ACCOUNT_TASKS = new Set(["status", "account-export", "account-delete", "billing-checkout", "billing-portal", "sync", "sync-erase"]);
 
 export function limitsFor(plan: Plan, config: Config): Limits {
   if (plan === "plus") return config.limits;
@@ -170,10 +173,12 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
   if (!token) return fail(401, "auth", "Sign in to use Aim Plus.", cors);
 
   const raw = await req.text();
-  if (new TextEncoder().encode(raw).length > deps.config.maxBodyBytes) return fail(413, "too_large", "That request is too large.", cors);
+  const size = new TextEncoder().encode(raw).length, cfg = deps.config;
+  if (size > Math.max(cfg.maxBodyBytes, cfg.maxSyncBytes || 0)) return fail(413, "too_large", "That request is too large.", cors);
   let body: { task?: unknown; input?: unknown };
   try { body = JSON.parse(raw || "{}"); } catch { return fail(400, "bad_json", "The request isn't valid JSON.", cors); }
   const name = typeof body?.task === "string" ? body.task : "";
+  if (size > (name === "sync" ? cfg.maxSyncBytes || cfg.maxBodyBytes : cfg.maxBodyBytes)) return fail(413, "too_large", "That request is too large.", cors);
   if (!ACCOUNT_TASKS.has(name) && !Object.hasOwn(TASKS, name)) return fail(400, "task", "Unknown task.", cors);
 
   let user;
@@ -189,7 +194,7 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
     const b = deps.billing ? await deps.billing.info(user.id) : null;
     const billing = { available: !!deps.billing, status: b?.status ?? null, renewsAt: b?.renewsAt ?? null,
       cancelAtPeriodEnd: !!b?.cancelAtPeriodEnd, manage: !!b?.customer };
-    return json(200, { ok: true, email: user.email ?? null, plan, usage, limits: limitsFor(plan, deps.config), billing }, cors);
+    return json(200, { ok: true, email: user.email ?? null, plan, usage, limits: limitsFor(plan, deps.config), billing, sync: !!deps.sync }, cors);
   }
 
   // Subscribe, or manage the subscription: a Stripe page for the extension to open.
@@ -207,6 +212,19 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
       console.error("billing", (e as Error).message);
       return fail(502, "billing", "Couldn't reach the payment service. Try again shortly.", cors);
     }
+  }
+
+  // Sync across devices (Plus): this browser's changes in, other browsers' changes out. Erasing works
+  // on any plan, so someone who stopped paying can still remove their copy.
+  if (name === "sync" || name === "sync-erase") {
+    if (!deps.sync) return fail(503, "sync", "Sync isn't available yet.", cors);
+    if (name === "sync-erase") { await deps.sync.erase(user.id); return json(200, { ok: true, erased: true }, cors); }
+    if (plan !== "plus") return fail(403, "plan", "This needs Aim Plus.", cors);
+    let input;
+    try { input = readSyncInput(body.input, deps.now().getTime()); }
+    catch (e) { if (e instanceof SyncError) return fail(400, "sync", e.message, cors); throw e; }
+    const r = await deps.sync.apply(user.id, input.device, input.since, input.items);
+    return json(200, { ok: true, ...r }, cors);
   }
 
   // Your data: download all of it, or delete the account and everything with it. No AI.

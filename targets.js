@@ -94,7 +94,7 @@ async function render() {
         if (!confirm(`Remove "${t.text}"? It stays in your history as unfinished.`)) return;
         await send({ type: "paused-drop", id: t.id });
         render();
-      })], `Last active ${when(t.lastActiveAt)}`))));
+      })], `${t.elsewhere ? "In progress in another browser · " : ""}Last active ${when(t.lastActiveAt)}`))));
   if (d.completed.length) sections.push(node("section", { className: "card" }, node("h2", { textContent: "Completed" }),
     d.completed.map(t => row(t, btn("Start again", "tonal", () => resume(t.id)), `Finished ${when(t.lastActiveAt)}`))));
   if (!sections.length) sections.push(node("p", { className: "muted",

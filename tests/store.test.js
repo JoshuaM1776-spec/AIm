@@ -31,7 +31,7 @@ function makeEnv(initial = {}) {
 const VIDEO = { id: "abc123", title: "Feeding a sourdough starter", channel: "Bread Co" };
 const fresh = () => makeEnv({ schemaVersion: 5 });
 const DEFAULTS = { homeCard: true, leisureMin: 60, graceMin: 15, totalMin: 0, purposeLimitMin: 0,
-  hideShorts: true, hideRecs: true, hideFeeds: true, noAutoplay: true, strict: false, learnTopics: [], learnOff: [] };
+  hideShorts: true, hideRecs: true, hideFeeds: true, noAutoplay: true, strict: false, learnTopics: [], learnOff: [], learnShorts: false };
 
 const tests = [];
 const test = (name, fn) => tests.push([name, fn]);
@@ -578,6 +578,53 @@ test("channel paths are normalized", async () => {
   assert.deepStrictEqual(Object.keys(env.local.avoid), ["/@café"]);
   await env.run(`setAvoid("/@café", "Café", null)`);
   assert.deepStrictEqual(env.local.avoid, {});
+});
+
+// ---------- sync across devices ----------
+test("sync: another browser's changes merge in; the Target you're on stays yours", async () => {
+  const env = fresh();
+  await env.run(`startPurpose({ text: "Learn to solder" })`);
+  const cur = env.local.purpose;
+  await env.ticks(3);
+  const snap = await env.run("syncSnapshot()");
+  assert.ok(snap.has(`target:${cur.id}`) && snap.has("settings:all") && snap.has("avoid:all"));
+  assert.ok(!("lastCountAt" in snap.get(`target:${cur.id}`).data.record), "timer state stays local");
+  const rec = (id, text, extra = {}) => ({ id, text, startedAt: 1, usedSec: 50, videos: [], searches: [], ...extra });
+  await env.run(`syncMerge(${JSON.stringify([
+    { kind: "target", id: cur.id, rev: 2, data: { state: "paused", record: rec(cur.id, "Learn to solder", { notes: "flux first", usedSec: 5 }) } },
+    { kind: "target", id: "p1", rev: 2, data: { state: "active", record: rec("p1", "Tile a backsplash") } },
+    { kind: "target", id: "h1", rev: 2, data: { state: "completed", record: rec("h1", "Bake bread", { endedAt: 5, outcome: "yes" }) } },
+    { kind: "settings", id: "all", rev: 2, data: { strict: true, leisureMin: -5 } },
+    { kind: "avoid", id: "all", rev: 2, data: { rules: { "/@x/videos": { name: "X", action: "hide" }, "/@y": { name: "Y", action: "bogus" } } } }
+  ])}, true)`);
+  assert.strictEqual(env.local.purpose.id, cur.id, "still on it here");
+  assert.strictEqual(env.local.purpose.notes, "flux first");
+  assert.ok(env.local.purpose.usedSec >= 30, "time spent here isn't lost");
+  assert.ok(env.local.paused.some(p => p.id === "p1" && p.elsewhere), "in progress elsewhere: ready to pick up");
+  assert.ok(env.local.history.some(h => h.id === "h1" && h.type === "purpose" && h.outcome === "yes"));
+  assert.strictEqual(env.local.settings.strict, true);
+  assert.strictEqual(env.local.settings.leisureMin, 60, "invalid settings are ignored");
+  assert.deepStrictEqual(Object.keys(env.local.avoid), ["/@x"]);
+  // Finished elsewhere: finished here; deleted elsewhere: gone (not the current Target).
+  await env.run(`syncMerge(${JSON.stringify([{ kind: "target", id: cur.id, rev: 3, data: { state: "completed", record: rec(cur.id, "Learn to solder", { endedAt: 9, outcome: "partly" }) } },
+    { kind: "target", id: "p1", rev: 3, data: null }])})`);
+  assert.strictEqual(env.local.purpose, null);
+  assert.ok(env.local.history.some(h => h.id === cur.id && h.outcome === "partly"));
+  assert.ok(!env.local.paused.some(p => p.id === "p1"));
+});
+
+test("sync: only deliberate deletions are passed on, and only while sync is on", async () => {
+  const env = fresh();
+  await env.run(`saveForLater({ id: "v1aaaa", title: "A" })`);
+  await env.run(`removeSaved("v1aaaa")`);
+  assert.strictEqual(env.local.syncDeleted, undefined, "sync off: nothing noted");
+  env.local.sync = { on: true };
+  await env.run(`saveForLater({ id: "v2bbbb", title: "B" })`);
+  await env.run(`removeSaved("v2bbbb")`);
+  await env.run(`startPurpose({ text: "Fold a fitted sheet" })`);
+  await env.run(`finishPurpose("yes")`);
+  await env.run(`clearHistory()`);
+  assert.deepStrictEqual(env.local.syncDeleted.map(d => d.kind), ["saved", "target"]);
 });
 
 (async () => {

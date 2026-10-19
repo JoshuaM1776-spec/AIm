@@ -42,3 +42,26 @@ export function memDb(now = () => new Date()) {
     async addProgress(events) { progress.push(...clone(events)); }
   };
 }
+
+// Sync's storage, in memory, with the same rules as sync_apply (migration 0004): an item is stored
+// only if newer; a browser gets back what others wrote since its cursor, oldest first, a page at a time.
+const cloneJson = x => JSON.parse(JSON.stringify(x));
+export function memSync(limit = 300) {
+  const rows = new Map(); // `${user}|${kind}|${id}` -> row
+  let seq = 0;
+  return {
+    rows,
+    async apply(user, device, since, items) {
+      for (const it of items) {
+        const k = `${user}|${it.kind}|${it.id}`, old = rows.get(k);
+        if (!old || old.rev < it.rev) rows.set(k, { user, kind: it.kind, id: it.id, rev: it.rev, data: cloneJson(it.data ?? null), device, seq: ++seq });
+      }
+      const mine = [...rows.values()].filter(r => r.user === user);
+      const changed = mine.filter(r => r.seq > since && r.device !== device).sort((a, b) => a.seq - b.seq).slice(0, limit);
+      const more = changed.length >= limit;
+      const cursor = more ? changed.at(-1).seq : Math.max(since, ...mine.map(r => r.seq));
+      return { items: changed.map(r => ({ kind: r.kind, id: r.id, rev: r.rev, data: cloneJson(r.data) })), cursor, more };
+    },
+    async erase(user) { for (const [k, r] of rows) if (r.user === user) rows.delete(k); }
+  };
+}

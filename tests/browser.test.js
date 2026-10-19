@@ -99,6 +99,10 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
       return route.fulfill({ contentType: "application/json", body: JSON.stringify({ title: `Video ${id}`, author_name: `Chan ${id}`, author_url: `https://www.youtube.com/@chan${id}` }) });
     }
     // "Learn something": channel feeds (one Short each, which Aim skips) and a channel page to look an id up on.
+    if (u.pathname === "/feeds/videos.xml" && u.searchParams.get("playlist_id")) {
+      const f = SHORTS_FEEDS[u.searchParams.get("playlist_id")];
+      return f ? route.fulfill({ contentType: "application/atom+xml", body: f }) : route.fulfill({ status: 404, body: "" });
+    }
     if (u.pathname === "/feeds/videos.xml") {
       const f = FEEDS[u.searchParams.get("channel_id")];
       return f ? route.fulfill({ contentType: "application/atom+xml", body: atom(f) }) : route.fulfill({ status: 404, body: "" });
@@ -124,6 +128,11 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     `<entry><yt:videoId>${base}sh</yt:videoId><title>A quick one #shorts</title><link rel="alternate" href="https://www.youtube.com/shorts/${base}sh"/><author><name>${name}</name></author><published>2026-10-${day + 1}T10:00:00+00:00</published></entry>` +
     [1, 2, 3].map(i => `<entry><yt:videoId>${base}${i}</yt:videoId><title>${name} lesson ${i} &amp; more</title><link rel="alternate" href="https://www.youtube.com/watch?v=${base}${i}"/>` +
       `<author><name>${name}</name></author><published>2026-10-${String(day - i).padStart(2, "0")}T10:00:00+00:00</published></entry>`).join("") + `</feed>`;
+  // 3Blue1Brown's Shorts-only playlist (UUSH + its id after "UC"); other channels have none, so their
+  // Shorts come from their main feeds.
+  const SHORTS_FEEDS = { "UUSHYO_jab_esuFRV4b17AJtAw": `<?xml version="1.0"?><feed xmlns:yt="http://www.youtube.com/xml/schemas/2015"><title>3Blue1Brown</title>` +
+    [["shderiv01", "What a derivative really measures", 17], ["shfouri01", "Fourier series in a minute", 16], ["shprime01", "A strange pattern in primes", 15]]
+      .map(([id, t, day]) => `<entry><yt:videoId>${id}</yt:videoId><title>${t}</title><link rel="alternate" href="https://www.youtube.com/shorts/${id}"/><author><name>3Blue1Brown</name></author><published>2026-10-${day}T10:00:00+00:00</published></entry>`).join("") + `</feed>` };
   const setLocal = obj => sw.evaluate(o => chrome.storage.local.set(o), obj);
   const patchLocal = (key, fields) => sw.evaluate(async ([k, f]) => {
     const cur = (await chrome.storage.local.get(k))[k];
@@ -594,6 +603,41 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.goto("https://www.youtube.com/");
   await p.waitForSelector("#wp-home .wp-home-current");
   step("with a Target going, Learn something stays out of the way", !(await p.$(".wp-learn")));
+
+  // ---------- Shorts from your topics: a Quick review ----------
+  await sw.evaluate(() => serial(async () => {
+    await finishPurpose("yes");
+    await startPurpose({ text: "Calculus exam prep" });
+    await startStudy({ title: "Calculus", topics: [{ title: "Derivatives", brief: "Rates of change.", searches: ["derivatives explained"] }] });
+    const { purpose } = await chrome.storage.local.get("purpose");
+    await updateStudy({ topicId: purpose.study.topics[0].id, check: { assessmentId: "a1", objectives: [{ text: "Explain what a derivative measures", status: "needs_review" }] } });
+    await finishPurpose("partly");
+    await setSetting("learnShorts", true);
+  }));
+  await p.goto("https://www.youtube.com/");
+  await p.waitForSelector("#wp-home .wp-review-item", { timeout: 15000 });
+  if (process.env.SHOTS) { await p.waitForTimeout(300); await (await p.$("#wp-home")).screenshot({ path: `${process.env.SHOTS}/quick-review.png` }); }
+  const reviewIds = await p.$$eval(".wp-review-item", ns => ns.map(n => n.querySelector(".wp-review-thumb").style.backgroundImage.match(/vi\/([^/]+)\//)[1]));
+  step("Quick review: Shorts from your topics' channels (a channel's Shorts playlist when it has one), the one on something you studied first", reviewIds[0] === "shderiv01" &&
+    (await text(".wp-review-item")).includes("Reviews: Derivatives") && reviewIds.includes("khanvidsh") && !reviewIds.includes("tbobvidsh") && !reviewIds.some(id => id.startsWith("numb")), reviewIds.join());
+  await p.click(".wp-review-item");
+  await p.waitForURL(/shorts\/shderiv01/);
+  await p.waitForSelector(".wp-notice");
+  st = await store();
+  step("opening one starts a Quick review Target, and the Short plays", st.purpose?.text === "Quick review: Derivatives" && !(await p.$("#shorts-player .wp-player-card")) &&
+    (await text(".wp-notice")).includes("Quick review · 1 of"), st.purpose?.text);
+  await p.goto("https://www.youtube.com/shorts/s9");
+  await p.waitForSelector("#shorts-player .wp-player-card", { timeout: 6000 });
+  step("a Short from anywhere else waits, and offers the next review", (await text(".wp-player-card")).includes("Only Shorts from your topics") && !!(await p.$('.wp-player-card button:text-is("Next review")')));
+  await p.click('.wp-player-card button:text-is("Next review")');
+  await p.waitForURL(new RegExp(`shorts/${reviewIds[1]}`));
+  await p.waitForSelector(".wp-notice");
+  step("Next review plays the next one", (await text(".wp-notice")).includes("2 of") && !(await p.$("#shorts-player .wp-player-card")));
+  await sw.evaluate(() => serial(() => setSetting("learnShorts", false)));
+  await p.goto("https://www.youtube.com/shorts/shfouri01");
+  await p.waitForSelector("#shorts-player .wp-player-card", { timeout: 6000 });
+  step("with the setting off, every Short waits again", (await text(".wp-player-card")).includes("Shorts are hidden"));
+  await sw.evaluate(() => serial(() => finishPurpose("yes")));
   await sw.evaluate(() => serial(async () => { await finishPurpose("yes"); await setSetting("learnTopics", []); await setSetting("learnOff", []); }));
 
   // ---------- Aim Homeschool preview: the student's Today screen ----------

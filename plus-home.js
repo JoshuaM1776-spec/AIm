@@ -37,7 +37,11 @@ function features(ctx) {
       action: ["Open Pathways", () => open("pathways.html")] },
     { icon: "☰", title: "Learning record", text: "Everything you've worked on, with what your checks showed and what you made. Print it or save it as a PDF.",
       live: ctx.record ? `${ctx.record.targets} Targets completed · ${ctx.record.topicsChecked} topics checked · ${ctx.record.projects} projects` : null,
-      action: ["Open your record", () => open("record.html")] }
+      action: ["Open your record", () => open("record.html")] },
+    { icon: "⇄", title: "Sync across devices", text: "Your Targets, study sessions and learning record, saved videos and settings, on every computer where you sign in. Start at school, pick it up at home.",
+      how: "Off until you turn it on in Settings → Aim Plus.",
+      live: ctx.sync?.on ? (ctx.sync.lastAt ? "On" : "On, syncing") : null,
+      action: ["Open Settings", () => open("options.html#plus")] }
   ];
 }
 
@@ -61,7 +65,7 @@ async function render() {
   const plus = acct.signedIn && acct.plan === "plus";
   const study = s?.purpose?.study && !s.purpose.study.endedAt
     ? { title: s.purpose.study.title, of: s.purpose.study.topics.length, done: s.purpose.study.topics.filter(t => t.check).length } : null;
-  const ctx = { study, record: rec?.totals || null };
+  const ctx = { study, record: rec?.totals || null, sync: acct?.sync || null };
   const head = plus
     ? node("section", { className: `card${welcome ? " welcome" : ""}` },
         node("h1", { textContent: welcome ? `Welcome to ${BRAND} Plus` : `Your ${BRAND} Plus` }),

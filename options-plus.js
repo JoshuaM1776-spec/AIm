@@ -115,7 +115,41 @@ function accountView(st) {
   const out = node("button", { className: "btn tonal", type: "button", textContent: "Sign out" });
   out.onclick = async () => { if (await plusDo({ type: "plus-sign-out" })) { toast("Signed out."); renderPlus(); } };
   buttons.append(out);
-  return [...lines, buttons, yourData()];
+  return [...lines, ...(st.plan === "plus" && st.sync?.available ? [syncView(st.sync)] : []), buttons, yourData()];
+}
+
+// Sync across devices: off until turned on here. Says what it carries and when it last ran.
+function ago(ts) {
+  const m = Math.round((Date.now() - ts) / 60000);
+  return m < 1 ? "just now" : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : new Date(ts).toLocaleDateString();
+}
+function syncView(sy) {
+  const sw = node("input", { type: "checkbox", id: "plusSync", checked: !!sy.on });
+  sw.setAttribute("aria-label", "Sync across devices");
+  sw.onchange = async () => {
+    const r = await plusDo({ type: "plus-sync-set", on: sw.checked });
+    if (r?.result === "error") plusMsg(r.message);
+    else if (r) plusMsg(sw.checked ? "Synced. Turn it on in your other browsers too." : "Sync is off. What's already synced stays on Aim's server until you remove it.");
+    renderPlus(true);
+  };
+  const state = sy.on ? (sy.error ? `Last try didn't work: ${sy.error}` : sy.lastAt ? `Last synced ${ago(sy.lastAt)}.` : "Syncing…") : "";
+  const box = node("div", { className: "setting", style: "display:block" },
+    node("div", { className: "setting", style: "padding:0;border:0" },
+      node("div", { className: "what" }, node("b", { textContent: "Sync across devices" }),
+        node("span", { textContent: "Your Targets, study sessions and learning record, Saved for later, settings and channel rules, in every browser where you sign in. Kept on Aim's server with your account. Time spent per day stays in each browser." })),
+      node("label", { className: "switch" }, sw, node("i"))));
+  if (state) box.append(node("p", { className: "note", id: "plusSyncState", textContent: state }));
+  const row = node("div", { className: "form" });
+  if (sy.on) {
+    const now = node("button", { className: "btn tonal", type: "button", id: "plusSyncNow", textContent: "Sync now" });
+    now.onclick = async () => { const r = await plusDo({ type: "plus-sync-now" }); if (r) { plusMsg(r.result === "error" ? r.message : "Synced."); renderPlus(true); } };
+    row.append(now);
+  }
+  const erase = node("button", { className: "btn text", type: "button", id: "plusSyncErase", textContent: "Remove synced copy from Aim's server" });
+  erase.onclick = async () => { if (await plusDo({ type: "plus-sync-erase" })) { plusMsg("Removed from Aim's server, and sync is off. Everything in this browser stays."); renderPlus(true); } };
+  row.append(erase);
+  box.append(row);
+  return box;
 }
 
 // Your data: download all of it, or delete the account. Deleting asks you to type DELETE.

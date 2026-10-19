@@ -26,18 +26,21 @@ function learnChannels() {
 const xmlText = s => String(s || "").replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
   .replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&amp;/g, "&").trim();
 // A channel's feed (Atom), read with plain patterns: YouTube's Trusted Types rules can block parsers.
-function parseFeed(xml, channelName) {
-  return xml.split("<entry>").slice(1, 9).map(e => {
+// shorts: true keeps only Shorts, false leaves them out, "all" keeps everything (a Shorts-only playlist).
+function parseFeed(xml, channelName, shorts = false) {
+  return xml.split("<entry>").slice(1, 16).map(e => {
     const link = e.match(/<link[^>]*rel="alternate"[^>]*href="([^"]+)"/)?.[1] || "";
     return { id: e.match(/<yt:videoId>([\w-]{6,20})<\/yt:videoId>/)?.[1] || "", title: xmlText(e.match(/<title>([\s\S]*?)<\/title>/)?.[1]),
       channel: xmlText(e.match(/<author>\s*<name>([\s\S]*?)<\/name>/)?.[1]) || channelName,
       published: Date.parse(e.match(/<published>([^<]+)<\/published>/)?.[1] || "") || 0, short: /\/shorts\//.test(link) };
-  }).filter(v => v.id && v.title && !v.short && !/#shorts\b/i.test(v.title)).map(({ short, ...v }) => v);
+  }).filter(v => v.id && v.title && (shorts === "all" || (v.short || /#shorts\b/i.test(v.title)) === shorts)).slice(0, 8)
+    .map(({ short, ...v }) => ({ ...v, title: v.title.replace(/\s*#shorts\b/gi, "").trim() || v.title }));
 }
 
-async function fetchFeed(id) {
+// A channel's feed, or (playlist) one of its playlists' feeds.
+async function fetchFeed(id, playlist = false) {
   try {
-    const r = await fetch(`/feeds/videos.xml?channel_id=${encodeURIComponent(id)}`, { credentials: "omit" });
+    const r = await fetch(`/feeds/videos.xml?${playlist ? "playlist_id" : "channel_id"}=${encodeURIComponent(id)}`, { credentials: "omit" });
     const t = r.ok ? await r.text() : "";
     return t.includes("<feed") ? t : null;
   } catch { return null; }
@@ -49,14 +52,21 @@ async function resolveHandle(handle) {
     return t.match(/"(?:externalId|channelId)":"(UC[\w-]{22})"/)?.[1] || t.match(/\/channel\/(UC[\w-]{22})/)?.[1] || null;
   } catch { return null; }
 }
-// One channel, fresh: the known id first, then the handle looked up again if that fails.
-async function refreshChannel(c, cached) {
+// One channel, fresh: the known id first, then the handle looked up again if that fails. With
+// shorts, its Shorts too: every channel has a Shorts-only playlist, UUSH plus the rest of its id.
+async function refreshChannel(c, cached, shorts = false) {
   let id = cached?.id || c.id || null, xml = id ? await fetchFeed(id) : null;
   if (!xml && c.handle && !/^@UC[\w-]{22}$/.test(c.handle)) {
     const found = await resolveHandle(c.handle);
     if (found && found !== id) { id = found; xml = await fetchFeed(id); }
   }
-  return xml ? { id, at: Date.now(), videos: parseFeed(xml, c.name) } : { id: null, at: Date.now(), failed: true, videos: [] };
+  if (!xml) return { id: null, at: Date.now(), failed: true, videos: [], ...(shorts ? { shorts: [] } : {}) };
+  const out = { id, at: Date.now(), videos: parseFeed(xml, c.name) };
+  if (shorts) {
+    const list = await fetchFeed("UUSH" + id.slice(2), true);
+    out.shorts = list ? parseFeed(list, c.name, "all") : parseFeed(xml, c.name, true);
+  }
+  return out;
 }
 
 // Newest first, taking turns between channels (at most two from one), skipping what you've seen.
@@ -70,20 +80,21 @@ function pickLearn(channels, cache, seen, n = LEARN_SHOWN) {
 }
 
 async function loadLearn() {
-  const channels = learnChannels();
-  const key = channels.map(c => c.handle).join(",");
-  if (!channels.length) return (learnState = { key, videos: [] });
+  const channels = learnChannels(), shorts = !!settings.learnShorts;
+  const key = channels.map(c => c.handle).join(",") + (shorts ? "+shorts" : "");
+  if (!channels.length) return (learnState = { key, videos: [], shorts: [] });
   if (learnState?.key === key) return learnState;
   if (learnLoading?.key === key) return learnLoading.promise;
   const promise = (async () => {
     const { learn = {} } = await chrome.storage.local.get("learn");
     const cache = { ...(learn.channels || {}) }, fresh = {};
-    const stale = channels.filter(c => !cache[c.handle] || Date.now() - (cache[c.handle].at || 0) > LEARN_REFRESH_MS);
+    const stale = channels.filter(c => !cache[c.handle] || Date.now() - (cache[c.handle].at || 0) > LEARN_REFRESH_MS || (shorts && !cache[c.handle].shorts));
     for (let i = 0; i < stale.length; i += 3) // a few at a time
-      await Promise.all(stale.slice(i, i + 3).map(async c => { fresh[c.handle] = cache[c.handle] = await refreshChannel(c, cache[c.handle]); }));
+      await Promise.all(stale.slice(i, i + 3).map(async c => { fresh[c.handle] = cache[c.handle] = await refreshChannel(c, cache[c.handle], shorts); }));
     if (Object.keys(fresh).length) send({ type: "learn-cache", channels: fresh });
     const seen = new Set((await send({ type: "learn-seen" })) || []);
-    learnState = { key, videos: pickLearn(channels, cache, seen) };
+    learnState = { key, videos: pickLearn(channels, cache, seen),
+      shorts: shorts ? channels.flatMap(c => (cache[c.handle]?.shorts || []).filter(v => !seen.has(v.id)).map(v => ({ ...v, topic: c.topic }))) : [] };
     learnLoading = null;
     return learnState;
   })();
@@ -116,9 +127,10 @@ function learnBlock() {
       el("div", { class: "wp-label" }, "Learn something"),
       el("button", { class: "wp-link wp-learn-edit", onclick: () => send({ type: "open-options", section: "learn" }) }, "Your topics")),
     el("div", { class: "wp-muted wp-learn-loading" }, "Finding new videos from your topics…"));
-  loadLearn().then(({ videos }) => {
+  loadLearn().then(({ videos, shorts }) => {
     if (!box.isConnected) return;
     box.querySelector(".wp-learn-loading")?.remove();
+    fillReview(box, shorts);
     if (!videos.length) return box.append(el("div", { class: "wp-muted" }, "Nothing new from your topics right now. Check back tomorrow."));
     box.append(el("div", { class: "wp-home-minis wp-learn-row" }, ...videos.map(v => el("button", { class: "wp-mini wp-learn-item", title: v.title, onclick: () => startLearning(v, videos) },
       thumb(v, "wp-thumb-sm"), el("span", { class: "wp-mini-title" }, v.title), el("span", { class: "wp-learn-meta" }, `${v.channel} · ${v.topic}`)))));

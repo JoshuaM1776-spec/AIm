@@ -2,7 +2,7 @@
 // Aim Free uses no AI and talks to no server. Aim Plus (plus.js) talks to Aim's server only
 // after the user signs in, and only when config.js names a server.
 
-importScripts("store.js", "config.js", "plus.js");
+importScripts("store.js", "config.js", "plus.js", "sync.js");
 
 // Fires on first install and on every update or reload of the extension. A new install opens the
 // welcome tour; an update from before onboarding existed skips it (see setOnboarding in store.js).
@@ -107,6 +107,7 @@ const reads = {
   "search-check": m => checkSearch(m.query),
   "targets": () => readAll().then(resumable),
   "record": () => readAll().then(learningRecord),
+  "review-shorts": m => rankReviewShorts(m.shorts),
   "open-study": () => chrome.tabs.create({ url: chrome.runtime.getURL("study.html") }).then(() => ({ result: "applied" })),
   "open-welcome": () => chrome.tabs.create({ url: chrome.runtime.getURL("welcome.html") }).then(() => ({ result: "applied" })),
   "pathways": () => readPathways(),
@@ -168,5 +169,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   const run = w ? serial(async () => { await ensureMigrated(); return w(msg); })
     : serial(ensureMigrated).then(() => r(msg));
   run.then(res => sendResponse(res ?? null), e => sendResponse({ error: String(e.message || e) }));
+  if (SYNC_AFTER.has(msg.type)) run.then(syncSoon, () => {});
   return true;
 });

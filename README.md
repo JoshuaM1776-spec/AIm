@@ -37,6 +37,7 @@ Chrome extension, Manifest V3, no build step.
 | `content/filetext.js` | Reads a study guide file (.txt, .docx, .pdf) in the browser for a study session (Aim Plus) |
 | `content/topics.js` | Learn something: the topics and their hand-picked channels (also loaded by Settings) |
 | `content/learn.js` | Learn something: six new videos from your topics on the home page, from YouTube's public channel feeds, cached a day |
+| `content/shorts.js` | Shorts from your topics (a Learn something setting): the Quick review row, matched to what you've learned, and which Shorts may play |
 | `content/channels.js` | Your channels: Prefer (a "Your channel" badge; the librarian puts them first), Warn and Hide |
 | `content/notes.js` | Notes on a Target (Aim menu, or the notes icon in the results bar), saved as you type, with "Suggest questions" when signed in |
 | `content/study.js` | Study sessions on YouTube: the offer, the planning dialog, the topic header on results, the plan in the watch page's sidebar |
@@ -53,6 +54,7 @@ Chrome extension, Manifest V3, no build step.
 | `welcome.html/js` | The welcome tour: opens once on install (what Aim is, how it works, a few choices, pin it), and from Settings → "Show the welcome tour again" |
 | `config.js`, `plus.js` | Aim Plus in the service worker: where the server is (empty = Free only), sign-in with an emailed code, calling Aim's AI endpoint. Only Aim's own pages can use it, never YouTube tabs. |
 | `plus.html`, `plus-home.js` | The Aim Plus page: what each Plus feature does, with a button to use it once you have Plus; the welcome page after subscribing |
+| `sync.js` | Aim Plus sync across devices, in the service worker: sends what changed in this browser, merges what changed in others (off until turned on in Settings) |
 | `options-plus.js` | The Aim Plus section of Settings (hidden until `config.js` is filled in) |
 | `signin.html/js` | Where the link in the sign-in email lands. It hands the session to the worker, which accepts it only for a sign-in this browser started. |
 | `pathways.html/js` | Pathways (Aim Plus): themes from what you've explored, work connected to an interest, and a path's four steps (See it, Try it, Meet it, Prepare for it) with reflections |
@@ -107,7 +109,7 @@ The name is Aim. It lives in one place, so it's easy to change if it ever has to
 
 `manifest.json` has a `"key"` so Aim's development ID stays `fdebaflkeabmcggljcjmchnepgddbplp` wherever it's loaded from; Supabase's sign-in redirect depends on it. Remove it from the copy you upload to the Chrome Web Store.
 
-Everything lives in `chrome.storage.local`, except the Aim Plus sign-in session, which `plus.js` keeps in the service worker's IndexedDB so YouTube tabs can't read it. `schemaVersion` records the data format. When it changes, bump `SCHEMA_VERSION` in `store.js`, add a step to `migrateStorage()`, and add a test to `tests/store.test.js`.
+Everything lives in `chrome.storage.local` (with Aim Plus sync on, a copy of Targets, saved videos, settings and channel rules is also on Aim's server; see `sync.js`), except the Aim Plus sign-in session, which `plus.js` keeps in the service worker's IndexedDB so YouTube tabs can't read it. `schemaVersion` records the data format. When it changes, bump `SCHEMA_VERSION` in `store.js`, add a step to `migrateStorage()`, and add a test to `tests/store.test.js`.
 
 ## Testing
 

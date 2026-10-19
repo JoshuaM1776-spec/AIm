@@ -23,7 +23,7 @@ Aim itself makes one kind of request: when you open a video, it asks YouTube's p
 
 A study guide file you upload for a study session (Aim Plus) is read in your browser; only its text, which you see and can edit first, is sent, exactly as if you had pasted it.
 
-"Learn something" reads the public video feeds of the channels for the topics you picked, from youtube.com, in your YouTube tab, about once a day. It sends nothing about you; which topics you picked stays in this browser.
+"Learn something" reads the public video feeds of the channels for the topics you picked, from youtube.com, in your YouTube tab, about once a day (with "Shorts from your topics" on, also each channel's public Shorts list). It sends nothing about you; which topics you picked stays in this browser. Matching those Shorts to what you've learned happens in this browser, with no AI.
 
 Paying for Aim Plus happens on Stripe's pages; Aim never sees your card. Aim's server keeps your Stripe customer id and your subscription's status and renewal date, to know your plan; deleting your account cancels the subscription and removes them.
 
@@ -67,7 +67,8 @@ Signing in is optional, and Aim Free works the same without it. If you sign in u
 - **"Where could this take me?"** (any signed-in account): sends the subject or topic you asked about (and the lesson's one-line description) to Aim's server and the AI. Nothing about you, and nothing is stored.
 - **Pathways** (Aim Plus only, off until you turn it on): your answers to "Want more of this?", the topics they're about, your reflections, the themes found and the paths you explore are kept in your browser. To find themes and write a path's steps, Aim sends the AI those topics and answers (never your watch history), the stage you chose (middle school, high school…), and the career or interest you're exploring; nothing of it is stored on the server. Pathways never uses your gender, background, family, income or location, gives no scores, and is never shared or sold. Turning it off deletes all of it from your browser.
 - **TeachBack** (Aim Plus only): when you test your understanding, the topic, any notes you paste, the questions and your answers are stored on Aim's server with the results, so you can come back to them. Your answers are sent to the AI to evaluate them. Results are estimates, never shared, and deleted with your account.
-- **Your Targets, searches, watch history and settings stay in your browser** as described above. They aren't uploaded unless a future feature asks you first.
+- **Sync across devices** (Aim Plus only, off until you turn it on in Settings → Aim Plus): keeps a copy of your Targets (their searches, the videos you watched for them with titles and channels, notes, study sessions and checks), your Saved for later videos, your settings and your channel rules on Aim's server with your account, so every browser where you sign in and turn it on has them. Time spent per day, breaks, strict-mode reasons and Pathways stay in each browser. **Remove synced copy from Aim's server** (same place) deletes the copy right away and turns sync off; deleting your account deletes it too; Download my data includes it.
+- **Otherwise, your Targets, searches, watch history and settings stay in your browser** as described above.
 - The sign-in session is kept in the extension's own storage on your computer, not readable by web pages.
 - **Signing out** ends the session on this computer and on the server.
 - **Download my data** (Settings → Aim Plus) gives you one file with everything Aim's server holds for your account, plus what Aim keeps in your browser.

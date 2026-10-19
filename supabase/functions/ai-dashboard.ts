@@ -1428,6 +1428,43 @@ export async function handleStripeWebhook(req: Request, cfg: Pick<BillingConfig,
   return new Response(JSON.stringify({ received: true, result }), { headers: { "Content-Type": "application/json" } });
 }
 
+// ---------- sync.ts ----------
+// Aim Plus sync: the server's half. Each browser sends what changed on it and gets back what other
+// browsers changed (see sync.js in the extension, and migration 0004). No AI. The newest change to
+// an item wins; the database decides that, so two browsers syncing at once can't undo each other.
+
+export const SYNC_KINDS = ["target", "saved", "settings", "avoid"] as const;
+export interface SyncItem { kind: string; id: string; rev: number; data: unknown }
+export interface SyncStore {
+  apply(userId: string, device: string, since: number, items: SyncItem[]): Promise<{ items: SyncItem[]; cursor: number; more: boolean }>;
+  erase(userId: string): Promise<void>; // "Stop syncing and remove the copy on Aim's server"
+}
+
+export const SYNC_LIMITS = { items: 100, itemBytes: 64 * 1024 };
+
+export class SyncError extends Error {}
+
+// What a browser may send: a few kinds of item, each a plain object (or null, deleted), none huge.
+export function readSyncInput(input: unknown, now: number): { device: string; since: number; items: SyncItem[] } {
+  const i = (input || {}) as Record<string, unknown>;
+  const device = typeof i.device === "string" && /^[\w-]{8,64}$/.test(i.device) ? i.device : "";
+  if (!device) throw new SyncError("Missing device.");
+  const since = Number.isSafeInteger(i.since) && (i.since as number) >= 0 ? i.since as number : 0;
+  const raw = i.items === undefined ? [] : i.items;
+  if (!Array.isArray(raw) || raw.length > SYNC_LIMITS.items) throw new SyncError("Too many items.");
+  const items = raw.map((x: Record<string, unknown>) => {
+    if (!x || !(SYNC_KINDS as readonly string[]).includes(x.kind as string)) throw new SyncError("Unknown item kind.");
+    if (typeof x.id !== "string" || !/^[\w-]{1,64}$/.test(x.id)) throw new SyncError("Bad item id.");
+    // A browser's clock can be wrong, but not by more than a day into the future.
+    if (!Number.isSafeInteger(x.rev) || (x.rev as number) <= 0 || (x.rev as number) > now + 864e5) throw new SyncError("Bad item time.");
+    const data = x.data ?? null;
+    if (data !== null && (typeof data !== "object" || Array.isArray(data))) throw new SyncError("Bad item.");
+    if (new TextEncoder().encode(JSON.stringify(data)).length > SYNC_LIMITS.itemBytes) throw new SyncError("An item is too large.");
+    return { kind: x.kind as string, id: x.id, rev: x.rev as number, data };
+  });
+  return { device, since, items };
+}
+
 // ---------- handler.ts ----------
 // Aim Plus — the AI endpoint's logic, free of Deno and SDK imports so it can be tested in Node.
 // index.ts wires it to Supabase and the Claude API.
@@ -1449,6 +1486,7 @@ export interface Config {
   limits: Limits;      // Plus accounts
   freeLimits?: Limits; // free accounts (the librarian only); defaults to a tenth of `limits`
   maxBodyBytes: number;
+  maxSyncBytes?: number; // a sync round carries more (up to 100 Targets); defaults to maxBodyBytes
 }
 
 export type ClaudeResult =
@@ -1474,6 +1512,7 @@ export interface Deps {
     portal(customer: string): Promise<string>;
     close(customer: string): Promise<void>; // deleting the account: cancels the subscription
   };
+  sync?: SyncStore;   // Plus sync across devices (sync.ts)
   now(): Date;
   config: Config;
 }
@@ -1521,7 +1560,7 @@ export const TASKS: Record<string, Task> = {
 };
 
 // Handled directly in handle(), without AI.
-const ACCOUNT_TASKS = new Set(["status", "account-export", "account-delete", "billing-checkout", "billing-portal"]);
+const ACCOUNT_TASKS = new Set(["status", "account-export", "account-delete", "billing-checkout", "billing-portal", "sync", "sync-erase"]);
 
 export function limitsFor(plan: Plan, config: Config): Limits {
   if (plan === "plus") return config.limits;
@@ -1596,10 +1635,12 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
   if (!token) return fail(401, "auth", "Sign in to use Aim Plus.", cors);
 
   const raw = await req.text();
-  if (new TextEncoder().encode(raw).length > deps.config.maxBodyBytes) return fail(413, "too_large", "That request is too large.", cors);
+  const size = new TextEncoder().encode(raw).length, cfg = deps.config;
+  if (size > Math.max(cfg.maxBodyBytes, cfg.maxSyncBytes || 0)) return fail(413, "too_large", "That request is too large.", cors);
   let body: { task?: unknown; input?: unknown };
   try { body = JSON.parse(raw || "{}"); } catch { return fail(400, "bad_json", "The request isn't valid JSON.", cors); }
   const name = typeof body?.task === "string" ? body.task : "";
+  if (size > (name === "sync" ? cfg.maxSyncBytes || cfg.maxBodyBytes : cfg.maxBodyBytes)) return fail(413, "too_large", "That request is too large.", cors);
   if (!ACCOUNT_TASKS.has(name) && !Object.hasOwn(TASKS, name)) return fail(400, "task", "Unknown task.", cors);
 
   let user;
@@ -1615,7 +1656,7 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
     const b = deps.billing ? await deps.billing.info(user.id) : null;
     const billing = { available: !!deps.billing, status: b?.status ?? null, renewsAt: b?.renewsAt ?? null,
       cancelAtPeriodEnd: !!b?.cancelAtPeriodEnd, manage: !!b?.customer };
-    return json(200, { ok: true, email: user.email ?? null, plan, usage, limits: limitsFor(plan, deps.config), billing }, cors);
+    return json(200, { ok: true, email: user.email ?? null, plan, usage, limits: limitsFor(plan, deps.config), billing, sync: !!deps.sync }, cors);
   }
 
   // Subscribe, or manage the subscription: a Stripe page for the extension to open.
@@ -1633,6 +1674,19 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
       console.error("billing", (e as Error).message);
       return fail(502, "billing", "Couldn't reach the payment service. Try again shortly.", cors);
     }
+  }
+
+  // Sync across devices (Plus): this browser's changes in, other browsers' changes out. Erasing works
+  // on any plan, so someone who stopped paying can still remove their copy.
+  if (name === "sync" || name === "sync-erase") {
+    if (!deps.sync) return fail(503, "sync", "Sync isn't available yet.", cors);
+    if (name === "sync-erase") { await deps.sync.erase(user.id); return json(200, { ok: true, erased: true }, cors); }
+    if (plan !== "plus") return fail(403, "plan", "This needs Aim Plus.", cors);
+    let input;
+    try { input = readSyncInput(body.input, deps.now().getTime()); }
+    catch (e) { if (e instanceof SyncError) return fail(400, "sync", e.message, cors); throw e; }
+    const r = await deps.sync.apply(user.id, input.device, input.since, input.items);
+    return json(200, { ok: true, ...r }, cors);
   }
 
   // Your data: download all of it, or delete the account and everything with it. No AI.
@@ -1802,7 +1856,8 @@ const account: NonNullable<Deps["account"]> = {
       .select("assessment_id, seq, objective, student, kind, question, status, answer, hints, evaluation, created_at").in("assessment_id", aIds).order("seq")) : [];
     const progress = ids.length ? must(await admin.from("progress_events")
       .select("learner_id, source, kind, topic, objective, evidence, assessment_id, created_at").in("learner_id", ids).order("created_at")) : [];
-    return { profile, aiUsage: usage, learners, assessments, assessmentTurns: turns, progress };
+    const synced = must(await admin.from("sync_items").select("kind, id, rev, data").eq("user_id", userId).order("seq"));
+    return { profile, aiUsage: usage, learners, assessments, assessmentTurns: turns, progress, synced };
   },
   async deleteUser(userId) {
     const { error } = await admin.auth.admin.deleteUser(userId);
@@ -1823,6 +1878,17 @@ const billing: Deps["billing"] = billingCfg.secretKey && billingCfg.pricePlus ? 
   portal: customer => portalUrl(stripeApi(billingCfg.secretKey), billingCfg, customer),
   close: customer => deleteCustomer(billingCfg.secretKey, customer)
 } : undefined;
+
+// Sync across devices: one database function applies a browser's changes and returns everyone else's
+// (migration 0004), so the newest change wins even when two browsers sync at once.
+const sync: SyncStore = {
+  async apply(userId, device, since, items) {
+    const r = must(await admin.rpc("sync_apply", { p_user: userId, p_device: device, p_since: since, p_items: items })) as
+      { items: { kind: string; id: string; rev: number; data: unknown }[]; cursor: number; more: boolean };
+    return { items: r.items, cursor: Number(r.cursor), more: !!r.more };
+  },
+  async erase(userId) { must(await admin.from("sync_items").delete().eq("user_id", userId)); }
+};
 
 const deps: Deps = {
   async getUser(token) {
@@ -1856,6 +1922,7 @@ const deps: Deps = {
   db,
   account,
   billing,
+  sync,
   now: () => new Date(),
   config: {
     origins: env("AIM_EXTENSION_ORIGINS").split(",").map(s => s.trim()).filter(Boolean),
@@ -1870,7 +1937,8 @@ const deps: Deps = {
       dayTokens: num("AIM_FREE_DAY_TOKENS", 80_000),
       minuteCalls: num("AIM_FREE_MINUTE_CALLS", 10)
     },
-    maxBodyBytes: 24 * 1024 // a pasted study guide can run to a few pages
+    maxBodyBytes: 24 * 1024, // a pasted study guide can run to a few pages
+    maxSyncBytes: 1024 * 1024
   }
 };
 

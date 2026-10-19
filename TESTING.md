@@ -18,7 +18,7 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 
 ## Real-YouTube check (automated)
 
-`tools/real-youtube-check.mjs` loads Aim on the real youtube.com and checks what breaks when YouTube changes its pages: the home card replacing the feed, results (links, titles, channels, lengths), the watch page (video id, title, channel, sidebar, Up next), every selector in `content/youtube.js` on its page, and every channel in Learn something's list (found, with videos). It writes `report.json` and screenshots.
+`tools/real-youtube-check.mjs` loads Aim on the real youtube.com and checks what breaks when YouTube changes its pages: the home card replacing the feed, results (links, titles, channels, lengths), the watch page (video id, title, channel, sidebar, Up next), every selector in `content/youtube.js` on its page, and every channel in Learn something's list (found, with videos, and its Shorts list). It writes `report.json` and screenshots.
 
 ```sh
 PLAYWRIGHT=… CHROMIUM_PATH=… node tools/real-youtube-check.mjs ./real-youtube-report
@@ -308,6 +308,19 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] **Upgrade to Plus** opens Stripe Checkout (test mode: card 4242 4242 4242 4242). After paying, the Plus page opens once with **Welcome to Aim Plus**, and each feature now has its button and a live line (your current study session, record totals).
 - [ ] Settings → Aim Plus shows when it renews and **Manage subscription** (Stripe's portal). Cancelling there shows "Ends on …"; at the end, the plan goes back to Free.
 - [ ] Deleting the account cancels the subscription in Stripe.
+
+### 32. Sync across devices (0.45, Plus)
+- [ ] Settings → Aim Plus shows **Sync across devices**, off. Turning it on says **Synced** and **Last synced just now**.
+- [ ] In a second Chrome profile, sign in to the same account and turn sync on: Targets set aside appear under Set aside (one in progress elsewhere says so), finished ones and their study sessions appear on the Targets page and in the learning record, and Saved for later, settings and channel rules match.
+- [ ] Finish a Target in one profile, then **Sync now** in the other: it's finished there too. Remove a saved video: it's gone in both. Time per day stays separate.
+- [ ] **Remove synced copy from Aim's server** turns sync off and keeps everything in this browser. Signing out turns sync off.
+
+### 33. Shorts from your topics (0.45)
+- [ ] Settings → Learn something → **Shorts from your topics** on (with a topic chosen): YouTube's home page shows **Quick review**, five Shorts from your topics' channels, upright thumbnails, no "#shorts" in titles.
+- [ ] After a study session on a topic (or a Target), a Short about it comes first, labeled **Reviews: <topic>**.
+- [ ] Clicking one starts the Target "Quick review: …" and the Short plays, with a bar: **Quick review · 1 of 5** and **Next**. The last one says **Done reviewing**, which finishes the Target.
+- [ ] Swiping to a Short YouTube picked: it waits behind **Only Shorts from your topics**, with **Next review**.
+- [ ] Turn the setting off: every Short waits again, and Quick review is gone.
 
 ## Known issues (not regressions)
 

@@ -707,3 +707,11 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 .wp .wp-learn-row .wp-learn-item { width: auto; }
 .wp-learn-row .wp-thumb-sm { width: 100%; height: auto; aspect-ratio: 16 / 9; }
 @media (max-width: 560px) { .wp-learn-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* Quick review: Shorts from your topics, upright thumbnails (content/shorts.js). */
+.wp-review { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.wp-review-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.wp .wp-review-item { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; color: inherit; font: inherit; }
+.wp-review-thumb { display: block; width: 100%; aspect-ratio: 3 / 4; border-radius: 8px; background-color: var(--wp-tonal); background-size: cover; background-position: center; }
+.wp-review-item .wp-mini-title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.wp .wp-review-item:focus-visible { outline: 2px solid var(--wp-primary); outline-offset: 2px; border-radius: 8px; }
+@media (max-width: 560px) { .wp-review-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } }

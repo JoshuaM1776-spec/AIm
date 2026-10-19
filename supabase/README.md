@@ -102,4 +102,7 @@ psql "$TEST_DB" -v ON_ERROR_STOP=1 -f tests/db/stub.sql -f supabase/migrations/0
 psql "$TEST_DB2" -v ON_ERROR_STOP=1 -f tests/db/stub.sql -f supabase/migrations/0001_init.sql \
   -c "insert into auth.users values ('00000000-0000-0000-0000-0000000000e1','e@example.com')" \
   -f supabase/migrations/0002_teachback.sql -f tests/db/test_teachback.sql
+# sync across devices, on a fresh database
+psql "$TEST_DB3" -v ON_ERROR_STOP=1 -f tests/db/stub.sql -f supabase/migrations/0001_init.sql -f supabase/migrations/0002_teachback.sql \
+  -f supabase/migrations/0003_billing.sql -f supabase/migrations/0004_sync.sql -f tests/db/test_sync.sql
 ```

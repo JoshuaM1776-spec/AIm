@@ -102,7 +102,11 @@ async function continueAfterRules(info) {
   const p = activePurpose();
   if (!p) return showChoiceCard(info);
   if (p.timeUp) return showTimeUpCard();
-  if (isShortsPage() && settings.hideShorts !== false) return showShortsCard();
+  if (isShortsPage() && settings.hideShorts !== false) {
+    // Shorts from your topics (Settings → Learn something) play; any other waits.
+    if (await isLearnShort(id)) { if (currentId !== id) return; release(id); return showReviewBar(id); }
+    return showShortsCard();
+  }
   evaluateVideo(info);
 }
 

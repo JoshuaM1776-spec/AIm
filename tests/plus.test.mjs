@@ -10,7 +10,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { handle } from "../supabase/functions/ai/handler.ts";
-import { memDb } from "./helpers/memdb.mjs";
+import { memDb, memSync } from "./helpers/memdb.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT || "playwright");
@@ -105,8 +105,9 @@ const deps = {
     portal: async () => `${base}/stripe/portal`,
     close: async customer => { srv.closedCustomers = [...(srv.closedCustomers || []), customer]; }
   },
+  sync: memSync(),
   now: () => new Date(),
-  config: { origins: [], limits: { dayCalls: 300, dayTokens: 400000, minuteCalls: 20 }, maxBodyBytes: 16384 }
+  config: { origins: [], limits: { dayCalls: 300, dayTokens: 400000, minuteCalls: 20 }, maxBodyBytes: 16384, maxSyncBytes: 1024 * 1024 }
 };
 
 const server = http.createServer(async (req, res) => {
@@ -207,7 +208,7 @@ const [front] = await Promise.all([ctx.waitForEvent("page"), opt.click("button:t
 await front.waitForSelector(".feature");
 const frontText = await front.textContent("main");
 step("the Plus page, before Plus: what it does and the way to upgrade", frontText.includes("helps you actually learn") && !!(await front.$("button:text-is('Upgrade to Plus')")) &&
-  (await front.$$(".feature")).length === 7 && !(await front.$(".feature .row")));
+  (await front.$$(".feature")).length === 8 && !(await front.$(".feature .row")));
 await front.close();
 
 const local = await sw.evaluate(() => chrome.storage.local.get(null));
@@ -595,6 +596,85 @@ await sw.evaluate(async () => { const s = await loadSession(); s.expiresAt = Dat
 await opt.reload();
 await opt.waitForSelector("#plusEmail");
 step("a revoked session shows the sign-in form again", (await sw.evaluate(() => loadSession())) === null);
+
+// ---------- sync across devices: a second browser ----------
+async function signInHere(page) {
+  await page.waitForSelector("#plusEmail");
+  await page.fill("#plusEmail", user.email);
+  await page.click("button:text-is('Send sign-in email')");
+  await page.fill("#plusCode", CODE);
+  await page.click("button:text-is('Sign in')");
+  await page.waitForSelector("button:text-is('Sign out')");
+}
+await signInHere(opt);
+// Browser A: a Target set aside, one finished (with a study session), a saved video, strict mode, a hidden channel.
+const sinkId = await sw.evaluate(async () => {
+  await serial(() => startPurpose({ text: "Fix the kitchen sink drain", search: "sink drain clog" }));
+  const { purpose } = await chrome.storage.local.get("purpose");
+  await serial(() => pausePurpose());
+  await serial(() => startPurpose({ text: "Understand derivatives" }));
+  await serial(() => startStudy({ title: "Derivatives", topics: [{ title: "Limits", brief: "b", searches: ["limits intro"] }] }));
+  await serial(() => finishPurpose("yes"));
+  await serial(() => saveForLater({ id: "vidSaved01", title: "How drains work", channel: "Plumbing 101" }));
+  await serial(() => setSetting("strict", true));
+  await serial(() => setAvoid("/@noisy", "Noisy", "hide"));
+  return purpose.id;
+});
+await opt.waitForSelector("#plusSync");
+step("Plus shows Sync across devices, off until turned on", !(await opt.isChecked("#plusSync")));
+const shotSync = async name => { if (process.env.SHOTS) { await opt.setViewportSize({ width: 1000, height: 900 }); await (await opt.$("#plus")).screenshot({ path: `${process.env.SHOTS}/${name}.png` }); } };
+await opt.click("#plusSync");
+await opt.waitForFunction(() => /Synced/.test(document.getElementById("plusMsg").textContent));
+await shotSync("sync-on");
+step("turning sync on sends this browser's Targets, saved videos and settings", [...deps.sync.rows.values()].some(r => r.id === sinkId) && [...deps.sync.rows.values()].some(r => r.data?.record?.text === "Understand derivatives") &&
+  [...deps.sync.rows.values()].some(r => r.kind === "saved") && (await opt.textContent("#plusSyncState")).includes("Last synced"));
+
+const ctx2 = await chromium.launchPersistentContext(fs.mkdtempSync(path.join(os.tmpdir(), "aim-")), {
+  executablePath: process.env.CHROMIUM_PATH || undefined,
+  headless: true, args: [`--disable-extensions-except=${ext}`, `--load-extension=${ext}`]
+});
+let [sw2] = ctx2.serviceWorkers();
+if (!sw2) sw2 = await ctx2.waitForEvent("serviceworker");
+await new Promise(r => setTimeout(r, 500));
+await sw2.evaluate(() => serial(() => setOnboarding({ seenAll: true })));
+const opt2 = await ctx2.newPage();
+await opt2.goto(`chrome-extension://${extId}/options.html`);
+await signInHere(opt2);
+await opt2.waitForSelector("#plusSync");
+await opt2.click("#plusSync");
+await opt2.waitForFunction(() => /Synced/.test(document.getElementById("plusMsg").textContent));
+const b1 = await sw2.evaluate(() => chrome.storage.local.get(["paused", "history", "saved", "settings", "avoid"]));
+step("the second browser gets the set-aside Target, ready to resume", b1.paused.some(p => p.id === sinkId && p.text === "Fix the kitchen sink drain" && p.searches?.[0]?.q === "sink drain clog"));
+step("…the finished one, with its study session, for the learning record", b1.history.some(h => h.text === "Understand derivatives" && h.outcome === "yes" && h.study?.title === "Derivatives"));
+step("…saved videos, settings and channel rules", b1.saved.some(v => v.id === "vidSaved01") && b1.settings.strict === true && b1.avoid["/@noisy"]?.action === "hide");
+const rec2 = await sw2.evaluate(() => readAll().then(learningRecord));
+step("the learning record in the second browser includes the first browser's study", rec2.entries.some(e => e.study?.title === "Derivatives"));
+
+// Browser B finishes the sink Target and removes the saved video; A catches up with Sync now.
+await sw2.evaluate(async id => { await serial(() => resumePurpose(id)); await serial(() => finishPurpose("partly")); await serial(() => removeSaved("vidSaved01")); return syncNow(); }, sinkId);
+await opt.click("#plusSyncNow");
+await opt.waitForFunction(() => /Synced/.test(document.getElementById("plusMsg").textContent));
+const a2 = await sw.evaluate(() => chrome.storage.local.get(["paused", "history", "saved"]));
+step("finishing a Target in one browser finishes it in the other", !a2.paused.some(p => p.id === sinkId) && a2.history.some(h => h.id === sinkId && h.outcome === "partly"));
+step("removing a saved video removes it everywhere", !a2.saved.some(v => v.id === "vidSaved01"));
+step("nothing is sent back and forth once both agree", (await sw.evaluate(() => syncNow())).sent === 0 && (await sw2.evaluate(() => syncNow())).sent === 0);
+// A Target in progress in one browser shows up in the other as one to pick up.
+await sw.evaluate(async () => { await serial(() => startPurpose({ text: "Wire a three-way switch" })); return syncNow(); });
+await sw2.evaluate(() => syncNow());
+step("a Target in progress elsewhere can be picked up here", (await sw2.evaluate(() => chrome.storage.local.get("paused"))).paused.some(p => p.text === "Wire a three-way switch" && p.elsewhere));
+await ctx2.close();
+
+await opt.click("#plusSyncErase");
+await opt.waitForFunction(() => /Removed from Aim's server/.test(document.getElementById("plusMsg").textContent) && !document.getElementById("plusSync")?.checked);
+step("Remove synced copy empties the server and turns sync off; this browser keeps its data",
+  deps.sync.rows.size === 0 && !(await opt.isChecked("#plusSync")) && (await sw.evaluate(() => chrome.storage.local.get("history"))).history.length > 0,
+  `${deps.sync.rows.size} ${await opt.isChecked("#plusSync")}`);
+await opt.click("#plusSync");
+await opt.waitForFunction(() => /Synced/.test(document.getElementById("plusMsg").textContent));
+await opt.click("button:text-is('Sign out')");
+await opt.waitForSelector("#plusEmail");
+step("signing out turns sync off", (await sw.evaluate(() => syncState())).on === false);
+await sw.evaluate(() => serial(async () => { await chrome.storage.local.set({ purpose: null }); }));
 
 // Sign in again, then sign out.
 await opt.fill("#plusEmail", user.email);

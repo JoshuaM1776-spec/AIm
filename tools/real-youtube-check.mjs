@@ -111,11 +111,17 @@ try {
         try { const res = await fetch(`/${handle}`); const t = res.ok ? await res.text() : ""; found = t.match(/"(?:externalId|channelId)":"(UC[\w-]{22})"/)?.[1] || null; } catch {}
         entries = found ? await feed(found) : null;
       }
-      return { entries, via, found };
+      // "Shorts from your topics" reads the channel's Shorts-only playlist (UUSH + the id after "UC").
+      const cid = found || id;
+      let shorts = null;
+      if (cid) try { const res = await fetch(`/feeds/videos.xml?playlist_id=UUSH${cid.slice(2)}`); const t = res.ok ? await res.text() : ""; shorts = t.includes("<feed") ? (t.match(/<entry>/g) || []).length : null; } catch {}
+      return { entries, via, found, shorts };
     }, c);
     report.channels.push({ topic: c.topic, name: c.name, handle: c.handle, hintId: c.id || null, ...r });
-    check(`channel: ${c.name} (${c.handle})`, r.entries > 0, r.entries === null ? "not found: check the handle" : `${r.entries} videos via ${r.via}${r.found && r.found !== c.id ? `, id ${r.found}` : ""}`);
+    check(`channel: ${c.name} (${c.handle})`, r.entries > 0, r.entries === null ? "not found: check the handle" : `${r.entries} videos via ${r.via}${r.found && r.found !== c.id ? `, id ${r.found}` : ""}, ${r.shorts === null ? "no Shorts list" : `${r.shorts} Shorts`}`);
   }
+  check("Shorts lists load for most channels", report.channels.filter(c => c.shorts !== null).length >= report.channels.length / 2,
+    `${report.channels.filter(c => c.shorts !== null).length} of ${report.channels.length}`);
   check("no page errors from Aim", !errors.some(e => /wp-|Aim/.test(e)), errors.join(" | "));
 } finally {
   writeFileSync(join(out, "report.json"), JSON.stringify(report, null, 2));

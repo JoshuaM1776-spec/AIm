@@ -20,7 +20,9 @@ const DEFAULT_SETTINGS = {
   // Strict mode: bending a rule (more time, a warned channel, a search that doesn't match) asks for a reason.
   strict: false,
   // "Learn something": topics you picked (content/topics.js), and curated channels you took out.
-  learnTopics: [], learnOff: []
+  learnTopics: [], learnOff: [],
+  // Shorts from your Learn something channels only: a few at a time, as quick reviews of what you've learned.
+  learnShorts: false
 };
 const GRACE_CHOICES = [0, 5, 10, 15, 30];
 const minutesSetting = max => v => Number.isInteger(v) && v >= 0 && v <= max;
@@ -36,7 +38,8 @@ const SETTING_RULES = {
   noAutoplay: v => typeof v === "boolean",
   strict: v => typeof v === "boolean",
   learnTopics: v => Array.isArray(v) && v.length <= 20 && v.every(x => typeof x === "string" && /^[a-z]{2,20}$/.test(x)),
-  learnOff: v => Array.isArray(v) && v.length <= 200 && v.every(x => typeof x === "string" && /^@[\w.-]{1,60}$/.test(x))
+  learnOff: v => Array.isArray(v) && v.length <= 200 && v.every(x => typeof x === "string" && /^@[\w.-]{1,60}$/.test(x)),
+  learnShorts: v => typeof v === "boolean"
 };
 
 // ---------- write queue ----------
@@ -245,7 +248,7 @@ function resumable(s) {
 function summary(p, state) {
   return { id: p.id, text: p.text, state, lastActiveAt: p.lastActiveAt || p.pausedAt || p.endedAt || p.startedAt,
     usedSec: Math.round(p.usedSec || 0), videos: (p.videos || []).length, searches: (p.searches || []).length,
-    outcome: p.outcome || null, last: p.last || null, study: studyProgress(p), notes: p.notes || "", recent: recentVideos(p), trail: searchTrail(p) };
+    outcome: p.outcome || null, last: p.last || null, study: studyProgress(p), notes: p.notes || "", elsewhere: !!p.elsewhere, recent: recentVideos(p), trail: searchTrail(p) };
 }
 
 // The way a Target went, from its searches: "truck ac recharge → refrigerant types → ac compressor".
@@ -410,6 +413,7 @@ async function resumePurpose(id) {
     s.paused = s.paused.filter(p => p.id !== id);
     next = { ...next, suspended: false, lastCountAt: 0, lastActiveAt: Date.now() };
     delete next.pausedAt;
+    delete next.elsewhere;
     if (next.last?.id) allow(next, [next.last], [], "");
   } else {
     const done = s.history.find(h => h.type === "purpose" && h.id === id);
@@ -1103,9 +1107,10 @@ async function saveLearnCache(channels) {
   const cache = learn.channels || {};
   for (const [handle, c] of Object.entries(channels || {}).slice(0, 80)) {
     if (!/^@[\w.-]{1,60}$/.test(handle) || !c || typeof c !== "object") continue;
+    const list = a => (Array.isArray(a) ? a : []).slice(0, 8).map(v => ({ id: clip(v.id, 20), title: clip(v.title, 200), channel: clip(v.channel, 100),
+      published: Number(v.published) || 0 })).filter(v => /^[\w-]{6,20}$/.test(v.id) && v.title);
     cache[handle] = { id: /^UC[\w-]{22}$/.test(c.id) ? c.id : null, at: Number(c.at) || Date.now(), failed: !!c.failed,
-      videos: (Array.isArray(c.videos) ? c.videos : []).slice(0, 8).map(v => ({ id: clip(v.id, 20), title: clip(v.title, 200), channel: clip(v.channel, 100),
-        published: Number(v.published) || 0 })).filter(v => /^[\w-]{6,20}$/.test(v.id) && v.title) };
+      videos: list(c.videos), ...(Array.isArray(c.shorts) ? { shorts: list(c.shorts) } : {}) };
   }
   await chrome.storage.local.set({ learn: { channels: cache } });
   return { result: "applied" };
@@ -1116,6 +1121,43 @@ async function learnSeen() {
   const ids = new Set();
   for (const r of [purpose, ...paused, ...history.slice(-200)]) for (const v of r?.videos || []) ids.add(v.id);
   return [...ids].slice(-1000);
+}
+
+// ---------- quick review with Shorts ----------
+// What you've learned, as things to review: study topics (those a TeachBack check said need work
+// count most), then each Target and its searches. Each Short from your topics' channels is matched to
+// the one it shares the most meaningful words with. No AI.
+function reviewConcepts(s) {
+  const out = [];
+  const add = (label, text, weight) => {
+    const words = [...new Set(meaningfulWords(text).filter(w => w.length >= 4))];
+    if (words.length) out.push({ label: clip(label, 80), words, weight });
+  };
+  for (const p of [s.purpose, ...s.paused, ...s.history.filter(h => h.type === "purpose")].filter(Boolean)) {
+    for (const t of p.study?.topics || []) {
+      const weak = (t.check?.objectives || []).some(o => o.status === "needs_review" || o.status === "partial");
+      add(t.title, [t.title, ...(t.check?.objectives || []).map(o => o.text)].join(" "), weak ? 3 : 2);
+    }
+    const text = String(p.text || "").replace(/^(Exploring|Quick review):\s*/, "");
+    if (!/^Quick review/.test(p.text || "")) add(text, [text, ...(p.searches || []).map(x => x.q)].join(" "), 1);
+  }
+  return out;
+}
+// shorts: [{ id, title, channel, topic, published }] → the same, ranked: reviews of things you've
+// learned first (best match first), then the newest. Each gets `review`: what it reviews, or null.
+async function rankReviewShorts(shorts) {
+  const concepts = reviewConcepts(await readAll());
+  const ranked = (Array.isArray(shorts) ? shorts : []).slice(0, 80).map(v => {
+    const words = new Set(meaningfulWords(v.title));
+    let best = null, score = 0;
+    for (const c of concepts) {
+      const n = c.words.filter(w => words.has(w)).length * c.weight;
+      if (n > score) { score = n; best = c.label; }
+    }
+    return { id: clip(v.id, 20), title: clip(v.title, 200), channel: clip(v.channel, 100), topic: clip(v.topic, 60),
+      published: Number(v.published) || 0, review: best, score };
+  }).filter(v => /^[\w-]{6,20}$/.test(v.id));
+  return ranked.sort((a, b) => b.score - a.score || b.published - a.published).map(({ score, ...v }) => v);
 }
 
 // ---------- save for later ----------
@@ -1131,10 +1173,100 @@ async function removeSaved(id) {
   const { saved = [] } = await chrome.storage.local.get("saved");
   if (!saved.some(v => v.id === id)) return { result: "applied" };
   await chrome.storage.local.set({ saved: saved.filter(v => v.id !== id) });
+  await noteDeleted("saved", [id]);
   return { result: "applied" };
 }
 
 async function clearHistory() {
+  const { history = [] } = await chrome.storage.local.get("history");
   await chrome.storage.local.set({ history: [] });
+  await noteDeleted("target", history.filter(h => h.type === "purpose").map(h => h.id));
+  return { result: "applied" };
+}
+
+// ---------- sync across devices (Aim Plus, sync.js) ----------
+// What sync carries, as items: each Target (current, set aside or finished, with its study session),
+// each Saved for later video, settings, and channel rules. Usage, breaks, reasons and Pathways stay
+// in this browser. Something you delete on purpose (Clear history, removing a saved video) is noted,
+// so it's deleted in your other browsers too; things that only age out of the lists aren't.
+async function noteDeleted(kind, ids) {
+  const { sync } = await chrome.storage.local.get("sync");
+  if (!sync?.on || !ids.length) return;
+  const { syncDeleted = [] } = await chrome.storage.local.get("syncDeleted");
+  await chrome.storage.local.set({ syncDeleted: [...syncDeleted, ...ids.map(id => ({ kind, id }))].slice(-1000) });
+}
+
+// A Target as synced: without what only this browser's timer uses, and with its longest lists cut short.
+function syncTarget(p, state) {
+  const { lastCountAt, suspended, elsewhere, ...rec } = p;
+  if (rec.allowed?.length > 150) rec.allowed = rec.allowed.slice(-150);
+  if (rec.allowedLists?.length > 50) rec.allowedLists = rec.allowedLists.slice(-50);
+  if (JSON.stringify(rec).length > 60_000) { rec.videos = (rec.videos || []).slice(-80); rec.searches = (rec.searches || []).slice(-40); rec.allowed = []; }
+  return { state, record: rec };
+}
+
+// Every item, keyed "kind:id".
+async function syncSnapshot() {
+  const d = await chrome.storage.local.get(["purpose", "paused", "history", "saved", "avoid"]);
+  const items = new Map(), put = (kind, id, data) => { if (/^[\w-]{1,64}$/.test(String(id))) items.set(`${kind}:${id}`, { kind, id: String(id), data }); };
+  for (const h of d.history || []) if (h.type === "purpose" && h.id) put("target", h.id, syncTarget(h, "completed"));
+  for (const p of d.paused || []) put("target", p.id, syncTarget(p, "paused"));
+  if (d.purpose) put("target", d.purpose.id, syncTarget(d.purpose, "active"));
+  for (const v of d.saved || []) put("saved", v.id, v);
+  put("settings", "all", await getSettings());
+  put("avoid", "all", { rules: d.avoid || {} });
+  return items;
+}
+
+// Applies other browsers' changes. first: this browser's first sync, where channel rules from both
+// sides are kept (afterwards the newest set wins, so removing a rule syncs too).
+async function syncMerge(items, first = false) {
+  const d = await chrome.storage.local.get(["purpose", "paused", "history", "saved", "avoid", "stop"]);
+  let purpose = d.purpose || null, paused = d.paused || [], history = d.history || [], saved = d.saved || [], avoid = d.avoid || {};
+  let stop = d.stop || null, settings = null;
+  const byTime = h => h.endedAt || h.startedAt || 0;
+  for (const it of items || []) {
+    const data = it.data && typeof it.data === "object" ? it.data : null;
+    if (it.kind === "target") {
+      const rec = data?.record && typeof data.record === "object" ? { ...data.record, id: it.id } : null;
+      if (!rec || typeof rec.text !== "string") {  // deleted elsewhere (not the Target you're on here)
+        paused = paused.filter(p => p.id !== it.id);
+        history = history.filter(h => h.id !== it.id);
+        continue;
+      }
+      if (purpose?.id === it.id) {
+        if (data.state === "completed") {  // finished in another browser
+          history = [...history.filter(h => h.id !== it.id), { ...rec, type: "purpose" }];
+          purpose = null;
+          if (stop?.kind === "purpose") stop = null;
+        } else {
+          const allowed = [...(purpose.allowed || []), ...(rec.allowed || [])].filter((v, i, a) => a.findIndex(x => x.id === v.id) === i).slice(-MAX_ALLOWED);
+          purpose = { ...rec, allowed, usedSec: Math.max(rec.usedSec || 0, purpose.usedSec || 0), lastCountAt: purpose.lastCountAt || 0, suspended: !!purpose.suspended };
+          delete purpose.pausedAt;
+        }
+        continue;
+      }
+      paused = paused.filter(p => p.id !== it.id);
+      history = history.filter(h => h.id !== it.id);
+      if (data.state === "completed") history.push({ ...rec, type: "purpose" });
+      else paused.push({ ...rec, type: undefined, pausedAt: rec.pausedAt || rec.lastActiveAt || Date.now(), lastCountAt: 0, suspended: false, elsewhere: data.state === "active" });
+    } else if (it.kind === "saved") {
+      saved = saved.filter(v => v.id !== it.id);
+      if (data?.id === it.id) saved.push({ id: clip(data.id, 20), title: clip(data.title, 300), channel: clip(data.channel, 200), at: Number(data.at) || Date.now() });
+    } else if (it.kind === "settings" && data) {
+      settings ||= await getSettings();
+      for (const [k, v] of Object.entries(data)) if (SETTING_RULES[k]?.(v)) settings[k] = v;
+    } else if (it.kind === "avoid" && data?.rules && typeof data.rules === "object") {
+      const rules = {};
+      for (const [k, c] of Object.entries(data.rules))
+        if (["hide", "warn", "prefer"].includes(c?.action)) rules[channelPath(k)] = { name: clip(c.name, 200) || k, action: c.action };
+      avoid = first ? { ...rules, ...avoid } : rules;
+    }
+  }
+  paused.sort((a, b) => (b.lastActiveAt || b.pausedAt || 0) - (a.lastActiveAt || a.pausedAt || 0));
+  for (const old of paused.splice(MAX_PAUSED)) history.push(purposeRecord(old, null));
+  history.sort((a, b) => byTime(a) - byTime(b));
+  saved.sort((a, b) => (a.at || 0) - (b.at || 0));
+  await chrome.storage.local.set({ purpose, paused, history: history.slice(-200), saved: saved.slice(-200), avoid, stop, ...(settings ? { settings } : {}) });
   return { result: "applied" };
 }

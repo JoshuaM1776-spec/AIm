@@ -31,6 +31,7 @@ async function render() {
   $("homeschoolResetRow").hidden = !st.homeschool;
   for (const k of TOGGLES) $(k).checked = S[k] !== false;
   $("strict").checked = S.strict === true;
+  $("learnShorts").checked = S.learnShorts === true;
   renderLearn(S);
   for (const k of ["leisureMin", "graceMin", "totalMin", "purposeLimitMin"]) {
     const sel = $(k);
@@ -80,6 +81,7 @@ $("homeschoolReset").onclick = async () => {
 };
 for (const k of TOGGLES) $(k).onchange = () => setSetting(k, $(k).checked);
 $("strict").onchange = () => setSetting("strict", $("strict").checked);
+$("learnShorts").onchange = () => setSetting("learnShorts", $("learnShorts").checked);
 // "Learn something": topics as toggles; under each chosen topic, its channels, which you can take out.
 function renderLearn(S) {
   const on = new Set(S.learnTopics || []), off = new Set(S.learnOff || []);

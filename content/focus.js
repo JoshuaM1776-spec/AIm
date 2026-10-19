@@ -66,15 +66,17 @@ function renderFeedNote() {
 
 // ---------------- Shorts ----------------
 // Opening a Short while you're on purpose: it waits behind a card, like any other drift.
+// With Shorts from your topics on, it says so, and offers the next Short in your review.
 function showShortsCard() {
   hold();
-  const p = activePurpose();
+  const p = activePurpose(), review = settings.learnShorts ? reviewCardParts(currentId) : null;
+  if (review) closeNotice(); // the review bar of the Short before
   showPlayerCard(
     brandLine(),
-    el("div", { class: "wp-title" }, "Shorts are hidden while you're on Target"),
+    el("div", { class: "wp-title" }, review ? review.title : "Shorts are hidden while you're on Target"),
     p ? el("div", { class: "wp-current" }, el("div", { class: "wp-label" }, "Current Target"), el("div", { class: "wp-strong" }, p.text)) : null,
     el("div", { class: "wp-actions wp-actions-start" },
-      el("button", { class: "wp-btn wp-btn-primary", onclick: goBack }, "Back on Target")),
+      ...(review?.actions || [el("button", { class: "wp-btn wp-btn-primary", onclick: goBack }, "Back on Target")])),
     el("div", { class: "wp-label" }, "Or take a break"),
     breakChips(takeBreak));
 }
