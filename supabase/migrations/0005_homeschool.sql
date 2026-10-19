@@ -7,11 +7,12 @@
 -- edits so a change never reaches the student until the parent approves it again. Uploaded
 -- curricula have their own table, private to the household (docs/HOMESCHOOL.md → "Bring your own
 -- curriculum"). Only the server (service role) writes any of this; parents read their household.
+-- Safe to run again: everything checks whether it's already there.
 
-alter table public.profiles drop constraint profiles_plan_check;
+alter table public.profiles drop constraint if exists profiles_plan_check;
 alter table public.profiles add constraint profiles_plan_check check (plan in ('free', 'plus', 'homeschool'));
 
-create table public.households (
+create table if not exists public.households (
   id uuid primary key default gen_random_uuid(),
   owner uuid not null unique references auth.users (id) on delete cascade,
   name text not null default 'Our family',
@@ -20,14 +21,14 @@ create table public.households (
 );
 
 alter table public.learners
-  add column household_id uuid references public.households (id) on delete cascade,
-  add column levels jsonb not null default '{}'::jsonb,    -- subject → level, not one grade
-  add column interests text not null default '';
+  add column if not exists household_id uuid references public.households (id) on delete cascade,
+  add column if not exists levels jsonb not null default '{}'::jsonb,    -- subject → level, not one grade
+  add column if not exists interests text not null default '';
 
 -- Plans as documents: kind 'curriculum' (key: learner id), 'curriculum_version' (learner:version),
 -- 'week' (learner:YYYY-MM-DD, the Monday), 'channels' and 'materials' (key 'all'). version counts
 -- saves, so two parents editing at once can't overwrite each other unknowingly.
-create table public.hs_docs (
+create table if not exists public.hs_docs (
   household_id uuid not null references public.households (id) on delete cascade,
   kind text not null check (kind in ('curriculum', 'curriculum_version', 'week', 'channels', 'materials')),
   key text not null,
@@ -37,7 +38,7 @@ create table public.hs_docs (
   primary key (household_id, kind, key)
 );
 
-create table public.curriculum_uploads (
+create table if not exists public.curriculum_uploads (
   id uuid primary key default gen_random_uuid(),
   household_id uuid not null references public.households (id) on delete cascade,
   title text not null,
@@ -48,23 +49,23 @@ create table public.curriculum_uploads (
 );
 
 -- A student's extension: an anonymous account tied to one learner.
-create table public.student_devices (
+create table if not exists public.student_devices (
   user_id uuid primary key references auth.users (id) on delete cascade,
   learner_id uuid not null references public.learners (id) on delete cascade,
   paired_at timestamptz not null default now()
 );
-create table public.pairing_codes (
+create table if not exists public.pairing_codes (
   code_hash text primary key,                             -- sha-256 of the code; the code itself isn't kept
   learner_id uuid not null references public.learners (id) on delete cascade,
   expires_at timestamptz not null
 );
 
 -- Progress: "developing" (TeachBack's partial), and which curriculum objective it's about.
-alter table public.progress_events drop constraint progress_events_kind_check;
+alter table public.progress_events drop constraint if exists progress_events_kind_check;
 alter table public.progress_events add constraint progress_events_kind_check
   check (kind in ('viewed', 'item_completed', 'discussed', 'developing', 'demonstrated', 'needs_review'));
-alter table public.progress_events add column plan_objective text, add column plan_item text;
-alter table public.assessments add column plan_objective text;
+alter table public.progress_events add column if not exists plan_objective text, add column if not exists plan_item text;
+alter table public.assessments add column if not exists plan_objective text;
 
 alter table public.households enable row level security;
 alter table public.hs_docs enable row level security;
@@ -72,17 +73,21 @@ alter table public.curriculum_uploads enable row level security;
 alter table public.student_devices enable row level security;
 alter table public.pairing_codes enable row level security;   -- server only
 
+drop policy if exists "Parents read their household" on public.households;
 create policy "Parents read their household" on public.households for select to authenticated
   using ((select auth.uid()) = owner);
+drop policy if exists "Parents read their plans" on public.hs_docs;
 create policy "Parents read their plans" on public.hs_docs for select to authenticated
   using (household_id in (select id from public.households where owner = (select auth.uid())));
+drop policy if exists "Parents read their uploads" on public.curriculum_uploads;
 create policy "Parents read their uploads" on public.curriculum_uploads for select to authenticated
   using (household_id in (select id from public.households where owner = (select auth.uid())));
+drop policy if exists "Parents read their students' devices" on public.student_devices;
 create policy "Parents read their students' devices" on public.student_devices for select to authenticated
   using (learner_id in (select l.id from public.learners l join public.households h on h.id = l.household_id where h.owner = (select auth.uid())));
 
 -- Saving a document: only if it's still the version the editor started from (or new).
-create function public.hs_save(p_household uuid, p_kind text, p_key text, p_data jsonb, p_expect int)
+create or replace function public.hs_save(p_household uuid, p_kind text, p_key text, p_data jsonb, p_expect int)
 returns int language plpgsql security definer set search_path = public as $$
 declare v int;
 begin
