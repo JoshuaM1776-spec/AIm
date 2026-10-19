@@ -414,6 +414,23 @@ test("librarian: the channels you prefer go to the ranking (names only, at most 
   assert.ok(!prompt.includes("CHANNELS THEY TRUST"));
 });
 
+test("Put it to work: Plus only; leans on what needs practice; tidied and bounded", async () => {
+  let prompt = "";
+  const deps = makeDeps({ plan: "plus", claude: req => {
+    prompt = req.prompt;
+    return { ok: true, model: "main", inputTokens: 10, outputTokens: 5, text: JSON.stringify({ title: "Trace a sugar cube", task: "Follow glucose to ATP.",
+      steps: ["a", "b", "c", "d", "e", "f", ""], shows: "You can explain ATP.", minutes: 900, safety: "" }) };
+  } });
+  const r = await call(deps, { task: "study-apply", input: { title: "Cellular respiration", previous: "Draw a mitochondrion",
+    topics: [{ title: "Glycolysis", brief: "Glucose is split.", practice: ["Where glycolysis happens"] }, { title: "" }] } });
+  assert.strictEqual(r.status, 200);
+  assert.match(prompt, /needs practice: Where glycolysis happens/);
+  assert.match(prompt, /PREVIOUS SUGGESTION: Draw a mitochondrion/);
+  assert.strictEqual(r.body.steps.length, 5);
+  assert.strictEqual(r.body.minutes, 240);
+  assert.strictEqual((await call(makeDeps({ plan: "free" }), { task: "study-apply", input: { title: "x y" } })).status, 403);
+});
+
 test("study sessions: Plus only; the student's notes keep their structure; topics are tidied", async () => {
   let prompt = "";
   const deps = makeDeps({ plan: "plus", claude: req => {

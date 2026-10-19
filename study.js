@@ -49,6 +49,51 @@ function topicCard(st, t, i) {
         notes: [t.brief, st.notes].filter(Boolean).join("\n\n").slice(0, 3000), study: t.id }))));
 }
 
+// "Put it to work": one small project using what the session covered, once there's something to
+// build on (a topic checked, or the session ended). Optional, and never graded.
+let applyBusy = false, applyErr = "", applyNoteOpen = false, applyDraft = "";
+async function suggestApply(st) {
+  applyBusy = true; applyErr = ""; render();
+  let r;
+  try {
+    r = await chrome.runtime.sendMessage({ type: "plus-call", task: "study-apply", input: {
+      title: st.title, goal: (await send({ type: "status" }))?.purpose?.text || "", previous: st.apply?.title || "",
+      topics: st.topics.map(t => ({ title: t.title, brief: t.brief, practice: (t.check?.objectives || []).filter(o => o.status !== "demonstrated").map(o => o.text) })) } });
+  } catch { r = { error: `${BRAND} was updated or reloaded. Reload this page.` }; }
+  applyBusy = false;
+  if (!r || r.error) applyErr = r?.error || "Something went wrong. Try again.";
+  else await send({ type: "study-update", apply: r });
+  render();
+}
+function applyCard(st) {
+  if (!st.topics.some(t => t.check) && !st.endedAt) return null;
+  const a = st.apply;
+  const head = node("div", { className: "spread" }, node("h2", { textContent: "Put it to work" }),
+    a?.minutes ? node("span", { className: "pill", textContent: `About ${a.minutes} min` }) : null);
+  if (!a) return node("div", { className: "card apply" }, head,
+    node("p", { className: "muted", textContent: "A small project that uses what you studied, aimed at what your checks say to practice. Optional, and never graded." }),
+    applyErr ? node("p", { className: "error", textContent: applyErr }) : null,
+    node("div", { className: "row" }, btn(applyBusy ? "Thinking…" : "Suggest a project", "", () => suggestApply(st))));
+  const done = !!a.doneAt;
+  return node("div", { className: "card apply" }, head,
+    node("h3", { textContent: a.title }),
+    node("p", { textContent: a.task }),
+    a.steps.length ? node("ol", { className: "clean" }, a.steps.map(x => node("li", { textContent: x }))) : null,
+    a.shows ? node("p", { className: "muted small", textContent: `Finishing it shows: ${a.shows}` }) : null,
+    a.safety ? node("p", { className: "note small", textContent: a.safety }) : null,
+    done ? node("div", { className: "note" }, node("span", { className: "pill ok", textContent: "Done" }), a.note ? node("span", { textContent: a.note }) : null) : null,
+    !done && applyNoteOpen ? node("div", {},
+      node("label", { className: "field", textContent: "What did you make or find out? (a sentence or two)" }),
+      (() => { const ta = node("textarea", { value: applyDraft, rows: 3, oninput: e => { applyDraft = e.target.value; } }); return ta; })(),
+      node("div", { className: "row" },
+        btn("Save", "", async () => { await send({ type: "study-update", applyDone: { note: applyDraft } }); applyNoteOpen = false; applyDraft = ""; render(); }),
+        btn("Cancel", "text", () => { applyNoteOpen = false; render(); }))) : null,
+    applyErr ? node("p", { className: "error", textContent: applyErr }) : null,
+    done || applyNoteOpen ? null : node("div", { className: "row" },
+      btn("I did it", "", () => { applyNoteOpen = true; render(); }),
+      btn(applyBusy ? "Thinking…" : "Suggest another", "text", () => suggestApply(st))));
+}
+
 async function render() {
   const s = await send({ type: "status" });
   const st = s?.purpose?.study;
@@ -67,6 +112,7 @@ async function render() {
     st.scopeNote ? node("p", { className: "note", textContent: st.scopeNote }) : null,
     review.length ? node("div", { className: "note" }, node("b", { textContent: "Worth reviewing: " }), review.map(t => t.title).join(", ")) : null,
     st.topics.map((t, i) => topicCard(st, t, i)),
+    applyCard(st),
     keep(`interest|${st.id}`, () => PW.interest({ topic: st.title, source: "study" })),
     st.endedAt ? null : node("div", { className: "row" },
       btn("Continue studying", "", () => { const t = st.topics[st.current] || st.topics[0]; location.href = yt(`/results?search_query=${encodeURIComponent(t.searches[0])}`); }),

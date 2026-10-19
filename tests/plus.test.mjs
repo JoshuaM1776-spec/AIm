@@ -54,6 +54,8 @@ const deps = {
     const reply = !req.schema ? "ready" : JSON.stringify(
       props.includes("first_question") ? { type: "concepts", first_question: "What does a plant actually make during photosynthesis?",
           objectives: ["Explain what photosynthesis produces", "Explain the role of light", "Explain where it happens in the cell"] }
+      : props.includes("shows") ? (srv.applyPrompt = req.prompt, { title: "Trace a sugar cube", task: "Follow one glucose molecule from breakfast to ATP and draw where each step happens.",
+          steps: ["Draw a cell", "Mark glycolysis", "Mark the Krebs cycle"], shows: "You can explain where ATP comes from.", minutes: 30, safety: "" })
       : props.includes("evaluation") ? srv.director.shift()
       : props.includes("hint") ? { hint: "Think about what the plant keeps for later." }
       : props.includes("topics") ? (srv.studyPrompt = req.prompt, { title: "Cellular respiration", scope_note: "",
@@ -329,6 +331,10 @@ await yt.waitForURL(/search_query=cellular%20respiration%20explained/);
 await yt.waitForSelector("button:text-is('Organize a study session')");
 step("a learning goal offers a study session (Plus)", (await yt.textContent("#wp-results-bar")).includes("Studying this?"));
 await yt.click("button:text-is('Organize a study session')");
+await yt.setInputFiles(".wp-dialog input[type=file]", new URL("./fixtures/syllabus-chrome.pdf", import.meta.url).pathname);
+await yt.waitForFunction(() => /Glycolysis: where it happens/.test(document.querySelector(".wp-dialog textarea")?.value || ""));
+step("Upload a file: a syllabus PDF is read in the browser into the study guide box",
+  (await yt.textContent(".wp-study-file-note")).includes("Read syllabus-chrome.pdf") && (await yt.inputValue(".wp-dialog textarea")).includes("BIO 110"));
 await yt.fill(".wp-dialog textarea", "Unit 3\n- glycolysis\n- Krebs cycle");
 await yt.click(".wp-dialog button:text-is('Start')");
 await yt.waitForURL(/search_query=glycolysis%20explained/);
@@ -480,6 +486,17 @@ await overview.waitForSelector("h1:text-is('Cellular respiration')");
 const ov = await overview.textContent("main");
 step("the summary shows topics, videos, checks and what to review", ov.includes("2 topics · 1 checked") && ov.includes("Glycolysis") &&
   ov.includes("What your check showed") && ov.includes("Worth reviewing") && !/null|\[object/.test(ov), ov.slice(0, 200));
+await overview.click(".apply button:text-is('Suggest a project')");
+await overview.waitForSelector(".apply h3");
+const ap = await overview.textContent(".apply");
+step("Put it to work: a project aimed at what needs practice", ap.includes("Trace a sugar cube") && ap.includes("About 30 min") && ap.includes("Mark glycolysis") &&
+  /needs practice: /.test(srv.applyPrompt || ""), (srv.applyPrompt || "").slice(0, 200));
+await overview.click(".apply button:text-is('I did it')");
+await overview.fill(".apply textarea", "Drew it on the whiteboard and explained it to my sister.");
+await overview.click(".apply button:text-is('Save')");
+await overview.waitForSelector(".apply .pill.ok");
+const studied = (await sw.evaluate(() => chrome.storage.local.get("purpose"))).purpose.study.apply;
+step("I did it keeps the note with the session", !!studied.doneAt && studied.note.includes("whiteboard"));
 overview.on("dialog", d => d.accept());
 await overview.click("button:text-is('End study session')");
 await overview.waitForSelector("text=Session ended");

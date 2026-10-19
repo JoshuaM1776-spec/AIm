@@ -685,3 +685,7 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 /* Strict mode's reason prompt. */
 .wp .wp-reason-input { width: 100%; min-height: 64px; resize: vertical; padding: 10px 12px; line-height: 20px; }
 .wp-reason-err:empty { display: none; }
+
+/* Upload a study guide file in the study session dialog. */
+.wp-study-file { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 8px; }
+.wp-study-file-note { font-size: 13px; line-height: 18px; }

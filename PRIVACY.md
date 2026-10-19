@@ -21,6 +21,8 @@ This data never leaves your computer. Aim does not sell, share or transfer it, a
 
 Aim itself makes one kind of request: when you open a video, it asks YouTube's public "oEmbed" address on youtube.com for that video's title and channel, so it can tell which video is on screen. This request goes to YouTube, the site you're already on, and contains only the video's address.
 
+A study guide file you upload for a study session (Aim Plus) is read in your browser; only its text, which you see and can edit first, is sent, exactly as if you had pasted it.
+
 Strict mode (off unless you turn it on) keeps the reasons you give for bending a rule in this browser, with the Target they were for; they never leave it.
 
 The "Up next from your search" list, and the videos you've watched for a Target on the home screen and the Targets page, show thumbnails from YouTube's image server (i.ytimg.com), the same images YouTube itself shows.

@@ -6,6 +6,7 @@ Run all three before and after every phase. A change is safe to keep when everyt
 
 ```sh
 node tests/store.test.js      # data layer: migrations, timer, write queue, settings (no dependencies)
+node tests/filetext.test.mjs  # study guide files: .docx and PDFs from Chrome, LibreOffice, ReportLab (no dependencies)
 node tests/browser.test.js    # loads the extension in Chromium on a fake youtube.com (needs Playwright)
 node --experimental-strip-types tests/ai.test.mjs     # Aim Plus AI endpoint logic (no dependencies)
 node --experimental-strip-types tests/plus.test.mjs   # Aim Plus sign-in in Chromium against a local stand-in server (needs Playwright)
@@ -267,6 +268,11 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] All Targets: a Target with two or more searches shows **Your path: first → second → third**.
 - [ ] Settings → Advanced → **Strict mode** on. "Add 15 minutes" (Time's up), "Continue" past a warned channel, and "Yes, it's part of it" for an unrelated search each ask why first; Continue stays disabled until you write a short sentence; "Never mind" changes nothing.
 - [ ] The popup → Your activity → **Reasons you gave** lists them, newest first, with the Target. Strict mode off: no questions.
+
+### 27. Put it to work, and a syllabus file (0.39, Plus)
+- [ ] In a study session, check a topic, then open the summary: **Put it to work** offers **Suggest a project**. It suggests one small project with steps, a time estimate and what finishing it shows, aimed at what your check said to practice; regulated subjects get a safety note.
+- [ ] **I did it** asks what you made or found out and keeps it with the session; **Suggest another** gives something different.
+- [ ] Organize a study session → **Upload a file**: a .docx, a .pdf exported from Word or Google Docs, and a .txt each fill the study guide box with their text, to check before Start. A scanned PDF says to paste the text instead. Over 6,000 characters, it says only the start fits.
 
 ## Known issues (not regressions)
 

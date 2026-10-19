@@ -573,11 +573,16 @@ async function startStudy({ title, scopeNote, topics, notes }) {
 }
 
 // videos: the librarian's picks for a topic; current: move to a topic; check: a TeachBack result.
-async function updateStudy({ topicId, videos, current, check, end }) {
+async function updateStudy({ topicId, videos, current, check, end, apply, applyDone }) {
   const s = await readAll();
   const st = s.purpose?.study;
   if (!st) return { result: "error", message: "No study session." };
   if (end) st.endedAt = Date.now();
+  // "Put it to work": the suggested project, and whether (and how) the student did it.
+  if (apply && typeof apply === "object") st.apply = { title: clip(apply.title, 80), task: clip(apply.task, 500),
+    steps: (Array.isArray(apply.steps) ? apply.steps : []).map(x => clip(x, 200)).filter(Boolean).slice(0, 5), shows: clip(apply.shows, 200),
+    minutes: Number(apply.minutes) || 30, safety: clip(apply.safety, 300), at: Date.now(), doneAt: null, note: "" };
+  if (applyDone && st.apply) { st.apply.doneAt = Date.now(); st.apply.note = clip(applyDone.note, 500); }
   if (Number.isInteger(current) && current >= 0 && current < st.topics.length) st.current = current;
   const t = st.topics.find(x => x.id === topicId);
   if (t && Array.isArray(videos)) t.videos = videos.slice(0, 4).map(v => ({ id: clip(v.id, 20), title: clip(v.title, 200), channel: clip(v.channel, 100), length: videoLength(v.length), reason: clip(v.reason, 120) })).filter(v => v.id);

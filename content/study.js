@@ -22,8 +22,25 @@ const topicSearchUrl = t => `/results?search_query=${encodeURIComponent(t.search
 function openStudyDialog(p) {
   closeDropdown();
   const notes = el("textarea", { class: "wp-input", rows: "5", maxlength: "6000",
-    placeholder: "Optional: paste your study guide, syllabus or notes, so the topics match your class." });
+    placeholder: "Optional: your study guide, syllabus or notes (paste, or upload a .docx, .pdf or .txt), so the topics match your class." });
   const err = el("div", { class: "wp-error" });
+  // Or a file: its text is read here, in the browser, and put in the box to check before planning.
+  const fileNote = el("span", { class: "wp-muted wp-study-file-note" });
+  const picker = el("input", { type: "file", accept: ".txt,.md,.docx,.pdf,text/plain", hidden: true });
+  picker.addEventListener("change", async () => {
+    const file = picker.files?.[0];
+    picker.value = "";
+    if (!file) return;
+    err.textContent = ""; fileNote.textContent = `Reading ${file.name}…`;
+    try {
+      const text = await readFileText(file);
+      notes.value = text.slice(0, 6000);
+      fileNote.textContent = text.length > 6000 ? `Read ${file.name}. Only the first 6,000 characters fit; trim it to what this session covers.` : `Read ${file.name}. Check the text below, then Start.`;
+      notes.focus();
+    } catch (e) { fileNote.textContent = ""; err.textContent = e.message || "Couldn't read that file."; }
+  });
+  const upload = el("div", { class: "wp-study-file" },
+    el("button", { class: "wp-btn wp-btn-tonal", onclick: () => picker.click() }, icon("book"), "Upload a file"), picker, fileNote);
   const start = el("button", { class: "wp-btn wp-btn-primary" }, "Start");
   start.onclick = async () => {
     start.disabled = true; err.textContent = ""; start.textContent = "Planning…";
@@ -38,7 +55,7 @@ function openStudyDialog(p) {
     el("div", { class: "wp-title" }, "Organize a study session"),
     el("div", { class: "wp-current" }, el("div", { class: "wp-label" }, "Current Target"), el("div", { class: "wp-strong" }, p.text)),
     el("p", { class: "wp-muted" }, `${BRAND} breaks this into a few topics in order, finds a clear video for each, and lets you check your understanding as you go.`),
-    notes, err,
+    upload, notes, err,
     el("div", { class: "wp-actions" }, el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Cancel"), start)));
   setTimeout(() => notes.focus(), 50);
 }
