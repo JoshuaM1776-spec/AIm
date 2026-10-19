@@ -10,8 +10,9 @@ import { studyPlan, studyApply } from "./study.ts";
 import { careers, step, themes, where } from "./pathways.ts";
 import { videoConcepts } from "./video.ts";
 import { type SyncStore, SyncError, readSyncInput } from "./sync.ts";
+import { type HsDb, HS_TASKS } from "./homeschool.ts";
 
-export type Plan = "free" | "plus";
+export type Plan = "free" | "plus" | "homeschool"; // Homeschool includes everything in Plus
 
 export interface Limits {
   dayCalls: number;    // AI calls per user per rolling 24 hours
@@ -51,6 +52,7 @@ export interface Deps {
     close(customer: string): Promise<void>; // deleting the account: cancels the subscription
   };
   sync?: SyncStore;   // Plus sync across devices (sync.ts)
+  hs?: HsDb;          // Aim Homeschool: the parent website and paired student devices (homeschool.ts)
   now(): Date;
   config: Config;
 }
@@ -101,7 +103,7 @@ export const TASKS: Record<string, Task> = {
 const ACCOUNT_TASKS = new Set(["status", "account-export", "account-delete", "billing-checkout", "billing-portal", "sync", "sync-erase"]);
 
 export function limitsFor(plan: Plan, config: Config): Limits {
-  if (plan === "plus") return config.limits;
+  if (plan === "plus" || plan === "homeschool") return config.limits;
   return config.freeLimits || {
     dayCalls: Math.max(1, Math.round(config.limits.dayCalls / 10)),
     dayTokens: Math.max(1, Math.round(config.limits.dayTokens / 10)),
@@ -179,13 +181,16 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
   try { body = JSON.parse(raw || "{}"); } catch { return fail(400, "bad_json", "The request isn't valid JSON.", cors); }
   const name = typeof body?.task === "string" ? body.task : "";
   if (size > (name === "sync" ? cfg.maxSyncBytes || cfg.maxBodyBytes : cfg.maxBodyBytes)) return fail(413, "too_large", "That request is too large.", cors);
-  if (!ACCOUNT_TASKS.has(name) && !Object.hasOwn(TASKS, name)) return fail(400, "task", "Unknown task.", cors);
+  if (!ACCOUNT_TASKS.has(name) && !Object.hasOwn(TASKS, name) && !Object.hasOwn(HS_TASKS, name)) return fail(400, "task", "Unknown task.", cors);
 
   let user;
   try { user = await deps.getUser(token); } catch { user = null; }
   if (!user) return fail(401, "auth", "Your sign-in has expired. Sign in again.", cors);
 
-  const plan = await deps.getPlan(user.id);
+  // A student's paired extension has its family's plan.
+  let plan = await deps.getPlan(user.id);
+  const device = plan === "free" && deps.hs ? await deps.hs.deviceOf(user.id) : null;
+  if (device) plan = await deps.getPlan(device.ownerId);
 
   // Account and usage for the signed-in user. No AI.
   if (name === "status") {
@@ -219,7 +224,7 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
   if (name === "sync" || name === "sync-erase") {
     if (!deps.sync) return fail(503, "sync", "Sync isn't available yet.", cors);
     if (name === "sync-erase") { await deps.sync.erase(user.id); return json(200, { ok: true, erased: true }, cors); }
-    if (plan !== "plus") return fail(403, "plan", "This needs Aim Plus.", cors);
+    if (plan === "free") return fail(403, "plan", "This needs Aim Plus.", cors);
     let input;
     try { input = readSyncInput(body.input, deps.now().getTime()); }
     catch (e) { if (e instanceof SyncError) return fail(400, "sync", e.message, cors); throw e; }
@@ -246,8 +251,18 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
     return json(200, { ok: true, deleted: true }, cors);
   }
 
+  // Aim Homeschool: the parent website and the student's extension (homeschool.ts checks the plan).
+  if (Object.hasOwn(HS_TASKS, name)) {
+    if (!deps.hs) return fail(503, "homeschool", "Aim Homeschool isn't available yet.", cors);
+    const userId = user.id;
+    const ctx = { userId, input: body.input, now: deps.now(), db: deps.db || NO_DB, hs: deps.hs, ownerPlan: deps.getPlan,
+      ai: (taskName: string, req: AiRequest) => useAI(deps, userId, taskName, req, limitsFor("plus", deps.config)) };
+    try { return json(200, { ok: true, ...(await HS_TASKS[name](ctx)) }, cors); }
+    catch (e) { if (e instanceof TaskError) return fail(e.status, e.code, e.message, cors); throw e; }
+  }
+
   const task = TASKS[name];
-  if (task.plan === "plus" && plan !== "plus") return fail(403, "plan", "This needs Aim Plus.", cors);
+  if (task.plan === "plus" && plan === "free") return fail(403, "plan", "This needs Aim Plus.", cors);
 
   const userId = user.id;
   const ctx: TaskCtx = {

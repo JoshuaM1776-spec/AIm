@@ -40,6 +40,7 @@ export interface Assessment {
   objectives: string[];
   status: "active" | "complete" | "incomplete";
   result: Result | null;
+  plan_objective?: string | null; // the curriculum objective a homeschool lesson's check is about
   created_at: string;
   updated_at: string;
 }
@@ -84,12 +85,12 @@ export interface Result {
 
 export interface TeachbackDb {
   selfLearner(accountId: string): Promise<string>;
-  createAssessment(a: { learnerId: string; topic: string; notes: string | null; contentType: string; objectives: string[] }): Promise<string>;
+  createAssessment(a: { learnerId: string; topic: string; notes: string | null; contentType: string; objectives: string[]; planObjective?: string | null }): Promise<string>;
   getAssessment(id: string): Promise<{ assessment: Assessment; accountId: string; turns: Turn[] } | null>;
   addTurn(assessmentId: string, t: Pick<Turn, "seq" | "objective" | "student" | "kind" | "question">): Promise<void>;
   updateTurn(assessmentId: string, seq: number, patch: Partial<Pick<Turn, "status" | "answer" | "hints" | "evaluation">>): Promise<void>;
   updateAssessment(id: string, patch: { status?: Assessment["status"]; result?: Result; finished?: boolean }): Promise<void>;
-  addProgress(events: { learnerId: string; kind: "demonstrated" | "needs_review"; topic: string; objective: string; evidence: string; assessmentId: string }[]): Promise<void>;
+  addProgress(events: { learnerId: string; kind: "demonstrated" | "developing" | "needs_review"; topic: string; objective: string; evidence: string; assessmentId: string; planObjective?: string | null }[]): Promise<void>;
 }
 
 // ---------- limits ----------
@@ -223,7 +224,8 @@ export function view(a: Assessment, turns: Turn[]) {
 async function load(ctx: TaskCtx, id: unknown) {
   if (typeof id !== "string" || !UUID.test(id)) throw new TaskError(404, "not_found", "That session wasn't found.");
   const rec = await ctx.db.getAssessment(id);
-  if (!rec || rec.accountId !== ctx.userId) throw new TaskError(404, "not_found", "That session wasn't found.");
+  // Yours, or (a student's paired extension) your learner's.
+  if (!rec || (rec.accountId !== ctx.userId && rec.assessment.learner_id !== await ctx.db.selfLearner(ctx.userId))) throw new TaskError(404, "not_found", "That session wasn't found.");
   // Unfinished sessions can be resumed for a week, then close with whatever evidence they have.
   const idle = ctx.now.getTime() - new Date(rec.assessment.updated_at).getTime();
   if (rec.assessment.status === "active" && idle > LIMITS.expireDays * 86400_000) {
@@ -392,7 +394,8 @@ export async function start(ctx: TaskCtx) {
   const question = text(r.first_question, 300);
   if (!objectives.length || !question) throw new TaskError(502, "upstream", "The AI couldn't plan this session. Try again.");
   const learnerId = await ctx.db.selfLearner(ctx.userId);
-  const id = await ctx.db.createAssessment({ learnerId, topic, notes: notes || null, contentType: oneOf(r.type, TYPES, "concepts"), objectives });
+  const planObjective = typeof input.planObjective === "string" && /^[\w-]{1,12}$/.test(input.planObjective) ? input.planObjective : null;
+  const id = await ctx.db.createAssessment({ learnerId, topic, notes: notes || null, contentType: oneOf(r.type, TYPES, "concepts"), objectives, planObjective });
   await ctx.db.addTurn(id, { seq: 1, objective: 0, student: "milo", kind: "question", question });
   const rec = (await ctx.db.getAssessment(id))!;
   return { session: view(rec.assessment, rec.turns) };
@@ -554,8 +557,8 @@ Write:
   };
   await ctx.db.updateAssessment(a.id, { status: opts.endedEarly ? "incomplete" : "complete", result, finished: true });
   const events = result.objectives.flatMap(o => o.status === "not_assessed" ? [] : [{
-    learnerId: a.learner_id, kind: o.status === "demonstrated" ? "demonstrated" as const : "needs_review" as const,
-    topic: a.topic, objective: o.text, evidence: o.evidence[0] || "", assessmentId: a.id
+    learnerId: a.learner_id, kind: o.status === "demonstrated" ? "demonstrated" as const : o.status === "partial" ? "developing" as const : "needs_review" as const,
+    topic: a.topic, objective: o.text, evidence: o.evidence[0] || "", assessmentId: a.id, planObjective: a.plan_objective || null
   }]);
   if (events.length) await ctx.db.addProgress(events);
 }

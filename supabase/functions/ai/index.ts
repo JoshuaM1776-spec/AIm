@@ -7,6 +7,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 import { type ClaudeResult, corsHeaders, type Deps, handle } from "./handler.ts";
 import type { AiRequest, Assessment, TeachbackDb, Turn } from "./teachback.ts";
 import type { SyncStore } from "./sync.ts";
+import type { HsDb } from "./homeschool.ts";
 import { type BillingConfig, checkoutUrl, deleteCustomer, portalUrl, stripeApi } from "./billing.ts";
 
 const env = (k: string, d = "") => Deno.env.get(k) ?? d;
@@ -78,6 +79,9 @@ const must = <T>(r: { data: T; error: { message: string } | null }): T => {
 };
 const db: TeachbackDb = {
   async selfLearner(accountId) {
+    // A student's paired extension works as its learner.
+    const device = must(await admin.from("student_devices").select("learner_id").eq("user_id", accountId).maybeSingle());
+    if (device) return device.learner_id;
     const found = must(await admin.from("learners").select("id").eq("account_id", accountId).eq("is_self", true).maybeSingle());
     if (found) return found.id;
     const made = await admin.from("learners").insert({ account_id: accountId, is_self: true }).select("id").single();
@@ -85,9 +89,9 @@ const db: TeachbackDb = {
     // Created by a request running at the same moment.
     return must(await admin.from("learners").select("id").eq("account_id", accountId).eq("is_self", true).single())!.id;
   },
-  async createAssessment({ learnerId, topic, notes, contentType, objectives }) {
+  async createAssessment({ learnerId, topic, notes, contentType, objectives, planObjective }) {
     return must(await admin.from("assessments")
-      .insert({ learner_id: learnerId, topic, notes, content_type: contentType, objectives }).select("id").single())!.id;
+      .insert({ learner_id: learnerId, topic, notes, content_type: contentType, objectives, plan_objective: planObjective ?? null }).select("id").single())!.id;
   },
   async getAssessment(id) {
     const a = must(await admin.from("assessments").select("*, learners!inner(account_id)").eq("id", id).maybeSingle());
@@ -114,7 +118,7 @@ const db: TeachbackDb = {
   async addProgress(events) {
     must(await admin.from("progress_events").insert(events.map(e => ({
       learner_id: e.learnerId, source: "teachback", kind: e.kind, topic: e.topic,
-      objective: e.objective, evidence: e.evidence || null, assessment_id: e.assessmentId
+      objective: e.objective, evidence: e.evidence || null, assessment_id: e.assessmentId, plan_objective: e.planObjective ?? null
     }))));
   }
 };
@@ -136,7 +140,13 @@ const account: NonNullable<Deps["account"]> = {
     const progress = ids.length ? must(await admin.from("progress_events")
       .select("learner_id, source, kind, topic, objective, evidence, assessment_id, created_at").in("learner_id", ids).order("created_at")) : [];
     const synced = must(await admin.from("sync_items").select("kind, id, rev, data").eq("user_id", userId).order("seq"));
-    return { profile, aiUsage: usage, learners, assessments, assessmentTurns: turns, progress, synced };
+    const household = must(await admin.from("households").select("id, name, settings, created_at").eq("owner", userId).maybeSingle());
+    const homeschool = household ? {
+      household,
+      plans: must(await admin.from("hs_docs").select("kind, key, data, version, updated_at").eq("household_id", household.id)),
+      uploads: must(await admin.from("curriculum_uploads").select("id, title, kind, text, created_at").eq("household_id", household.id))
+    } : null;
+    return { profile, aiUsage: usage, learners, assessments, assessmentTurns: turns, progress, synced, homeschool };
   },
   async deleteUser(userId) {
     const { error } = await admin.auth.admin.deleteUser(userId);
@@ -169,6 +179,86 @@ const sync: SyncStore = {
   async erase(userId) { must(await admin.from("sync_items").delete().eq("user_id", userId)); }
 };
 
+// Aim Homeschool's storage (migration 0005). The parent's household; its students are learners.
+const hsDb: HsDb = {
+  async household(owner) {
+    return must(await admin.from("households").select("id, owner, name, settings").eq("owner", owner).maybeSingle());
+  },
+  async createHousehold(owner) {
+    const made = await admin.from("households").insert({ owner }).select("id, owner, name, settings").single();
+    if (!made.error) return made.data;
+    return must(await admin.from("households").select("id, owner, name, settings").eq("owner", owner).single())!; // made at the same moment
+  },
+  async saveHousehold(id, patch) { must(await admin.from("households").update(patch).eq("id", id)); },
+  async learners(householdId) {
+    return must(await admin.from("learners").select("id, name, levels, interests").eq("household_id", householdId).order("created_at"))!
+      .map(l => ({ id: l.id, name: l.name || "", levels: l.levels || {}, interests: l.interests || "" }));
+  },
+  async saveLearner(householdId, owner, l) {
+    if (l.id) { must(await admin.from("learners").update({ name: l.name, levels: l.levels, interests: l.interests }).eq("id", l.id).eq("household_id", householdId)); return l.id; }
+    return must(await admin.from("learners").insert({ account_id: owner, household_id: householdId, name: l.name, levels: l.levels, interests: l.interests }).select("id").single())!.id;
+  },
+  async removeLearner(householdId, id) { must(await admin.from("learners").delete().eq("id", id).eq("household_id", householdId)); },
+  async docs(householdId, kind, prefix = "") {
+    let q = admin.from("hs_docs").select("key, data, version").eq("household_id", householdId).eq("kind", kind);
+    if (prefix) q = q.like("key", prefix.replace(/[%_]/g, "\\$&") + "%");
+    return must(await q)!;
+  },
+  async saveDoc(householdId, kind, key, data, expect) {
+    return must(await admin.rpc("hs_save", { p_household: householdId, p_kind: kind, p_key: key, p_data: data, p_expect: expect })) as number | null;
+  },
+  async uploads(householdId) {
+    return must(await admin.from("curriculum_uploads").select("id, title, kind, text, created_at").eq("household_id", householdId).order("created_at"))!
+      .map(u => ({ id: u.id, title: u.title, kind: u.kind, chars: u.text.length, createdAt: u.created_at }));
+  },
+  async uploadTexts(householdId, ids) {
+    if (!ids.length) return [];
+    return must(await admin.from("curriculum_uploads").select("id, title, text").eq("household_id", householdId).in("id", ids))!;
+  },
+  async addUpload(householdId, u) {
+    return must(await admin.from("curriculum_uploads").insert({ household_id: householdId, title: u.title, kind: u.kind, text: u.text, confirmed: true }).select("id").single())!.id;
+  },
+  async deleteUpload(householdId, id) { must(await admin.from("curriculum_uploads").delete().eq("id", id).eq("household_id", householdId)); },
+  async devices(householdId) {
+    const rows = must(await admin.from("student_devices").select("user_id, learner_id, paired_at, learners!inner(household_id)").eq("learners.household_id", householdId))!;
+    return rows.map(r => ({ userId: r.user_id, learnerId: r.learner_id, pairedAt: r.paired_at }));
+  },
+  async removeDevice(householdId, userId) {
+    const d = (await this.devices(householdId)).find(x => x.userId === userId);
+    if (d) { must(await admin.from("student_devices").delete().eq("user_id", userId)); await admin.auth.admin.deleteUser(userId); }
+  },
+  async createPairCode(learnerId, codeHash, expiresAt) {
+    must(await admin.from("pairing_codes").insert({ code_hash: codeHash, learner_id: learnerId, expires_at: expiresAt.toISOString() }));
+  },
+  async consumePairCode(codeHash, userId, now) {
+    const c = must(await admin.from("pairing_codes").delete().eq("code_hash", codeHash).select("learner_id, expires_at").maybeSingle());
+    if (!c || new Date(c.expires_at) < now) return null;
+    must(await admin.from("student_devices").upsert({ user_id: userId, learner_id: c.learner_id, paired_at: now.toISOString() }));
+    return c.learner_id;
+  },
+  async deviceOf(userId) {
+    const d = must(await admin.from("student_devices").select("learner_id, learners!inner(household_id, households!inner(owner))").eq("user_id", userId).maybeSingle()) as
+      { learner_id: string; learners: { household_id: string; households: { owner: string } } } | null;
+    return d ? { learnerId: d.learner_id, householdId: d.learners.household_id, ownerId: d.learners.households.owner } : null;
+  },
+  async progress(ids) {
+    if (!ids.length) return [];
+    return must(await admin.from("progress_events").select("learner_id, source, kind, topic, objective, plan_objective, plan_item, evidence, created_at").in("learner_id", ids).order("created_at"))!
+      .map(e => ({ learnerId: e.learner_id, source: e.source, kind: e.kind, topic: e.topic, objective: e.objective, planObjective: e.plan_objective, planItem: e.plan_item, evidence: e.evidence, at: e.created_at }));
+  },
+  async addProgress(events) {
+    must(await admin.from("progress_events").insert(events.map(e => ({ learner_id: e.learnerId, source: e.source, kind: e.kind, topic: e.topic,
+      objective: e.objective, plan_objective: e.planObjective, plan_item: e.planItem, evidence: e.evidence }))));
+  },
+  // YouTube's oEmbed: the published way to get a video's title and channel.
+  async videoInfo(id) {
+    const r = await fetch(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(`https://www.youtube.com/watch?v=${id}`)}`).catch(() => null);
+    if (!r?.ok) return null;
+    const j = await r.json() as { title?: string; author_name?: string };
+    return { title: String(j.title || ""), channel: String(j.author_name || "") };
+  }
+};
+
 const deps: Deps = {
   async getUser(token) {
     const { data, error } = await admin.auth.getUser(token);
@@ -176,7 +266,7 @@ const deps: Deps = {
   },
   async getPlan(userId) {
     const { data } = await admin.from("profiles").select("plan").eq("id", userId).maybeSingle();
-    return data?.plan === "plus" ? "plus" : "free";
+    return data?.plan === "plus" || data?.plan === "homeschool" ? data.plan as "plus" | "homeschool" : "free";
   },
   async usageSince(userId, since) {
     const { data, error } = await admin.from("ai_usage").select("input_tokens, output_tokens")
@@ -202,6 +292,7 @@ const deps: Deps = {
   account,
   billing,
   sync,
+  hs: hsDb,
   now: () => new Date(),
   config: {
     origins: env("AIM_EXTENSION_ORIGINS").split(",").map(s => s.trim()).filter(Boolean),

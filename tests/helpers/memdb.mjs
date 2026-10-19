@@ -13,9 +13,9 @@ export function memDb(now = () => new Date()) {
       learners.set(id, { account_id: accountId });
       return id;
     },
-    async createAssessment({ learnerId, topic, notes, contentType, objectives }) {
+    async createAssessment({ learnerId, topic, notes, contentType, objectives, planObjective = null }) {
       const id = randomUUID(), t = now().toISOString();
-      assessments.set(id, { id, learner_id: learnerId, topic, notes, content_type: contentType, objectives,
+      assessments.set(id, { id, learner_id: learnerId, topic, notes, content_type: contentType, objectives, plan_objective: planObjective,
         status: "active", result: null, created_at: t, updated_at: t });
       turns.set(id, []);
       return id;
@@ -39,7 +39,7 @@ export function memDb(now = () => new Date()) {
       if (result) a.result = clone(result);
       touch(id);
     },
-    async addProgress(events) { progress.push(...clone(events)); }
+    async addProgress(events) { progress.push(...clone(events).map(e => ({ source: "teachback", at: now().toISOString(), ...e }))); }
   };
 }
 
@@ -64,4 +64,61 @@ export function memSync(limit = 300) {
     },
     async erase(user) { for (const [k, r] of rows) if (r.user === user) rows.delete(k); }
   };
+}
+
+// Aim Homeschool's storage (the HsDb interface in homeschool.ts), in memory, sharing learners and
+// progress with a memDb so a student's TeachBack shows up in the parent's progress. Pass the plans
+// each account has (owner id → plan) to getPlan through `plans`.
+export function memHs(db, { now = () => new Date(), videos = {} } = {}) {
+  const households = new Map(), docs = new Map(), uploads = new Map(), devices = new Map(), codes = new Map();
+  const clone = x => JSON.parse(JSON.stringify(x));
+  // A paired device's TeachBack is its learner's.
+  const selfLearner = db.selfLearner;
+  db.selfLearner = async accountId => devices.get(accountId)?.learnerId || selfLearner(accountId);
+  const hs = {
+    store: { households, docs, uploads, devices, codes },
+    async household(owner) { return [...households.values()].find(h => h.owner === owner) || null; },
+    async createHousehold(owner) { const h = { id: randomUUID(), owner, name: "Our family", settings: {} }; households.set(h.id, h); return clone(h); },
+    async saveHousehold(id, { name, settings }) { const h = households.get(id); if (name) h.name = name; if (settings) h.settings = clone(settings); },
+    async learners(hid) { return [...db.learners].filter(([, l]) => l.household_id === hid).map(([id, l]) => ({ id, name: l.name, levels: l.levels || {}, interests: l.interests || "" })); },
+    async saveLearner(hid, owner, l) {
+      const id = l.id || randomUUID();
+      db.learners.set(id, { ...(db.learners.get(id) || { account_id: owner }), household_id: hid, name: l.name, levels: clone(l.levels), interests: l.interests });
+      return id;
+    },
+    async removeLearner(hid, id) { if (db.learners.get(id)?.household_id === hid) db.learners.delete(id); },
+    async docs(hid, kind, prefix = "") { return [...docs.values()].filter(d => d.hid === hid && d.kind === kind && d.key.startsWith(prefix)).map(d => clone({ key: d.key, data: d.data, version: d.version })); },
+    async saveDoc(hid, kind, key, data, expect) {
+      const k = `${hid}|${kind}|${key}`, d = docs.get(k);
+      if (!expect) { if (d) return null; docs.set(k, { hid, kind, key, data: clone(data), version: 1 }); return 1; }
+      if (!d || d.version !== expect) return null;
+      d.data = clone(data); d.version++;
+      return d.version;
+    },
+    async uploads(hid) { return [...uploads.values()].filter(u => u.hid === hid).map(u => ({ id: u.id, title: u.title, kind: u.kind, chars: u.text.length, createdAt: u.at })); },
+    async uploadTexts(hid, ids) { return ids.map(id => uploads.get(id)).filter(u => u && u.hid === hid).map(u => ({ id: u.id, title: u.title, text: u.text })); },
+    async addUpload(hid, u) { const id = randomUUID(); uploads.set(id, { ...u, id, hid, at: now().toISOString() }); return id; },
+    async deleteUpload(hid, id) { if (uploads.get(id)?.hid === hid) uploads.delete(id); },
+    async devices(hid) { return [...devices].filter(([, d]) => db.learners.get(d.learnerId)?.household_id === hid).map(([userId, d]) => ({ userId, learnerId: d.learnerId, pairedAt: d.at })); },
+    async removeDevice(hid, userId) { if (db.learners.get(devices.get(userId)?.learnerId)?.household_id === hid) devices.delete(userId); },
+    async createPairCode(learnerId, hash, expiresAt) { codes.set(hash, { learnerId, expiresAt }); },
+    async consumePairCode(hash, userId, at) {
+      const c = codes.get(hash);
+      codes.delete(hash);
+      if (!c || c.expiresAt < at || !db.learners.has(c.learnerId)) return null;
+      devices.set(userId, { learnerId: c.learnerId, at: at.toISOString() });
+      return c.learnerId;
+    },
+    async deviceOf(userId) {
+      const d = devices.get(userId), l = d && db.learners.get(d.learnerId), h = l && households.get(l.household_id);
+      return h ? { learnerId: d.learnerId, householdId: h.id, ownerId: h.owner } : null;
+    },
+    async progress(ids) {
+      return db.progress.filter(e => ids.includes(e.learnerId)).map(e => ({ learnerId: e.learnerId, source: e.source || "teachback", kind: e.kind, topic: e.topic,
+        objective: e.objective ?? null, planObjective: e.planObjective ?? null, planItem: e.planItem ?? null, evidence: e.evidence ?? null, at: e.at || now().toISOString() }));
+    },
+    async addProgress(events) { db.progress.push(...clone(events).map(e => ({ ...e, at: now().toISOString() }))); },
+    async videoInfo(id) { return videos[id] || null; }
+  };
+  return hs;
 }

@@ -2,7 +2,7 @@
 // accounts, database and Claude. Run: node --experimental-strip-types tests/ai.test.mjs
 import assert from "node:assert";
 import { handle } from "../supabase/functions/ai/handler.ts";
-import { memDb, memSync } from "./helpers/memdb.mjs";
+import { memDb, memHs, memSync } from "./helpers/memdb.mjs";
 import { difficulty } from "../supabase/functions/ai/teachback.ts";
 import { checkoutUrl, handleStripeEvent, handleStripeWebhook, planForStatus, stripeApi, verifyStripeSignature } from "../supabase/functions/ai/billing.ts";
 
@@ -735,6 +735,155 @@ test("sync: a round may be larger than other requests, but not without limit", a
   assert.strictEqual((await call(d, { task: "sync", input: { device: "device-aaaa", items: huge } })).status, 413);
 });
 
+// ---------- Aim Homeschool ----------
+// A parent (u1, plan homeschool) and a student's extension (s1, an anonymous account, plan free).
+function hsDeps(plans = { u1: "homeschool" }) {
+  const replies = [];
+  const d = makeDeps({ claude: req => ({ ok: true, text: JSON.stringify(replies.shift()), model: "m", inputTokens: 10, outputTokens: 10 }) });
+  d.config = { ...d.config, limits: { dayCalls: 100, dayTokens: 100000, minuteCalls: 100 }, maxBodyBytes: 200000 };
+  d.getUser = async t => ({ good: { id: "u1", email: "parent@example.com" }, kid: { id: "s1" }, other: { id: "u2", email: "x@example.com" } })[t] || null;
+  d.getPlan = async id => plans[id] || "free";
+  d.now = () => new Date("2026-10-19T15:00:00Z"); // a Monday
+  d.db = memDb(d.now);
+  d.hs = memHs(d.db, { now: d.now, videos: { dQw4w9WgXcQ: { title: "Volcanoes 101", channel: "Science Co" } } });
+  d.replies = replies;
+  return d;
+}
+const hs = (d, task, input, token = "good") => call(d, { task, input }, { token });
+const BUILT = { note: "", subjects: [{ name: "Science", units: [
+  { title: "Earth Systems", weeks: 2, weeks_inferred: false, objectives: [{ text: "Explain how volcanoes form", inferred: false }, { text: "Describe plate boundaries", inferred: false }], requires: [], project: "Build a volcano model" },
+  { title: "Weather", weeks: 2, weeks_inferred: true, objectives: [{ text: "Explain the water cycle", inferred: true }], requires: ["Earth Systems"], project: "" }] }] };
+const weekReply = (ids, extra = {}) => ({ note: "", days: [
+  { day: "Mon", items: [{ kind: "video", subject: "Science", title: "How volcanoes form", objectiveId: ids[0], why: "Introduces it.", detail: "Watch and note three causes.", minutes: 20, search: "how volcanoes form", together: false }] },
+  { day: "Thu", items: [{ kind: "teachback", subject: "Science", title: "Explain volcanoes", objectiveId: ids[0], why: "Check.", detail: "Explain it.", minutes: 10, search: "", together: false }] },
+  { day: "Sat", items: [{ kind: "reading", subject: "Science", title: "Not a school day", objectiveId: ids[0], why: "", detail: "", minutes: 10, search: "", together: false }] }],
+  project: { title: "Volcano model", subject: "Science", objectiveId: ids[0], day: "Fri", minutes: 60, involvement: "together", materials: [{ name: "Baking soda", qty: "2 tbsp", kind: "consumable" }, { name: "Tray", qty: "1", kind: "reusable" }], deliverables: ["A photo"], prep: ["Buy vinegar"], safety: "Wear goggles" }, ...extra });
+
+test("homeschool: only a Homeschool account; a family, a student, a curriculum it brought, approved", async () => {
+  const d = hsDeps({ u1: "plus" });
+  assert.strictEqual((await hs(d, "hs-home")).status, 403, "Plus isn't Homeschool");
+  const h = hsDeps();
+  let r = await hs(h, "hs-home");
+  assert.strictEqual(r.status, 200);
+  assert.deepStrictEqual(r.body.learners, []);
+  r = await hs(h, "hs-learner-save", { name: "Alex", levels: { Science: "Grade 5", Math: "Grade 6" }, interests: "volcanoes" });
+  const alex = r.body.id;
+  assert.strictEqual((await hs(h, "hs-upload-add", { title: "Our science", kind: "purchased", text: "x".repeat(100) })).status, 400, "the parent confirms their right to use it");
+  r = await hs(h, "hs-upload-add", { title: "Our science", kind: "purchased", confirmed: true, text: "Unit 1 Earth Systems: volcanoes, plates. Unit 2 Weather." + " ".repeat(10) });
+  const up = r.body.id;
+  h.replies.push(BUILT);
+  r = await hs(h, "hs-curriculum-build", { learnerId: alex, uploadIds: [up], startDate: "2026-10-19" });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.match(h.calls.at(-1).prompt, /Unit 1 Earth Systems/, "built from the family's own text");
+  assert.match(h.calls.at(-1).system, /Don't invent units/);
+  const draft = r.body.draft;
+  assert.strictEqual(draft.subjects[0].level, "Grade 5", "the student's level in that subject");
+  assert.deepStrictEqual(draft.subjects[0].units[1].requires, [draft.subjects[0].units[0].id], "prerequisites by unit");
+  assert.strictEqual(draft.subjects[0].units[1].objectives[0].inferred, true);
+  // Moving Weather before Earth Systems warns, but saves.
+  const moved = { ...draft, subjects: [{ ...draft.subjects[0], units: [draft.subjects[0].units[1], draft.subjects[0].units[0]] }] };
+  r = await hs(h, "hs-curriculum-save", { learnerId: alex, draft: moved, version: r.body.version });
+  assert.strictEqual(r.status, 200);
+  assert.match(r.body.warnings[0].text, /comes before “Earth Systems”/);
+  assert.strictEqual((await hs(h, "hs-curriculum-save", { learnerId: alex, draft, version: 1 })).status, 409, "a stale copy can't overwrite");
+  r = await hs(h, "hs-curriculum-save", { learnerId: alex, draft, version: r.body.version });
+  // No week before the curriculum is approved.
+  assert.strictEqual((await hs(h, "hs-week-propose", { learnerId: alex, weekStart: "2026-10-19" })).status, 400);
+  r = await hs(h, "hs-curriculum-approve", { learnerId: alex });
+  assert.strictEqual(r.body.approvedVersion, 1);
+  const home = (await hs(h, "hs-home")).body;
+  assert.strictEqual(home.learners[0].curriculum.approvedVersion, 1);
+  assert.strictEqual(home.learners[0].curriculum.pending, false);
+  assert.deepStrictEqual(home.uploads.map(u => u.title), ["Our science"]);
+  // Uploads are this household's only, and deletable.
+  const other = hsDeps({ u1: "homeschool", u2: "homeschool" });
+  Object.assign(other, { hs: h.hs, db: h.db });
+  assert.deepStrictEqual((await hs(other, "hs-home", {}, "other")).body.uploads, [], "another family sees nothing");
+  await hs(h, "hs-upload-delete", { id: up });
+  assert.strictEqual(h.hs.store.uploads.size, 0);
+});
+
+test("homeschool: a week from the approved curriculum; gaps decided before approval; the student gets only what's approved", async () => {
+  const h = hsDeps();
+  const alex = (await hs(h, "hs-learner-save", { name: "Alex", levels: { Science: "Grade 5" } })).body.id;
+  h.replies.push(BUILT);
+  await hs(h, "hs-curriculum-build", { learnerId: alex, text: "Unit 1 Earth Systems: volcanoes and plates. Unit 2 Weather and water.", startDate: "2026-10-19" });
+  await hs(h, "hs-curriculum-approve", { learnerId: alex });
+  const cur = (await hs(h, "hs-home")).body.learners[0].curriculum.approved;
+  const ids = cur.subjects[0].units[0].objectives.map(o => o.id);
+  h.replies.push(weekReply(ids));
+  let r = await hs(h, "hs-week-propose", { learnerId: alex, weekStart: "2026-10-21" });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.strictEqual(r.body.week.weekStart, "2026-10-19", "weeks start on Monday");
+  assert.match(h.calls.at(-1).prompt, /Earth Systems", week 1 of 2/);
+  assert.match(h.calls.at(-1).prompt, /Explain how volcanoes form/);
+  assert.doesNotMatch(h.calls.at(-1).prompt, /water cycle/, "only this week's unit");
+  assert.strictEqual(r.body.week.days[0].items[0].objective, "Explain how volcanoes form", "the curriculum's words");
+  assert.strictEqual(r.body.week.days[5].items.length, 0, "nothing on a non-school day");
+  assert.deepStrictEqual(r.body.gaps, [{ subject: "Science", items: [r.body.week.days[0].items[0].id] }], "no preferred Science channel yet");
+  // The student isn't connected yet; pairing with a one-time code.
+  const code = (await hs(h, "hs-pair-code", { learnerId: alex })).body.code;
+  assert.match(code, /^[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+  assert.strictEqual((await hs(h, "student-today", {}, "kid")).status, 403);
+  r = await hs(h, "student-pair", { code: code.toLowerCase() }, "kid");
+  assert.strictEqual(r.status, 200);
+  assert.strictEqual(r.body.student, "Alex");
+  assert.strictEqual(r.body.planned, false, "nothing approved yet, so nothing for the student");
+  assert.strictEqual((await hs(h, "student-pair", { code }, "kid")).status, 400, "a code works once");
+  // Approving waits for the gap decision.
+  r = await hs(h, "hs-week-approve", { learnerId: alex, weekStart: "2026-10-19" });
+  assert.strictEqual(r.status, 400);
+  assert.match(r.body.error.message, /Science/);
+  await hs(h, "hs-channels-save", { bySubject: { Science: [{ name: "SciShow", handle: "@SciShow", id: "UCZYTClx2T1of7BRZ86-8fow" }, { name: "bad", handle: "nope" }] } });
+  r = await hs(h, "hs-week-approve", { learnerId: alex, weekStart: "2026-10-19" });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  r = await hs(h, "student-today", {}, "kid");
+  assert.deepStrictEqual(r.body.items.map(i => i.title), ["How volcanoes form"]);
+  assert.strictEqual(r.body.project.title, "Volcano model");
+  assert.deepStrictEqual(r.body.channels.map(c => c.name), ["SciShow"], "only valid channels kept");
+  // An edit to the approved week waits for approval again; the student keeps the approved copy.
+  const home = (await hs(h, "hs-home")).body.learners[0].weeks[0];
+  const edited = structuredClone(home.draft);
+  edited.days[0].items[0].title = "Volcanoes, revised";
+  r = await hs(h, "hs-week-save", { learnerId: alex, weekStart: "2026-10-19", draft: edited, version: home.version });
+  assert.strictEqual(r.body.status, "changed");
+  assert.deepStrictEqual((await hs(h, "student-today", {}, "kid")).body.items.map(i => i.title), ["How volcanoes form"], "never silently changed");
+  assert.strictEqual((await hs(h, "hs-week-propose", { learnerId: alex, weekStart: "2026-10-19" })).status, 409, "an approved week isn't replaced");
+  // A plain-language change: the AI revises the draft, chosen videos stay.
+  h.replies.push(weekReply(ids, { note: "Lighter Monday." }));
+  r = await hs(h, "hs-week-revise", { learnerId: alex, weekStart: "2026-10-19", request: "Make Monday lighter" });
+  assert.strictEqual(r.body.status, "changed");
+  assert.match(h.calls.at(-1).prompt, /The parent asks: Make Monday lighter/);
+  await hs(h, "hs-week-approve", { learnerId: alex, weekStart: "2026-10-19", version: r.body.version });
+  // Progress: lessons done count as watched, never as understanding.
+  const item = (await hs(h, "student-today", {}, "kid")).body.items[0];
+  await hs(h, "student-progress", { itemId: item.id, kind: "done", video: { id: "abc", title: "Volcanoes", channel: "SciShow" } }, "kid");
+  assert.strictEqual((await hs(h, "student-today", {}, "kid")).body.items[0].done, true);
+  let obj = (await hs(h, "hs-home")).body.learners[0].objectives[ids[0]];
+  assert.deepStrictEqual([obj.status, obj.watched], ["not_assessed", 1]);
+  // A TeachBack from the student's device counts for that objective (here: partial → Developing).
+  h.db.progress.push({ learnerId: alex, source: "teachback", kind: "developing", topic: "Volcanoes", objective: "x", planObjective: ids[0], evidence: "magma rises", at: "2026-10-22T10:00:00Z" });
+  obj = (await hs(h, "hs-home")).body.learners[0].objectives[ids[0]];
+  assert.deepStrictEqual([obj.status, obj.evidence], ["developing", "magma rises"]);
+  // The student's extension has its family's plan: TeachBack and the rest of Plus work there.
+  h.replies.push("ready");
+  assert.strictEqual((await call(h, { task: "check" }, { token: "kid" })).status, 200);
+  // Unpairing.
+  await hs(h, "hs-device-remove", { userId: "s1".padEnd(36, "0") });
+  h.hs.store.devices.delete("s1");
+  assert.strictEqual((await hs(h, "student-today", {}, "kid")).status, 403);
+});
+
+test("homeschool: a video chosen by link; materials you own; project status on both copies", async () => {
+  const h = hsDeps();
+  assert.strictEqual((await hs(h, "hs-video-info", { url: "https://example.com/x" })).status, 400);
+  const r = await hs(h, "hs-video-info", { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=10" });
+  assert.deepStrictEqual(r.body.video, { id: "dQw4w9WgXcQ", title: "Volcanoes 101", channel: "Science Co" });
+  const m = await hs(h, "hs-materials-save", { owned: ["Tray", "tray", "Goggles"] });
+  assert.deepStrictEqual([...h.hs.store.docs.values()].find(d => d.kind === "materials").data.owned, ["tray", "goggles"]);
+  assert.strictEqual((await hs(h, "hs-materials-save", { owned: [], version: m.body.version + 5 })).status, 409);
+});
+
 test("the one-file dashboard version is up to date with supabase/functions/ai", async () => {
   const fs = await import("node:fs");
   const { build, OUT, buildWebhook, OUT_WEBHOOK } = await import("../tools/bundle-ai.mjs");
@@ -745,7 +894,7 @@ test("the one-file dashboard version is up to date with supabase/functions/ai", 
   const dupes = names.filter((n, i) => names.indexOf(n) !== i);
   assert.deepStrictEqual(dupes, [], "top-level names repeat in the one-file version");
   // Imports between the files disappear when they're merged, so they can't rename anything.
-  for (const f of ["handler.ts", "index.ts", "librarian.ts", "study.ts", "pathways.ts", "video.ts", "sync.ts"]) {
+  for (const f of ["handler.ts", "index.ts", "librarian.ts", "study.ts", "pathways.ts", "video.ts", "sync.ts", "homeschool.ts"]) {
     const src = fs.readFileSync(new URL(`../supabase/functions/ai/${f}`, import.meta.url), "utf8");
     assert.doesNotMatch(src, /^import [^\n]*\bas\b[^\n]*from "\.\//m, `${f}: no "as" in local imports`);
   }
@@ -754,7 +903,7 @@ test("the one-file dashboard version is up to date with supabase/functions/ai", 
 let failed = 0;
 for (const [name, fn] of tests) {
   try { await fn(); console.log("ok  ", name); }
-  catch (e) { failed++; console.log("FAIL", name, "\n   ", e.message); }
+  catch (e) { failed++; console.log("FAIL", name, "\n   ", process.env.DEBUG ? e.stack : e.message); }
 }
 console.log(`\n${tests.length - failed}/${tests.length} passed`);
 process.exit(failed ? 1 : 0);
