@@ -3,8 +3,8 @@
 //   icons/16|32|48|128.png, icons/light/*.png  toolbar and store icons (for light / dark toolbars)
 //   icons/wordmark.png, icons/wordmark-light.png  "Aim" with the mark, for the store and website
 //   the ICON.logo entry in content/core.js
-// The mark: a rounded triangle pointing forward, a road winding through it, and a coral arrowhead
-// where the road leads out. Never red and never on a red tile, so it isn't mistaken for YouTube's
+// The mark: a rounded triangle pointing forward, a road curving up through it with a ribbon beside
+// it, and a coral arrowhead where the road leads out. Never red and never on a red tile, so it isn't mistaken for YouTube's
 // play button.
 // Run: PLAYWRIGHT=… CHROMIUM_PATH=… node tools/build-mark.mjs
 import { writeFileSync, readFileSync } from "node:fs";
@@ -12,10 +12,11 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-export const COLORS = { forest: "#163126", coral: "#ff5446", cream: "#f8f1e7", light: "#f1f1f1" };
+export const COLORS = { forest: "#193d31", coral: "#ff5446", cream: "#f8f1e7", light: "#f1f1f1" };
 
-// Units: a 100 × 100 box, y down. The triangle's corners, rounded:
-const CORNERS = [[8, 6], [96, 50], [8, 94]], ROUND = 11;
+// Units: a 100 × 100 box, y down. The triangle's corners, rounded (its bottom-right is cut flat; the
+// road and ribbon take that part):
+const CORNERS = [[8, 6], [96, 50], [48, 95], [8, 95]], ROUND = 11;
 
 // A convex polygon with rounded corners, sampled finely (clockwise).
 function rounded(v, r, per = 12) {
@@ -93,37 +94,73 @@ function arc(poly, s, e) {
 const f = n => +n.toFixed(2);
 const d = poly => "M" + poly.map(p => `${f(p[0])} ${f(p[1])}`).join("L") + "Z";
 
+// The polygon with its corner at index i rounded off over distance r along each side.
+function fillet(poly, i, r) {
+  const n = poly.length, at = k => poly[(k + n) % n];
+  const walk = step => { let k = i, left = r, p = poly[i];
+    for (;;) { const q = at(k + step), l = Math.hypot(q[0] - p[0], q[1] - p[1]);
+      if (l >= left) return [[p[0] + (q[0] - p[0]) * left / l, p[1] + (q[1] - p[1]) * left / l], k];
+      left -= l; p = q; k += step; } };
+  const [a, ka] = walk(-1), [b, kb] = walk(1), c = poly[i];
+  const curve = Array.from({ length: 9 }, (_, j) => { const t = j / 8, u = 1 - t;
+    return [u * u * a[0] + 2 * u * t * c[0] + t * t * b[0], u * u * a[1] + 2 * u * t * c[1] + t * t * b[1]]; });
+  // Keep the points outside the rounded stretch, in order, starting after it.
+  const out = [...curve];
+  for (let k = kb + 1; (k - (ka - 0)) % n !== 0 && out.length < n + 9; k++) out.push(at(k));
+  return out;
+}
+
+// A band along `center` between distances near(t) and far(t) on one side, from index i0 to i1,
+// with round ends.
+function band(center, near, far, side, i0, i1) {
+  const n = center.length - 1;
+  const inner = offset(center, near, side).slice(i0, i1 + 1), outer = offset(center, far, side).slice(i0, i1 + 1);
+  const cap = (from, to, out) => {
+    const c = [(from[0] + to[0]) / 2, (from[1] + to[1]) / 2], r = Math.hypot(from[0] - c[0], from[1] - c[1]);
+    const a0 = Math.atan2(from[1] - c[1], from[0] - c[0]);
+    // Turn the way that passes through `out` (the direction the band ends in).
+    const mid = a0 + Math.PI / 2, sense = Math.cos(mid) * out[0] + Math.sin(mid) * out[1] > 0 ? 1 : -1;
+    return Array.from({ length: 13 }, (_, k) => { const g = a0 + sense * Math.PI * k / 12; return [c[0] + r * Math.cos(g), c[1] + r * Math.sin(g)]; });
+  };
+  const fwd = norm([center[i1][0] - center[i1 - 1][0], center[i1][1] - center[i1 - 1][1]]);
+  const back = norm([center[i0][0] - center[i0 + 1][0], center[i0][1] - center[i0 + 1][1]]);
+  return [...inner, ...cap(inner.at(-1), outer.at(-1), fwd), ...outer.slice().reverse(), ...cap(outer[0], inner[0], back)];
+}
+
 export function mark({ small = false } = {}) {
   const shape = rounded(CORNERS, ROUND), inside = insideOf(shape);
-  // The road: in through the lower edge, a bend left, a bend right, out through the upper edge.
-  const center = spline([[52, 106], [50, 88], [31, 77], [32, 62], [54, 52], [70, 40], [80, 28]]);
-  const width = t => (small ? 23 - 11 * t : 18 - 9 * t) / 2;
-  const left = within(inside, offset(center, width, 1)), right = within(inside, offset(center, width, -1));
-  // Which edge borders the triangle's top-left part: the one leaving the upper edge further left.
-  const [upper, lower] = left.at(-1)[0] < right.at(-1)[0] ? [left, right] : [right, left];
+  // The road: in through the lower edge near the corner, curving up and out by the tip.
+  const center = spline([[27, 112], [27, 96], [28, 82], [36, 71], [52, 62], [68, 54], [84, 46], [98, 39]]);
+  const n = center.length - 1;
+  // Half the road's width; it widens where it comes in at the bottom, curling the triangle's foot.
+  const road = t => (small ? 13 - 2 * t : 9.5 - 1.5 * t) / 2 + (t < 0.34 ? 8 * (1 - t / 0.34) ** 2 : 0);
+  const rib = t => (small ? 22 - 3 * t : 18 - 3 * t);             // the ribbon's width
+  const upper = within(inside, offset(center, road, -1)), lower = within(inside, offset(center, road, 1));
   const pos = p => along(shape, p);
-  // Each piece: one road edge, then back along the outline the way that doesn't cross the road.
-  const piece = (edge, other) => {
-    const s = pos(edge.at(-1)), e = pos(edge[0]), o = [pos(other[0]), pos(other.at(-1))];
-    const fwd = arc(shape, s, e), between = (x, a, b) => (b > a ? x > a && x < b : x > a || x < b);
-    const crossesOther = o.some(x => between(x, s, e));
-    return [...edge, ...(crossesOther ? arc(shape, e, s).reverse() : fwd)];
-  };
-  const ink = [piece(upper, lower), piece(lower, upper)];
-  // The arrowhead, out past the upper edge where the road leads, pointing the road's way.
-  const exitMid = [(upper.at(-1)[0] + lower.at(-1)[0]) / 2, (upper.at(-1)[1] + lower.at(-1)[1]) / 2];
-  const dir = norm([center.at(-1)[0] - center.at(-8)[0], center.at(-1)[1] - center.at(-8)[1]]);
-  const nrm = [-dir[1], dir[0]], L = small ? 34 : 30, W = small ? 30 : 27, gap = small ? 3 : 2.5;
-  const base = [exitMid[0] + dir[0] * gap, exitMid[1] + dir[1] * gap];
+  // The triangle above the road: the road's upper edge, then round by the left side.
+  const s0 = pos(upper.at(-1)), e0 = pos(upper[0]), o = [pos(lower[0]), pos(lower.at(-1))];
+  const between = (x, a, b) => (b > a ? x > a && x < b : x > a || x < b);
+  let top = [...upper, ...(o.some(x => between(x, s0, e0)) ? arc(shape, e0, s0).reverse() : arc(shape, s0, e0))];
+  top = fillet(top, 0, small ? 5 : 4);  // the foot, where the road comes in
+  top = fillet(top, top.findIndex(p => p === upper.at(-1)), 1.5);  // the point by the arrow
+  // Below the road: a ribbon running beside it, from the first bend up to the arrow.
+  const i0 = Math.round(n * 0.47), i1 = Math.round(n * 0.9);
+  const ribbon = band(center, road, t => road(t) + rib(t), 1, i0, i1);
+  // The arrowhead, just past the end of the road, pointing the road's way.
+  // It sits a little above the road's line and turns a little upward: heading for higher ground.
+  const end = center[i1], along0 = norm([end[0] - center[i1 - 6][0], end[1] - center[i1 - 6][1]]), turn = -0.22;
+  const dir = [along0[0] * Math.cos(turn) - along0[1] * Math.sin(turn), along0[0] * Math.sin(turn) + along0[1] * Math.cos(turn)];
+  const nrm = [-dir[1], dir[0]], L = small ? 38 : 36, W = small ? 34 : 32, gap = small ? 5 : 4, lift = small ? 5 : 6;
+  const base = [end[0] + dir[0] * gap - nrm[0] * lift, end[1] + dir[1] * gap - nrm[1] * lift];
   const tip = [base[0] + dir[0] * L, base[1] + dir[1] * L];
-  const wing = s => [base[0] + nrm[0] * W / 2 * s - dir[0] * 2, base[1] + nrm[1] * W / 2 * s - dir[1] * 2];
+  const wing = s => [base[0] + nrm[0] * W / 2 * s, base[1] + nrm[1] * W / 2 * s];
   const notch = [base[0] + dir[0] * L * 0.28, base[1] + dir[1] * L * 0.28];
   const arrow = [tip, wing(1), notch, wing(-1)];
   // Box around everything.
-  const all = [...shape, ...arrow], pad = 2;
+  const all = [...top, ...ribbon, ...arrow], pad = 2;
   const x0 = Math.min(...all.map(p => p[0])) - pad, y0 = Math.min(...all.map(p => p[1])) - pad;
   const x1 = Math.max(...all.map(p => p[0])) + pad, y1 = Math.max(...all.map(p => p[1])) + pad;
-  return { ink: ink.map(d), accent: [d(arrow)], box: [x0, y0, x1 - x0, y1 - y0] };
+  return { ink: [d(top), d(ribbon)], accent: [d(arrow)], box: [x0, y0, x1 - x0, y1 - y0] };
 }
 
 export function svg(m, ink, extra = "") {
