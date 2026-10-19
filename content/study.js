@@ -5,6 +5,48 @@
 
 const activeStudy = p => (p?.study && !p.study.endedAt ? p.study : null);
 
+// ---------- Today, for a study session (on YouTube's home page) ----------
+// What to do today: the next topic not yet checked, and, a day or more after a check, the topics it
+// said to review (simple spaced review). When everything's checked: put it to work.
+function studyToday(st, now = Date.now()) {
+  const startOfToday = new Date(now).setHours(0, 0, 0, 0);
+  const cur = st.topics[st.current];
+  const next = cur && !cur.check ? cur : st.topics.find(t => !t.check) || null;
+  const review = st.topics.filter(t => t.check && t.check.at < startOfToday && t.check.objectives.some(o => o.status !== "demonstrated"));
+  return { next, review, allChecked: st.topics.every(t => t.check) };
+}
+
+async function goToTopic(st, t, search) {
+  await send({ type: "study-update", current: st.topics.indexOf(t) });
+  location.href = `/results?search_query=${encodeURIComponent(search || t.searches[0])}`;
+}
+
+function studyTodayBlock(p) {
+  const st = activeStudy(p);
+  if (!st) return null;
+  const { next, review, allChecked } = studyToday(st);
+  const done = st.topics.filter(t => t.check).length;
+  return el("div", { class: "wp-study-today" },
+    el("div", { class: "wp-row-between" },
+      el("div", { class: "wp-label" }, `Today · ${st.title}`),
+      el("span", { class: "wp-muted" }, `${done} of ${st.topics.length} topics checked`)),
+    next ? el("div", { class: "wp-study-today-row" },
+      el("span", { class: "wp-study-today-kind" }, "Next up"),
+      el("span", { class: "wp-strong wp-ellipsis" }, `${st.topics.indexOf(next) + 1}. ${next.title}`),
+      el("button", { class: "wp-btn wp-btn-tonal", onclick: () => goToTopic(st, next) }, "Start")) : null,
+    ...review.slice(0, 2).map(t => {
+      const weak = t.check.objectives.find(o => o.status !== "demonstrated");
+      return el("div", { class: "wp-study-today-row" },
+        el("span", { class: "wp-study-today-kind wp-review" }, "Review today"),
+        el("span", { class: "wp-ellipsis" }, el("b", {}, t.title), weak ? el("span", { class: "wp-muted" }, ` · ${weak.text}`) : null),
+        el("button", { class: "wp-btn wp-btn-text", onclick: () => goToTopic(st, t, weak?.search) }, "Review"));
+    }),
+    allChecked && !review.length ? el("div", { class: "wp-study-today-row" },
+      el("span", { class: "wp-study-today-kind" }, "Done"),
+      el("span", {}, st.apply?.doneAt ? "Every topic checked, and you put it to work." : "Every topic checked. Ready to put it to work?"),
+      el("button", { class: "wp-btn wp-btn-tonal", onclick: () => send({ type: "open-study" }) }, st.apply?.doneAt ? "See summary" : "Put it to work")) : null);
+}
+
 // Which topic the page is about: the one whose video is playing or whose search this is.
 function studyTopic(st) {
   if (!st) return null;

@@ -479,6 +479,21 @@ await pw.waitForSelector("button:text-is('Turn on Pathways')");
 const gone = await sw.evaluate(() => chrome.storage.local.get(["pathways", "interests"]));
 step("turning Pathways off deletes all of it", !gone.pathways && !gone.interests);
 await pw.close();
+// Today, on YouTube's home page: the next topic, and a review a day after a check that found gaps.
+await yt.goto("https://www.youtube.com/");
+await yt.waitForSelector("#wp-home .wp-study-today");
+let today = await yt.textContent(".wp-study-today");
+step("home: Today for the study session shows what's next and how far along", today.includes("Today · Cellular respiration") && today.includes("1 of 2 topics checked") &&
+  today.includes("Next up") && today.includes("2. Krebs cycle") && !today.includes("Review today"), today);
+await sw.evaluate(async () => { const { purpose } = await chrome.storage.local.get("purpose");
+  purpose.study.topics[0].check.at = Date.now() - 86400000 * 1.5; await chrome.storage.local.set({ purpose }); });
+await yt.reload();
+await yt.waitForSelector("#wp-home .wp-study-today-kind.wp-review");
+today = await yt.textContent(".wp-study-today");
+step("a day after a check that found gaps, the topic comes back as Review today", today.includes("Review today") && today.includes("Glycolysis"), today);
+await yt.click(".wp-study-today-row:has-text('Review today') button");
+await yt.waitForURL(/results\?search_query=/);
+step("Review goes straight to a search for what needs practice", !/glycolysis%20explained$/.test(yt.url()), yt.url());
 await yt.goto("https://www.youtube.com/results?search_query=krebs%20cycle%20explained");
 await yt.waitForSelector(".wp-study-bar");
 const [overview] = await Promise.all([ctx.waitForEvent("page"), yt.click(".wp-study-bar button:text-is('See summary')")]);

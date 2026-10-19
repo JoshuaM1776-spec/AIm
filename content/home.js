@@ -28,7 +28,7 @@ async function renderHome() {
   const p = activePurpose();
   const others = status.paused || [];
   const key = status.totalReached ? "total"
-    : [p ? `p|${p.id}|${p.text}|${(status.currentVideos || []).map(v => v.id).join(",")}` : "idle", leisureUsedUp(),
+    : [p ? `p|${p.id}|${p.text}|${(status.currentVideos || []).map(v => v.id).join(",")}|${p.study ? `${p.study.current}:${p.study.topics.map(t => t.check?.at || 0).join(".")}:${p.study.apply?.doneAt || 0}` : ""}` : "idle", leisureUsedUp(),
       others.map(x => `${x.id}:${x.recent?.[0]?.id || ""}`).join(","), (status.saved || []).map(v => v.id).join(","),
       account.on, status.pathways?.offer?.name || ""].join("|");
   if ($("#wp-home")?.dataset.key === key) return; // don't rebuild while someone is typing
@@ -188,6 +188,7 @@ function currentTargetRow(p) {
     el("div", { class: "wp-label" }, "Current Target"),
     el("div", { class: "wp-home-purpose" }, p.text),
     el("div", { class: "wp-muted wp-home-meta" }, targetMeta({ ...p, videos: (p.videos || []).length })),
+    studyTodayBlock(p),
     vids[0] ? lastVideoCard(p, vids[0]) : null,
     moreVideos(vids.slice(1)),
     el("div", { class: "wp-home-alt" },

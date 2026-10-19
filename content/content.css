@@ -689,3 +689,9 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 /* Upload a study guide file in the study session dialog. */
 .wp-study-file { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 8px; }
 .wp-study-file-note { font-size: 13px; line-height: 18px; }
+
+/* Today, for a study session: next topic, reviews due, or put it to work. */
+.wp-study-today { display: flex; flex-direction: column; gap: 2px; margin: 8px 0 2px; padding: 10px 12px; border-radius: 12px; background: var(--wp-tonal); }
+.wp-study-today-row { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 40px; font-size: 14px; line-height: 20px; }
+.wp-study-today-kind { font-size: 12px; font-weight: 500; color: var(--wp-muted); }
+.wp-study-today-kind.wp-review { color: var(--wp-accent); }

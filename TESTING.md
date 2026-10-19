@@ -274,6 +274,11 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] **I did it** asks what you made or found out and keeps it with the session; **Suggest another** gives something different.
 - [ ] Organize a study session → **Upload a file**: a .docx, a .pdf exported from Word or Google Docs, and a .txt each fill the study guide box with their text, to check before Start. A scanned PDF says to paste the text instead. Over 6,000 characters, it says only the start fits.
 
+### 28. Today, for a study session (0.40, Plus)
+- [ ] With a study session going, YouTube's home page shows **Today · <session>** in the current Target's card: how many topics are checked, **Next up** with Start (goes to that topic's search).
+- [ ] A day after a check that found gaps, that topic shows as **Review today**, and Review searches for what needs practice.
+- [ ] With every topic checked: **Put it to work** (or See summary once you've done it).
+
 ## Known issues (not regressions)
 
 - The word check knows words, not meanings: synonyms ("tap" vs "faucet") get the question once; answering Yes teaches it that search.
