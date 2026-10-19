@@ -55,6 +55,13 @@ test("preflight answers the extension with CORS headers", async () => {
   assert.match(r.headers.get("Access-Control-Allow-Headers"), /authorization/);
 });
 
+test("the parent website's address is let in alongside the extension", async () => {
+  const d = makeDeps(); d.config = { ...d.config, webOrigins: ["https://family.example.com"] };
+  assert.strictEqual((await call(d, { task: "status" }, { origin: "https://family.example.com" })).status, 200);
+  assert.strictEqual((await call(d, { task: "status" })).status, 200, "the extension still works");
+  assert.strictEqual((await call(d, { task: "status" }, { origin: "https://evil.example" })).status, 403);
+});
+
 test("other websites are turned away", async () => {
   const r = await call(makeDeps(), { task: "status" }, { origin: "https://evil.example" });
   assert.strictEqual(r.status, 403);
@@ -820,6 +827,7 @@ test("homeschool: a week from the approved curriculum; gaps decided before appro
   assert.doesNotMatch(h.calls.at(-1).prompt, /water cycle/, "only this week's unit");
   assert.strictEqual(r.body.week.days[0].items[0].objective, "Explain how volcanoes form", "the curriculum's words");
   assert.strictEqual(r.body.week.days[5].items.length, 0, "nothing on a non-school day");
+  assert.strictEqual(r.body.week.days[2].items.length, 0, "a day the plan leaves out stays empty (Wednesday isn't Thursday)");
   assert.deepStrictEqual(r.body.gaps, [{ subject: "Science", items: [r.body.week.days[0].items[0].id] }], "no preferred Science channel yet");
   // The student isn't connected yet; pairing with a one-time code.
   const code = (await hs(h, "hs-pair-code", { learnerId: alex })).body.code;

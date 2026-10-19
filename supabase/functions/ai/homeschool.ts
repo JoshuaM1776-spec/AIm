@@ -151,7 +151,7 @@ const PROJECT_STATUS = ["proposed", "approved", "ready", "completed"] as const;
 export function cleanWeek(x: unknown, weekStart: string) {
   const w = hsObj(x);
   const days = DAY_NAMES.map((name, i) => {
-    const d = hsObj(hsArr(w.days).find(d0 => hsObj(d0).day === name) || hsArr(w.days)[i]);
+    const d = hsObj(hsArr(w.days).find(d0 => hsObj(d0).day === name)); // by name only: a day left out is empty
     return {
       day: name, date: addDays(weekStart, i),
       items: hsArr(d.items).slice(0, 12).map(i0 => {
@@ -347,6 +347,7 @@ export async function hsHouseholdSave(ctx: HsCtx) {
     ...(s.schoolDays ? { schoolDays: days.length ? days : ["Mon", "Tue", "Wed", "Thu", "Fri"] } : {}),
     ...(s.minutesPerDay ? { minutesPerDay: Math.min(480, Math.max(30, Math.round(Number(s.minutesPerDay)))) } : {}),
     ...(s.rotation ? { rotation: hsArr(s.rotation).map(x => hsText(x, 40)).filter(Boolean).slice(0, HS_LIMITS.subjects) } : {}),
+    ...(s.subjects ? { subjects: hsArr(s.subjects).map(x => hsText(x, 40)).filter(x => x && SUBJECT_RE.test(x)).slice(0, HS_LIMITS.subjects) } : {}),
     ...(s.setupStep !== undefined ? { setupStep: Math.min(20, Math.max(0, Number(s.setupStep) || 0)) } : {}),
     ...(s.setupDone !== undefined ? { setupDone: s.setupDone === true } : {}) };
   await ctx.hs.saveHousehold(h.id, { ...(i.name ? { name: hsText(i.name, 80) } : {}), settings });

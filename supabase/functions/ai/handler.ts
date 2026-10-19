@@ -22,6 +22,7 @@ export interface Limits {
 
 export interface Config {
   origins: string[];   // allowed extension origins; empty allows any chrome-extension:// origin
+  webOrigins?: string[]; // the parent website's address(es), e.g. https://family.example.com
   limits: Limits;      // Plus accounts
   freeLimits?: Limits; // free accounts (the librarian only); defaults to a tenth of `limits`
   maxBodyBytes: number;
@@ -129,6 +130,7 @@ export function corsHeaders(origin: string | null, config: Config): Record<strin
 }
 
 export function originAllowed(origin: string, config: Config): boolean {
+  if (config.webOrigins?.includes(origin)) return true;
   return config.origins.length ? config.origins.includes(origin) : /^chrome-extension:\/\/[a-p]{32}$/.test(origin);
 }
 

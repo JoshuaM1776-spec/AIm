@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Aim Homeschool</title>
+<link rel="icon" href="shared/icon.png">
+<link rel="stylesheet" href="shared/tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="#/overview"><img src="shared/mark.svg" alt="" width="28" height="28"><span>Aim</span><span class="tier">Homeschool</span></a>
+  <nav id="nav" aria-label="Main" hidden>
+    <a href="#/overview">Overview</a><a href="#/curriculum">Curriculum</a><a href="#/week">Weekly Plan</a>
+    <a href="#/projects">Projects &amp; Materials</a><a href="#/progress">Progress</a>
+  </nav>
+  <div class="end" id="who"></div>
+</header>
+<main id="app" aria-live="polite"></main>
+<div id="toast" role="status" hidden></div>
+<script src="config.js"></script>
+<script src="shared/topics.js"></script>
+<script src="shared/filetext.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>

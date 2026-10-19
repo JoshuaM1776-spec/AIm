@@ -296,6 +296,7 @@ const deps: Deps = {
   now: () => new Date(),
   config: {
     origins: env("AIM_EXTENSION_ORIGINS").split(",").map(s => s.trim()).filter(Boolean),
+    webOrigins: env("AIM_WEB_ORIGINS").split(",").map(s => s.trim()).filter(Boolean),
     limits: {
       dayCalls: num("AIM_DAY_CALLS", 300),
       dayTokens: num("AIM_DAY_TOKENS", 400_000),
