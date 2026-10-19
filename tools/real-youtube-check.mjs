@@ -38,6 +38,8 @@ const context = await chromium.launchPersistentContext(mkdtempSync(join(tmpdir()
   args: [`--disable-extensions-except=${root}`, `--load-extension=${root}`, "--disable-blink-features=AutomationControlled"]
 });
 const page = await context.newPage();
+let sw = context.serviceWorkers()[0];
+const worker = async () => (sw ||= await context.waitForEvent("serviceworker"));
 const errors = [];
 page.on("pageerror", e => errors.push(e.message));
 
@@ -73,17 +75,26 @@ try {
   await page.goto("https://www.youtube.com/results?search_query=how+do+jet+engines+work", { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(5000);
   await page.screenshot({ path: join(out, "results.png") });
-  await selectorsOn("results", ["results", "resultsList", "resultVideos", "resultLength", "resultMeta", "resultChannel", "itemWatchLink", "itemTitle", "ads"]);
-  const results = await page.evaluate(([vids, link, title, chan, len]) => [...document.querySelectorAll(vids)].slice(0, 20).map(n => ({
+  // Lengths are drawn as rows scroll into view.
+  for (let i = 0; i < 6; i++) { await page.evaluate(() => window.scrollBy(0, 1200)); await page.waitForTimeout(700); }
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await selectorsOn("results", ["results", "resultsList", "resultVideos", "resultTitleLabel", "resultMeta", "resultChannel", "itemWatchLink", "itemTitle"]);
+  report.selectors.results.ads = await page.evaluate(sel => document.querySelectorAll(sel).length, YT.ads); // often none; recorded only
+  const results = await page.evaluate(([vids, link, title, chan, len, label]) => [...document.querySelectorAll(vids)].slice(0, 20).map(n => ({
     link: !!n.querySelector(link), title: !!(n.querySelector(title[0]) || n.querySelector(title[1]))?.textContent?.trim(),
-    channel: chan.some(s => n.querySelector(s)), length: len.some(s => n.querySelector(s)) })), [YT.resultVideos, YT.itemWatchLink, sels(YT.itemTitle), sels(YT.resultChannel), sels(YT.resultLength)]);
+    channel: chan.some(s => n.querySelector(s)),
+    length: len.some(s => /\d:\d\d/.test(n.querySelector(s)?.textContent || "")) || / (hours?|minutes?|seconds?)$/.test(n.querySelector(label)?.getAttribute("aria-label") || "") })),
+    [YT.resultVideos, YT.itemWatchLink, sels(YT.itemTitle), sels(YT.resultChannel), sels(YT.resultLength), YT.resultTitleLabel]);
   const share = k => (results.length ? results.filter(r => r[k]).length / results.length : 0);
   check("results: at least 5 videos found", results.length >= 5, `${results.length}`);
   check("results: each has a watch link", share("link") >= 0.9, share("link").toFixed(2));
   check("results: each has a title", share("title") >= 0.9, share("title").toFixed(2));
   check("results: each has a channel", share("channel") >= 0.8, share("channel").toFixed(2));
-  check("results: most show a length", share("length") >= 0.5, share("length").toFixed(2));
+  check("results: most have a length (badge or spoken label)", share("length") >= 0.8, share("length").toFixed(2));
   check("results: Aim's results bar (or its question) appears", await page.$("#wp-results-bar"));
+  const kept = (await (await worker()).evaluate(() => chrome.storage.local.get("purpose"))).purpose?.allowed || [];
+  check("results: Aim keeps them for the Target, most with a length", kept.length >= 5 && kept.filter(v => v.length).length >= kept.length * 0.8,
+    `${kept.filter(v => v.length).length} of ${kept.length}: ${kept.slice(0, 4).map(v => v.length).join(" ")}`);
 
   // ---------- watch ----------
   const firstId = await page.evaluate(sel => { const a = document.querySelector(`ytd-search ${sel}`); return a ? new URL(a.href).searchParams.get("v") : null; }, YT.itemWatchLink);
@@ -98,30 +109,52 @@ try {
     check("watch: not stopped by a bot check", !(await page.getByText(/confirm you.re not a bot/i).count()));
   }
 
-  // ---------- Learn something: every curated channel ----------
-  const all = new Map();
-  for (const t of TOPICS) for (const c of t.channels) all.set(c.handle, { ...c, topic: t.name });
-  for (const c of all.values()) {
-    const r = await page.evaluate(async ({ handle, id }) => {
-      const feed = async x => { try { const res = await fetch(`/feeds/videos.xml?channel_id=${x}`); const t = res.ok ? await res.text() : ""; return t.includes("<feed") ? (t.match(/<entry>/g) || []).length : null; } catch { return null; } };
-      let entries = id ? await feed(id) : null, via = "id";
-      let found = null;
-      if (entries === null) {
-        via = "handle";
-        try { const res = await fetch(`/${handle}`); const t = res.ok ? await res.text() : ""; found = t.match(/"(?:externalId|channelId)":"(UC[\w-]{22})"/)?.[1] || null; } catch {}
-        entries = found ? await feed(found) : null;
-      }
-      // "Shorts from your topics" reads the channel's Shorts-only playlist (UUSH + the id after "UC").
-      const cid = found || id;
-      let shorts = null;
-      if (cid) try { const res = await fetch(`/feeds/videos.xml?playlist_id=UUSH${cid.slice(2)}`); const t = res.ok ? await res.text() : ""; shorts = t.includes("<feed") ? (t.match(/<entry>/g) || []).length : null; } catch {}
-      return { entries, via, found, shorts };
-    }, c);
-    report.channels.push({ topic: c.topic, name: c.name, handle: c.handle, hintId: c.id || null, ...r });
-    check(`channel: ${c.name} (${c.handle})`, r.entries > 0, r.entries === null ? "not found: check the handle" : `${r.entries} videos via ${r.via}${r.found && r.found !== c.id ? `, id ${r.found}` : ""}, ${r.shorts === null ? "no Shorts list" : `${r.shorts} Shorts`}`);
+  // ---------- Learn something: every curated channel, through Aim's own code ----------
+  // Every topic and Shorts from your topics on; the home page then fetches each channel (feed, or
+  // channel page when the feed fails) and the background caches what it found.
+  await worker();
+  const handles = [...new Set(TOPICS.flatMap(t => t.channels.map(c => c.handle)))];
+  // The search above started a Target, and Learn something only shows without one.
+  await sw.evaluate(async ids => { await serial(() => finishPurpose("yes")); await serial(() => setOnboarding({ seenAll: true }));
+    await serial(() => setSetting("learnTopics", ids)); await serial(() => setSetting("learnShorts", true)); }, TOPICS.map(t => t.id));
+  await page.goto("https://www.youtube.com/", { waitUntil: "domcontentloaded" });
+  const until = Date.now() + 240_000;
+  let cache = {};
+  while (Date.now() < until) {
+    cache = (await sw.evaluate(() => chrome.storage.local.get("learn"))).learn?.channels || {};
+    if (handles.every(h => cache[h])) break;
+    await page.waitForTimeout(3000);
   }
-  check("Shorts lists load for most channels", report.channels.filter(c => c.shorts !== null).length >= report.channels.length / 2,
-    `${report.channels.filter(c => c.shorts !== null).length} of ${report.channels.length}`);
+  await page.waitForTimeout(3000);
+  await page.screenshot({ path: join(out, "learn.png"), fullPage: true });
+  for (const t of TOPICS) for (const c of t.channels) {
+    const r = cache[c.handle];
+    report.channels.push({ topic: t.name, name: c.name, handle: c.handle, hintId: c.id || null, id: r?.id || null,
+      videos: r?.videos?.length ?? null, shorts: r?.shorts?.length ?? null, newest: r?.videos?.[0]?.title || null });
+    check(`channel: ${c.name} (${c.handle})`, r && !r.failed && r.videos.length > 0,
+      !r ? "not fetched" : r.failed ? "not found: check the handle" : `${r.videos.length} videos, ${r.shorts?.length ?? 0} Shorts, id ${r.id}${c.id && c.id !== r.id ? ` (hint was ${c.id})` : ""}`);
+  }
+  check("Shorts found for most channels", report.channels.filter(c => c.shorts > 0).length >= report.channels.length / 2,
+    `${report.channels.filter(c => c.shorts > 0).length} of ${report.channels.length}`);
+  check("home: Learn something shows a row", await page.$("#wp-home .wp-learn-row .wp-learn-item"));
+  check("home: Quick review shows Shorts", await page.$("#wp-home .wp-review-item"));
+  // A Short from the review plays; one YouTube picks (its /shorts page) waits behind Aim's card.
+  if (await page.$("#wp-home .wp-review-item")) {
+    await page.click("#wp-home .wp-review-item");
+    await page.waitForURL(/\/shorts\//, { timeout: 15000 }).catch(() => {});
+    await page.waitForTimeout(5000);
+    await page.screenshot({ path: join(out, "short-review.png") });
+    check("shorts: a review Short plays, with Aim's review bar", /\/shorts\//.test(page.url()) && !(await page.$(".wp-player-card")) && !!(await page.$(".wp-notice")), page.url());
+    const reviewUrl = page.url();
+    await page.mouse.move(770, 450);
+    await page.mouse.wheel(0, 900); // YouTube's "next Short", like a swipe
+    await page.waitForTimeout(3000);
+    if (page.url() === reviewUrl) { await page.keyboard.press("ArrowDown"); await page.waitForTimeout(3000); }
+    report.swipedTo = page.url();
+    await page.screenshot({ path: join(out, "short-other.png") });
+    if (page.url() === reviewUrl) console.log("  --   shorts: YouTube didn't move to another Short here (it often won't play video for cloud servers); check by hand");
+    else check("shorts: a Short YouTube picked waits, offering the next review", !!(await page.$(".wp-player-card")) && (await page.textContent(".wp-player-card")).includes("Only Shorts from your topics"), `${reviewUrl} → ${page.url()}`);
+  }
   check("no page errors from Aim", !errors.some(e => /wp-|Aim/.test(e)), errors.join(" | "));
 } finally {
   writeFileSync(join(out, "report.json"), JSON.stringify(report, null, 2));

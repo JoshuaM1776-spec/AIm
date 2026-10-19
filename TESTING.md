@@ -24,6 +24,8 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 PLAYWRIGHT=… CHROMIUM_PATH=… node tools/real-youtube-check.mjs ./real-youtube-report
 ```
 
+Last full run: October 19, 2026, all checks passing (after the fixes in 0.45.1: channel pages when YouTube's feeds fail, lengths from the title's spoken label, three corrected handles). Swiping to another Short can't be tried from a cloud server, where YouTube won't play video; check it by hand.
+
 From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`, `*.googlevideo.com`, `*.ggpht.com`, `*.gstatic.com`, `*.googleapis.com` and `accounts.google.com`. YouTube may challenge cloud servers ("confirm you're not a bot") and refuse playback there; the page-structure checks still mean something, but the manual checklist on a real computer is the final word.
 
 ## Manual checklist (real YouTube)

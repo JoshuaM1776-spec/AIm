@@ -39,6 +39,9 @@ const YT = {
   ads: "ytd-ad-slot-renderer, ytd-in-feed-ad-layout-renderer, ytd-promoted-video-renderer, ytd-promoted-sparkles-web-renderer, ytd-search-pyv-renderer, ytd-display-ad-renderer",
   // What the librarian reads about each result. Missing pieces are simply left out.
   resultLength: ["ytd-thumbnail-overlay-time-status-renderer", ".yt-badge-shape__text", "badge-shape .badge-shape-wiz__text"],
+  // The title link's spoken label ends with the length ("… 5 minutes, 1 second"); YouTube draws the time
+  // badge only once a row has been on screen, so this is how the rest are known.
+  resultTitleLabel: "a#video-title[aria-label]",
   resultMeta: ["#metadata-line", ".yt-content-metadata-view-model-wiz__metadata-row", ".yt-content-metadata-view-model__metadata-row"],
   resultSnippet: [".metadata-snippet-text", "#description-text", ".metadata-snippet-container"],
   resultPlaylists: "ytd-playlist-renderer, ytd-radio-renderer, yt-lockup-view-model",
@@ -142,6 +145,16 @@ function sidebarItems() {
   return items;
 }
 
+// A result's length, "5:01": from its time badge, or else from the end of its title's spoken label.
+function resultLength(n) {
+  const badge = squash(first(YT.resultLength, n)?.textContent).match(/\d+(?::\d{2}){1,2}/)?.[0];
+  if (badge) return badge;
+  const m = ($(YT.resultTitleLabel, n)?.getAttribute("aria-label") || "").match(/(?:(\d+) hours?)?,?\s*(?:(\d+) minutes?)?,?\s*(?:(\d+) seconds?)?\s*$/);
+  if (!m || !(m[1] || m[2] || m[3])) return "";
+  const [h, mi, sec] = [m[1], m[2], m[3]].map(x => Number(x) || 0), pad = x => String(x).padStart(2, "0");
+  return h ? `${h}:${pad(mi)}:${pad(sec)}` : `${mi}:${pad(sec)}`;
+}
+
 // Videos and playlists on a search results page: { videos: [{ id, title, channel }], lists: [id] }.
 // Shorts in results are left out (they link to /shorts/, not /watch).
 function searchResults() {
@@ -158,7 +171,7 @@ function searchResults() {
     if (!id || seen.has(id)) continue;
     seen.add(id);
     videos.push({ id, title: squash(first(YT.itemTitle, n)?.textContent || a.title || a.getAttribute("aria-label")), channel: squash(first(YT.resultChannel, n)?.textContent),
-      length: squash(first(YT.resultLength, n)?.textContent).slice(0, 12), meta: squash(first(YT.resultMeta, n)?.textContent).slice(0, 80),
+      length: resultLength(n), meta: squash(first(YT.resultMeta, n)?.textContent).slice(0, 80),
       snippet: squash(first(YT.resultSnippet, n)?.textContent).slice(0, 200) });
   }
   // Anything else on the results page that links to a video counts too: an AI answer (Ask YouTube)

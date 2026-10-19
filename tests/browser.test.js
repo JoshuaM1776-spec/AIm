@@ -107,7 +107,8 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
       const f = FEEDS[u.searchParams.get("channel_id")];
       return f ? route.fulfill({ contentType: "application/atom+xml", body: atom(f) }) : route.fulfill({ status: 404, body: "" });
     }
-    if (u.pathname === "/@standupmaths") return route.fulfill({ contentType: "text/html", body: '<html><body><script>var x = {"externalId":"UCstandupmaths0000000000"};</script></body></html>' });
+    // Stand-up Maths' feed fails (as YouTube's feeds have for weeks at a time), so Aim reads its Videos tab.
+    if (u.pathname === "/@standupmaths/videos") return route.fulfill({ contentType: "text/html", body: CHANNEL_PAGE });
     const body = u.pathname === "/watch" && u.searchParams.get("v") === "realplay" ? REALPLAY : u.pathname === "/watch" ? WATCH(u.searchParams.get("v")) : u.pathname === "/results" && /dripping/.test(u.searchParams.get("search_query") || "") ? RESULTS_AI : u.pathname === "/new" ? ASKPAGE : u.pathname === "/results" ? RESULTS
       : u.pathname.startsWith("/shorts/") ? SHORTS(u.pathname.split("/")[2]) : u.pathname === "/feed/subscriptions" ? SUBS : HOME;
     // Same Trusted Types policy YouTube sends, so string-to-HTML writes would fail here too.
@@ -123,7 +124,12 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await new Promise(r => setTimeout(r, 500));
 
   const FEEDS = { "UCYO_jab_esuFRV4b17AJtAw": ["3Blue1Brown", "tbobvid", 18], "UCoxcjq-8xIDTYp3uz647V5A": ["Numberphile", "numbvid", 17],
-    "UC4a-Gbdw7vOaccHmFo40b9g": ["Khan Academy", "khanvid", 16], "UCstandupmaths0000000000": ["Stand-up Maths", "sumavid", 15] };
+    "UC4a-Gbdw7vOaccHmFo40b9g": ["Khan Academy", "khanvid", 16] };
+  // A channel's Videos tab as YouTube sends it: the list is in the page's data (ytInitialData).
+  const lockup = (id, title, ago) => ({ richItemRenderer: { content: { lockupViewModel: { contentId: id, contentType: "LOCKUP_CONTENT_TYPE_VIDEO",
+    metadata: { lockupMetadataViewModel: { title: { content: title }, metadata: { contentMetadataViewModel: { metadataRows: [{ metadataParts: [{ text: { content: "12K" } }, { text: { content: ago } }] }] } } } } } } } });
+  const CHANNEL_PAGE = `<html><body><script>var ytInitialData = ${JSON.stringify({ metadata: { channelMetadataRenderer: { title: "Stand-up Maths", externalId: "UCSju5G2aFaWMqn-_0YBtq5A" } },
+    contents: { tabs: [{ tabRenderer: { content: { richGridRenderer: { contents: [lockup("sumavid1", "Stand-up Maths lesson 1 & more", "2 years ago"), lockup("sumavid2", "Stand-up Maths lesson 2 & more", "3 years ago")] } } } }] } })};</script></body></html>`;
   const atom = ([name, base, day]) => `<?xml version="1.0"?><feed xmlns:yt="http://www.youtube.com/xml/schemas/2015"><title>${name}</title>` +
     `<entry><yt:videoId>${base}sh</yt:videoId><title>A quick one #shorts</title><link rel="alternate" href="https://www.youtube.com/shorts/${base}sh"/><author><name>${name}</name></author><published>2026-10-${day + 1}T10:00:00+00:00</published></entry>` +
     [1, 2, 3].map(i => `<entry><yt:videoId>${base}${i}</yt:videoId><title>${name} lesson ${i} &amp; more</title><link rel="alternate" href="https://www.youtube.com/watch?v=${base}${i}"/>` +
@@ -584,7 +590,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("each says its channel and topic", (await text(".wp-learn-row .wp-learn-item")).includes("3Blue1Brown · Math") && (await text(".wp-learn-row")).includes("lesson 1 & more"));
   st = await store();
   step("the feeds are cached for a day; a channel that can't be found is noted", !!st.learn.channels["@3blue1brown"].videos.length &&
-    st.learn.channels["@standupmaths"].id === "UCstandupmaths0000000000" && st.learn.channels["@Mathologer"].failed === true);
+    st.learn.channels["@standupmaths"].id === "UCSju5G2aFaWMqn-_0YBtq5A" && st.learn.channels["@standupmaths"].videos[0]?.id === "sumavid1" && st.learn.channels["@Mathologer"].failed === true);
   await p.click(".wp-learn-row .wp-learn-item");
   await p.waitForURL(/watch\?v=tbobvid1/);
   st = await store();
