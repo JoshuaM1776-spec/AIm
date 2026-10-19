@@ -55,7 +55,7 @@ async function render() {
     name.className = "what";
     name.textContent = c.name || key;
     const sel = document.createElement("select");
-    for (const [value, label] of [["hide", "Hide"], ["warn", "Warn"], ["", "Remove"]]) sel.append(new Option(label, value, false, value === c.action));
+    for (const [value, label] of [["prefer", "Prefer"], ["warn", "Warn"], ["hide", "Hide"], ["", "Remove"]]) sel.append(new Option(label, value, false, value === c.action));
     sel.onchange = async () => {
       const r = await send({ type: "avoid", key, name: c.name, action: sel.value || null });
       toast(r?.result === "applied" ? (sel.value ? "Saved." : `Removed ${c.name || key}.`) : "Couldn't save that.");

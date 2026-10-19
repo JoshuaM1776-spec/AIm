@@ -116,11 +116,35 @@ function purposeBar(p, lib) {
       el("button", { class: "wp-link wp-rb-change", onclick: () => openPivotDialog() }, "Change")),
     left !== null ? el("span", { class: "wp-muted wp-rb-left" }, `${fmtMin(left)} left`) : null,
     el("button", { class: `wp-rb-icon${p.notes ? " has" : ""}`, "aria-label": p.notes ? "Notes" : "Add notes", title: p.notes ? "Notes" : "Add notes", onclick: openNotesDialog }, icon("book")),
-    el("button", { class: "wp-rb-icon", "aria-label": "Target complete", title: "Target complete", onclick: askDone }, icon("check2")),
+    el("button", { class: "wp-rb-icon", "aria-label": doneLabel(p), title: doneLabel(p), onclick: doneAction(p) }, icon("check2")),
     toggle,
     activeStudy(p) ? studyBarBlock(p) : null,
-    open ? librarianBlock(p) : null].filter(Boolean));
+    open ? librarianBlock(p) : null,
+    !open && stillLooking(p) ? stillLookingRow(p, stillLooking(p), lib) : null].filter(Boolean));
   return bar;
+}
+
+// "Still looking?": three searches for this Target with nothing watched for more than a minute and
+// a half since. Offered once per streak; signed in, it opens the librarian, otherwise a tip.
+const stillDismissed = new Set();
+function stillLooking(p) {
+  const s = p.searches || [];
+  if (s.length < 3 || activeStudy(p) || p.plan) return null;
+  const since = s[s.length - 3].at || 0, key = `${p.id}|${since}`;
+  if (stillDismissed.has(key)) return null;
+  if ((p.videos || []).some(v => (v.lastAt || v.at || 0) >= since && (v.sec || 0) >= 90)) return null;
+  return key;
+}
+function stillLookingRow(p, key, lib) {
+  const dismiss = () => { stillDismissed.add(key); $(".wp-rb-still")?.remove(); };
+  return el("div", { class: "wp-rb-still" },
+    el("span", { class: "wp-strong" }, "Still looking?"),
+    lib ? el("span", { class: "wp-muted" }, `Tell ${BRAND} what you need in a sentence, and it'll suggest better searches.`)
+      : el("span", { class: "wp-muted" }, "Try the exact name of the part, error or idea, or fewer words."),
+    lib ? el("button", { class: "wp-btn wp-btn-tonal", onclick: () => {
+      dismiss(); libOpen = { query: searchQuery().toLowerCase(), open: true }; renderResultsBar();
+      setTimeout(() => $("#wp-lib .wp-lib-input")?.focus(), 0); } }, icon("ask"), "Ask the librarian") : null,
+    el("button", { class: "wp-btn wp-btn-text", onclick: dismiss }, "Not now"));
 }
 
 // The search shares no meaningful word with the purpose: ask once, results hidden meanwhile.

@@ -29,7 +29,8 @@ async function renderHome() {
   const others = status.paused || [];
   const key = status.totalReached ? "total"
     : [p ? `p|${p.id}|${p.text}|${(status.currentVideos || []).map(v => v.id).join(",")}` : "idle", leisureUsedUp(),
-      others.map(x => `${x.id}:${x.recent?.[0]?.id || ""}`).join(","), account.on, status.pathways?.offer?.name || ""].join("|");
+      others.map(x => `${x.id}:${x.recent?.[0]?.id || ""}`).join(","), (status.saved || []).map(v => v.id).join(","),
+      account.on, status.pathways?.offer?.name || ""].join("|");
   if ($("#wp-home")?.dataset.key === key) return; // don't rebuild while someone is typing
   $("#wp-home")?.remove();
 
@@ -84,6 +85,7 @@ async function renderHome() {
     !p && !others.length ? el("div", { class: "wp-home-examples" }, ...EXAMPLES.map(t =>
       el("button", { class: "wp-home-example", onclick: () => { input.value = t; input.focus(); } }, `“${t}”`))) : null,
     resumeBlock,
+    savedBlock(),
     el("div", { class: "wp-label wp-home-break-label" }, p ? "Or take a break" : "Just browsing? Take a break"),
     breakChips(takeBreak)].filter(Boolean));
   host.prepend(card);
@@ -158,6 +160,28 @@ function moreVideos(list) {
   return el("div", { class: "wp-home-more" }, toggle, row);
 }
 
+// "Saved for later": videos you set aside for another time. Watching one is a one-video break, so
+// it never counts toward a Target. A video leaves the list once you've watched it.
+function savedRow(list, max) {
+  return el("div", { class: "wp-home-minis wp-saved-row" }, ...list.slice(0, max).map(v => el("div", { class: "wp-mini" },
+    el("button", { class: "wp-mini-play", title: v.title, onclick: () => watchSaved(v) }, thumb(v, "wp-thumb-sm"), el("span", { class: "wp-mini-title" }, v.title)),
+    el("button", { class: "wp-mini-x", "aria-label": `Remove “${v.title}” from Saved for later`, title: "Remove", onclick: async e => {
+      e.currentTarget.closest(".wp-mini").remove();
+      await send({ type: "saved-remove", id: v.id });
+      status.saved = (status.saved || []).filter(x => x.id !== v.id);
+      if (!status.saved.length) $(".wp-home-saved")?.remove();
+    } }, icon("close")))));
+}
+function savedBlock() {
+  const list = status.saved || [];
+  if (!list.length) return null;
+  return el("div", { class: "wp-home-saved" },
+    el("div", { class: "wp-row-between" },
+      el("div", { class: "wp-label" }, "Saved for later"),
+      el("span", { class: "wp-muted wp-home-saved-note" }, "Watching one is a short break")),
+    savedRow(list, 6));
+}
+
 function currentTargetRow(p) {
   const vids = status.currentVideos || [];
   return el("div", { class: "wp-home-current" },
@@ -168,7 +192,7 @@ function currentTargetRow(p) {
     moreVideos(vids.slice(1)),
     el("div", { class: "wp-home-alt" },
       el("button", { class: "wp-btn wp-btn-accent", onclick: () => resumeTarget(p.id) }, icon("play"), "Continue"),
-      el("button", { class: "wp-btn wp-btn-tonal", onclick: askDone }, icon("check2"), "Target complete"),
+      el("button", { class: "wp-btn wp-btn-tonal", onclick: doneAction(p) }, icon("check2"), doneLabel(p)),
       el("button", { class: "wp-btn wp-btn-text", onclick: setAsideTarget }, "Set aside")));
 }
 

@@ -55,11 +55,21 @@ function avoidFor(key) {
   return null;
 }
 
+// Watch something from "Saved for later": during a break it just plays; otherwise it's a
+// one-video break, so it doesn't count toward your Target.
+async function watchSaved(v) {
+  if (!brk) {
+    const r = await send({ type: "break-start", oneVideoId: v.id });
+    if (!r || r.result !== "applied") return toast(r?.message || "Couldn't start a break.");
+  }
+  location.href = `/watch?v=${encodeURIComponent(v.id)}`;
+}
+
 async function saveCurrent(thenLeave) {
   if (!currentInfo) return;
   await send({ type: "save", video: currentInfo });
   closeNotice();
-  toast(`Saved for later. Find it under the ${BRAND} icon.`);
+  toast("Saved for later. It's on YouTube's home page, and offered when you take a break.");
   if (thenLeave) goBack();
 }
 
@@ -73,7 +83,7 @@ async function gate(id, known = null) {
   if (status.totalReached) return showTotalCard();
   // Hidden channels always ask; warned channels ask unless they fit your purpose.
   const a = avoidFor(info.channelKey);
-  if (a && !overridden.has(id) && (a.action === "hide" || !activePurpose())) return openChannelWarning(info, a.action);
+  if (a && !overridden.has(id) && (a.action === "hide" || (a.action === "warn" && !activePurpose()))) return openChannelWarning(info, a.action);
   continueAfterRules(info);
 }
 
@@ -169,7 +179,7 @@ function showTimeUpCard() {
     el("div", { class: "wp-title" }, "Time's up"),
     el("div", { class: "wp-muted" }, `You set ${p.limitMin} minutes for: ${p.text}`),
     el("div", { class: "wp-actions wp-actions-start" },
-      el("button", { class: "wp-btn wp-btn-primary", onclick: askDone }, "Target complete"),
+      el("button", { class: "wp-btn wp-btn-primary", onclick: doneAction(p) }, doneLabel(p)),
       el("button", { class: "wp-btn wp-btn-tonal", onclick: () => addPurposeTime(15) }, "Add 15 minutes")),
     el("div", { class: "wp-label" }, "Or take a break"),
     breakChips(takeBreak));
@@ -183,7 +193,7 @@ function showTotalCard() {
     el("div", { class: "wp-title" }, "That's today's YouTube time"),
     el("div", { class: "wp-muted" }, `You set a daily limit of ${settings.totalMin} minutes. It resets at midnight.`),
     activePurpose() ? el("div", { class: "wp-actions wp-actions-start" },
-      el("button", { class: "wp-btn wp-btn-tonal", onclick: askDone }, "Target complete")) : null);
+      el("button", { class: "wp-btn wp-btn-tonal", onclick: doneAction(activePurpose()) }, doneLabel(activePurpose()))) : null);
 }
 
 // ---------------- limits running out mid-video ----------------

@@ -255,6 +255,14 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] All Targets: each Target with videos shows its last video's thumbnail (click to continue) and **See more videos (N)**.
 - [ ] Light and dark themes.
 
+### 25. Saved for later, Still looking?, Got my answer, your channels (0.37)
+- [ ] Save a video for later (Aim menu → Save this video for later). YouTube's home page shows **Saved for later** with its thumbnail; hovering shows ×, which removes it.
+- [ ] Clicking a saved video plays it as a one-video break (your Target's time doesn't count it). Watching it to the end removes it from the list.
+- [ ] With something saved, start a 15-minute break: a notice offers your saved videos.
+- [ ] With a Target, search three different ways without watching anything for more than a minute and a half: the results bar asks **Still looking?** Signed in, **Ask the librarian** opens it with the box focused; signed out, it gives a tip. **Not now** puts it away.
+- [ ] Ask the librarian a quick question ("how do I reset my router?"): the Target's done button says **Got my answer** (home card, results bar, Aim menu) and ends it in one tap, with no questions.
+- [ ] While watching, Aim menu → **Prefer, warn about or hide this channel** → Prefer. Its videos show a **Your channel** badge in search results; it never warns or blocks. Signed in, the librarian's picks put a fitting video from it first. Settings → Advanced → **Your channels** lists it with Prefer / Warn / Hide / Remove.
+
 ## Known issues (not regressions)
 
 - The word check knows words, not meanings: synonyms ("tap" vs "faucet") get the question once; answering Yes teaches it that search.

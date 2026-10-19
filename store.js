@@ -735,6 +735,9 @@ async function recordTick(seconds, video) {
     }
   }
 
+  // A saved video you've now watched (most of the way) leaves "Saved for later".
+  if (video?.id && Number(video.d) > 0 && Number(video.t) >= Number(video.d) * 0.9) await removeSaved(video.id);
+
   // Which limit, if any, ran out with this tick? The most serious one wins.
   let kind = null;
   if (totalReached(settings, today)) kind = "total";
@@ -1009,7 +1012,9 @@ async function setAvoid(key, name, action) {
   key = channelPath(key);
   if (!key) return { result: "error", message: "Unknown channel." };
   const { avoid = {} } = await chrome.storage.local.get("avoid");
-  if (action === "hide" || action === "warn") avoid[key] = { name: clip(name, 200) || key, action };
+  // hide: gone from feeds; warn: ask before watching without a Target; prefer: trusted (a badge on
+  // results, and the librarian puts its videos first when they fit).
+  if (action === "hide" || action === "warn" || action === "prefer") avoid[key] = { name: clip(name, 200) || key, action };
   else delete avoid[key];
   await chrome.storage.local.set({ avoid });
   return { result: "applied", avoid };
@@ -1026,6 +1031,7 @@ async function saveForLater(video) {
 
 async function removeSaved(id) {
   const { saved = [] } = await chrome.storage.local.get("saved");
+  if (!saved.some(v => v.id === id)) return { result: "applied" };
   await chrome.storage.local.set({ saved: saved.filter(v => v.id !== id) });
   return { result: "applied" };
 }

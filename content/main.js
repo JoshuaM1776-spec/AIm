@@ -55,7 +55,7 @@ const pageObserver = new MutationObserver(() => {
   if (pageTimer) return;
   pageTimer = setTimeout(() => {
     pageTimer = null;
-    if (hiddenKeys().size) applyHidden();
+    if (hiddenKeys().size || preferredKeys().size) applyHidden();
     captureResults();
     renderUpNext();
     renderConcepts();

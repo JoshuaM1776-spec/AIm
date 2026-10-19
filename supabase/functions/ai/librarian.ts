@@ -102,7 +102,8 @@ const RANK_SYSTEM = `You are Aim's librarian. Given what someone is trying to ac
 
 - Judge from the title, channel, length, age and description snippet. Prefer videos that match the exact need (model, version, level), come from channels that look like they teach the subject well, and have a sensible length for the job.
 - Make 1 to 3 groups with short labels that say what each is for, such as "Start here", "Step by step", "Go deeper", "If you have the V6". Up to 4 videos per group; leave out videos that don't fit the goal.
-- For each picked video, give a reason under 90 characters, about why it fits this goal. Base it only on the information given; don't invent details about a video.`;
+- For each picked video, give a reason under 90 characters, about why it fits this goal. Base it only on the information given; don't invent details about a video.
+- If the person lists channels they trust, a video from one of them that fits the goal goes first in its group, and its reason can say it's from their channel. Never pick a video that doesn't fit just because of its channel.`;
 
 const RANK_SCHEMA = {
   type: "object",
@@ -143,10 +144,12 @@ export async function rank(ctx: TaskCtx) {
       meta: clean(o.meta, 80), snippet: clean(o.snippet, 200) };
   }).filter(v => /^[\w-]{6,20}$/.test(v.id) && v.title);
   if (!results.length) return { groups: [] };
+  // Channels the person marked as preferred (names only), so the librarian can put them first.
+  const preferred = list(input.preferred).map(c => clean(c, 100)).filter(Boolean).slice(0, 30);
 
   const r = parse(await ctx.ai("librarian-rank", {
     tier: "fast", maxTokens: 3000, schema: RANK_SCHEMA, system: RANK_SYSTEM,
-    prompt: `GOAL: ${goal}\n${query ? `SEARCH: ${query}\n` : ""}\nRESULTS:\n${results.map(v =>
+    prompt: `GOAL: ${goal}\n${query ? `SEARCH: ${query}\n` : ""}${preferred.length ? `CHANNELS THEY TRUST: ${preferred.join("; ")}\n` : ""}\nRESULTS:\n${results.map(v =>
       `- id ${v.id}: "${v.title}" · ${v.channel || "unknown channel"}${v.length ? ` · ${v.length}` : ""}${v.meta ? ` · ${v.meta}` : ""}${v.snippet ? `\n  ${v.snippet}` : ""}`).join("\n")}`
   }));
 

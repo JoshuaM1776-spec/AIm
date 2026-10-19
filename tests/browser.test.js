@@ -234,7 +234,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.click("#wp-chip .wp-pill");
   let menu = await text(".wp-dropdown");
   step("menu: purpose, no time limit, what's hidden, break choices, Done, Change Target",
-    ["Current Target", "No time limit", "Shorts, recommendations and feeds hidden · autoplay off", "Adjust", "Take a break", "Target complete", "Change Target", "Save this video", "Hide or warn"].every(t => menu.includes(t)) &&
+    ["Current Target", "No time limit", "Shorts, recommendations and feeds hidden · autoplay off", "Adjust", "Take a break", "Target complete", "Change Target", "Save this video", "Prefer, warn about or hide"].every(t => menu.includes(t)) &&
     !/Pause|Explore|Add 15/.test(menu), menu.slice(0, 200));
 
   // ---------- take a break and come back ----------
@@ -390,6 +390,20 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.waitForTimeout(1500);
   step("hidden channel's video is removed from the feed", (await p.isHidden("#i1")) && (await p.isVisible("#i2")));
 
+  // ---------- your channels: prefer; and "Still looking?" ----------
+  await setLocal({ avoid: { "/@hideme": { name: "Hide Me", action: "hide" }, "/@plumb": { name: "Plumb Co", action: "prefer" } } });
+  await sw.evaluate(() => serial(() => startPurpose({ text: "fix a leaky faucet", search: "leaky faucet" })));
+  await sw.evaluate(() => serial(async () => { await addSearch("faucet drip fix"); await addSearch("faucet washer"); }));
+  await p.goto("https://www.youtube.com/results?search_query=faucet+washer");
+  await p.waitForSelector("#wp-results-bar");
+  await p.waitForTimeout(800);
+  step("a preferred channel's results get a Your channel badge", await p.$eval("#normalItem", n => n.hasAttribute("data-wp-preferred")));
+  step("Still looking? after three searches with nothing watched", (await text(".wp-rb-still")).includes("Still looking?"));
+  await p.click('.wp-rb-still button:text-is("Not now")');
+  step("Not now puts it away", !(await p.$(".wp-rb-still")));
+  await sw.evaluate(() => serial(() => finishPurpose("yes")));
+  await setLocal({ avoid: { "/@hideme": { name: "Hide Me", action: "hide" } } });
+
   // ---------- popup and settings ----------
   await sw.evaluate(() => startPurpose({ text: "learn to sharpen a chisel" }));
   const pop = await ctx.newPage();
@@ -472,6 +486,41 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("resuming a Target without a video goes back to its last search", (await store()).purpose?.text === "Fix my truck's AC");
   await all.close();
   await sw.evaluate(() => serial(() => finishPurpose("yes")));
+
+  // ---------- Saved for later ----------
+  await sw.evaluate(() => serial(async () => { await saveForLater({ id: "sav1", title: "Saved one", channel: "C" }); await saveForLater({ id: "sav2", title: "Saved two", channel: "C" }); }));
+  await p.goto("https://www.youtube.com/");
+  await p.waitForSelector("#wp-home .wp-home-saved");
+  step("home: Saved for later, newest first", (await p.$$eval(".wp-home-saved .wp-mini-play", ns => ns.map(n => n.title).join())) === "Saved two,Saved one");
+  await p.click(".wp-home-saved .wp-mini-play");
+  await p.waitForURL(/watch\?v=sav2/);
+  step("watching a saved video is a one-video break", (await store()).brk?.oneVideoId === "sav2");
+  await sw.evaluate(() => serial(() => recordTick(10, { id: "sav2", title: "Saved two", channel: "C", t: 95, d: 100 })));
+  step("a saved video you've watched leaves the list", (await store()).saved.map(v => v.id).join() === "sav1");
+  await sw.evaluate(() => serial(() => endBreak()));
+  await p.goto("https://www.youtube.com/");
+  await p.waitForSelector("#wp-home .wp-home-saved");
+  await p.click('#wp-home .wp-chip:text-is("15m")');
+  await p.waitForSelector(".wp-notice .wp-saved-row");
+  step("starting a break offers what you saved", (await text(".wp-notice")).includes("You saved a video for later") && (await p.$$(".wp-notice .wp-mini-play")).length === 1);
+  await p.click('.wp-notice button[aria-label="Dismiss"]');
+  await sw.evaluate(() => serial(() => endBreak()));
+  await sw.evaluate(() => serial(() => removeSaved("sav1")));
+
+  // ---------- Got my answer: a quick lookup ends in one tap ----------
+  await sw.evaluate(() => serial(async () => {
+    await startPurpose({ text: "how do I reset my router", search: "reset router" });
+    const { purpose } = await chrome.storage.local.get("purpose");
+    await chrome.storage.local.set({ purpose: { ...purpose, librarian: { kind: "lookup" } } });
+  }));
+  await p.goto("https://www.youtube.com/");
+  await p.waitForSelector("#wp-home .wp-home-current");
+  step("a lookup Target says Got my answer instead of Target complete",
+    !!(await p.$('.wp-home-current button:has-text("Got my answer")')) && !(await p.$('.wp-home-current button:has-text("Target complete")')));
+  await p.click('.wp-home-current button:has-text("Got my answer")');
+  await p.waitForTimeout(800);
+  st = await store();
+  step("Got my answer ends the Target as found, with no questions", !st.purpose && st.history[st.history.length - 1].outcome === "yes" && !(await p.$(".wp-done-dialog")));
 
   // ---------- Aim Homeschool preview: the student's Today screen ----------
   await sw.evaluate(() => serial(async () => { await setHomeschoolPreview(true); await setOnboarding({ hsTour: false }); }));

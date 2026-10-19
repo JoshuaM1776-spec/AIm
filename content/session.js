@@ -73,7 +73,7 @@ function videoItems() {
   if (!currentId || !currentInfo) return [];
   return [
     menuItem("save", "Save this video for later", () => saveCurrent(false)),
-    menuItem("avoid", "Hide or warn about this channel", openAvoidDialog)
+    menuItem("avoid", "Prefer, warn about or hide this channel", openAvoidDialog)
   ];
 }
 
@@ -91,7 +91,7 @@ function purposeMenu() {
     el("div", { class: "wp-label" }, "Searches toward this Target"),
     el("div", { class: "wp-muted" }, p.searches.slice(-4).map(s => s.q).join(" · "))) : null;
   return [head, time, searches, focusBlock(), breakBlock(), el("div", { class: "wp-menu-items" },
-    menuItem("check2", "Target complete", askDone),
+    menuItem("check2", doneLabel(activePurpose()), doneAction(activePurpose())),
     menuItem("pivot", "Change Target", () => openPivotDialog()),
     menuItem("pause", "Set aside for later", setAsideTarget),
     menuItem("book", p.notes ? "Notes" : "Add notes", openNotesDialog),
@@ -261,6 +261,12 @@ async function addPurposeTime(minutes) {
 // ---------------- Done ----------------
 // Done asks once, before ending: did you find what you were looking for? Or keep going.
 // With Aim Plus, it also offers TeachBack: a check of what you can now explain.
+// A quick lookup ("how do I reset my router?") ends in one tap: "Got my answer", with no
+// questions or follow-up offers. The librarian decides what's a lookup.
+const isLookup = p => p?.librarian?.kind === "lookup" && !p.study && !p.plan;
+const doneLabel = p => (isLookup(p) ? "Got my answer" : "Target complete");
+const doneAction = p => (isLookup(p) ? () => finishPurpose("yes") : askDone);
+
 async function askDone() {
   closeDropdown();
   const p = activePurpose() || purpose;

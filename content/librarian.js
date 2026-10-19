@@ -127,7 +127,7 @@ async function librarianPicks() {
     for (let i = 0; i < 12 && results.length < 3; i++) { await sleep(400); results = searchResults().videos; }
     if (searchQuery() !== query) { picksInFlight = null; return; }
     const r = await send({ type: "librarian", task: "librarian-rank",
-      input: { target: topic ? `${topic.title}, as part of: ${p.text}` : p.text, query, results: results.slice(0, 24).map(v => ({ id: v.id, title: v.title, channel: v.channel, length: v.length, meta: v.meta, snippet: v.snippet })) } });
+      input: { target: topic ? `${topic.title}, as part of: ${p.text}` : p.text, query, preferred: preferredNames(), results: results.slice(0, 24).map(v => ({ id: v.id, title: v.title, channel: v.channel, length: v.length, meta: v.meta, snippet: v.snippet })) } });
     picksInFlight = null;
     if (!r || r.error || !r.groups?.length || searchQuery() !== query) return;
     const byId = new Map(results.map(v => [v.id, v]));

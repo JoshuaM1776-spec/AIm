@@ -34,12 +34,14 @@ async function fullState() {
 
 // What a YouTube tab needs to know.
 async function tabState() {
-  const { avoid = {}, history = [], paused = [] } = await chrome.storage.local.get(["avoid", "history", "paused"]);
+  const { avoid = {}, history = [], paused = [], saved = [] } = await chrome.storage.local.get(["avoid", "history", "paused", "saved"]);
   const status = await getStatus();
   return { ...status, settings: { ...status.settings, avoid }, recent: recentPurposes(history, status.purpose?.text),
     // The homepage shows at most two set-aside Targets; the Targets page shows everything.
     paused: paused.slice(0, 2).map(p => summary(p, "paused")), pausedCount: paused.length,
-    currentVideos: status.purpose ? recentVideos(status.purpose) : [] };
+    currentVideos: status.purpose ? recentVideos(status.purpose) : [],
+    // "Saved for later", newest first, for the homepage and the start of a break.
+    saved: saved.slice(-12).reverse(), savedCount: saved.length };
 }
 
 // Changes to stored data run one at a time (see serial in store.js).

@@ -402,6 +402,18 @@ test("librarian: ranking keeps only videos YouTube showed, once each, in at most
   assert.deepStrictEqual(none.body.groups, []);
 });
 
+test("librarian: the channels you prefer go to the ranking (names only, at most 30)", async () => {
+  let prompt = "";
+  const deps = libDeps({ rank: req => { prompt = req.prompt || JSON.stringify(req); return { groups: [] }; } });
+  await call(deps, { task: "librarian-rank", input: { target: "Fix a leaky faucet", query: "faucet washer", preferred: ["Plumb Co", "", ...Array(40).fill("X")],
+    results: [{ id: "abc123def", title: "Faucet washer", channel: "Plumb Co" }] } });
+  assert.match(prompt, /CHANNELS THEY TRUST: Plumb Co; X/);
+  assert.strictEqual((prompt.match(/; X/g) || []).length, 29, "at most 30 names");
+  const without = libDeps({ rank: req => { prompt = req.prompt || JSON.stringify(req); return { groups: [] }; } });
+  await call(without, { task: "librarian-rank", input: { target: "x", results: [{ id: "abc123def", title: "t", channel: "c" }] } });
+  assert.ok(!prompt.includes("CHANNELS THEY TRUST"));
+});
+
 test("study sessions: Plus only; the student's notes keep their structure; topics are tidied", async () => {
   let prompt = "";
   const deps = makeDeps({ plan: "plus", claude: req => {

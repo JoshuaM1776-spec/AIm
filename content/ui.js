@@ -130,6 +130,11 @@ async function takeBreak(choice) {
   if (r.capped) toast(`Break set to ${r.capped} min: what's left of today's leisure time.`);
   else toast(choice.oneVideoId ? "Enjoy the video." : `Break: ${choice.minutes} minutes.`);
   if (currentId) regate(currentId);
+  // A break is a good moment for the videos you saved for later.
+  const saved = status.saved || [];
+  if (!choice.oneVideoId && saved.length) showNotice([el("div", { class: "wp-notice-text" },
+    el("b", {}, saved.length === 1 ? "You saved a video for later. Watch it now?" : `You saved ${saved.length} videos for later. Watch one now?`),
+    savedRow(saved, 3))]);
 }
 
 // A break ran out: back to your Target (already resumed), or more break while leisure time lasts.

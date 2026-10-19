@@ -659,3 +659,25 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 .wp .wp-concept-ask:hover { background: var(--wp-tonal); }
 .wp-concept-ask .wp-icon svg { width: 16px; height: 16px; }
 .wp-point-here { outline: 3px solid #ff5446 !important; outline-offset: 3px; border-radius: 18px; transition: outline-color .3s; }
+
+/* "Saved for later" on the homepage and at the start of a break: small thumbnails with a remove ×. */
+.wp-home-saved { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.wp-home-saved-note { font-size: 12px; }
+.wp-saved-row { padding-top: 2px; }
+.wp-mini { position: relative; }
+.wp .wp-mini-play { display: flex; flex-direction: column; gap: 4px; padding: 0; border: 0; background: none; text-align: left; width: 112px; }
+.wp .wp-mini-play:hover .wp-mini-title { color: var(--wp-text); }
+.wp .wp-mini-x { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border-radius: 50%; border: 0; padding: 0; display: none;
+  align-items: center; justify-content: center; background: rgba(0, 0, 0, .7); color: #fff; }
+.wp .wp-mini-x svg { width: 14px; height: 14px; }
+.wp-mini:hover .wp-mini-x, .wp .wp-mini-x:focus-visible { display: flex; }
+.wp-notice .wp-saved-row { margin-top: 8px; }
+
+/* "Still looking?" under the results bar. */
+.wp-rb-still { flex-basis: 100%; display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; padding: 10px 12px; margin-top: 6px;
+  border-radius: 12px; background: var(--wp-tonal); font-size: 13px; line-height: 18px; }
+
+/* A channel you prefer: a small "Your channel" badge on its videos. */
+[data-wp-preferred] { position: relative; }
+[data-wp-preferred]::before { content: "Your channel"; position: absolute; z-index: 2; top: 6px; left: 6px; padding: 0 6px; border-radius: 4px;
+  background: var(--wp-primary, #193d31); color: var(--wp-on-primary, #fffdf9); font: 500 11px/18px Roboto, Arial, sans-serif; pointer-events: none; }
