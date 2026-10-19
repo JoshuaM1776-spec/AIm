@@ -1331,6 +1331,14 @@ export async function checkoutUrl(stripe: StripeFetch, cfg: BillingConfig, user:
   return String(s.url);
 }
 
+// Deleting the account: delete the Stripe customer, which cancels their subscription at once, so
+// nobody is charged for an account that no longer exists.
+export async function deleteCustomer(secretKey: string, customerId: string, fetcher: typeof fetch = fetch) {
+  const res = await fetcher(`https://api.stripe.com/v1/customers/${encodeURIComponent(customerId)}`, {
+    method: "DELETE", headers: { Authorization: `Bearer ${secretKey}` } });
+  if (!res.ok && res.status !== 404) throw new Error(`stripe delete customer: ${res.status}`);
+}
+
 export async function portalUrl(stripe: StripeFetch, cfg: BillingConfig, customerId: string) {
   const s = await stripe("billing_portal/sessions", { customer: customerId, return_url: `${cfg.publicUrl}/stripe-webhook?page=back` });
   return String(s.url);
@@ -1464,6 +1472,7 @@ export interface Deps {
     info(userId: string): Promise<{ status: string | null; renewsAt: string | null; cancelAtPeriodEnd: boolean; customer: string | null }>;
     checkout(user: { id: string; email?: string }, customer: string | null): Promise<string>;
     portal(customer: string): Promise<string>;
+    close(customer: string): Promise<void>; // deleting the account: cancels the subscription
   };
   now(): Date;
   config: Config;
@@ -1635,6 +1644,12 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
   if (name === "account-delete") {
     if ((body.input as { confirm?: unknown } | undefined)?.confirm !== "DELETE") return fail(400, "confirm", "Type DELETE to confirm.", cors);
     if (!deps.account) return fail(500, "server", "Something went wrong. Try again.", cors);
+    // Stop the subscription first: if that fails, keep the account, so it can be tried again.
+    const customer = deps.billing ? (await deps.billing.info(user.id)).customer : null;
+    if (customer) {
+      try { await deps.billing!.close(customer); }
+      catch (e) { console.error("billing close", (e as Error).message); return fail(502, "billing", "Couldn't cancel your subscription just now, so nothing was deleted. Try again shortly.", cors); }
+    }
     await deps.account.deleteUser(user.id);
     return json(200, { ok: true, deleted: true }, cors);
   }
@@ -1805,7 +1820,8 @@ const billing: Deps["billing"] = billingCfg.secretKey && billingCfg.pricePlus ? 
     return { customer: p?.stripe_customer_id ?? null, status: p?.plan_status ?? null, renewsAt: p?.plan_renews_at ?? null, cancelAtPeriodEnd: !!p?.plan_cancel_at_period_end };
   },
   checkout: (user, customer) => checkoutUrl(stripeApi(billingCfg.secretKey), billingCfg, user, customer),
-  portal: customer => portalUrl(stripeApi(billingCfg.secretKey), billingCfg, customer)
+  portal: customer => portalUrl(stripeApi(billingCfg.secretKey), billingCfg, customer),
+  close: customer => deleteCustomer(billingCfg.secretKey, customer)
 } : undefined;
 
 const deps: Deps = {

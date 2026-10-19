@@ -46,6 +46,7 @@ export interface Deps {
     info(userId: string): Promise<{ status: string | null; renewsAt: string | null; cancelAtPeriodEnd: boolean; customer: string | null }>;
     checkout(user: { id: string; email?: string }, customer: string | null): Promise<string>;
     portal(customer: string): Promise<string>;
+    close(customer: string): Promise<void>; // deleting the account: cancels the subscription
   };
   now(): Date;
   config: Config;
@@ -217,6 +218,12 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
   if (name === "account-delete") {
     if ((body.input as { confirm?: unknown } | undefined)?.confirm !== "DELETE") return fail(400, "confirm", "Type DELETE to confirm.", cors);
     if (!deps.account) return fail(500, "server", "Something went wrong. Try again.", cors);
+    // Stop the subscription first: if that fails, keep the account, so it can be tried again.
+    const customer = deps.billing ? (await deps.billing.info(user.id)).customer : null;
+    if (customer) {
+      try { await deps.billing!.close(customer); }
+      catch (e) { console.error("billing close", (e as Error).message); return fail(502, "billing", "Couldn't cancel your subscription just now, so nothing was deleted. Try again shortly.", cors); }
+    }
     await deps.account.deleteUser(user.id);
     return json(200, { ok: true, deleted: true }, cors);
   }

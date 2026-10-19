@@ -25,7 +25,7 @@ A study guide file you upload for a study session (Aim Plus) is read in your bro
 
 "Learn something" reads the public video feeds of the channels for the topics you picked, from youtube.com, in your YouTube tab, about once a day. It sends nothing about you; which topics you picked stays in this browser.
 
-Paying for Aim Plus happens on Stripe's pages; Aim never sees your card. Aim's server keeps your Stripe customer id and your subscription's status and renewal date, to know your plan; deleting your account removes them.
+Paying for Aim Plus happens on Stripe's pages; Aim never sees your card. Aim's server keeps your Stripe customer id and your subscription's status and renewal date, to know your plan; deleting your account cancels the subscription and removes them.
 
 Strict mode (off unless you turn it on) keeps the reasons you give for bending a rule in this browser, with the Target they were for; they never leave it.
 

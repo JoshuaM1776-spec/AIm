@@ -68,6 +68,14 @@ export async function checkoutUrl(stripe: StripeFetch, cfg: BillingConfig, user:
   return String(s.url);
 }
 
+// Deleting the account: delete the Stripe customer, which cancels their subscription at once, so
+// nobody is charged for an account that no longer exists.
+export async function deleteCustomer(secretKey: string, customerId: string, fetcher: typeof fetch = fetch) {
+  const res = await fetcher(`https://api.stripe.com/v1/customers/${encodeURIComponent(customerId)}`, {
+    method: "DELETE", headers: { Authorization: `Bearer ${secretKey}` } });
+  if (!res.ok && res.status !== 404) throw new Error(`stripe delete customer: ${res.status}`);
+}
+
 export async function portalUrl(stripe: StripeFetch, cfg: BillingConfig, customerId: string) {
   const s = await stripe("billing_portal/sessions", { customer: customerId, return_url: `${cfg.publicUrl}/stripe-webhook?page=back` });
   return String(s.url);

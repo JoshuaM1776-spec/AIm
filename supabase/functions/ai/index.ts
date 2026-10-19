@@ -6,7 +6,7 @@ import Anthropic from "npm:@anthropic-ai/sdk@0.135.0";
 import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 import { type ClaudeResult, corsHeaders, type Deps, handle } from "./handler.ts";
 import type { AiRequest, Assessment, TeachbackDb, Turn } from "./teachback.ts";
-import { type BillingConfig, checkoutUrl, portalUrl, stripeApi } from "./billing.ts";
+import { type BillingConfig, checkoutUrl, deleteCustomer, portalUrl, stripeApi } from "./billing.ts";
 
 const env = (k: string, d = "") => Deno.env.get(k) ?? d;
 const num = (k: string, d: number) => {
@@ -152,7 +152,8 @@ const billing: Deps["billing"] = billingCfg.secretKey && billingCfg.pricePlus ? 
     return { customer: p?.stripe_customer_id ?? null, status: p?.plan_status ?? null, renewsAt: p?.plan_renews_at ?? null, cancelAtPeriodEnd: !!p?.plan_cancel_at_period_end };
   },
   checkout: (user, customer) => checkoutUrl(stripeApi(billingCfg.secretKey), billingCfg, user, customer),
-  portal: customer => portalUrl(stripeApi(billingCfg.secretKey), billingCfg, customer)
+  portal: customer => portalUrl(stripeApi(billingCfg.secretKey), billingCfg, customer),
+  close: customer => deleteCustomer(billingCfg.secretKey, customer)
 } : undefined;
 
 const deps: Deps = {

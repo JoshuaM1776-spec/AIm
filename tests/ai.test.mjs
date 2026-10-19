@@ -519,6 +519,20 @@ test("billing: subscribe and manage tasks, and what status says", async () => {
   assert.strictEqual((await call(withBilling("plus", "cus_1"), { task: "status" })).body.billing.manage, true);
 });
 
+test("billing: deleting the account cancels the subscription first, and keeps the account if that fails", async () => {
+  const closed = [], deleted = [];
+  const mk = fail => Object.assign(makeDeps({ plan: "plus" }), {
+    account: { exportData: async () => ({}), deleteUser: async id => deleted.push(id) },
+    billing: { info: async () => ({ customer: "cus_1", status: "active", renewsAt: null, cancelAtPeriodEnd: false }),
+      checkout: async () => "", portal: async () => "", close: async c => { if (fail) throw new Error("down"); closed.push(c); } } });
+  const bad = await call(mk(true), { task: "account-delete", input: { confirm: "DELETE" } });
+  assert.strictEqual(bad.status, 502);
+  assert.deepStrictEqual(deleted, [], "nothing deleted while the subscription is still running");
+  const ok = await call(mk(false), { task: "account-delete", input: { confirm: "DELETE" } });
+  assert.strictEqual(ok.status, 200);
+  assert.deepStrictEqual([closed, deleted], [["cus_1"], ["u1"]]);
+});
+
 test("study sessions: Plus only; the student's notes keep their structure; topics are tidied", async () => {
   let prompt = "";
   const deps = makeDeps({ plan: "plus", claude: req => {
