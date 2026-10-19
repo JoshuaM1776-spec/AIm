@@ -32,6 +32,8 @@ const LEARN_TOPICS = [
     { name: "OverSimplified", handle: "@OverSimplified" },
     { name: "Kings and Generals", handle: "@KingsandGenerals" },
     { name: "Historia Civilis", handle: "@HistoriaCivilis" },
+    { name: "The Fat Electrician", handle: "@TheFatElectrician" },
+    { name: "History Dose", handle: "@HistoryDose" },
     { name: "Crash Course", handle: "@crashcourse", id: "UCX6b17PVsYBQ0ip5gyeme-Q" }] },
   { id: "coding", name: "Coding", channels: [
     { name: "Fireship", handle: "@Fireship", id: "UCsBjURrPoezykLs9EqgamOA" },
