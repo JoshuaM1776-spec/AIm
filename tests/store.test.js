@@ -543,6 +543,24 @@ test("a Target's path: each search once, in order, the last six", async () => {
   assert.strictEqual(env.run(`searchTrail({}).length`), 0);
 });
 
+test("the learning record: Targets with something to show, study sessions kept after they end, and totals", async () => {
+  const env = fresh();
+  await env.run(`startPurpose({ text: "Cellular respiration exam", search: "cellular respiration" })`);
+  await env.tick(120, { id: "v1", title: "Glycolysis", channel: "Bio", t: 100, d: 600 });
+  await env.run(`startStudy({ title: "Cellular respiration", topics: [{ title: "Glycolysis", brief: "b", searches: ["glycolysis"] }, { title: "Krebs", brief: "b", searches: ["krebs"] }] })`);
+  await env.run(`(async () => { const s = await readAll(); s.purpose.study.topics[0].check = { at: 5, objectives: [{ text: "Net ATP", status: "demonstrated" }, { text: "Where", status: "partial" }] };
+    s.purpose.study.apply = { title: "Trace it", task: "t", doneAt: 9, note: "drew it" }; await chrome.storage.local.set({ purpose: s.purpose }); })()`);
+  await env.run(`finishPurpose("yes")`);
+  await env.run(`startPurpose({ text: "nothing yet" })`);
+  const r = JSON.parse(await env.run(`readAll().then(s => JSON.stringify(learningRecord(s)))`));
+  assert.deepStrictEqual(r.entries.map(e => e.text), ["Cellular respiration exam"], "a Target with nothing to show is left out");
+  const e = r.entries[0];
+  assert.strictEqual(e.state, "completed");
+  assert.strictEqual(e.study.topics[0].check.objectives[1].status, "partial", "the study session is kept after the Target ends");
+  assert.strictEqual(e.study.apply.note, "drew it");
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(r.totals)), { targets: 1, learningSec: e.usedSec, topicsChecked: 1, demonstrated: 1, projects: 1 });
+});
+
 test("channel paths are normalized", async () => {
   const env = fresh();
   await env.run(`setAvoid("/@caf%C3%A9/videos", "Café", "hide")`);

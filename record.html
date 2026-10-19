@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="light dark">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Learning record</title>
+<link rel="stylesheet" href="aim.css">
+<style>
+  /* The learning record: totals, then one card per Target. Prints cleanly (Save as PDF). */
+  .totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin: 16px 0 20px; }
+  .totals div { background: var(--surface); border: 1px solid var(--card-border); border-radius: 12px; padding: 12px 14px; }
+  .totals b { display: block; font: 700 24px/30px var(--font-display); }
+  .totals span { color: var(--muted); font-size: 12px; }
+  .entry h2 { margin-bottom: 2px; }
+  .entry .meta { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+  .entry h3 { margin: 12px 0 4px; }
+  .obj { display: flex; gap: 8px; align-items: baseline; margin: 4px 0; }
+  .vids { margin: 4px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+  .project { border-left: 3px solid var(--accent); padding: 2px 0 2px 10px; margin-top: 10px; }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  @media print {
+    body { background: #fff; color: #000; } .no-print, #toast { display: none !important; }
+    .card, .totals div { box-shadow: none; border-color: #ccc; break-inside: avoid; } .page { max-width: none; padding: 0; }
+  }
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="page-head">
+    <img class="for-light" src="icons/48.png" alt=""><img class="for-dark" src="icons/light/48.png" alt="">
+    <span class="brand" data-brand>Aim</span><span class="crumb">Learning record</span>
+    <span class="end no-print"><button class="btn tonal" id="print" type="button">Print or save as PDF</button></span>
+  </header>
+  <h1>Your learning record</h1>
+  <p class="muted">What you've worked on with <span data-brand>Aim</span>: your Targets, the time and videos behind them, and, for study sessions, what your checks showed and what you made. Kept in this browser.</p>
+  <div id="record" aria-live="polite"></div>
+</main>
+<div id="toast" role="status"></div>
+<script src="record.js"></script>
+</body>
+</html>

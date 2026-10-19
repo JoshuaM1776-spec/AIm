@@ -236,6 +236,7 @@ async function render() {
 
 document.getElementById("settings").addEventListener("click", () => chrome.runtime.openOptionsPage());
 document.getElementById("limits").addEventListener("click", () => send({ type: "open-options", section: "advanced" }));
+document.getElementById("record").addEventListener("click", () => send({ type: "open-record" }));
 document.getElementById("clear").addEventListener("click", async () => {
   if (!confirm("Clear your history of Targets and breaks?")) return;
   await send({ type: "history-clear" });

@@ -293,7 +293,43 @@ function archive(history, record) {
 }
 function purposeRecord(p, outcome) {
   return { type: "purpose", id: p.id, text: p.text, startedAt: p.startedAt, endedAt: Date.now(), usedSec: Math.round(p.usedSec),
-    outcome: outcome || null, path: p.path, searches: p.searches, videos: p.videos, notes: p.notes || "" };
+    outcome: outcome || null, path: p.path, searches: p.searches, videos: p.videos, notes: p.notes || "",
+    kind: p.librarian?.kind || null, study: studySnapshot(p.study) };
+}
+
+// What a study session showed, kept when its Target ends, for the learning record.
+function studySnapshot(st) {
+  if (!st?.topics?.length) return null;
+  return { title: st.title, startedAt: st.startedAt || null, endedAt: st.endedAt || null,
+    topics: st.topics.map(t => ({ title: t.title, watched: (t.watched || []).length, videos: (t.videos || []).length,
+      check: t.check ? { at: t.check.at, objectives: t.check.objectives.map(o => ({ text: o.text, status: o.status })) } : null })),
+    apply: st.apply ? { title: st.apply.title, task: st.apply.task, doneAt: st.apply.doneAt || null, note: st.apply.note || "" } : null };
+}
+
+// ---------- the learning record ----------
+// Every Target with something to show (time spent or videos watched), newest first: the current one,
+// those set aside, and finished ones, with study sessions' checks and projects. All from this browser.
+function learningRecord(s) {
+  const entry = (p, state) => {
+    const study = p.type === "purpose" ? p.study : studySnapshot(p.study);
+    const videos = (p.videos || []).slice().sort((a, b) => (b.sec || 0) - (a.sec || 0));
+    return { id: p.id, text: p.text, state, kind: p.kind || p.librarian?.kind || null, outcome: p.outcome || null,
+      startedAt: p.startedAt, endedAt: p.endedAt || null, lastAt: p.endedAt || p.lastActiveAt || p.pausedAt || p.startedAt,
+      usedSec: Math.round(p.usedSec || 0), videoCount: videos.length, videos: videos.slice(0, 5).map(v => ({ id: v.id, title: v.title, channel: v.channel })),
+      study, notes: p.notes || "" };
+  };
+  const all = [
+    ...(s.purpose ? [entry(s.purpose, "active")] : []),
+    ...s.paused.map(p => entry(p, "paused")),
+    ...s.history.filter(h => h.type === "purpose" && h.text).map(h => entry(h, "completed"))
+  ].filter(e => e.usedSec >= 60 || e.videoCount || e.study).sort((a, b) => (b.lastAt || 0) - (a.lastAt || 0));
+  const checks = all.flatMap(e => e.study?.topics || []).filter(t => t.check);
+  return {
+    entries: all.slice(0, 300),
+    totals: { targets: all.filter(e => e.state === "completed").length, learningSec: all.reduce((n, e) => n + e.usedSec, 0),
+      topicsChecked: checks.length, demonstrated: checks.reduce((n, t) => n + t.check.objectives.filter(o => o.status === "demonstrated").length, 0),
+      projects: all.filter(e => e.study?.apply?.doneAt).length }
+  };
 }
 function breakRecord(b) {
   return { type: "break", id: b.id, startedAt: b.startedAt, endedAt: Date.now(), usedSec: Math.round(b.usedSec),

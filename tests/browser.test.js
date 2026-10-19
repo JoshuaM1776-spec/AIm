@@ -497,6 +497,13 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     !!(await all.$(".item:has-text('Study for my biology exam') .lead-thumb .thumb")) &&
     (await all.textContent(".item:has-text('Study for my biology exam') details.videos summary")) === "See more videos (2)" &&
     !(await all.$(".item:has-text(\"Fix my truck's AC\") .lead-thumb")));
+  const rec = await ctx.newPage();
+  await rec.goto(`chrome-extension://${extId}/record.html`);
+  await rec.waitForSelector("#record .totals");
+  const recText = await rec.textContent("#record");
+  step("Learning record: totals and the Targets you worked on, with their videos", recText.includes("Targets completed") && recText.includes("Study for my biology exam") &&
+    recText.includes("Video bio1") && (await rec.$$("#record .entry")).length >= 2 && !/undefined|null|NaN/.test(recText), recText.slice(0, 200));
+  await rec.close();
   await all.click(".item:has-text(\"Fix my truck's AC\") button:text-is('Resume')");
   await all.waitForURL(/results\?search_query=truck/);
   step("resuming a Target without a video goes back to its last search", (await store()).purpose?.text === "Fix my truck's AC");

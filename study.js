@@ -121,6 +121,7 @@ async function render() {
         await send({ type: "study-update", end: true });
         render();
       })),
+    node("p", { className: "small" }, node("a", { href: "record.html", textContent: "See your learning record" })),
     node("p", { className: "muted small", style: "margin-top:20px",
       textContent: "Checks are estimates from TeachBack conversations, based only on what you wrote. They aren't grades." })
   ].flat().filter(Boolean));

@@ -279,6 +279,11 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] A day after a check that found gaps, that topic shows as **Review today**, and Review searches for what needs practice.
 - [ ] With every topic checked: **Put it to work** (or See summary once you've done it).
 
+### 29. Learning record (0.41)
+- [ ] Popup → **Learning record** (also linked from All Targets and a study session's summary) opens one page: totals (Targets completed, time on Target, study topics checked, ideas demonstrated, projects done), then each Target you worked on, newest first.
+- [ ] A finished Target that had a study session still shows its topics, what each check showed, and the Put it to work project with your note.
+- [ ] **Study sessions** and **Completed** filter the list; **Print or save as PDF** prints just the record (no buttons).
+
 ## Known issues (not regressions)
 
 - The word check knows words, not meanings: synonyms ("tap" vs "faucet") get the question once; answering Yes teaches it that search.

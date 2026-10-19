@@ -42,6 +42,7 @@ Chrome extension, Manifest V3, no build step.
 | `content/main.js` | Timer ticks, sync with other tabs, navigation, startup. Loads last. |
 | `content/content.css` | Styles for all of the above |
 | `popup.html/js` | Toolbar popup |
+| `record.html/js` | The learning record: totals, then each Target with its time, videos, study checks and projects; printable |
 | `targets.html/js` | All Targets: current, set aside (Resume, Remove) and completed (Start again) |
 | `aim.css` | The shared look for all of Aim's own pages (see Design) |
 | `tokens.css` | Aim's fonts and colors, from the mark (used by `aim.css` and the popup) |

@@ -104,6 +104,7 @@ const reads = {
   "state": () => fullState(),
   "search-check": m => checkSearch(m.query),
   "targets": () => readAll().then(resumable),
+  "record": () => readAll().then(learningRecord),
   "open-study": () => chrome.tabs.create({ url: chrome.runtime.getURL("study.html") }).then(() => ({ result: "applied" })),
   "open-welcome": () => chrome.tabs.create({ url: chrome.runtime.getURL("welcome.html") }).then(() => ({ result: "applied" })),
   "pathways": () => readPathways(),
@@ -115,6 +116,7 @@ const reads = {
     return chrome.tabs.create({ url: chrome.runtime.getURL("pathways.html" + (q.size ? "?" + q : "")) }).then(() => ({ result: "applied" }));
   },
   "open-targets": () => chrome.tabs.create({ url: chrome.runtime.getURL("targets.html") }).then(() => ({ result: "applied" })),
+  "open-record": () => chrome.tabs.create({ url: chrome.runtime.getURL("record.html") }).then(() => ({ result: "applied" })),
   // YouTube tabs may only learn whether to offer Plus features, and open TeachBack for a topic.
   "plus-brief": () => plusBrief(),
   // The librarian's two tasks, which YouTube tabs may call for a signed-in account (see plus.js).
