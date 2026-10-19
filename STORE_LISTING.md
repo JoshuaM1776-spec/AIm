@@ -71,7 +71,7 @@ Don't show YouTube's logo prominently in screenshots or promos, and don't make t
 - [ ] **Decide Free-only or with Plus.** `config.js` now points at the Aim Plus project. For a Free-only release, empty both values first. For a release with Plus, update PRIVACY.md and the privacy answers above.
 - [ ] **Remove the `"key"` line from `manifest.json` in the uploaded copy.** It pins Aim's ID for development; the Chrome Web Store assigns its own ID. Then add `chrome-extension://<store ID>/**` to Supabase's Redirect URLs, and set `AIM_EXTENSION_ORIGINS` to the store ID.
 - [ ] Run `TESTING.md` on real YouTube (light and dark, wide and narrow windows).
-- [x] Logo chosen (October 2026): the forward triangle with a road and a coral arrowhead; forest green, sage and coral. Tagline idea: "Learn forward." See README → Rebranding.
+- [x] Logo chosen (October 2026): the forward triangle with a road and a coral arrowhead; deep forest green and coral. Tagline idea: "Learn forward." See README → Rebranding.
 - [ ] Before launch, a trademark search for "Aim" in software and education (USPTO classes 9 and 41), since other products use the word.
 - [ ] Fill in the contact email in `PRIVACY.md` and publish it.
 - [ ] Build the zip without `tests/`: `git archive --format=zip -o aim.zip HEAD ':!tests' ':!supabase' ':!docs' ':!tools'`.

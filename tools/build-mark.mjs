@@ -1,5 +1,5 @@
 // Draws the Aim mark and writes everything made from it:
-//   icons/mark.svg, icons/mark-small.svg       the drawing (full, and simplified for 16–32 px)
+//   icons/mark.svg, icons/mark-small.svg       the drawing (full, and a wider road for 16–32 px)
 //   icons/16|32|48|128.png, icons/light/*.png  toolbar and store icons (for light / dark toolbars)
 //   icons/wordmark.png, icons/wordmark-light.png  "Aim" with the mark, for the store and website
 //   the ICON.logo entry in content/core.js
@@ -12,7 +12,7 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-export const COLORS = { forest: "#1e3a32", sage: "#7c9a7a", coral: "#ff5446", cream: "#f8f1e7", light: "#f1f1f1" };
+export const COLORS = { forest: "#163126", coral: "#ff5446", cream: "#f8f1e7", light: "#f1f1f1" };
 
 // Units: a 100 × 100 box, y down. The triangle's corners, rounded:
 const CORNERS = [[8, 6], [96, 50], [8, 94]], ROUND = 11;
@@ -70,19 +70,6 @@ function within(inside, line) {
   const a = line.findIndex(inside), b = line.findLastIndex(inside);
   return [hit(inside, line[a], line[a - 1]), ...line.slice(a, b + 1), hit(inside, line[b], line[b + 1])];
 }
-// Sutherland–Hodgman: a polygon clipped to a convex one.
-function clip(subject, poly) {
-  let out = subject;
-  poly.forEach((a, i) => {
-    const b = poly[(i + 1) % poly.length], inn = p => cross(a, b, p) >= 0, input = out; out = [];
-    input.forEach((p, j) => {
-      const q = input[(j + 1) % input.length];
-      if (inn(p)) out.push(p);
-      if (inn(p) !== inn(q)) { const d1 = cross(a, b, p), d2 = cross(a, b, q), t = d1 / (d1 - d2); out.push([p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]); }
-    });
-  });
-  return out;
-}
 // Position of a point along the outline (index of its nearest segment, plus fraction).
 function along(poly, p) {
   let best = [Infinity, 0];
@@ -109,8 +96,8 @@ const d = poly => "M" + poly.map(p => `${f(p[0])} ${f(p[1])}`).join("L") + "Z";
 export function mark({ small = false } = {}) {
   const shape = rounded(CORNERS, ROUND), inside = insideOf(shape);
   // The road: in through the lower edge, a bend left, a bend right, out through the upper edge.
-  const center = spline([[40, 106], [40, 88], [29, 73], [37, 58], [56, 49], [69, 39], [80, 26]]);
-  const width = t => (small ? 24 - 12 * t : 19 - 10 * t) / 2;
+  const center = spline([[52, 106], [50, 88], [31, 77], [32, 62], [54, 52], [70, 40], [80, 28]]);
+  const width = t => (small ? 23 - 11 * t : 18 - 9 * t) / 2;
   const left = within(inside, offset(center, width, 1)), right = within(inside, offset(center, width, -1));
   // Which edge borders the triangle's top-left part: the one leaving the upper edge further left.
   const [upper, lower] = left.at(-1)[0] < right.at(-1)[0] ? [left, right] : [right, left];
@@ -123,17 +110,10 @@ export function mark({ small = false } = {}) {
     return [...edge, ...(crossesOther ? arc(shape, e, s).reverse() : fwd)];
   };
   const ink = [piece(upper, lower), piece(lower, upper)];
-  // The sage verge along the road's upper side, widest in the middle, clipped to the triangle.
-  const verge = [];
-  if (!small) {
-    const vw = t => width(t) + 5 * Math.sin(Math.PI * Math.min(1, Math.max(0, (t - 0.15) / 0.85)));
-    const side = upper === left ? 1 : -1;
-    verge.push(clip([...offset(center, width, side), ...offset(center, vw, side).reverse()], shape));
-  }
   // The arrowhead, out past the upper edge where the road leads, pointing the road's way.
   const exitMid = [(upper.at(-1)[0] + lower.at(-1)[0]) / 2, (upper.at(-1)[1] + lower.at(-1)[1]) / 2];
   const dir = norm([center.at(-1)[0] - center.at(-8)[0], center.at(-1)[1] - center.at(-8)[1]]);
-  const nrm = [-dir[1], dir[0]], L = small ? 34 : 30, W = small ? 30 : 27, gap = small ? 7 : 6;
+  const nrm = [-dir[1], dir[0]], L = small ? 34 : 30, W = small ? 30 : 27, gap = small ? 3 : 2.5;
   const base = [exitMid[0] + dir[0] * gap, exitMid[1] + dir[1] * gap];
   const tip = [base[0] + dir[0] * L, base[1] + dir[1] * L];
   const wing = s => [base[0] + nrm[0] * W / 2 * s - dir[0] * 2, base[1] + nrm[1] * W / 2 * s - dir[1] * 2];
@@ -143,7 +123,7 @@ export function mark({ small = false } = {}) {
   const all = [...shape, ...arrow], pad = 2;
   const x0 = Math.min(...all.map(p => p[0])) - pad, y0 = Math.min(...all.map(p => p[1])) - pad;
   const x1 = Math.max(...all.map(p => p[0])) + pad, y1 = Math.max(...all.map(p => p[1])) + pad;
-  return { ink: ink.map(d), verge: verge.map(d), accent: [d(arrow)], box: [x0, y0, x1 - x0, y1 - y0] };
+  return { ink: ink.map(d), accent: [d(arrow)], box: [x0, y0, x1 - x0, y1 - y0] };
 }
 
 export function svg(m, ink, extra = "") {
@@ -151,7 +131,6 @@ export function svg(m, ink, extra = "") {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${f(vx)} ${f(vy)} ${f(s)} ${f(s)}"${extra}>` + inner(m, ink) + `</svg>`;
 }
 const inner = (m, ink) => m.ink.map(p => `<path d="${p}" fill="${ink}"/>`).join("") +
-  m.verge.map(p => `<path d="${p}" fill="${COLORS.sage}"/>`).join("") +
   m.accent.map(p => `<path d="${p}" fill="${COLORS.coral}" stroke="${COLORS.coral}" stroke-width="2" stroke-linejoin="round"/>`).join("");
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
