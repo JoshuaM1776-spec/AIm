@@ -246,6 +246,15 @@ The browser test checks Aim's own wiring: the top-bar button, prompts, pause and
 - [ ] Two YouTube tabs: starting a break or setting a Target in one updates the other's indicator, and a card waiting on the other tab's player clears if the new state allows its video.
 - [ ] Reload the extension from `chrome://extensions` with a YouTube tab open. Aim's indicator disappears from that tab, videos play normally, and the tab console shows no repeating errors. Refreshing the tab brings Aim back.
 
+### 24. Picking up a Target, with its videos (0.36)
+- [ ] Watch two or three videos for a Target, then go to YouTube's home page. Under **Pick up where you left off**, the current Target shows its last video: thumbnail, title, channel, "Stopped at m:ss", and a coral line on the thumbnail showing how far you got. Clicking it continues at that moment.
+- [ ] **See more (N)** opens a row of small thumbnails of the Target's other videos, newest first; clicking one plays it from where you stopped, still on the Target. **See less** folds the row away.
+- [ ] Only videos you watched for that Target appear, never YouTube's suggestions; nothing plays or previews on hover.
+- [ ] A Target with no videos yet (only searches) keeps the plain text card.
+- [ ] Each Recent Target shows a small thumbnail of its last video; clicking it resumes that Target.
+- [ ] All Targets: each Target with videos shows its last video's thumbnail (click to continue) and **See more videos (N)**.
+- [ ] Light and dark themes.
+
 ## Known issues (not regressions)
 
 - The word check knows words, not meanings: synonyms ("tap" vs "faucet") get the question once; answering Yes teaches it that search.

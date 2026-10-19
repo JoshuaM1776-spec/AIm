@@ -41,10 +41,40 @@ async function resume(id) {
   location.href = r.url;
 }
 
+// Thumbnails of what you watched for a Target, as on YouTube's home screen: only videos you chose.
+const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+function thumb(v, cls) {
+  const pct = v.d > 0 && v.t > 0 ? Math.min(100, Math.round((v.t / v.d) * 100)) : 0;
+  const n = node("span", { className: `thumb ${cls}` },
+    v.d ? node("span", { className: "thumb-len", textContent: fmt(v.d) }) : null,
+    pct ? node("span", { className: "thumb-progress" }, node("i", { style: `width: ${pct}%` })) : null);
+  n.style.backgroundImage = `url("https://i.ytimg.com/vi/${encodeURIComponent(v.id)}/mqdefault.jpg")`;
+  return n;
+}
+// Pick the Target back up, then play this video from where you stopped.
+async function playVideo(t, v) {
+  const r = await send({ type: "purpose-resume", id: t.id });
+  if (!r || r.result !== "applied") return toast(r?.message || "Couldn't do that. Try again.");
+  await send({ type: "purpose-allow", query: "", videos: [{ id: v.id, title: v.title, channel: v.channel }], lists: [] });
+  const from = v.t > 5 && !(v.d && v.t > v.d - 15) ? `&t=${Math.floor(v.t)}s` : "";
+  location.href = `https://www.youtube.com/watch?v=${encodeURIComponent(v.id)}${from}`;
+}
+function videos(t) {
+  const more = (t.recent || []).slice(1);
+  if (!more.length) return null;
+  return node("details", { className: "videos" }, node("summary", { textContent: `See more videos (${more.length})` }),
+    node("div", { className: "minis" }, more.map(v => node("button", { className: "mini", type: "button", title: v.title, onclick: () => playVideo(t, v) },
+      thumb(v, "thumb-sm"), node("span", { className: "mini-title", textContent: v.title })))));
+}
+
 function row(t, actions, lead) {
+  const v = t.recent?.[0];
   return node("div", { className: "item" },
+    v ? node("button", { className: "lead-thumb", type: "button", title: `Continue “${v.title}”`, onclick: () => playVideo(t, v) }, thumb(v, "thumb-md")) : null,
     node("div", { className: "grow" }, node("b", { textContent: t.text, title: t.text }),
       node("span", { className: "sub", textContent: meta(t, lead) }),
+      v ? node("span", { className: "sub", textContent: `Last video: ${v.title}` }) : null,
+      videos(t),
       t.notes ? node("details", { className: "notes" }, node("summary", { textContent: "Notes" }), node("div", { textContent: t.notes })) : null),
     actions);
 }

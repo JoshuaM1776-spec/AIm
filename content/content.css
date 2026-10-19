@@ -320,6 +320,28 @@ html.wp-boot ytd-browse[page-subtype="home"] ytd-feed-filter-chip-bar-renderer {
 .wp-home-row { display: flex; align-items: center; gap: 16px; padding: 10px 0; border-top: 1px solid var(--wp-divider, rgba(0,0,0,.1)); }
 .wp-home-sub + .wp-home-row { border-top: 0; }
 .wp-home-row-text { flex: 1; min-width: 0; }
+/* Thumbnails of what you watched for a Target: the one you'd continue, "See more" of the rest, and a
+   small one beside each recent Target. YouTube's shapes; the progress line is Aim coral. */
+.wp-thumb { position: relative; display: block; flex: none; border-radius: 8px; overflow: hidden; background: var(--wp-tonal) center / cover no-repeat; }
+.wp-thumb-lg { width: 168px; height: 94px; }
+.wp-thumb-sm { width: 112px; height: 63px; }
+.wp-thumb-xs { width: 72px; height: 40px; border-radius: 6px; }
+.wp-thumb-len { position: absolute; right: 4px; bottom: 6px; background: rgba(0, 0, 0, .8); color: #fff; font-size: 12px; line-height: 16px; font-weight: 500; padding: 0 4px; border-radius: 4px; }
+.wp-thumb-sm .wp-thumb-len { font-size: 11px; line-height: 14px; right: 3px; bottom: 5px; }
+.wp-thumb-xs .wp-thumb-len { display: none; }
+.wp-thumb-progress { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255, 255, 255, .45); }
+.wp-thumb-progress i { display: block; height: 100%; background: var(--wp-accent); }
+.wp .wp-home-video { display: flex; align-items: center; gap: 14px; width: 100%; margin: 8px 0 2px; padding: 8px; border: 0; border-radius: 12px; background: var(--wp-tonal); text-align: left; }
+.wp .wp-home-video:hover { background: var(--wp-tonal-hover); }
+.wp-home-video-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 13px; line-height: 18px; }
+.wp-home-video-title { font-size: 14px; line-height: 20px; font-weight: 500; color: var(--wp-text); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.wp-home-more { display: flex; flex-direction: column; align-items: flex-start; }
+.wp .wp-home-see-more { padding: 0 8px; height: 30px; margin-left: -8px; font-size: 13px; }
+.wp-home-minis { display: flex; gap: 10px; overflow-x: auto; padding: 4px 0 6px; max-width: 100%; }
+.wp .wp-mini { display: flex; flex-direction: column; gap: 4px; width: 112px; flex: none; padding: 0; border: 0; background: none; text-align: left; }
+.wp .wp-mini:hover .wp-mini-title { color: var(--wp-text); }
+.wp-mini-title { font-size: 12px; line-height: 16px; color: var(--wp-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.wp .wp-home-row-thumb { padding: 0; border: 0; background: none; flex: none; border-radius: 6px; }
 .wp-home-all { align-self: flex-start; margin-left: -12px; }
 
 /* ---------- search results bar ---------- */

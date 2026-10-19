@@ -518,6 +518,24 @@ test("settings are validated", async () => {
   assert.strictEqual((await env.run(`setSetting("noAutoplay", "yes")`)).result, "error");
 });
 
+test("a Target's recent videos: the one you'd continue first, then most recently watched, with where you stopped", async () => {
+  const env = fresh();
+  const r = JSON.parse(env.run(`JSON.stringify(recentVideos({
+    last: { id: "b", t: 120 },
+    allowed: [{ id: "c", length: "10:00" }],
+    videos: [
+      { id: "a", title: "A", channel: "Ca", t: 30, d: 300, at: 1, lastAt: 5 },
+      { id: "b", title: "B", channel: "Cb", t: 90, d: 600, at: 2, lastAt: 3 },
+      { id: "c", title: "C", channel: "Cc", t: 0, at: 3, lastAt: 9 },
+      { id: "", title: "no id" }
+    ] }))`));
+  assert.deepStrictEqual(r.map(v => v.id), ["b", "c", "a"], "the last video leads, then by when it was last watched");
+  assert.strictEqual(r[0].t, 120, "the last video resumes where the Target left off");
+  assert.strictEqual(r[1].d, 600, "a length YouTube showed in results fills in a missing duration");
+  assert.strictEqual(r[2].t, 30);
+  assert.strictEqual(env.run(`recentVideos({}).length`), 0);
+});
+
 test("channel paths are normalized", async () => {
   const env = fresh();
   await env.run(`setAvoid("/@caf%C3%A9/videos", "Café", "hide")`);

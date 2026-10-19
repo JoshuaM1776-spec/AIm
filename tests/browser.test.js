@@ -413,7 +413,9 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await sw.evaluate(() => serial(() => setSetting("homeCard", true))); // an earlier check switched the homepage card off
   await sw.evaluate(() => serial(() => startPurpose({ text: "Study for my biology exam", search: "cell biology" })));
   await sw.evaluate(() => serial(() => allowVideos({ query: "cell biology", videos: [{ id: "bio1", title: "Cells" }], lists: [] })));
-  await sw.evaluate(() => serial(() => recordTick(10, { id: "bio1", title: "Video bio1", channel: "Chan bio1", t: 300 })));
+  await sw.evaluate(() => serial(() => recordTick(10, { id: "bio2", title: "Video bio2", channel: "Chan bio2", t: 60, d: 500 })));
+  await sw.evaluate(() => serial(() => recordTick(10, { id: "bio3", title: "Video bio3", channel: "Chan bio3", t: 90, d: 600 })));
+  await sw.evaluate(() => serial(() => recordTick(10, { id: "bio1", title: "Video bio1", channel: "Chan bio1", t: 300, d: 900 })));
   await sw.evaluate(() => serial(() => startPurpose({ text: "Fix my truck's AC", search: "truck ac recharge" })));
   await p.goto("https://www.youtube.com/");
   await p.waitForSelector("#wp-home .wp-home-resume");
@@ -422,6 +424,9 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     home.includes("Pick up where you left off") && home.includes("Current Target") && home.includes("Fix my truck's AC") && home.includes("Continue"), home.slice(0, 160));
   step("home: the set-aside Target under Recent Targets, with when and Resume",
     home.includes("Recent Targets") && home.includes("Study for my biology exam") && home.includes("Last active today") && !!(await p.$(".wp-home-row button:text-is('Resume')")));
+  step("home: a Target with no videos yet keeps the text-only card; a recent Target shows its last video small",
+    !(await p.$(".wp-home-current .wp-home-video")) && !!(await p.$(".wp-home-row .wp-home-row-thumb .wp-thumb-xs")) &&
+    (await p.$eval(".wp-home-row .wp-thumb-xs", n => n.style.backgroundImage)).includes("i.ytimg.com/vi/bio1/"));
   step("home: no example chips once there's something to pick up", !home.includes("Try asking") && home.includes("View all Targets") && !/\bnull\b/.test(home));
   await p.click(".wp-home-row button:text-is('Resume')");
   await p.waitForURL(/watch\?v=bio1/);
@@ -430,6 +435,21 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   st = await store();
   step("the resumed Target is current and the other is set aside", st.purpose?.text === "Study for my biology exam" &&
     st.paused.map(x => x.text).join() === "Fix my truck's AC" && !(await p.$(".wp-player-card")));
+  await p.goto("https://www.youtube.com/");
+  await p.waitForSelector("#wp-home .wp-home-current .wp-home-video");
+  const lastCard = await text("#wp-home .wp-home-video");
+  step("home: the current Target leads with its last video: thumbnail, title, channel, where you stopped, a coral progress line",
+    lastCard.includes("Video bio1") && lastCard.includes("Chan bio1") && lastCard.includes("Stopped at 5:00") &&
+    (await p.$eval(".wp-home-video .wp-thumb-progress i", n => n.style.width)) === "33%" && (await text(".wp-home-video .wp-thumb-len")) === "15:00", lastCard);
+  step("home: See more is closed at first and lists the Target's other videos",
+    (await text(".wp-home-see-more")) === "See more (2)" && (await p.$eval(".wp-home-minis", n => n.hidden)));
+  await p.click(".wp-home-see-more");
+  step("See more opens a row of small thumbnails, newest first",
+    (await p.$$eval(".wp-home-minis .wp-mini", ns => ns.map(n => n.title).join())) === "Video bio3,Video bio2" && (await text(".wp-home-see-more")) === "See less");
+  await p.click(".wp-home-minis .wp-mini");
+  await p.waitForURL(/watch\?v=bio3/);
+  step("a small thumbnail plays that video from where you stopped, still on the Target",
+    p.url().includes("watch?v=bio3&t=90s") && (await store()).purpose?.text === "Study for my biology exam", p.url());
   await p.click("#wp-chip .wp-pill");
   await p.click('.wp-dropdown button:has-text("Set aside for later")');
   await p.waitForURL("https://www.youtube.com/");
@@ -443,6 +463,10 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   const allText = await all.textContent("main");
   step("View all Targets lists set-aside and completed Targets", allText.includes("Study for my biology exam") && allText.includes("Start again") &&
     allText.includes("learn to sharpen a chisel"), allText.slice(0, 200));
+  step("Targets page: a Target's last video as a thumbnail, and See more videos for the rest",
+    !!(await all.$(".item:has-text('Study for my biology exam') .lead-thumb .thumb")) &&
+    (await all.textContent(".item:has-text('Study for my biology exam') details.videos summary")) === "See more videos (2)" &&
+    !(await all.$(".item:has-text(\"Fix my truck's AC\") .lead-thumb")));
   await all.click(".item:has-text(\"Fix my truck's AC\") button:text-is('Resume')");
   await all.waitForURL(/results\?search_query=truck/);
   step("resuming a Target without a video goes back to its last search", (await store()).purpose?.text === "Fix my truck's AC");

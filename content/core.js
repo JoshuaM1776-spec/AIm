@@ -175,6 +175,7 @@ function applyStatus(r) {
   stop = r.stop || null;
   status = { today: r.today, leisureLeftMin: r.leisureLeftMin, totalReached: !!r.totalReached, recent: r.recent || status.recent,
     paused: r.paused || status.paused || [], pausedCount: r.pausedCount ?? status.pausedCount ?? 0,
+    currentVideos: "currentVideos" in r ? r.currentVideos : status.currentVideos || [],
     homeschool: "homeschool" in r ? r.homeschool : status.homeschool || null,
     onboarding: "onboarding" in r ? r.onboarding : status.onboarding || null,
     pathways: "pathways" in r ? r.pathways : status.pathways || null };

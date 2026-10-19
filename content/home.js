@@ -28,7 +28,8 @@ async function renderHome() {
   const p = activePurpose();
   const others = status.paused || [];
   const key = status.totalReached ? "total"
-    : [p ? `p|${p.id}|${p.text}` : "idle", leisureUsedUp(), others.map(x => x.id).join(","), account.on, status.pathways?.offer?.name || ""].join("|");
+    : [p ? `p|${p.id}|${p.text}|${(status.currentVideos || []).map(v => v.id).join(",")}` : "idle", leisureUsedUp(),
+      others.map(x => `${x.id}:${x.recent?.[0]?.id || ""}`).join(","), account.on, status.pathways?.offer?.name || ""].join("|");
   if ($("#wp-home")?.dataset.key === key) return; // don't rebuild while someone is typing
   $("#wp-home")?.remove();
 
@@ -118,11 +119,53 @@ async function resumeTarget(id) {
   location.href = r.url;
 }
 
+// ---------- thumbnails of what you watched for a Target ----------
+// Only videos you chose for that Target (never suggestions), with nothing that plays or previews.
+const thumbUrl = id => `https://i.ytimg.com/vi/${encodeURIComponent(id)}/mqdefault.jpg`;
+function thumb(v, cls) {
+  const pct = v.d > 0 && v.t > 0 ? Math.min(100, Math.round((v.t / v.d) * 100)) : 0;
+  return el("span", { class: `wp-thumb ${cls}`, style: `background-image: url("${thumbUrl(v.id)}")` },
+    v.d ? el("span", { class: "wp-thumb-len" }, fmtClock(v.d)) : null,
+    pct ? el("span", { class: "wp-thumb-progress" }, el("i", { style: `width: ${pct}%` })) : null);
+}
+// Play one of the Target's videos from where you stopped (from the start if you'd finished it).
+async function playTargetVideo(v) {
+  await send({ type: "purpose-allow", query: "", videos: [{ id: v.id, title: v.title, channel: v.channel }], lists: [] });
+  const from = v.t > 5 && !(v.d && v.t > v.d - 15) ? `&t=${Math.floor(v.t)}s` : "";
+  location.href = `/watch?v=${encodeURIComponent(v.id)}${from}`;
+}
+function lastVideoCard(p, v) {
+  const stopped = v.t > 5 && !(v.d && v.t > v.d - 15) ? `Stopped at ${fmtClock(v.t)}` : v.d && v.t > v.d - 15 ? "Finished" : "";
+  return el("button", { class: "wp-home-video", title: `Continue “${v.title}”`, onclick: () => resumeTarget(p.id) },
+    thumb(v, "wp-thumb-lg"),
+    el("span", { class: "wp-home-video-text" },
+      el("span", { class: "wp-home-video-title" }, v.title || "Your last video"),
+      v.channel ? el("span", { class: "wp-muted" }, v.channel) : null,
+      stopped ? el("span", { class: "wp-muted" }, stopped) : null));
+}
+function moreVideos(list) {
+  if (!list.length) return null;
+  const row = el("div", { class: "wp-home-minis", hidden: "" },
+    ...list.map(v => el("button", { class: "wp-mini", title: v.title, onclick: () => playTargetVideo(v) },
+      thumb(v, "wp-thumb-sm"), el("span", { class: "wp-mini-title" }, v.title))));
+  const toggle = el("button", { class: "wp-btn wp-btn-text wp-home-see-more", "aria-expanded": "false" }, `See more (${list.length})`);
+  toggle.onclick = () => {
+    const open = row.hidden;
+    row.hidden = !open;
+    toggle.setAttribute("aria-expanded", String(open));
+    toggle.textContent = open ? "See less" : `See more (${list.length})`;
+  };
+  return el("div", { class: "wp-home-more" }, toggle, row);
+}
+
 function currentTargetRow(p) {
+  const vids = status.currentVideos || [];
   return el("div", { class: "wp-home-current" },
     el("div", { class: "wp-label" }, "Current Target"),
     el("div", { class: "wp-home-purpose" }, p.text),
     el("div", { class: "wp-muted wp-home-meta" }, targetMeta({ ...p, videos: (p.videos || []).length })),
+    vids[0] ? lastVideoCard(p, vids[0]) : null,
+    moreVideos(vids.slice(1)),
     el("div", { class: "wp-home-alt" },
       el("button", { class: "wp-btn wp-btn-accent", onclick: () => resumeTarget(p.id) }, icon("play"), "Continue"),
       el("button", { class: "wp-btn wp-btn-tonal", onclick: askDone }, icon("check2"), "Target complete"),
@@ -130,7 +173,9 @@ function currentTargetRow(p) {
 }
 
 function pausedTargetRow(t) {
+  const v = t.recent?.[0];
   return el("div", { class: "wp-home-row" },
+    v ? el("button", { class: "wp-home-row-thumb", title: `Resume: ${v.title}`, onclick: () => resumeTarget(t.id) }, thumb(v, "wp-thumb-xs")) : null,
     el("div", { class: "wp-home-row-text" },
       el("div", { class: "wp-strong wp-ellipsis" }, t.text),
       el("div", { class: "wp-muted wp-home-meta" }, targetMeta(t))),

@@ -238,7 +238,26 @@ function resumable(s) {
 function summary(p, state) {
   return { id: p.id, text: p.text, state, lastActiveAt: p.lastActiveAt || p.pausedAt || p.endedAt || p.startedAt,
     usedSec: Math.round(p.usedSec || 0), videos: (p.videos || []).length, searches: (p.searches || []).length,
-    outcome: p.outcome || null, last: p.last || null, study: studyProgress(p), notes: p.notes || "" };
+    outcome: p.outcome || null, last: p.last || null, study: studyProgress(p), notes: p.notes || "", recent: recentVideos(p) };
+}
+
+// The videos watched for a Target, most recently watched first (the one you'd continue leads),
+// with where you stopped in each and its length in seconds when known: the thumbnails on
+// "Pick up where you left off" and the Targets page. Only videos you chose; never suggestions.
+function recentVideos(p, n = 7) {
+  const lengths = new Map((p.allowed || []).map(v => [v.id, v.length]));
+  const toSec = l => (l ? String(l).split(":").reduce((s, x) => s * 60 + Number(x), 0) : 0);
+  const order = (p.videos || []).filter(v => v.id).slice().sort((a, b) => (b.lastAt || b.at || 0) - (a.lastAt || a.at || 0));
+  if (p.last?.id) order.sort((a, b) => (b.id === p.last.id) - (a.id === p.last.id));
+  const seen = new Set(), out = [];
+  for (const v of order) {
+    if (seen.has(v.id)) continue;
+    seen.add(v.id);
+    out.push({ id: v.id, title: v.title || "", channel: v.channel || "", t: p.last?.id === v.id ? Math.floor(p.last.t || 0) : v.t || 0,
+      d: v.d || toSec(lengths.get(v.id)) });
+    if (out.length >= n) break;
+  }
+  return out;
 }
 
 // Where a study session stands, for "Pick up where you left off": topic 2 of 3, 1 checked.
@@ -709,6 +728,10 @@ async function recordTick(seconds, video) {
         activity.videos = activity.videos.slice(-200);
       }
       v.sec += add;
+      // Where you stopped and how long it is, for the thumbnails on "Pick up where you left off".
+      v.t = Math.max(0, Math.floor(Number(video.t) || 0));
+      if (Number(video.d) > 0) v.d = Math.floor(Number(video.d));
+      v.lastAt = now;
     }
   }
 
