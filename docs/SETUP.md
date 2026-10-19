@@ -220,6 +220,23 @@ This lifts Supabase's limit of a couple of emails an hour, and lets you edit the
 | Check connection fails, and the logs (or the error) mention **Invalid JWT** | Open **Edge Functions → ai → Details** and turn off **Verify JWT** (sometimes "Enforce JWT verification"), then save. Aim's code checks the sign-in itself, so this is safe. Newer Supabase projects sometimes need it. |
 | The editor won't deploy and shows a red error | Make sure you pasted the **whole** file: it starts with `// GENERATED` and ends with `});`. Paste it again and redeploy. |
 
+## Part 9 — Take payments for Aim Plus (Stripe)
+
+Until this is done, Plus is given by hand: in Supabase's **Table Editor**, open `profiles` and set someone's `plan` to `plus`. Settings says subscriptions aren't available yet. When you're ready to charge:
+
+1. **Add billing's tables:** in Supabase, open **SQL Editor** → **New query**, paste all of `supabase/migrations/0003_billing.sql`, and choose **Run**.
+2. **Create the product in Stripe** ([dashboard.stripe.com](https://dashboard.stripe.com), in **Test mode** first): **Product catalog** → **Add product**, name it "Aim Plus", and add a **recurring** price (monthly, yearly or both; the price is your decision). Open the price and copy its **Price ID** (starts with `price_`).
+3. **Put the webhook function online:** in Supabase, **Edge Functions** → **Deploy a new function** → **Via Editor**. Paste all of `supabase/functions/stripe-webhook-dashboard.ts`, name it exactly `stripe-webhook`, and deploy. Then open its **Details** and turn **Verify JWT** (or "Enforce JWT verification") **off**: Stripe can't sign in to your project, so this function checks Stripe's signature on every request instead.
+4. **Tell Stripe where to send events:** in Stripe, **Developers** → **Webhooks** → **Add endpoint**. The URL is `https://YOUR-PROJECT-REF.supabase.co/functions/v1/stripe-webhook`. Select these events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`. Save, then reveal and copy the **Signing secret** (starts with `whsec_`).
+5. **Give the server the Stripe secrets:** in Supabase, **Edge Functions** → **Secrets**, add three. Type them there yourself; never paste them into a chat or a file.
+   - `STRIPE_SECRET_KEY`: from Stripe **Developers** → **API keys** → **Secret key** (`sk_test_…` in test mode)
+   - `STRIPE_WEBHOOK_SECRET`: the `whsec_…` from step 4
+   - `STRIPE_PRICE_PLUS`: the `price_…` from step 2
+6. **Let people manage their subscription:** in Stripe, **Settings** → **Billing** → **Customer portal**: turn on canceling and updating payment methods, and save.
+7. **Update the `ai` function** with the current `ai-dashboard.ts` (Part 6, "Updating later").
+8. **Test it:** in Aim's Settings, signed in on a Free account, choose **Upgrade to Plus**. Pay with Stripe's test card `4242 4242 4242 4242`, any future date, any CVC. Back in Settings, the plan says Aim Plus with a renewal date, and **Manage subscription** opens Stripe's portal; cancel there and the plan goes back to Free when the period ends.
+9. **Going live:** repeat steps 2, 4 and 5 in Stripe's live mode (a live price, a live webhook endpoint, the live secret key and signing secret), replacing the test values.
+
 ## Later, before real users
 
 - **Email sending:** set up your own SMTP (Part 4).

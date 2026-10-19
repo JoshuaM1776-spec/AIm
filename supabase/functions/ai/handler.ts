@@ -41,6 +41,12 @@ export interface Deps {
     exportData(userId: string): Promise<Record<string, unknown>>; // everything stored for the account
     deleteUser(userId: string): Promise<void>;                    // deletes the account; its data goes with it
   };
+  // Stripe, when configured (billing.ts). Absent: Plus is given by hand in the profiles table.
+  billing?: {
+    info(userId: string): Promise<{ status: string | null; renewsAt: string | null; cancelAtPeriodEnd: boolean; customer: string | null }>;
+    checkout(user: { id: string; email?: string }, customer: string | null): Promise<string>;
+    portal(customer: string): Promise<string>;
+  };
   now(): Date;
   config: Config;
 }
@@ -88,7 +94,7 @@ export const TASKS: Record<string, Task> = {
 };
 
 // Handled directly in handle(), without AI.
-const ACCOUNT_TASKS = new Set(["status", "account-export", "account-delete"]);
+const ACCOUNT_TASKS = new Set(["status", "account-export", "account-delete", "billing-checkout", "billing-portal"]);
 
 export function limitsFor(plan: Plan, config: Config): Limits {
   if (plan === "plus") return config.limits;
@@ -179,7 +185,27 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
   if (name === "status") {
     const since = new Date(deps.now().getTime() - 24 * 3600 * 1000);
     const usage = await deps.usageSince(user.id, since);
-    return json(200, { ok: true, email: user.email ?? null, plan, usage, limits: limitsFor(plan, deps.config) }, cors);
+    const b = deps.billing ? await deps.billing.info(user.id) : null;
+    const billing = { available: !!deps.billing, status: b?.status ?? null, renewsAt: b?.renewsAt ?? null,
+      cancelAtPeriodEnd: !!b?.cancelAtPeriodEnd, manage: !!b?.customer };
+    return json(200, { ok: true, email: user.email ?? null, plan, usage, limits: limitsFor(plan, deps.config), billing }, cors);
+  }
+
+  // Subscribe, or manage the subscription: a Stripe page for the extension to open.
+  if (name === "billing-checkout" || name === "billing-portal") {
+    if (!deps.billing) return fail(503, "billing", "Subscriptions aren't available yet.", cors);
+    const b = await deps.billing.info(user.id);
+    try {
+      if (name === "billing-portal") {
+        if (!b.customer) return fail(400, "billing", "There's no subscription to manage yet.", cors);
+        return json(200, { ok: true, url: await deps.billing.portal(b.customer) }, cors);
+      }
+      if (plan === "plus" && b.customer) return json(200, { ok: true, url: await deps.billing.portal(b.customer) }, cors);
+      return json(200, { ok: true, url: await deps.billing.checkout({ id: user.id, email: user.email }, b.customer) }, cors);
+    } catch (e) {
+      console.error("billing", (e as Error).message);
+      return fail(502, "billing", "Couldn't reach the payment service. Try again shortly.", cors);
+    }
   }
 
   // Your data: download all of it, or delete the account and everything with it. No AI.

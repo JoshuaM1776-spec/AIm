@@ -97,6 +97,13 @@ const deps = {
       assessments: [...deps.db.assessments.values()], assessmentTurns: [], progress: deps.db.progress }),
     deleteUser: async id => { srv.deletedUsers.push(id); for (const v of srv.sessions.values()) v.live = false; }
   },
+  // Stripe stand-in: Checkout and the portal are pages on this server.
+  billing: {
+    info: async () => ({ customer: srv.plan === "plus" ? "cus_test" : null, status: srv.plan === "plus" ? "active" : null,
+      renewsAt: srv.plan === "plus" ? "2026-11-18T12:00:00Z" : null, cancelAtPeriodEnd: false }),
+    checkout: async () => `${base}/stripe/checkout`,
+    portal: async () => `${base}/stripe/portal`
+  },
   now: () => new Date(),
   config: { origins: [], limits: { dayCalls: 300, dayTokens: 400000, minuteCalls: 20 }, maxBodyBytes: 16384 }
 };
@@ -192,12 +199,18 @@ await opt.click("button:text-is('Sign in')");
 await opt.waitForSelector("text=Plan: Aim Free");
 step("signs in and shows the plan", (await opt.textContent("#plusBody")).includes(user.email));
 step("free plan has no AI check", await opt.$("button:text-is('Check connection')") === null);
+const [checkout] = await Promise.all([ctx.waitForEvent("page"), opt.click("button:text-is('Upgrade to Plus')")]);
+step("Upgrade to Plus opens the payment page in a new tab (Stripe's, never Aim's)", checkout.url().endsWith("/stripe/checkout"), checkout.url());
+await checkout.close();
 
 const local = await sw.evaluate(() => chrome.storage.local.get(null));
 step("the session isn't in chrome.storage.local (YouTube tabs can read that)", !/acc-|ref-/.test(JSON.stringify(local)));
 
 srv.plan = "plus";
 await opt.reload();
+await opt.waitForSelector("text=Renews");
+step("Plus shows the subscription and a way to manage it, and no Upgrade", (await opt.textContent("#plusBody")).includes("Renews November 18, 2026") &&
+  !!(await opt.$("button:text-is('Manage subscription')")) && !(await opt.$("button:text-is('Upgrade to Plus')")));
 await opt.waitForSelector("button:text-is('Check connection')");
 step("plus plan shows AI use", (await opt.textContent("#plusBody")).includes("of 300 requests"));
 await opt.click("button:text-is('Check connection')");

@@ -6,6 +6,7 @@ import Anthropic from "npm:@anthropic-ai/sdk@0.135.0";
 import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 import { type ClaudeResult, corsHeaders, type Deps, handle } from "./handler.ts";
 import type { AiRequest, Assessment, TeachbackDb, Turn } from "./teachback.ts";
+import { type BillingConfig, checkoutUrl, portalUrl, stripeApi } from "./billing.ts";
 
 const env = (k: string, d = "") => Deno.env.get(k) ?? d;
 const num = (k: string, d: number) => {
@@ -141,6 +142,19 @@ const account: NonNullable<Deps["account"]> = {
   }
 };
 
+// Stripe, when its secrets are set (STRIPE_SECRET_KEY, STRIPE_PRICE_PLUS). Without them, Plus is
+// given by hand (profiles.plan) and Settings says subscriptions aren't available yet.
+const billingCfg: BillingConfig = { secretKey: env("STRIPE_SECRET_KEY"), webhookSecret: env("STRIPE_WEBHOOK_SECRET"),
+  pricePlus: env("STRIPE_PRICE_PLUS"), publicUrl: `${env("SUPABASE_URL")}/functions/v1` };
+const billing: Deps["billing"] = billingCfg.secretKey && billingCfg.pricePlus ? {
+  async info(userId) {
+    const p = must(await admin.from("profiles").select("stripe_customer_id, plan_status, plan_renews_at, plan_cancel_at_period_end").eq("id", userId).maybeSingle());
+    return { customer: p?.stripe_customer_id ?? null, status: p?.plan_status ?? null, renewsAt: p?.plan_renews_at ?? null, cancelAtPeriodEnd: !!p?.plan_cancel_at_period_end };
+  },
+  checkout: (user, customer) => checkoutUrl(stripeApi(billingCfg.secretKey), billingCfg, user, customer),
+  portal: customer => portalUrl(stripeApi(billingCfg.secretKey), billingCfg, customer)
+} : undefined;
+
 const deps: Deps = {
   async getUser(token) {
     const { data, error } = await admin.auth.getUser(token);
@@ -172,6 +186,7 @@ const deps: Deps = {
   callClaude,
   db,
   account,
+  billing,
   now: () => new Date(),
   config: {
     origins: env("AIM_EXTENSION_ORIGINS").split(",").map(s => s.trim()).filter(Boolean),

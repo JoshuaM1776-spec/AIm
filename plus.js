@@ -208,7 +208,7 @@ async function plusStatus() {
     const st = await plusCall("status");
     const fresh = await loadSession();
     if (fresh && fresh.plan !== st.plan) await saveSession({ ...fresh, plan: st.plan });
-    return { configured: true, signedIn: true, email: st.email || s.email, plan: st.plan, usage: st.usage, limits: st.limits };
+    return { configured: true, signedIn: true, email: st.email || s.email, plan: st.plan, usage: st.usage, limits: st.limits, billing: st.billing || null };
   } catch (e) {
     if (e.code === "auth") return { configured: true, signedIn: false, error: e.message };
     return { configured: true, signedIn: true, email: s.email, offline: true, error: e.message };
@@ -266,6 +266,9 @@ const plusHandlers = {
   "plus-export": () => plusExport(),
   "plus-delete": m => plusDelete(m.confirm),
   "plus-check": () => plusCall("check").then(r => ({ result: "ok", reply: r.reply })),
+  // Subscribe or manage: Stripe's own page, in a new tab. Card details never touch Aim.
+  "plus-subscribe": () => plusCall("billing-checkout").then(r => chrome.tabs.create({ url: r.url })).then(() => ({ result: "ok" })),
+  "plus-manage": () => plusCall("billing-portal").then(r => chrome.tabs.create({ url: r.url })).then(() => ({ result: "ok" })),
   "plus-call": async m => {
     if (!PLUS_TASKS.has(m.task)) throw new PlusError("Unknown request.");
     return plusCall(m.task, m.input);

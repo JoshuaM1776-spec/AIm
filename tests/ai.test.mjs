@@ -4,6 +4,7 @@ import assert from "node:assert";
 import { handle } from "../supabase/functions/ai/handler.ts";
 import { memDb } from "./helpers/memdb.mjs";
 import { difficulty } from "../supabase/functions/ai/teachback.ts";
+import { checkoutUrl, handleStripeEvent, handleStripeWebhook, planForStatus, stripeApi, verifyStripeSignature } from "../supabase/functions/ai/billing.ts";
 
 const EXT = "chrome-extension://" + "a".repeat(32);
 const LIMITS = { dayCalls: 3, dayTokens: 1000, minuteCalls: 2 };
@@ -85,7 +86,7 @@ test("rejects unknown tasks, bad JSON and large bodies", async () => {
 test("status reports plan, usage and limits without calling the AI", async () => {
   const deps = makeDeps({ plan: "free" });
   const r = await call(deps, { task: "status" });
-  assert.deepStrictEqual(r.body, { ok: true, email: "a@example.com", plan: "free", usage: { calls: 0, tokens: 0 },
+  assert.deepStrictEqual(r.body, { ok: true, email: "a@example.com", plan: "free", usage: { calls: 0, tokens: 0 }, billing: { available: false, status: null, renewsAt: null, cancelAtPeriodEnd: false, manage: false },
     limits: { dayCalls: 1, dayTokens: 100, minuteCalls: 1 } }, "free accounts get a tenth of the Plus allowance");
   assert.strictEqual(deps.calls.length, 0);
 });
@@ -431,6 +432,93 @@ test("Put it to work: Plus only; leans on what needs practice; tidied and bounde
   assert.strictEqual((await call(makeDeps({ plan: "free" }), { task: "study-apply", input: { title: "x y" } })).status, 403);
 });
 
+// ---------- billing (Stripe) ----------
+const WHSEC = "whsec_test_secret";
+async function signed(payload, secret = WHSEC, t = Math.floor(Date.now() / 1000)) {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = [...new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${t}.${payload}`)))].map(b => b.toString(16).padStart(2, "0")).join("");
+  return `t=${t},v1=${sig}`;
+}
+function billingDb() {
+  const events = new Set(), users = { u1: { customer: null, plan: "free" } };
+  return { users, events,
+    firstTime: async id => (events.has(id) ? false : (events.add(id), true)),
+    linkCustomer: async (userId, customer) => { users[userId].customer = customer; },
+    setPlanByCustomer: async (customer, p) => { const u = Object.values(users).find(x => x.customer === customer); if (!u) return false; Object.assign(u, p); return true; } };
+}
+
+test("billing: which subscription states are Plus", () => {
+  for (const s of ["active", "trialing", "past_due"]) assert.strictEqual(planForStatus(s), "plus", s);
+  for (const s of ["canceled", "unpaid", "incomplete", "incomplete_expired", "paused", ""]) assert.strictEqual(planForStatus(s), "free", s);
+});
+
+test("billing: Stripe signatures are checked, old ones refused", async () => {
+  const body = JSON.stringify({ id: "evt_1" }), now = Date.now();
+  assert.ok(await verifyStripeSignature(body, await signed(body), WHSEC, now));
+  assert.ok(!(await verifyStripeSignature(body, await signed(body, "whsec_other"), WHSEC, now)), "wrong secret");
+  assert.ok(!(await verifyStripeSignature(body + " ", await signed(body), WHSEC, now)), "changed body");
+  assert.ok(!(await verifyStripeSignature(body, await signed(body, WHSEC, Math.floor(now / 1000) - 600), WHSEC, now)), "replayed later");
+  assert.ok(!(await verifyStripeSignature(body, "", WHSEC, now)));
+  assert.ok(await verifyStripeSignature(body, `${await signed(body)},v1=deadbeef`, WHSEC, now), "any matching v1 is enough");
+});
+
+test("billing: checkout links the customer and turns on Plus; subscription changes follow; each event once", async () => {
+  const db = billingDb();
+  assert.strictEqual(await handleStripeEvent({ id: "evt_a", type: "checkout.session.completed",
+    data: { object: { client_reference_id: "u1", customer: "cus_1", mode: "subscription", payment_status: "paid" } } }, db), "linked");
+  assert.deepStrictEqual([db.users.u1.customer, db.users.u1.plan], ["cus_1", "plus"]);
+  assert.strictEqual(await handleStripeEvent({ id: "evt_a", type: "checkout.session.completed", data: { object: {} } }, db), "duplicate");
+  await handleStripeEvent({ id: "evt_b", type: "customer.subscription.updated",
+    data: { object: { customer: "cus_1", status: "past_due", cancel_at_period_end: true, items: { data: [{ current_period_end: 1800000000 }] } } } }, db);
+  assert.deepStrictEqual([db.users.u1.plan, db.users.u1.status, db.users.u1.cancelAtPeriodEnd, db.users.u1.renewsAt], ["plus", "past_due", true, new Date(1800000000 * 1000).toISOString()]);
+  await handleStripeEvent({ id: "evt_c", type: "customer.subscription.deleted", data: { object: { customer: "cus_1", status: "active" } } }, db);
+  assert.deepStrictEqual([db.users.u1.plan, db.users.u1.status], ["free", "canceled"], "deleted means canceled, whatever status it carries");
+  assert.strictEqual(await handleStripeEvent({ id: "evt_d", type: "customer.subscription.updated", data: { object: { customer: "cus_unknown", status: "active" } } }, db), "unknown customer");
+  assert.strictEqual(await handleStripeEvent({ id: "evt_e", type: "invoice.paid", data: { object: {} } }, db), "ignored");
+});
+
+test("billing: the webhook refuses unsigned requests and serves the return pages", async () => {
+  const db = billingDb(), body = JSON.stringify({ id: "evt_w", type: "checkout.session.completed", data: { object: { client_reference_id: "u1", customer: "cus_9", mode: "subscription" } } });
+  const bad = await handleStripeWebhook(new Request("https://x/stripe-webhook", { method: "POST", body, headers: { "Stripe-Signature": "t=1,v1=00" } }), { webhookSecret: WHSEC }, db);
+  assert.strictEqual(bad.status, 400);
+  assert.strictEqual(db.users.u1.customer, null, "nothing applied");
+  const ok = await handleStripeWebhook(new Request("https://x/stripe-webhook", { method: "POST", body, headers: { "Stripe-Signature": await signed(body) } }), { webhookSecret: WHSEC }, db);
+  assert.strictEqual(ok.status, 200);
+  assert.strictEqual(db.users.u1.plan, "plus");
+  const done = await handleStripeWebhook(new Request("https://x/stripe-webhook?page=done"), { webhookSecret: WHSEC }, db);
+  assert.match(await done.text(), /You're on Aim Plus/);
+});
+
+test("billing: Checkout asks Stripe for a Plus subscription tied to the user", async () => {
+  let sent;
+  const fetcher = async (url, init) => { sent = { url, body: init.body.toString(), auth: init.headers.Authorization }; return new Response(JSON.stringify({ url: "https://checkout.stripe.com/c/x" }), { status: 200 }); };
+  const url = await checkoutUrl(stripeApi("sk_test_1", fetcher), { secretKey: "sk_test_1", pricePlus: "price_plus", publicUrl: "https://p.supabase.co/functions/v1" }, { id: "u1", email: "a@example.com" }, null);
+  assert.strictEqual(url, "https://checkout.stripe.com/c/x");
+  assert.strictEqual(sent.url, "https://api.stripe.com/v1/checkout/sessions");
+  const p = new URLSearchParams(sent.body);
+  assert.deepStrictEqual([p.get("mode"), p.get("line_items[0][price]"), p.get("client_reference_id"), p.get("customer_email"), p.get("subscription_data[metadata][aim_user]")],
+    ["subscription", "price_plus", "u1", "a@example.com", "u1"]);
+  assert.match(p.get("success_url"), /stripe-webhook\?page=done$/);
+  assert.strictEqual(sent.auth, "Bearer sk_test_1");
+});
+
+test("billing: subscribe and manage tasks, and what status says", async () => {
+  const none = makeDeps({ plan: "free" });
+  assert.strictEqual((await call(none, { task: "billing-checkout" })).status, 503, "not configured yet");
+  assert.deepStrictEqual((await call(none, { task: "status" })).body.billing, { available: false, status: null, renewsAt: null, cancelAtPeriodEnd: false, manage: false });
+  const opened = [];
+  const withBilling = (plan, customer) => Object.assign(makeDeps({ plan }), { billing: {
+    info: async () => ({ customer, status: customer ? "active" : null, renewsAt: null, cancelAtPeriodEnd: false }),
+    checkout: async (user, c) => (opened.push(["checkout", user.id, c]), "https://checkout"),
+    portal: async c => (opened.push(["portal", c]), "https://portal") } });
+  assert.strictEqual((await call(withBilling("free", null), { task: "billing-checkout" })).body.url, "https://checkout");
+  assert.strictEqual((await call(withBilling("plus", "cus_1"), { task: "billing-checkout" })).body.url, "https://portal", "already Plus: manage instead of paying twice");
+  assert.strictEqual((await call(withBilling("free", null), { task: "billing-portal" })).status, 400);
+  assert.strictEqual((await call(withBilling("free", "cus_2"), { task: "billing-checkout" })).body.url, "https://checkout");
+  assert.deepStrictEqual(opened, [["checkout", "u1", null], ["portal", "cus_1"], ["checkout", "u1", "cus_2"]]);
+  assert.strictEqual((await call(withBilling("plus", "cus_1"), { task: "status" })).body.billing.manage, true);
+});
+
 test("study sessions: Plus only; the student's notes keep their structure; topics are tidied", async () => {
   let prompt = "";
   const deps = makeDeps({ plan: "plus", claude: req => {
@@ -594,8 +682,9 @@ test("account: download everything, or delete only with DELETE typed; both need 
 
 test("the one-file dashboard version is up to date with supabase/functions/ai", async () => {
   const fs = await import("node:fs");
-  const { build, OUT } = await import("../tools/bundle-ai.mjs");
+  const { build, OUT, buildWebhook, OUT_WEBHOOK } = await import("../tools/bundle-ai.mjs");
   assert.ok(fs.readFileSync(OUT, "utf8") === build(), "out of date: run node tools/bundle-ai.mjs");
+  assert.ok(fs.readFileSync(OUT_WEBHOOK, "utf8") === buildWebhook(), "webhook out of date: run node tools/bundle-ai.mjs");
   // The files are pasted together, so top-level names must not repeat across them.
   const names = [...build().matchAll(/^(?:export )?(?:const|let|function|class|async function) (\w+)/gm)].map(m => m[1]);
   const dupes = names.filter((n, i) => names.indexOf(n) !== i);

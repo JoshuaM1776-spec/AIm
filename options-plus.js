@@ -37,8 +37,6 @@ function emailForm() {
     plus.email = r.email;
     plus.step = "code";
     renderPlus();
-// Signing in from the emailed link happens in another tab; catch up when this one is looked at again.
-window.addEventListener("focus", () => { if (plus.step === "code" && !plus.busy) renderPlus(true); });
   };
   return [node("p", { className: "note", textContent: "Sign in to get AI-guided learning paths when Aim Plus launches. Aim Free stays free and keeps working the same, with or without an account." }), form];
 }
@@ -58,8 +56,6 @@ function codeForm() {
     plus.step = "email";
     toast("Signed in.");
     renderPlus();
-// Signing in from the emailed link happens in another tab; catch up when this one is looked at again.
-window.addEventListener("focus", () => { if (plus.step === "code" && !plus.busy) renderPlus(true); });
   };
   setTimeout(() => input.focus());
   return [node("p", { className: "note", textContent: `We sent an email to ${plus.email}. It may take a minute to arrive. ` +
@@ -71,11 +67,34 @@ function accountView(st) {
   const lines = [node("div", { className: "setting" },
     node("div", { className: "what" }, node("b", { textContent: st.email || "Signed in" }),
       node("span", { textContent: st.offline ? "Couldn't reach Aim's server just now." : `Plan: ${planName}` })))];
+  // The subscription: renewing, ending, or a card to fix; or the way to subscribe.
+  const b = st.billing;
+  const day = iso => new Date(iso).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
+  if (st.plan === "plus" && b?.manage) {
+    const when = b.renewsAt ? (b.cancelAtPeriodEnd ? `Ends ${day(b.renewsAt)}. You can turn renewal back on until then.` : `Renews ${day(b.renewsAt)}.`) : "Active.";
+    lines.push(node("div", { className: "setting" }, node("div", { className: "what" }, node("b", { textContent: "Subscription" }),
+      node("span", { textContent: b.status === "past_due" ? "Payment didn't go through. Update your card to keep Aim Plus." : when }))));
+  }
+  if (st.plan !== "plus" && b?.available) {
+    lines.push(node("div", { className: "note" },
+      node("b", { textContent: "Aim Plus" }),
+      node("div", { textContent: "Study sessions built from your syllabus, TeachBack checks, Put it to work, Pathways, and the librarian with a bigger daily allowance." })));
+  }
   if (st.plan === "plus" && st.usage && st.limits) {
     lines.push(node("div", { className: "setting" }, node("div", { className: "what" }, node("b", { textContent: "AI use, last 24 hours" }),
       node("span", { textContent: `${st.usage.calls} of ${st.limits.dayCalls} requests` }))));
   }
   const buttons = node("div", { className: "form" });
+  if (st.plan !== "plus" && b?.available) {
+    const up = node("button", { className: "btn accent", type: "button", textContent: "Upgrade to Plus" });
+    up.onclick = async () => { if (await plusDo({ type: "plus-subscribe" })) plusMsg("Stripe's secure checkout opened in a new tab. When you're done, come back here."); };
+    buttons.append(up);
+  }
+  if (b?.manage) {
+    const mg = node("button", { className: "btn tonal", type: "button", textContent: "Manage subscription" });
+    mg.onclick = () => plusDo({ type: "plus-manage" });
+    buttons.append(mg);
+  }
   if (st.plan === "plus") {
     const tb = node("button", { className: "btn", type: "button", textContent: "Test my understanding" });
     tb.onclick = () => chrome.tabs.create({ url: chrome.runtime.getURL("teachback.html") });
@@ -140,11 +159,13 @@ async function renderPlus(keepMsg = false) {
   if (!st || !st.configured) { $("plus").hidden = true; return; }
   $("plus").hidden = false;
   if (!keepMsg) plusMsg(st.error && !st.signedIn ? st.error : "");
+  plus.signedIn = !!st.signedIn;
   if (st.signedIn) plus.step = "email"; // signing out later starts from the email form
   const body = st.signedIn ? accountView(st) : plus.step === "code" ? codeForm() : emailForm();
   $("plusBody").replaceChildren(...body);
 }
 
 renderPlus();
-// Signing in from the emailed link happens in another tab; catch up when this one is looked at again.
-window.addEventListener("focus", () => { if (plus.step === "code" && !plus.busy) renderPlus(true); });
+// Signing in from the emailed link, or subscribing on Stripe, happens in another tab; catch up when
+// this one is looked at again.
+window.addEventListener("focus", () => { if ((plus.step === "code" || plus.signedIn) && !plus.busy) renderPlus(true); });

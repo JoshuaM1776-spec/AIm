@@ -73,6 +73,18 @@ You need a Supabase account, the [Supabase CLI](https://supabase.com/docs/guides
    ```
    Then Settings → Aim Plus → **Check connection**.
 
+## Billing (Stripe)
+
+`functions/ai/billing.ts` holds the logic; tests in `tests/ai.test.mjs`. Step by step: [docs/SETUP.md, Part 9](../docs/SETUP.md).
+
+| Part | What it does |
+|---|---|
+| `migrations/0003_billing.sql` | `profiles` gains `stripe_customer_id`, `plan_status`, `plan_renews_at`, `plan_cancel_at_period_end`; `billing_events` records each Stripe event once. |
+| `billing-checkout`, `billing-portal` (tasks on `ai`) | Return a Stripe Checkout page (a subscription to `STRIPE_PRICE_PLUS`, tied to the user) or the customer portal. Already Plus: Checkout returns the portal instead. Without Stripe secrets: 503, and `status` reports `billing.available: false`. |
+| `functions/stripe-webhook/` (and `stripe-webhook-dashboard.ts`) | Stripe's webhook, deployed with JWT verification off. Checks the `Stripe-Signature` (HMAC-SHA256, five-minute tolerance), applies each event once: Checkout links the customer and sets Plus; subscription events set the plan (`active`, `trialing`, `past_due` → Plus; anything else → Free). GET serves the pages Checkout and the portal return to. |
+
+Secrets: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PLUS`. Card details never reach Aim's server.
+
 ## Before release
 
 - Filling in `config.js` changes what Aim sends off the device, so update `PRIVACY.md` and the store listing's privacy answers at the same time (see the notes in both).
