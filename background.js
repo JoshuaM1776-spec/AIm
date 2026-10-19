@@ -44,6 +44,14 @@ async function tabState() {
     saved: saved.slice(-12).reverse(), savedCount: saved.length };
 }
 
+// A family's plan is for one day: on a new day (or after half an hour), fetch it again.
+let familyAt = 0;
+function familyFresh() {
+  chrome.storage.local.get("homeschool").then(({ homeschool: hs }) => {
+    if (hs?.family && (hs.date !== todayKey() || Date.now() - familyAt > 30 * 60_000)) { familyAt = Date.now(); studentRefresh(); }
+  });
+}
+
 // Changes to stored data run one at a time (see serial in store.js).
 const writes = {
   "tick": m => recordTick(Math.min(30, Math.max(0, Number(m.seconds) || 0)), m.video?.id ? m.video : null),
@@ -103,7 +111,7 @@ async function setToolbarTheme(dark) {
 const reads = {
   "open-options": m => chrome.tabs.create({ url: chrome.runtime.getURL("options.html" + ({ advanced: "#advanced", account: "#plus", learn: "#learn" }[m.section] || "")) }).then(() => ({ result: "applied" })),
   "theme": m => setToolbarTheme(!!m.dark),
-  "status": () => tabState(),
+  "status": () => { familyFresh(); return tabState(); },
   "state": () => fullState(),
   "search-check": m => checkSearch(m.query),
   "targets": () => readAll().then(resumable),
@@ -133,6 +141,7 @@ const reads = {
     if (typeof m.notes === "string" && m.notes.trim()) q.set("notes", m.notes.trim().slice(0, 3000));
     if (typeof m.study === "string" && /^[\w-]{8,64}$/.test(m.study)) q.set("study", m.study); // a study topic to report back to
     if (typeof m.plan === "string" && /^[\w-]{1,64}$/.test(m.plan)) q.set("plan", m.plan); // a plan item to mark done
+    if (typeof m.objective === "string" && /^[\w-]{1,12}$/.test(m.objective)) q.set("objective", m.objective); // its curriculum objective
     if (typeof m.video === "string" && /^[\w-]{6,20}$/.test(m.video)) q.set("video", m.video); // "Test me on this video"
     const url = chrome.runtime.getURL("teachback.html" + (q.size ? "?" + q : ""));
     return chrome.tabs.create({ url }).then(() => ({ result: "applied" }));
@@ -173,5 +182,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     : serial(ensureMigrated).then(() => r(msg));
   run.then(res => sendResponse(res ?? null), e => sendResponse({ error: String(e.message || e) }));
   if (SYNC_AFTER.has(msg.type)) run.then(syncSoon, () => {});
+  // A student's lesson done (or watched to the end): tell the family's side soon.
+  if (msg.type === "plan-done" || msg.type === "tick") run.then(() => chrome.storage.local.get("hsOutbox")).then(d => d.hsOutbox?.length && studentRefresh(), () => {});
   return true;
 });

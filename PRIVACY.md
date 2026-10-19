@@ -75,6 +75,14 @@ Signing in is optional, and Aim Free works the same without it. If you sign in u
 - **Download my data** (Settings → Aim Plus) gives you one file with everything Aim's server holds for your account, plus what Aim keeps in your browser.
 - **Delete account** (same place) permanently deletes your account and everything stored with it on Aim's server, right away. Aim's data in your browser stays until you clear it or remove the extension. Usage records Anthropic or Supabase keep under their own policies (for example for abuse prevention) follow their terms.
 
+**Aim Homeschool** (a pilot; a separate account plan for families):
+
+- **The parent's account** holds the family: each student's first name, their level in each subject, interests (optional), the curriculum plan (subjects, units, objectives, pacing) with each approved version, weekly plans with what was approved and when, preferred channels per subject, the materials marked as owned, and the curriculum files the parent adds.
+- **Curriculum files** are read in the parent's browser; their text is kept for that family only, used only to plan for that family (sent to the AI to organize the curriculum and plan weeks), never shared with other families, never used to improve Aim or to train AI, and deleted when the parent deletes it or the account.
+- **Students have no email or password.** A student's Chrome is connected to the family with a one-time code; Aim's server knows that browser only as an anonymous account tied to the student. It receives that day's approved plan and the family's preferred channels, and sends back which lessons were finished and which video was watched for a lesson. TeachBack checks from that browser are kept with the student, like any TeachBack.
+- **What the parent sees:** the plan, lessons finished, and what TeachBack checks and projects showed for each objective. Lessons watched are shown apart from understanding.
+- **Deleting:** the parent can disconnect a student's browser, remove a student (and everything for them), delete a curriculum file, or delete the account, which deletes the whole family's data on Aim's server. Download my data (on the website) includes all of it.
+
 Aim Plus data is processed by Supabase (account service and database) and Anthropic (AI), each under their own privacy terms.
 
 ## Changes

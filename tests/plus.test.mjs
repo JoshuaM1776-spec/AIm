@@ -212,7 +212,7 @@ step("the Plus page, before Plus: what it does and the way to upgrade", frontTex
 await front.close();
 
 const local = await sw.evaluate(() => chrome.storage.local.get(null));
-step("the session isn't in chrome.storage.local (YouTube tabs can read that)", !/acc-|ref-/.test(JSON.stringify(local)));
+step("the session isn't in chrome.storage.local (YouTube tabs can read that)", !/"(acc|ref)-\d+"/.test(JSON.stringify(local)));
 
 srv.plan = "plus";
 const [welcomePage] = await Promise.all([ctx.waitForEvent("page"), opt.reload()]);
@@ -738,7 +738,7 @@ const exported = JSON.parse(fs.readFileSync(await download.path(), "utf8"));
 step("Download my data: account, server data and this browser's data in one file", exported.format === "aim-export-1" &&
   exported.account.email === user.email && Array.isArray(exported.assessments) && exported.assessments.length > 0 &&
   !!exported.browser.settings && "history" in exported.browser, Object.keys(exported).join());
-step("the download never includes the sign-in session", !/acc-\d|ref-\d/.test(JSON.stringify(exported)));
+step("the download never includes the sign-in session", !/"(acc|ref)-\d+"/.test(JSON.stringify(exported))); // whole tokens; random ids can contain "acc-1"
 await opt.click("#plusDelete");
 await opt.fill("#plusDeleteConfirm", "delete");
 step("Delete stays disabled until DELETE is typed exactly", await opt.isDisabled("#plusDeleteGo"));

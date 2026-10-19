@@ -1,7 +1,8 @@
 // Aim Homeschool — the student's Today screen on YouTube's homepage, and the plan beside a
 // lesson's video. For a student in a Homeschool household this replaces the "What brings you
-// here?" card. Until the parent website exists it runs on a sample plan, turned on in Settings
-// (see setHomeschoolPreview in store.js and docs/HOMESCHOOL.md → "Student home on YouTube").
+// here?" card. The plan is the day from the week the parent approved on the parent website (a
+// browser connected to the family; saveFamilyPlan in store.js), or a sample plan, turned on in
+// Settings to try it (setHomeschoolPreview).
 
 const planOn = () => !!status.homeschool?.items?.length;
 const planKey = () => JSON.stringify(status.homeschool?.items?.map(i => [i.id, !!i.doneAt, i.video?.id || "", i.interest || ""]) || null);
@@ -24,7 +25,7 @@ async function openPlanItem(item) {
     if (r?.result !== "applied") return toast(r?.message || "Couldn't start that. Try again.");
     location.href = r.url;
   } else if (item.kind === "teachback") {
-    send({ type: "open-teachback", topic: item.topic || item.title, plan: item.id });
+    send({ type: "open-teachback", topic: item.topic || item.title, plan: item.id, objective: item.objectiveId || undefined });
   } else openPlanGuide(item);
 }
 

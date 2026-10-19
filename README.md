@@ -10,6 +10,24 @@ Chrome extension, Manifest V3, no build step.
 
 **Aim Plus** (in progress) adds an optional account and AI through Aim's own server. It stays switched off until `config.js` names that server; see [supabase/README.md](supabase/README.md).
 
+## The parent website (Aim Homeschool)
+
+`web/` is the parents' side of Aim Homeschool: plain HTML and JavaScript (no build), hosted anywhere, talking to the same Supabase project. Setup is in docs/SETUP.md Part 11; the design is docs/PARENT_WEBSITE.md.
+
+| File | What it does |
+|---|---|
+| `web/index.html`, `web/app.css` | The page shell, navigation and look (colors and type from `shared/tokens.css`) |
+| `web/config.js` | Where Aim's server is (same values as the extension's `config.js`) |
+| `web/api.js` | Sign-in (emailed code or link) and calls to Aim's server |
+| `web/ui.js` | Small helpers, the family's data, suggested channels per subject |
+| `web/app.js` | Routing, Overview ("Needs your attention"), Settings, and the seven-step setup |
+| `web/curriculum.js` | The big picture: the family's own curriculum organized, edited, warned about, approved |
+| `web/week.js` | The weekly plan: proposed, edited or changed in plain words, gaps decided, approved as a week |
+| `web/projects.js`, `web/progress.js` | Projects & Materials (four weeks ahead, one shopping list) and Progress (the four words, from evidence) |
+| `web/shared/` | Copies of the extension's colors, fonts, mark, channel list and file reader. `node tools/build-web.mjs` refreshes them. |
+
+On the server, `supabase/functions/ai/homeschool.ts` holds every rule (approval, gaps, pairing, what the student may see); migration `0005_homeschool.sql` the tables. In the extension, a student's browser connects in Settings ("A student? Connect to my family"), and `saveFamilyPlan` in `store.js` turns the approved day into Today.
+
 ## How it fits together
 
 | File | Role |

@@ -62,7 +62,7 @@ async function render() {
       node("p", { className: "muted", textContent: `${BRAND} Plus isn't set up in this copy of ${BRAND}.` })));
     return;
   }
-  const plus = acct.signedIn && acct.plan === "plus";
+  const plus = acct.signedIn && (acct.plan === "plus" || acct.plan === "homeschool");
   const study = s?.purpose?.study && !s.purpose.study.endedAt
     ? { title: s.purpose.study.title, of: s.purpose.study.topics.length, done: s.purpose.study.topics.filter(t => t.check).length } : null;
   const ctx = { study, record: rec?.totals || null, sync: acct?.sync || null };

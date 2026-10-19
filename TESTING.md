@@ -334,6 +334,16 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] Keep out → Hide removes its videos from the homepage, results and sidebar; Ask first asks before watching without a Target.
 - [ ] Aim's menu while watching → **Sort this channel** offers Learn from, For breaks, Hide and **All your channels**.
 
+### 35. Aim Homeschool: the parent website and the student's Chrome (0.47, pilot)
+- [ ] On the website, sign in (code or link). A new family starts setup; stop halfway and Overview says **Finish setting up**.
+- [ ] Setup: a student with a level per subject; "The whole plan" isn't offered; a curriculum file (.pdf, .docx or .txt) is read in the browser and can't be added without ticking the confirmation.
+- [ ] **Organize my curriculum**: only what's in the file appears; lines Aim inferred say "check this". Move a unit above one it builds on: a warning, nothing blocked. Approve.
+- [ ] **Propose this week**: lessons by school day with objectives and why; a TeachBack check; a project with materials and safety. Subjects without a preferred channel are one decision each; the week can't be approved until each is decided.
+- [ ] Edit, move, remove, pick a video by link, "Find another", and ask for a change in plain words. Approve the week. Edit it again: "Changed since you approved it"; the student still sees the approved version; **Undo my changes** works.
+- [ ] Projects & Materials: the next four weeks; tick what you own; Copy what's needed; Print; Materials ready, Completed.
+- [ ] Student's Chrome: Aim's Settings → **A student? Connect to my family** → the code from the website. YouTube's homepage shows Today with that day's approved lessons. Mark one done: the parent's Overview counts it. A TeachBack from Today shows on Progress as Demonstrated, Developing or Needs review, with its evidence.
+- [ ] Settings → Disconnect the browser: on its next refresh, the student's Chrome is back to plain Aim.
+
 ## Known issues (not regressions)
 
 - The word check knows words, not meanings: synonyms ("tap" vs "faucet") get the question once; answering Yes teaches it that search.

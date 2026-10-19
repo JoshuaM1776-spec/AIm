@@ -9,6 +9,7 @@ function node(tag, props = {}, ...kids) {
   return n;
 }
 const plusMsg = text => ($("plusMsg").textContent = text || "");
+const isPlus = st => st.plan === "plus" || st.plan === "homeschool"; // Homeschool includes Plus
 
 // Runs an account action with the buttons disabled, and shows its error if it fails.
 async function plusDo(msg) {
@@ -38,7 +39,34 @@ function emailForm() {
     plus.step = "code";
     renderPlus();
   };
-  return [node("p", { className: "note", textContent: "Sign in to get AI-guided learning paths when Aim Plus launches. Aim Free stays free and keeps working the same, with or without an account." }), form];
+  return [node("p", { className: "note", textContent: "Sign in to get AI-guided learning paths when Aim Plus launches. Aim Free stays free and keeps working the same, with or without an account." }), form, familyForm()];
+}
+
+// A student in a family using Aim Homeschool: connect this browser with the code from the parent's
+// Aim page. No email or password.
+function familyForm() {
+  const code = node("input", { type: "text", id: "familyCode", placeholder: "Code, like ABCD-2345", autocomplete: "off", maxLength: 12 });
+  code.setAttribute("aria-label", "Code from your parent's Aim page");
+  const go = node("button", { className: "btn tonal", type: "submit", textContent: "Connect" });
+  const form = node("form", { className: "form", hidden: true }, code, go);
+  form.onsubmit = async e => {
+    e.preventDefault();
+    const r = await plusDo({ type: "plus-student-pair", code: code.value });
+    if (r) { toast(`Connected. Hi, ${r.student}! Today's plan is on YouTube's homepage.`); renderPlus(); }
+  };
+  const open = node("button", { className: "btn text", type: "button", id: "familyOpen", textContent: "A student? Connect to my family" });
+  open.onclick = () => { form.hidden = false; open.hidden = true; code.focus(); };
+  return node("div", { style: "margin-top:12px" }, open, form);
+}
+
+function studentView(st) {
+  const leave = node("button", { className: "btn tonal", type: "button", textContent: "Disconnect this browser" });
+  leave.onclick = async () => { if (confirm("Disconnect this browser from your family's plan?") && await plusDo({ type: "plus-sign-out" })) { toast("Disconnected."); renderPlus(); } };
+  const refresh = node("button", { className: "btn tonal", type: "button", textContent: "Check for today's plan" });
+  refresh.onclick = async () => { const r = await plusDo({ type: "plus-student-refresh" }); if (r) plusMsg(r.result === "error" ? r.message : "Up to date."); renderPlus(true); };
+  return [node("div", { className: "setting" }, node("div", { className: "what" }, node("b", { textContent: `Connected to ${st.student.name || "your"}'s family plan` }),
+    node("span", { textContent: "Today on YouTube's homepage shows the plan your parent approved. What you finish shows up for them." }))),
+    node("div", { className: "form" }, refresh, leave)];
 }
 
 function codeForm() {
@@ -63,31 +91,31 @@ function codeForm() {
 }
 
 function accountView(st) {
-  const planName = st.plan === "plus" ? "Aim Plus" : "Aim Free";
+  const planName = st.plan === "homeschool" ? "Aim Homeschool" : isPlus(st) ? "Aim Plus" : "Aim Free";
   const lines = [node("div", { className: "setting" },
     node("div", { className: "what" }, node("b", { textContent: st.email || "Signed in" }),
       node("span", { textContent: st.offline ? "Couldn't reach Aim's server just now." : `Plan: ${planName}` })))];
   // The subscription: renewing, ending, or a card to fix; or the way to subscribe.
   const b = st.billing;
   const day = iso => new Date(iso).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
-  if (st.plan === "plus" && b?.manage) {
+  if (isPlus(st) && b?.manage) {
     const when = b.renewsAt ? (b.cancelAtPeriodEnd ? `Ends ${day(b.renewsAt)}. You can turn renewal back on until then.` : `Renews ${day(b.renewsAt)}.`) : "Active.";
     lines.push(node("div", { className: "setting" }, node("div", { className: "what" }, node("b", { textContent: "Subscription" }),
       node("span", { textContent: b.status === "past_due" ? "Payment didn't go through. Update your card to keep Aim Plus." : when }))));
   }
-  if (st.plan !== "plus" && b?.available) {
+  if (!isPlus(st) && b?.available) {
     lines.push(node("div", { className: "note" },
       node("b", { textContent: "Aim Plus" }),
       node("div", { textContent: "Study sessions built from your syllabus, TeachBack checks, Put it to work, Pathways, and the librarian with a bigger daily allowance." })));
   }
-  if (st.plan === "plus" && st.usage && st.limits) {
+  if (isPlus(st) && st.usage && st.limits) {
     lines.push(node("div", { className: "setting" }, node("div", { className: "what" }, node("b", { textContent: "AI use, last 24 hours" }),
       node("span", { textContent: `${st.usage.calls} of ${st.limits.dayCalls} requests` }))));
   }
   const buttons = node("div", { className: "form" });
-  const tour = node("button", { className: "btn tonal", type: "button", textContent: st.plan === "plus" ? "Everything in Plus" : "What's in Plus" });
+  const tour = node("button", { className: "btn tonal", type: "button", textContent: isPlus(st) ? "Everything in Plus" : "What's in Plus" });
   tour.onclick = () => chrome.tabs.create({ url: chrome.runtime.getURL("plus.html") });
-  if (st.plan !== "plus" && b?.available) {
+  if (!isPlus(st) && b?.available) {
     const up = node("button", { className: "btn accent", type: "button", textContent: "Upgrade to Plus" });
     up.onclick = async () => { if (await plusDo({ type: "plus-subscribe" })) plusMsg("Stripe's secure checkout opened in a new tab. When you're done, come back here."); };
     buttons.append(up);
@@ -97,7 +125,7 @@ function accountView(st) {
     mg.onclick = () => plusDo({ type: "plus-manage" });
     buttons.append(mg);
   }
-  if (st.plan === "plus") {
+  if (isPlus(st)) {
     const tb = node("button", { className: "btn", type: "button", textContent: "Test my understanding" });
     tb.onclick = () => chrome.tabs.create({ url: chrome.runtime.getURL("teachback.html") });
     buttons.append(tb);
@@ -115,7 +143,7 @@ function accountView(st) {
   const out = node("button", { className: "btn tonal", type: "button", textContent: "Sign out" });
   out.onclick = async () => { if (await plusDo({ type: "plus-sign-out" })) { toast("Signed out."); renderPlus(); } };
   buttons.append(out);
-  return [...lines, ...(st.plan === "plus" && st.sync?.available ? [syncView(st.sync)] : []), buttons, yourData()];
+  return [...lines, ...(isPlus(st) && st.sync?.available ? [syncView(st.sync)] : []), buttons, yourData()];
 }
 
 // Sync across devices: off until turned on here. Says what it carries and when it last ran.
@@ -198,7 +226,7 @@ async function renderPlus(keepMsg = false) {
   if (!keepMsg) plusMsg(st.error && !st.signedIn ? st.error : "");
   plus.signedIn = !!st.signedIn;
   if (st.signedIn) plus.step = "email"; // signing out later starts from the email form
-  const body = st.signedIn ? accountView(st) : plus.step === "code" ? codeForm() : emailForm();
+  const body = st.student ? studentView(st) : st.signedIn ? accountView(st) : plus.step === "code" ? codeForm() : emailForm();
   $("plusBody").replaceChildren(...body);
 }
 

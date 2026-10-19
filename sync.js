@@ -45,7 +45,8 @@ function syncNow() {
 async function syncRound() {
   let st = await syncState();
   if (!st.on || !plusConfigured()) return { result: "off" };
-  if ((await loadSession())?.plan !== "plus") return { result: "off" };
+  const session = await loadSession();
+  if (!["plus", "homeschool"].includes(session?.plan) || session.student) return { result: "off" };
   st.device ||= crypto.randomUUID();
   const call = (items = []) => plusCall("sync", { device: st.device, since: st.cursor, items });
   try {

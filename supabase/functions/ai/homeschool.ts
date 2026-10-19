@@ -580,6 +580,12 @@ export async function studentPair(ctx: HsCtx) {
   return studentToday(ctx);
 }
 
+// The student's own calendar date (time zones), if within a day of the server's.
+function localToday(ctx: HsCtx) {
+  const t = hsDate(hsObj(ctx.input).today);
+  return t && Math.abs(Date.parse(t) - Date.parse(ctx.now.toISOString().slice(0, 10))) <= 864e5 ? t : ctx.now.toISOString().slice(0, 10);
+}
+
 async function studentDevice(ctx: HsCtx) {
   const d = await ctx.hs.deviceOf(ctx.userId);
   if (!d) throw new TaskError(403, "unpaired", "This browser isn't connected to a family.");
@@ -592,16 +598,19 @@ async function studentDevice(ctx: HsCtx) {
 export async function studentToday(ctx: HsCtx) {
   const d = await studentDevice(ctx);
   const learner = (await ctx.hs.learners(d.householdId)).find(l => l.id === d.learnerId)!;
-  const weekStart = mondayOf(ctx.now), today = ctx.now.toISOString().slice(0, 10);
+  const today = localToday(ctx), weekStart = mondayOf(today);
   const doc = (await ctx.hs.docs(d.householdId, "week", `${d.learnerId}:${weekStart}`))[0];
   const week = doc?.data.approved ? cleanWeek(doc.data.approved, weekStart) : null;
   const done = new Set((await ctx.hs.progress([d.learnerId])).filter(e => e.kind === "item_completed" && e.planItem).map(e => e.planItem));
   const ch = (await ctx.hs.docs(d.householdId, "channels", "all"))[0]?.data || {};
   const day = week?.days.find(x => x.date === today) || null;
+  const cur = (await ctx.hs.docs(d.householdId, "curriculum", d.learnerId))[0];
+  const units = cur?.data.approved ? unitsForWeek(cleanCurriculum(cur.data.approved), weekStart).filter(x => x.unit)
+    .map(x => ({ subject: x.subject, title: x.unit!.title, summary: x.unit!.objectives.map(o => o.text).slice(0, 2).join("; ") })) : [];
   return {
-    student: learner.name, weekStart, today,
+    student: learner.name, weekStart, today, units,
     items: (day?.items || []).map(it => ({ ...it, done: done.has(it.id) })),
-    project: week?.project ? { ...week.project, today: week.days.find(x => x.day === week.project!.day)?.date === today } : null,
+    project: week?.project ? { ...week.project, today: week.days.find(x => x.day === week.project!.day)?.date === today, done: done.has(week.project.id) } : null,
     upcoming: (week?.days || []).filter(x => x.date > today && x.items.length).slice(0, 3).map(x => ({ day: x.day, date: x.date, titles: x.items.map(i => i.title).slice(0, 3) })),
     channels: Object.entries(hsObj(ch.bySubject)).flatMap(([subject, list]) => hsArr(list).map(c => ({ ...hsObj(c), subject }))),
     planned: !!week
@@ -611,7 +620,7 @@ export async function studentToday(ctx: HsCtx) {
 // The student finished (or un-finished) a lesson, or watched its video. Progress, not understanding.
 export async function studentProgress(ctx: HsCtx) {
   const d = await studentDevice(ctx), i = hsObj(ctx.input);
-  const weekStart = mondayOf(ctx.now);
+  const weekStart = mondayOf(localToday(ctx));
   const doc = (await ctx.hs.docs(d.householdId, "week", `${d.learnerId}:${weekStart}`))[0];
   const week = doc?.data.approved ? cleanWeek(doc.data.approved, weekStart) : null;
   const item = week?.days.flatMap(x => x.items).find(x => x.id === i.itemId) || (week?.project?.id === i.itemId ? { ...week.project, kind: "project" } : null);

@@ -1051,6 +1051,7 @@ async function planDone(id, done = true) {
   const item = hs?.items.find(i => i.id === id);
   if (!item) return { result: "error", message: "That isn't in today's plan." };
   item.doneAt = done ? Date.now() : null;
+  if (done) await queueFamilyReport(item, "done");
   // The whole day done: the last lesson stops being the Target, so YouTube is just YouTube again.
   const writes = { homeschool: hs };
   if (hs.items.every(i => i.doneAt)) {
@@ -1063,6 +1064,49 @@ async function planDone(id, done = true) {
 
 // While a lesson plays: the first video watched for it becomes its video, with where you are in
 // it; playing to about 90% counts the lesson as done.
+// A family's plan (Aim Homeschool, from the parent's approved week; plus.js fetches it): today's
+// lessons in Today's shape. What this browser already knows (a lesson's video, done) is kept.
+async function saveFamilyPlan(r) {
+  const { homeschool: old, avoid = {} } = await chrome.storage.local.get(["homeschool", "avoid"]);
+  const was = new Map((old?.family ? old.items : []).map(i => [i.id, i]));
+  const item = it => ({ id: clip(it.id, 12), kind: ["video", "reading", "activity", "teachback", "project"].includes(it.kind) ? it.kind : "activity",
+    subject: clip(it.subject, 40), title: clip(it.title, 120), desc: clip(it.detail || it.objective, 600), minutes: Number(it.minutes) || 20,
+    search: clip(it.search, 120) || null, objectiveId: clip(it.objectiveId, 12), topic: it.kind === "teachback" ? clip(it.objective || it.title, 200) : undefined,
+    together: !!it.together, video: was.get(it.id)?.video || (it.video?.id ? { id: clip(it.video.id, 20), title: clip(it.video.title, 300), channel: clip(it.video.channel, 200), t: 0 } : null),
+    doneAt: it.done ? (was.get(it.id)?.doneAt || Date.now()) : was.get(it.id)?.doneAt || null });
+  const items = (Array.isArray(r.items) ? r.items : []).map(item);
+  const p = r.project;
+  if (p?.today) items.push({ ...item({ ...p, kind: "project", detail: p.objective, done: p.done }),
+    guide: { materials: (p.materials || []).map(m => `${m.name}${m.qty ? ` (${m.qty})` : ""}`), steps: p.prep || [], show: (p.deliverables || []).length ? `Show: ${p.deliverables.join("; ")}` : "" } });
+  const unit = r.units?.[0];
+  const hs = { family: true, student: clip(r.student, 40) || "there", date: clip(r.today, 10), weekStart: clip(r.weekStart, 10), createdAt: Date.now(),
+    unit: unit ? { subject: clip(unit.subject, 40), title: clip(unit.title, 120), summary: clip(unit.summary, 200) } : { subject: "", title: "This week", summary: "" },
+    items,
+    upcoming: [...(p && !p.today ? [{ kind: "check", title: `Project: ${clip(p.title, 80)}`, desc: clip(p.objective, 120), when: clip(p.day, 10) }] : []),
+      ...(r.upcoming || []).map(u => ({ kind: "reflect", title: clip(u.titles?.[0], 80), desc: (u.titles || []).slice(1).map(t => clip(t, 60)).join(", "), when: clip(u.day, 10) }))].slice(0, 4),
+    deeper: [] };
+  // The family's preferred channels: "Your channel" in results, and first in the librarian's picks.
+  for (const c of r.channels || []) {
+    const key = c.handle ? channelPath("/" + c.handle) : c.id ? `/channel/${c.id}` : "";
+    if (key && (!avoid[key] || avoid[key].family)) avoid[key] = { name: clip(c.name, 200) || key, action: "prefer", topic: clip(c.subject, 40), family: true };
+  }
+  await chrome.storage.local.set({ homeschool: items.length || r.planned ? hs : null, avoid });
+  return { result: "applied", items: items.length };
+}
+async function clearFamilyPlan() {
+  const { homeschool, avoid = {} } = await chrome.storage.local.get(["homeschool", "avoid"]);
+  for (const [k, c] of Object.entries(avoid)) if (c.family) delete avoid[k];
+  await chrome.storage.local.set({ avoid, ...(homeschool?.family ? { homeschool: null } : {}) });
+  return { result: "applied" };
+}
+// What to tell the parent's side: a lesson done, or a lesson's video watched (sent by plus.js).
+async function queueFamilyReport(item, kind) {
+  const { homeschool: hs, hsOutbox = [] } = await chrome.storage.local.get(["homeschool", "hsOutbox"]);
+  if (!hs?.family) return;
+  hsOutbox.push({ itemId: item.id, kind, video: item.video ? { id: item.video.id, title: item.video.title, channel: item.video.channel } : null });
+  await chrome.storage.local.set({ hsOutbox: hsOutbox.slice(-100) });
+}
+
 async function notePlanVideo(id, video) {
   const { homeschool: hs } = await chrome.storage.local.get("homeschool");
   const item = hs?.items.find(i => i.id === id);
@@ -1070,7 +1114,7 @@ async function notePlanVideo(id, video) {
   if (!item.video || item.video.id === video.id) {
     item.video = { id: clip(video.id, 20), title: clip(video.title, 300), channel: clip(video.channel, 200), t: Math.max(0, Number(video.t) || 0) };
     const d = Number(video.d) || 0;
-    if (!item.doneAt && d > 30 && item.video.t >= d * 0.9) item.doneAt = Date.now();
+    if (!item.doneAt && d > 30 && item.video.t >= d * 0.9) { item.doneAt = Date.now(); await chrome.storage.local.set({ homeschool: hs }); return queueFamilyReport(item, "done"); }
     await chrome.storage.local.set({ homeschool: hs });
   }
 }

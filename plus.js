@@ -172,11 +172,59 @@ async function accessToken({ force = false } = {}) {
 
 async function plusSignOut() {
   const s = await loadSession();
+  if (s?.student) return plusStudentLeave();
   await clearSession();
   await syncReset();
   // Revoke on the server too. Signed out locally either way.
   if (s) await authCall("logout", {}, s.accessToken).catch(() => {});
   return { result: "signed-out" };
+}
+
+// ---------- a student's browser, connected to a family (Aim Homeschool) ----------
+// No email or password: an anonymous account (Supabase's anonymous sign-in), tied to the student by
+// the one-time code from the parent's website. Its plan is the family's, its Today the parent's
+// approved week.
+async function plusStudentPair(code) {
+  const prev = await loadSession();
+  if (prev && !prev.student) throw new PlusError("This browser is signed in to an Aim account. Sign out first to connect it to a family.");
+  const s = prev || sessionFrom(await authCall("signup", { data: {} }));
+  await saveSession({ ...s, student: { name: "" }, plan: "homeschool" });
+  try {
+    const r = await plusCall("student-pair", { code, today: todayKey() });
+    await saveSession({ ...(await loadSession()), student: { name: r.student } });
+    await serial(() => saveFamilyPlan(r));
+    return { result: "paired", student: r.student };
+  } catch (e) {
+    if (!prev) await clearSession();
+    throw e;
+  }
+}
+
+// Today's plan from the family; and what's been done here, sent to the parent's side.
+let studentRunning = null;
+function studentRefresh() {
+  studentRunning ||= (async () => {
+    const s = await loadSession();
+    if (!s?.student || !plusConfigured()) return { result: "off" };
+    try {
+      const { hsOutbox = [] } = await chrome.storage.local.get("hsOutbox");
+      for (const x of hsOutbox) await plusCall("student-progress", { ...x, today: todayKey() }).catch(e => { if (e.status !== 404) throw e; }); // 404: no longer in the plan
+      if (hsOutbox.length) await serial(async () => { const { hsOutbox: now = [] } = await chrome.storage.local.get("hsOutbox"); await chrome.storage.local.set({ hsOutbox: now.slice(hsOutbox.length) }); });
+      const r = await plusCall("student-today", { today: todayKey() });
+      await serial(() => saveFamilyPlan(r));
+      return { result: "applied" };
+    } catch (e) {
+      // Disconnected by the parent (or the family's plan ended): back to plain Aim.
+      if (e.code === "unpaired" || e.code === "auth" || e.code === "plan") { await clearSession(); await serial(clearFamilyPlan); }
+      return { result: "error", message: String(e.message || e) };
+    }
+  })().finally(() => { studentRunning = null; });
+  return studentRunning;
+}
+async function plusStudentLeave() {
+  await clearSession();
+  await serial(clearFamilyPlan);
+  return { result: "left" };
 }
 
 // ---------- Aim's AI endpoint ----------
@@ -205,12 +253,13 @@ async function plusStatus() {
   if (!plusConfigured()) return { configured: false };
   const s = await loadSession();
   if (!s) return { configured: true, signedIn: false };
+  if (s.student) return { configured: true, signedIn: true, student: s.student, plan: "homeschool" };
   try {
     const st = await plusCall("status");
     const fresh = await loadSession();
     if (fresh && fresh.plan !== st.plan) {
       await saveSession({ ...fresh, plan: st.plan });
-      if (st.plan === "plus") await plusWelcome();
+      if (st.plan === "plus" || st.plan === "homeschool") await plusWelcome();
     }
     const sy = await syncState();
     return { configured: true, signedIn: true, email: st.email || s.email, plan: st.plan, usage: st.usage, limits: st.limits, billing: st.billing || null,
@@ -253,7 +302,7 @@ async function plusDelete(confirm) {
 async function plusBrief() {
   if (!plusConfigured()) return { plus: false, account: false, configured: false };
   const s = await loadSession();
-  return { plus: s?.plan === "plus", account: !!s, configured: true };
+  return { plus: s?.plan === "plus" || s?.plan === "homeschool", account: !!s, configured: true, student: !!s?.student };
 }
 
 // The librarian, for YouTube tabs: only its tasks (planning a study session, and "Where could this
@@ -280,6 +329,9 @@ const plusHandlers = {
   "plus-sign-out": () => plusSignOut(),
   "plus-export": () => plusExport(),
   "plus-delete": m => plusDelete(m.confirm),
+  // A student's browser and its family (Aim Homeschool).
+  "plus-student-pair": m => plusStudentPair(m.code),
+  "plus-student-refresh": () => studentRefresh(),
   // Sync across devices (sync.js).
   "plus-sync-set": m => syncSet(!!m.on),
   "plus-sync-now": () => syncNow(),

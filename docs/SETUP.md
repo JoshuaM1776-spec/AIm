@@ -243,6 +243,19 @@ Until this is done, Plus is given by hand: in Supabase's **Table Editor**, open 
 2. **Update the `ai` function** with the current `ai-dashboard.ts` (Part 6, "Updating later").
 3. **Test it:** sign in to the same Plus account in two Chrome profiles, turn on **Sync across devices** in Settings → Aim Plus in both, and set a Target aside in one. **Sync now** in the other shows it under Set aside on the Targets page.
 
+## Part 11 — Aim Homeschool: the parent website (pilot)
+
+**Read first.** This puts children's learning data (their name, levels, plans and progress) on Aim's server. Before real families use it: the privacy and legal design for children (COPPA and equivalents), the curriculum-upload terms and takedown process, and a lawyer's review (docs/HOMESCHOOL.md → "Bring your own curriculum"). Until then, use it with your own family or a few test families who know it's a pilot.
+
+1. **Add Homeschool's tables:** in Supabase, **SQL Editor** → **New query**, paste all of `supabase/migrations/0005_homeschool.sql`, and choose **Run**.
+2. **Let students' browsers connect without an email:** **Authentication** → **Sign In / Providers** (or **Settings**) → turn on **Allow anonymous sign-ins**. Each student's Chrome becomes an anonymous account tied to the student by the parent's one-time code.
+3. **Put the website online.** The `web/` folder is plain files; any static host works (Cloudflare Pages, Netlify, GitHub Pages). First fill in `web/config.js` with the same two values as the extension's `config.js` (Part 7). Then upload the whole `web/` folder. Note its address, like `https://family.example.com`.
+4. **Let the website call Aim's server:** in **Edge Functions** → **Secrets**, add `AIM_WEB_ORIGINS` with the website's address (no trailing slash; several separated by commas).
+5. **Let the sign-in email come back to the website:** **Authentication** → **URL Configuration** → **Redirect URLs** → add the website's address.
+6. **Update the `ai` function** with the current `ai-dashboard.ts` (Part 6, "Updating later").
+7. **Turn Homeschool on for an account:** in **Table Editor** → `profiles`, set the parent's `plan` to `homeschool`. (Homeschool includes everything in Plus. Billing for it is a later step: it needs its own Stripe price.)
+8. **Test it:** sign in on the website and go through setup; add a curriculum you have the right to use; approve the big picture and a week; connect a student's Chrome with the code (Aim's Settings → "A student? Connect to my family"); YouTube's homepage shows Today with that day's lessons.
+
 ## Later, before real users
 
 - **Email sending:** set up your own SMTP (Part 4).

@@ -89,7 +89,7 @@ function intro(prefill = params.get("topic") || "") {
     if (topic.value.trim().length < 2) { err.textContent = "Say what you'd like to be tested on."; topic.focus(); return; }
     go.disabled = true; err.textContent = ""; busy.textContent = "Your students are getting ready…";
     notes = studied.value.trim();
-    const r = await call("teachback-start", { topic: topic.value.trim(), notes }, err);
+    const r = await call("teachback-start", { topic: topic.value.trim(), notes, planObjective: params.get("objective") || undefined }, err);
     go.disabled = false; busy.textContent = "";
     if (r) show(r.session);
   });
@@ -226,6 +226,6 @@ function results(s) {
 
 (async () => {
   const brief = await chrome.runtime.sendMessage({ type: "plus-status" }).catch(() => null);
-  if (!brief?.configured || !brief.signedIn || (brief.plan && brief.plan !== "plus")) return gate();
+  if (!brief?.configured || !brief.signedIn || (brief.plan && brief.plan !== "plus" && brief.plan !== "homeschool")) return gate();
   params.get("id") ? reload() : intro();
 })();

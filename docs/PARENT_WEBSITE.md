@@ -1,6 +1,8 @@
 # Aim Homeschool — Parent Website Specification
 
-> Reference copy of the founder's planning document (October 2026). Future product phase: not in current scope. See [HOMESCHOOL.md](HOMESCHOOL.md) for how it fits the rest of Aim.
+> Reference copy of the founder's planning document (October 2026). See [HOMESCHOOL.md](HOMESCHOOL.md) for how it fits the rest of Aim.
+>
+> **Status (0.47):** the §13 MVP is built as a pilot in `web/` (see README → "The parent website"). Two deliberate differences: Aim's server can't search YouTube (the Data API's quota and YouTube's terms), so a lesson carries a search and the subject's preferred channels, and the parent can choose a specific video by link; and the Curriculum is built only from what the family brings, since Aim's own reviewed curriculum doesn't exist yet. Not built yet: Portfolio, Library, the "Later" list.
 
 Standalone planning document \| October 2026 \| Future product phase
 

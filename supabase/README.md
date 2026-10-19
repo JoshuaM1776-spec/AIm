@@ -105,4 +105,8 @@ psql "$TEST_DB2" -v ON_ERROR_STOP=1 -f tests/db/stub.sql -f supabase/migrations/
 # sync across devices, on a fresh database
 psql "$TEST_DB3" -v ON_ERROR_STOP=1 -f tests/db/stub.sql -f supabase/migrations/0001_init.sql -f supabase/migrations/0002_teachback.sql \
   -f supabase/migrations/0003_billing.sql -f supabase/migrations/0004_sync.sql -f tests/db/test_sync.sql
+# Homeschool, on a fresh database
+psql "$TEST_DB4" -v ON_ERROR_STOP=1 -f tests/db/stub.sql -f supabase/migrations/0001_init.sql -f supabase/migrations/0002_teachback.sql \
+  -f supabase/migrations/0003_billing.sql -f supabase/migrations/0004_sync.sql -f supabase/migrations/0005_homeschool.sql -f tests/db/test_homeschool.sql
+node --experimental-strip-types tests/web.test.mjs    # the parent website and a student's Chrome, end to end
 ```
