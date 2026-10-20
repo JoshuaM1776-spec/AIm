@@ -70,7 +70,8 @@ On the server, `supabase/functions/ai/homeschool.ts` holds every rule (approval,
 | `aim.css` | The shared look for all of Aim's own pages (see Design) |
 | `tokens.css` | Aim's fonts and colors, from the mark (used by `aim.css` and the popup) |
 | `fonts/` | Inter and Inter Display, Latin subsets (SIL Open Font License) |
-| `options.html/js` | Settings page |
+| `design.html/js` | Design your YouTube: four stages (Home, Shorts, Watching, Timing) with a live preview drawn from your own topics' videos, click the preview to change that part, then a before-and-after and one Apply. The welcome tour invites you here; Settings links to each stage. |
+| `options.html/js` | Settings page (everything, including the finer details the designer leaves out) |
 | `welcome.html/js` | The welcome tour: opens once on install (what Aim is, how it works, a few choices, pin it), and from Settings → "Show the welcome tour again" |
 | `config.js`, `plus.js` | Aim Plus in the service worker: where the server is (empty = Free only), sign-in with an emailed code, calling Aim's AI endpoint. Only Aim's own pages can use it, never YouTube tabs. |
 | `plus.html`, `plus-home.js` | The Aim Plus page: what each Plus feature does, with a button to use it once you have Plus; the welcome page after subscribing |

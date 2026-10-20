@@ -1,6 +1,6 @@
 // Aim — the welcome tour, opened once when Aim is installed (and from Settings any time after).
-// Four short screens: what Aim is, how it works, a few choices, and where to find it. Every
-// choice saves as it's made, so closing the tab early loses nothing.
+// Four short screens: what Aim is, how it works, an invitation to design your YouTube (design.html),
+// and where to find it.
 
 const BRAND = chrome.runtime.getManifest().name;
 for (const n of document.querySelectorAll("[data-brand]")) n.textContent = BRAND;
@@ -71,28 +71,15 @@ function how() {
           ...["15 min", "30 min", "1 hour"].map(t => node("span", { className: "pill", textContent: t }))))));
 }
 
+// The choices themselves live in Design your YouTube (design.html): a live preview beats a list.
 function choices() {
-  const BREAKS = [[30, "30 min"], [60, "1 hour"], [120, "2 hours"], [0, "No limit"]];
-  const seg = node("div", { className: "seg", role: "group", ariaLabel: "Daily break time" });
-  const drawSeg = () => seg.replaceChildren(...BREAKS.map(([v, label]) =>
-    node("button", { type: "button", textContent: label, ariaPressed: String(settings.leisureMin === v),
-      onclick: async () => { await setSetting("leisureMin", v); drawSeg(); } })));
-  drawSeg();
-  const toggle = (key, title, sub) => {
-    const input = node("input", { type: "checkbox", checked: settings[key] !== false, ariaLabel: title });
-    input.id = `opt-${key}`;
-    input.onchange = () => setSetting(key, input.checked);
-    return node("div", { className: "setting" }, node("div", { className: "what" }, node("b", { textContent: title }), node("span", { textContent: sub })),
-      node("label", { className: "switch" }, input, node("i")));
-  };
   return node("div", {},
-    node("h1", { textContent: "Make it yours" }),
-    node("p", { className: "lede", textContent: "These are good places to start. You can change any of them in Settings." }),
-    node("div", { className: "opt-label", textContent: "Daily break time" }), seg,
-    node("p", { className: "hint", textContent: "All your breaks in a day share this. Time spent on your Target doesn't count." }),
-    toggle("homeCard", "Ask what brings you here", "Replaces YouTube's homepage feed."),
-    toggle("hideShorts", "Hide Shorts", "Except during breaks."),
-    toggle("hideRecs", "Hide recommendations beside videos", "Aim shows what your own search found instead."));
+    node("h1", { textContent: "Design your YouTube" }),
+    node("p", { className: "lede", textContent: "Choose what your homepage shows, what happens to Shorts, what steps aside while you watch, and how much time you want. A preview of YouTube changes as you choose." }),
+    node("div", { className: "callout" },
+      node("button", { className: "btn", type: "button", id: "design", textContent: "Design your YouTube",
+        onclick: () => send({ type: "open-design" }) }),
+      node("div", { className: "hint", style: "margin:8px 0 0", textContent: "About two minutes. Or skip it: Aim starts with good defaults, and you can design it any time from Settings." })));
 }
 
 // Only when this version of Aim has accounts: the librarian is free with an account.

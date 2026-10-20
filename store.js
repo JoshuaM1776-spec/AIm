@@ -1239,6 +1239,14 @@ async function rankReviewShorts(shorts) {
   return ranked.sort((a, b) => b.score - a.score || b.published - a.published).map(({ score, ...v }) => v);
 }
 
+// ---------- Design your YouTube (design.html) ----------
+// When the person last applied a design: the first time, the page walks through the four stages;
+// afterwards any stage opens directly.
+async function markDesigned() {
+  await chrome.storage.local.set({ design: { appliedAt: Date.now() } });
+  return { result: "applied" };
+}
+
 // ---------- save for later ----------
 async function saveForLater(video) {
   const { saved = [] } = await chrome.storage.local.get("saved");

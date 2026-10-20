@@ -344,6 +344,13 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] Student's Chrome: Aim's Settings → **A student? Connect to my family** → the code from the website. YouTube's homepage shows Today with that day's approved lessons. Mark one done: the parent's Overview counts it. A TeachBack from Today shows on Progress as Demonstrated, Developing or Needs review, with its evidence.
 - [ ] Settings → Disconnect the browser: on its next refresh, the student's Chrome is back to plain Aim.
 
+### 36. Design your YouTube (0.48)
+- [ ] The welcome tour's third screen offers **Design your YouTube**; it opens at Step 1 of 4 with a preview of YouTube's homepage.
+- [ ] Every choice changes the preview at once: the homepage (Aim's card or the feed), topics (Learn something with your channels' real thumbnails once they've loaded on YouTube), Shorts (none, Quick review, or as usual), Watching (the watch page: Up next from your search or recommendations, autoplay), Timing (Aim's menu with your limits).
+- [ ] **Before** shows YouTube as it was. Nothing changes on YouTube until **Apply to YouTube** on the before-and-after; then YouTube matches the design.
+- [ ] Settings → **Design your YouTube**, and its Jump to links, open a stage directly. Clicking a part of the preview opens its stage. A change shows **Changes not applied yet**, with Undo.
+- [ ] A student's browser connected to a family shows the design but can't change it.
+
 ## Known issues (not regressions)
 
 - The word check knows words, not meanings: synonyms ("tap" vs "faucet") get the question once; answering Yes teaches it that search.
