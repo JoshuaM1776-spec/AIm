@@ -119,7 +119,13 @@ async function evaluateVideo(info) {
     // Make sure we're not judging by a stale copy (a result clicked a moment ago).
     applyStatus(await send({ type: "status" }));
     if (currentId !== id) return;
-    if (!isAllowed(id)) return showDriftCard(info);
+    if (!isAllowed(id)) {
+      // Same channel as before, or plainly on topic: it continues the aim, no question asked.
+      const check = await send({ type: "video-check", video: { id, title: info.title, channel: info.channel } });
+      if (currentId !== id) return;
+      if (!check?.fits) return showDriftCard(info);
+      allowLocal([{ id, title: info.title, channel: info.channel }], [], "");
+    }
   }
   release(id);
 }
@@ -160,20 +166,27 @@ function showDriftCard(info) {
   const input = el("input", { class: "wp-input", type: "text", placeholder: "Search toward your aim", "aria-label": "Search toward your aim" });
   const search = () => { const q = input.value.trim(); if (q) location.href = "/results?search_query=" + encodeURIComponent(q); };
   keepKeys(input, search);
+  // One question, two answers. Everything else waits under "More options".
+  const partOfIt = () => withReason("video", "How is this video part of your aim?", info.title || info.id, async () => {
+    allowLocal([{ id: info.id, title: info.title, channel: info.channel }], [], "");
+    await send({ type: "purpose-allow", query: "", videos: [{ id: info.id, title: info.title, channel: info.channel }], lists: [] });
+    release(info.id);
+  });
   showPlayerCard(
     brandLine(),
-    el("div", { class: "wp-title" }, "Not on your aim"),
+    el("div", { class: "wp-title" }, "Part of your aim?"),
     el("div", { class: "wp-current" }, el("div", { class: "wp-label" }, "Your aim"), el("div", { class: "wp-strong" }, p.text)),
-    el("div", { class: "wp-muted" }, p.searches.length
-      ? "While you have an aim, you watch what your searches for it found. This video wasn't among them."
-      : "Search for what you're looking for, and the results are yours to watch."),
-    el("div", { class: "wp-row" }, input, el("button", { class: "wp-btn wp-btn-tonal", onclick: search }, "Search")),
     el("div", { class: "wp-actions wp-actions-start" },
-      history.length > 1 ? el("button", { class: "wp-btn wp-btn-primary", onclick: goBack }, "Back") : null,
-      el("button", { class: "wp-btn wp-btn-tonal", onclick: () => openPivotDialog("", { video: info }) }, "Change my aim"),
-      el("button", { class: "wp-btn wp-btn-text", onclick: () => saveCurrent(true) }, "Save for later")),
-    el("div", { class: "wp-label" }, "Or take a break"),
-    breakChips(takeBreak, { oneVideoId: info.id }));
+      el("button", { class: "wp-btn wp-btn-primary", onclick: () => (history.length > 1 ? goBack() : input.focus()) }, "Back to my aim"),
+      el("button", { class: "wp-btn wp-btn-tonal", onclick: partOfIt }, "Yes, it's part of it"),
+      el("button", { class: "wp-btn wp-btn-text", onclick: () => openPivotDialog("", { video: info }) }, "Change my aim")),
+    el("details", { class: "wp-more" },
+      el("summary", {}, "More options"),
+      el("div", { class: "wp-row" }, input, el("button", { class: "wp-btn wp-btn-tonal", onclick: search }, "Search")),
+      el("div", { class: "wp-actions wp-actions-start" },
+        el("button", { class: "wp-btn wp-btn-text", onclick: () => saveCurrent(true) }, "Save for later")),
+      el("div", { class: "wp-label" }, "Or take a break"),
+      breakChips(takeBreak, { oneVideoId: info.id })));
 }
 
 // The purpose's time limit ran out.

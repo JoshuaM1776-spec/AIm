@@ -41,7 +41,7 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 
 - [ ] **Opening a video in a new tab plays normally** (no "An error occurred. Please try again later"), with and without an aim. A video Aim holds starts for a split second, then pauses under the card.
 
-- [ ] **Fresh install** (remove Aim first, then load it): the welcome tour opens in a new tab. Let's go → How it works → Make it yours (changes save right away) → Want help finding the right video? (only when accounts are available) → You're all set → Open YouTube. Back, Skip and the arrow keys work; light and dark both look right.
+- [ ] **Fresh install** (remove Aim first, then load it): the welcome tour opens in a new tab. Welcome and how it works on one screen → Let's go → Make it yours: four switches, already on, each saved right away, with **Customize with a preview** for the full designer → Want help finding the right video? (only when accounts are available) → You're all set → Open YouTube. Back, Skip and the arrow keys work; light and dark both look right.
 - [ ] First YouTube visit: a tip points at the box ("Start here", 1 of 2), then at the Aim button. Neither comes back after a reload. The first search on an aim gets one tip about the results bar.
 - [ ] **Updating** an existing Aim (reload over an older version): no welcome tab and no tips.
 - [ ] Settings → "Show the welcome tour again" opens it and brings the tips back.
@@ -78,7 +78,7 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] Click a result: it plays. The sidebar shows **Up next from your search** with the other results (thumbnails, titles, channels) instead of YouTube's recommendations.
 - [ ] Scroll the results further, then open one from far down: it plays too (results are captured as they load).
 - [ ] A playlist in the results: its videos play.
-- [ ] Open a video your searches didn't find (a link in a description, a channel page, a pasted URL): "Not on your aim" on the player, with Back, a search box, Change my aim, Save for later and break options. There's no "watch anyway".
+- [ ] Open a video your searches didn't find (a link in a description, a channel page, a pasted URL): "Part of your aim?" on the player: **Back to my aim**, **Yes, it's part of it** (plays it and keeps it with the aim; strict mode asks why first), Change my aim. A search box, Save for later and break options sit under **More options**. A video from a channel you've already watched for this aim, or whose title shares a word with it, plays without asking (not in strict mode).
 - [ ] **Change my aim** from that card: the new aim includes the video, which then plays.
 - [ ] A related search ("sourdough starter" → "starter feeding schedule") continues silently.
 - [ ] An unrelated one ("gaming laptop deals") hides its results behind "Is … part of your aim?". **Yes** shows them and they become watchable. **Change my aim** or a break also work.
@@ -115,8 +115,8 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 
 ### 8. Done with this aim
 
-- [ ] Menu → **Done with this aim** (or the results bar, homepage or time-up card) asks first: "Done with this aim? Did you find what you were looking for?" with Yes, I'm done / Partly / Not really / Keep going.
-- [ ] Keep going closes it. The others land on the homepage with a short confirmation.
+- [ ] Menu → **Done with this aim** (or the results bar, homepage, time-up card or popup) ends it in one tap and lands on the homepage.
+- [ ] A light card follows: "N min on …", the videos, a quiet **Found what you needed? Yes · Partly · No** (answering says thanks in place), **Test my understanding** (Plus, learning aims) and **Not done? Pick it back up**.
 - [ ] Homepage with no aims: "What brings you here?", one rounded field ("Tell me what you're looking for…") with a small arrow inside, three example requests, and no big Search YouTube button. Enter and the arrow both work.
 - [ ] Popup with an aim: Resume (red), Take a Break, Done, then small Change my aim · Set aside · All aims links. It shows "N min so far" (time left only with a limit). **Resume** on a YouTube tab goes to the last video at the moment you left; on another site it opens a new tab instead. "Your activity" is folded.
 - [ ] Results after a plain search, signed in: the librarian is folded behind the speech-bubble icon; clicking it opens the ask box. After a request it opens by itself.
@@ -272,7 +272,7 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] Save a video for later (Aim menu → Save this video for later). YouTube's home page shows **Saved for later** with its thumbnail; hovering shows ×, which removes it.
 - [ ] Clicking a saved video plays it as a one-video break (your aim's time doesn't count it). Watching it to the end removes it from the list.
 - [ ] With something saved, start a 15-minute break: a notice offers your saved videos.
-- [ ] With an aim, search three different ways without watching anything for more than a minute and a half: the results bar asks **Still looking?** Signed in, **Ask the librarian** opens it with the box focused; signed out, it gives a tip. **Not now** puts it away.
+- [ ] With an aim, search three different ways without watching anything for more than a minute and a half: one quiet line under the results bar says **Still looking?** Signed in, **Tell Aim what you need** opens the librarian with the box focused; signed out, it gives a tip. The × puts it away.
 - [ ] Ask the librarian a quick question ("how do I reset my router?"): the aim's done button says **Got my answer** (home card, results bar, Aim menu) and ends it in one tap, with no questions.
 - [ ] While watching, Aim menu → **Prefer, warn about or hide this channel** → Prefer. Its videos show a **Your channel** badge in search results; it never warns or blocks. Signed in, the librarian's picks put a fitting video from it first. Settings → Advanced → **Your channels** lists it with Prefer / Warn / Hide / Remove.
 
@@ -297,7 +297,7 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] **Study sessions** and **Completed** filter the list; **Print or save as PDF** prints just the record (no buttons).
 
 ### 30. Learn something (0.42)
-- [ ] With no topics chosen and no aim, YouTube's home page invites you to **Choose topics** (Settings → Learn something); **No thanks** hides it for good.
+- [ ] With no topics chosen and no aim, YouTube's home page has one quiet line, **Learn something new? Choose topics** (Settings → Learn something); its × hides it for good.
 - [ ] Pick Math and Engineering: the home page shows **Learn something**, six new videos (three by two) from those channels, newest first, at most two per channel, no Shorts, each labeled with its channel and topic. The first visit takes a few seconds while feeds load; after that it's instant for a day.
 - [ ] **Check every curated channel loads** (Settings lists them, each linked): a channel that never shows up has a wrong handle in content/topics.js.
 - [ ] Clicking one starts the aim "Exploring: <title>"; the watch page's sidebar says **More from your topics** with the rest of the row.
@@ -345,7 +345,7 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] Settings → Disconnect the browser: on its next refresh, the student's Chrome is back to plain Aim.
 
 ### 36. Design your YouTube (0.48)
-- [ ] The welcome tour's third screen offers **Design your YouTube**; it opens at Step 1 of 3 with a preview of YouTube's homepage.
+- [ ] The welcome tour's Make it yours screen offers **Customize with a preview** (Design your YouTube); it opens at Step 1 of 3 with a preview of YouTube's homepage.
 - [ ] Every choice changes the preview at once. Home: **A clean page with my aim** (no videos), **Videos from channels I choose** (topic picks appear under it; real thumbnails once they've loaded on YouTube), **The regular YouTube feed**. Shorts: **Hide**, **Only from selected channels** (asks for channels if none), **Show all**. Watching: the watch page, with Up next from your search or recommendations, and autoplay. (Time limits aren't a stage for now; they're in More settings.)
 - [ ] After applying **A clean page**, YouTube's homepage shows only What brings you here?, even with topics picked.
 - [ ] **Before** shows YouTube as it was. Nothing changes on YouTube until **Apply to YouTube** on the before-and-after; then YouTube matches the design.
@@ -360,3 +360,7 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - Aim changes YouTube's own autoplay switch. If Aim is removed during an aim, autoplay stays off until you switch it back on.
 - Hiding channels depends on the channel link in each video tile. Tiles that only link the channel by ID, not by @handle, may not be matched.
 - Miniplayer time counting relies on YouTube's `ytd-miniplayer` element and needs checking on real YouTube.
+
+### 37. Aims, and fewer interruptions (0.49)
+- [ ] Nowhere in the extension says "Target": it's **your aim** (Set aim, Back to my aim, Change my aim, Your aims, Done with this aim).
+- [ ] Each moment in docs/INTERRUPTIONS.md behaves as its "Now" column says: one-tap Done with the light card after, "Part of your aim?" asked less often and with a Yes, quiet lines for Still looking? and Learn something new?, two first-time tips, a three-screen welcome.

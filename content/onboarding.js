@@ -77,14 +77,8 @@ function showTips() {
   const chip = $("#wp-chip .wp-pill");
   if (chip && tipSeen("home") && !tipSeen("chip") && location.pathname === "/") {
     return showCoach(chip, { title: "Your aim lives here", step: 2, of: 2, primary: "Got it",
-      body: "Open this anytime to take a break, change your aim, or say you found what you needed.",
+      body: "Open this anytime to take a break, change your aim, or say you're done. It's the only button to remember.",
       onPrimary: async () => { await markTip("chip"); closeCoach(); } });
-  }
-  const bar = $("#wp-results-bar:not(.wp-rb-pending) .wp-rb-purpose");
-  if (bar && !tipSeen("results")) {
-    return showCoach(bar, { title: "This search is on your aim", primary: "Got it",
-      body: "Change your aim here, or tap the check when you've found what you needed. The videos below are YouTube's own results.",
-      onPrimary: async () => { await markTip("results"); closeCoach(); } });
   }
 }
 

@@ -259,36 +259,13 @@ async function addPurposeTime(minutes) {
 }
 
 // ---------------- Done ----------------
-// Done asks once, before ending: did you find what you were looking for? Or keep going.
-// With Aim Plus, it also offers TeachBack: a check of what you can now explain.
-// A quick lookup ("how do I reset my router?") ends in one tap: "Got my answer", with no
-// questions or follow-up offers. The librarian decides what's a lookup.
+// Done is one tap. What it was like comes after, on the homepage, in one light card: the time and
+// videos, Test my understanding (Plus, for learning), a quiet "Found what you needed?", and a way
+// back in if Done was a slip. A quick lookup says "Got my answer" instead.
 const isLookup = p => p?.librarian?.kind === "lookup" && !p.study && !p.plan;
 const doneLabel = p => (isLookup(p) ? "Got my answer" : "Done with this aim");
-const doneAction = p => (isLookup(p) ? () => finishPurpose("yes") : askDone);
-
-async function askDone() {
-  closeDropdown();
-  const p = activePurpose() || purpose;
-  if (!p) return;
-  const plus = (await send({ type: "plus-brief" }))?.plus === true;
-  openModal(el("div", { class: "wp-dialog wp-dialog-center wp-done-dialog", role: "dialog", "aria-modal": "true" },
-    el("div", { class: "wp-done-check" }, icon("check")),
-    el("div", { class: "wp-title" }, "Done with this aim?"),
-    el("div", { class: "wp-muted" }, p.text),
-    el("label", { class: "wp-q wp-q-sm" }, "Did you find what you were looking for?"),
-    el("div", { class: "wp-done-actions" },
-      el("button", { class: "wp-btn wp-btn-primary wp-btn-block", onclick: () => finishPurpose("yes") }, "Yes, I'm done"),
-      el("div", { class: "wp-row", style: "width:100%" },
-        el("button", { class: "wp-btn wp-btn-tonal", style: "flex:1", onclick: () => finishPurpose("partly") }, "Partly"),
-        el("button", { class: "wp-btn wp-btn-tonal", style: "flex:1", onclick: () => finishPurpose("no") }, "Not really")),
-      el("button", { class: "wp-btn wp-btn-text wp-btn-block", onclick: closeModal }, "Keep going")),
-    // With Pathways on, a learning aim asks once whether you'd like more of it.
-    status.pathways && (p.librarian?.kind === "learn" || p.study) ? interestChips({ topic: p.study?.title || p.text, source: "target" }) : null,
-    plus && (p.librarian?.kind === "learn" || p.study || p.plan || !p.librarian) ? el("div", { class: "wp-done-teachback" },
-      el("span", { class: "wp-muted" }, "Learned something?"),
-      el("button", { class: "wp-btn wp-btn-tonal", onclick: () => send({ type: "open-teachback", topic: p.text }) }, "Test my understanding")) : null));
-}
+const doneAction = p => (isLookup(p) ? () => finishPurpose("yes") : () => finishPurpose(null));
+const askDone = () => finishPurpose(null);
 
 // Done never leaves you inside a video: you land back on "What brings you here?",
 // where Aim asks once whether you found what you needed.
@@ -310,23 +287,25 @@ async function showReflection() {
   if (Date.now() - (s.endedAt || 0) > 10 * 60 * 1000) return; // ended long ago, e.g. from the popup
   if (s.outcome) return toast(s.outcome === "yes" ? "Done. Glad you found it." : "Done. Noted for next time.");
   const mins = Math.max(1, Math.round(s.usedSec / 60));
-  const pathText = s.path?.length > 1 ? s.path.map(p => p.text).join(" → ") : null;
+  const learning = s.kind === "learn" || !!s.study || !s.kind;
+  const plus = learning && (await send({ type: "plus-brief" }))?.plus === true;
+  const rated = el("div", { class: "wp-end-rate" });
   const rate = outcome => async () => {
     await send({ type: "purpose-rate", id: s.id, outcome });
-    closeNotice();
-    toast(outcome === "yes" ? "Nice work." : "Noted. That's useful to know.");
+    rated.replaceChildren(el("span", { class: "wp-muted" }, outcome === "yes" ? "Nice work." : "Noted. That's useful to know."));
   };
+  rated.append(el("span", { class: "wp-muted" }, "Found what you needed?"),
+    ...[["yes", "Yes"], ["partly", "Partly"], ["no", "No"]].map(([v, label]) => el("button", { class: "wp-link", onclick: rate(v) }, label)));
   showNotice([
     el("span", { class: "wp-notice-icon wp-accent" }, icon("check")),
     el("div", { class: "wp-notice-text" },
-      el("div", { class: "wp-strong" }, "Done"),
-      el("div", { class: "wp-muted" }, `${mins} min on: ${s.text}${s.videos?.length ? ` · ${s.videos.length} video${s.videos.length > 1 ? "s" : ""}` : ""}`),
-      pathText ? el("div", { class: "wp-muted wp-ellipsis" }, `Path: ${pathText}`) : null),
+      el("div", { class: "wp-strong" }, `${mins} min on ${s.text}`),
+      el("div", { class: "wp-muted" }, s.videos?.length ? `${s.videos.length} video${s.videos.length > 1 ? "s" : ""} · Done` : "Done"),
+      rated,
+      // With Pathways on, a learning aim asks once whether you'd like more of it.
+      status.pathways && learning ? interestChips({ topic: s.study?.title || s.text, source: "target" }) : null),
     el("div", { class: "wp-notice-actions wp-col" },
-      el("div", { class: "wp-label" }, "Did you find what you needed?"),
-      el("div", { class: "wp-notice-actions" },
-        el("button", { class: "wp-btn wp-btn-tonal", onclick: rate("yes") }, "Yes"),
-        el("button", { class: "wp-btn wp-btn-tonal", onclick: rate("partly") }, "Partly"),
-        el("button", { class: "wp-btn wp-btn-tonal", onclick: rate("no") }, "No")))
+      plus ? el("button", { class: "wp-btn wp-btn-tonal", onclick: () => { closeNotice(); send({ type: "open-teachback", topic: s.text }); } }, "Test my understanding") : null,
+      el("button", { class: "wp-btn wp-btn-text", onclick: () => { closeNotice(); resumeTarget(s.id); } }, "Not done? Pick it back up"))
   ]);
 }

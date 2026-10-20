@@ -1,0 +1,864 @@
+{
+  "at": "2026-10-20T19:10:16.360Z",
+  "checks": [
+    {
+      "name": "home: Aim's card replaces the feed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "home: the feed itself is hidden",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "home: Aim's button in the top bar",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "home: selector mastheadCenter",
+      "ok": true,
+      "detail": "1"
+    },
+    {
+      "name": "home: selector mastheadEnd",
+      "ok": true,
+      "detail": "1"
+    },
+    {
+      "name": "home: selector homeBrowse",
+      "ok": true,
+      "detail": "1"
+    },
+    {
+      "name": "home: selector searchBox",
+      "ok": true,
+      "detail": "0 / 1 / 2 / 1"
+    },
+    {
+      "name": "results: selector results",
+      "ok": true,
+      "detail": "1"
+    },
+    {
+      "name": "results: selector resultsList",
+      "ok": true,
+      "detail": "1"
+    },
+    {
+      "name": "results: selector resultVideos",
+      "ok": true,
+      "detail": "17"
+    },
+    {
+      "name": "results: selector resultTitleLabel",
+      "ok": true,
+      "detail": "17"
+    },
+    {
+      "name": "results: selector resultMeta",
+      "ok": true,
+      "detail": "17 / 0 / 0"
+    },
+    {
+      "name": "results: selector resultChannel",
+      "ok": true,
+      "detail": "34 / 34 / 51"
+    },
+    {
+      "name": "results: selector itemWatchLink",
+      "ok": true,
+      "detail": "134"
+    },
+    {
+      "name": "results: selector itemTitle",
+      "ok": true,
+      "detail": "17 / 184"
+    },
+    {
+      "name": "results: at least 5 videos found",
+      "ok": true,
+      "detail": "18"
+    },
+    {
+      "name": "results: each has a watch link",
+      "ok": true,
+      "detail": "1.00"
+    },
+    {
+      "name": "results: each has a title",
+      "ok": true,
+      "detail": "1.00"
+    },
+    {
+      "name": "results: each has a channel",
+      "ok": true,
+      "detail": "1.00"
+    },
+    {
+      "name": "results: most have a length (badge or spoken label)",
+      "ok": true,
+      "detail": "1.00"
+    },
+    {
+      "name": "results: Aim's results bar (or its question) appears",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "results: Aim keeps them for the aim, most with a length",
+      "ok": true,
+      "detail": "17 of 17: 5:01 3:13 5:21 39:00"
+    },
+    {
+      "name": "results: a video to open",
+      "ok": true,
+      "detail": "L24Wf0VlTE0"
+    },
+    {
+      "name": "watch: selector watchFlexy",
+      "ok": true,
+      "detail": "1"
+    },
+    {
+      "name": "watch: selector watchTitle",
+      "ok": true,
+      "detail": "1"
+    },
+    {
+      "name": "watch: selector watchDescription",
+      "ok": true,
+      "detail": "1"
+    },
+    {
+      "name": "watch: selector videoChannelLink",
+      "ok": true,
+      "detail": "1 / 1 / 0 / 0"
+    },
+    {
+      "name": "watch: selector sidebarHost",
+      "ok": true,
+      "detail": "1"
+    },
+    {
+      "name": "watch: selector mainVideo",
+      "ok": true,
+      "detail": "1"
+    },
+    {
+      "name": "watch: selector player",
+      "ok": true,
+      "detail": "1 / 0"
+    },
+    {
+      "name": "watch: selector autoplayToggle",
+      "ok": true,
+      "detail": "1"
+    },
+    {
+      "name": "watch: selector watchActionButtons",
+      "ok": true,
+      "detail": "7"
+    },
+    {
+      "name": "watch: the page's video id matches",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "watch: Aim's Up next in the sidebar",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "watch: not stopped by a bot check",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "channel rows: selector channelRow",
+      "ok": true,
+      "detail": "5"
+    },
+    {
+      "name": "channel rows: selector channelLink",
+      "ok": true,
+      "detail": "5"
+    },
+    {
+      "name": "channel rows: selector channelName",
+      "ok": true,
+      "detail": "5 / 5"
+    },
+    {
+      "name": "channel rows: each has an @handle and a name",
+      "ok": true,
+      "detail": "/@ScienceMax Science Max - Scholastic, /@Scienceabc Science ABC, /@becausescience Because Science, /@NGScience Next Generation Science, /@ScienceMagazine Science Magazine"
+    },
+    {
+      "name": "channel: Veritasium (@veritasium)",
+      "ok": true,
+      "detail": "4 videos, 8 Shorts, id UCHnyfMqiRRG1u-2MsSQLbXA"
+    },
+    {
+      "name": "channel: Kurzgesagt (@kurzgesagt)",
+      "ok": true,
+      "detail": "5 videos, 8 Shorts, id UCsXVk37bltHxD1rDPwtNM8Q"
+    },
+    {
+      "name": "channel: SciShow (@SciShow)",
+      "ok": true,
+      "detail": "8 videos, 8 Shorts, id UCZYTClx2T1of7BRZ86-8fow"
+    },
+    {
+      "name": "channel: Smarter Every Day (@smartereveryday)",
+      "ok": true,
+      "detail": "8 videos, 0 Shorts, id UC6107grRI4m0o2-emgoDnAA"
+    },
+    {
+      "name": "channel: Crash Course (@crashcourse)",
+      "ok": true,
+      "detail": "8 videos, 8 Shorts, id UCX6b17PVsYBQ0ip5gyeme-Q"
+    },
+    {
+      "name": "channel: 3Blue1Brown (@3blue1brown)",
+      "ok": true,
+      "detail": "4 videos, 8 Shorts, id UCYO_jab_esuFRV4b17AJtAw"
+    },
+    {
+      "name": "channel: Numberphile (@numberphile)",
+      "ok": true,
+      "detail": "8 videos, 5 Shorts, id UCoxcjq-8xIDTYp3uz647V5A"
+    },
+    {
+      "name": "channel: Khan Academy (@khanacademy)",
+      "ok": true,
+      "detail": "8 videos, 8 Shorts, id UC4a-Gbdw7vOaccHmFo40b9g"
+    },
+    {
+      "name": "channel: Stand-up Maths (@standupmaths)",
+      "ok": true,
+      "detail": "8 videos, 0 Shorts, id UCSju5G2aFaWMqn-_0YBtq5A"
+    },
+    {
+      "name": "channel: Mathologer (@Mathologer)",
+      "ok": true,
+      "detail": "8 videos, 0 Shorts, id UC1_uAIS3r8Vu6JjXWvastJg"
+    },
+    {
+      "name": "channel: PBS Space Time (@pbsspacetime)",
+      "ok": true,
+      "detail": "8 videos, 6 Shorts, id UC7_gcs09iThXybpVgjHZ_7g"
+    },
+    {
+      "name": "channel: NASA (@NASA)",
+      "ok": true,
+      "detail": "8 videos, 8 Shorts, id UCLA_DiR1FfKNvjuUpBHmylQ"
+    },
+    {
+      "name": "channel: Scott Manley (@scottmanley)",
+      "ok": true,
+      "detail": "6 videos, 8 Shorts, id UCxzC4EngIsMrPmbm6Nxvb-A"
+    },
+    {
+      "name": "channel: Everyday Astronaut (@EverydayAstronaut)",
+      "ok": true,
+      "detail": "8 videos, 8 Shorts, id UC6uKrU_WqJ1R2HMTY3LIx5Q"
+    },
+    {
+      "name": "channel: Real Engineering (@RealEngineering)",
+      "ok": true,
+      "detail": "8 videos, 8 Shorts, id UCR1IuLEqb6UEA_zQ81kwXfg"
+    },
+    {
+      "name": "channel: Practical Engineering (@PracticalEngineeringChannel)",
+      "ok": true,
+      "detail": "8 videos, 8 Shorts, id UCMOqf8ab-42UUQIdVoKwjlQ"
+    },
+    {
+      "name": "channel: Mark Rober (@MarkRober)",
+      "ok": true,
+      "detail": "2 videos, 8 Shorts, id UCY1kMZp36IQSyNx_9h4mpCg"
+    },
+    {
+      "name": "channel: Engineering Explained (@EngineeringExplained)",
+      "ok": true,
+      "detail": "8 videos, 8 Shorts, id UClqhvGmHcvWL9w3R48t9QXQ"
+    },
+    {
+      "name": "channel: Stuff Made Here (@StuffMadeHere)",
+      "ok": true,
+      "detail": "8 videos, 0 Shorts, id UCj1VqrHhDte54oLgPG4xpuQ"
+    },
+    {
+      "name": "channel: OverSimplified (@OverSimplified)",
+      "ok": true,
+      "detail": "8 videos, 0 Shorts, id UCNIuvl7V8zACPpTmmNIqP2A"
+    },
+    {
+      "name": "channel: Kings and Generals (@KingsandGenerals)",
+      "ok": true,
+      "detail": "7 videos, 8 Shorts, id UCMmaBzfCCwZ2KqaBJjkj0fw"
+    },
+    {
+      "name": "channel: Historia Civilis (@HistoriaCivilis)",
+      "ok": true,
+      "detail": "8 videos, 0 Shorts, id UCv_vLHiWVBh_FR9vbeuiY-A"
+    },
+    {
+      "name": "channel: The Fat Electrician (@the_fat_electrician)",
+      "ok": true,
+      "detail": "8 videos, 8 Shorts, id UC_T3Zsw2257Ke-g3F20ZCRA"
+    },
+    {
+      "name": "channel: History Dose (@HistoryDose)",
+      "ok": true,
+      "detail": "8 videos, 8 Shorts, id UCLCckD5PjOk2M3iS_nPcjNQ"
+    },
+    {
+      "name": "channel: Crash Course (@crashcourse)",
+      "ok": true,
+      "detail": "8 videos, 8 Shorts, id UCX6b17PVsYBQ0ip5gyeme-Q"
+    },
+    {
+      "name": "channel: Fireship (@Fireship)",
+      "ok": true,
+      "detail": "8 videos, 8 Shorts, id UCsBjURrPoezykLs9EqgamOA"
+    },
+    {
+      "name": "channel: freeCodeCamp (@freecodecamp)",
+      "ok": true,
+      "detail": "8 videos, 8 Shorts, id UC8butISFwT-Wl7EV0hUK0BQ"
+    },
+    {
+      "name": "channel: Computerphile (@Computerphile)",
+      "ok": true,
+      "detail": "8 videos, 0 Shorts, id UC9-y-6csu5WGm29I7JiwpnA"
+    },
+    {
+      "name": "channel: CS50 (@cs50)",
+      "ok": true,
+      "detail": "8 videos, 8 Shorts, id UCcabW7890RKJzL968QWEykA"
+    },
+    {
+      "name": "channel: The Coding Train (@TheCodingTrain)",
+      "ok": true,
+      "detail": "8 videos, 8 Shorts, id UCvjgXvBlbQiydffZU7m1_aw"
+    },
+    {
+      "name": "channel: The Plain Bagel (@ThePlainBagel)",
+      "ok": true,
+      "detail": "8 videos, 4 Shorts, id UCFCEuCsyWP0YkP3CZ3Mr01Q"
+    },
+    {
+      "name": "channel: Ben Felix (@BenFelixCSI)",
+      "ok": true,
+      "detail": "8 videos, 8 Shorts, id UCDXTQ8nWmx_EhZ2v-kp7QxA"
+    },
+    {
+      "name": "channel: Two Cents (@TwoCentsPBS)",
+      "ok": true,
+      "detail": "7 videos, 8 Shorts, id UCL8w_A8p8P1HWI3k6PR5Z6w"
+    },
+    {
+      "name": "channel: Mentour Pilot (@MentourPilot)",
+      "ok": true,
+      "detail": "5 videos, 8 Shorts, id UCwpHKudUkP5tNgmMdexB3ow"
+    },
+    {
+      "name": "channel: Green Dot Aviation (@GreenDotAviation)",
+      "ok": true,
+      "detail": "8 videos, 0 Shorts, id UCfCNU6LWB66VR48V58d2KOg"
+    },
+    {
+      "name": "channel: Captain Joe (@flywithcaptainjoe)",
+      "ok": true,
+      "detail": "8 videos, 8 Shorts, id UC88tlMjiS7kf8uhPWyBTn_A"
+    },
+    {
+      "name": "Shorts found for most channels",
+      "ok": true,
+      "detail": "28 of 36"
+    },
+    {
+      "name": "home: Learn something shows a row",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "home: Quick review shows Shorts",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "shorts: a review Short plays, with Aim's review bar",
+      "ok": true,
+      "detail": "https://www.youtube.com/shorts/NIifnIP_NnQ"
+    },
+    {
+      "name": "no page errors from Aim",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "selectors": {
+    "home": {
+      "mastheadCenter": [
+        1
+      ],
+      "mastheadEnd": [
+        1
+      ],
+      "homeBrowse": [
+        1
+      ],
+      "searchBox": [
+        0,
+        1,
+        2,
+        1
+      ]
+    },
+    "results": {
+      "results": [
+        1
+      ],
+      "resultsList": [
+        1
+      ],
+      "resultVideos": [
+        17
+      ],
+      "resultTitleLabel": [
+        17
+      ],
+      "resultMeta": [
+        17,
+        0,
+        0
+      ],
+      "resultChannel": [
+        34,
+        34,
+        51
+      ],
+      "itemWatchLink": [
+        134
+      ],
+      "itemTitle": [
+        17,
+        184
+      ],
+      "ads": 0
+    },
+    "watch": {
+      "watchFlexy": [
+        1
+      ],
+      "watchTitle": [
+        1
+      ],
+      "watchDescription": [
+        1
+      ],
+      "videoChannelLink": [
+        1,
+        1,
+        0,
+        0
+      ],
+      "sidebarHost": [
+        1
+      ],
+      "mainVideo": [
+        1
+      ],
+      "player": [
+        1,
+        0
+      ],
+      "autoplayToggle": [
+        1
+      ],
+      "watchActionButtons": [
+        7
+      ]
+    },
+    "channel rows": {
+      "channelRow": [
+        5
+      ],
+      "channelLink": [
+        5
+      ],
+      "channelName": [
+        5,
+        5
+      ]
+    }
+  },
+  "channels": [
+    {
+      "topic": "Science",
+      "name": "Veritasium",
+      "handle": "@veritasium",
+      "hintId": "UCHnyfMqiRRG1u-2MsSQLbXA",
+      "id": "UCHnyfMqiRRG1u-2MsSQLbXA",
+      "videos": 4,
+      "shorts": 8,
+      "newest": "The Absurd Engineering Behind The Internet"
+    },
+    {
+      "topic": "Science",
+      "name": "Kurzgesagt",
+      "handle": "@kurzgesagt",
+      "hintId": "UCsXVk37bltHxD1rDPwtNM8Q",
+      "id": "UCsXVk37bltHxD1rDPwtNM8Q",
+      "videos": 5,
+      "shorts": 8,
+      "newest": "You Will Only Like Half of This Video"
+    },
+    {
+      "topic": "Science",
+      "name": "SciShow",
+      "handle": "@SciShow",
+      "hintId": "UCZYTClx2T1of7BRZ86-8fow",
+      "id": "UCZYTClx2T1of7BRZ86-8fow",
+      "videos": 8,
+      "shorts": 8,
+      "newest": "How the Black Market Saved Thousands of Cats"
+    },
+    {
+      "topic": "Science",
+      "name": "Smarter Every Day",
+      "handle": "@smartereveryday",
+      "hintId": "UC6107grRI4m0o2-emgoDnAA",
+      "id": "UC6107grRI4m0o2-emgoDnAA",
+      "videos": 8,
+      "shorts": 0,
+      "newest": "INSIDE a Nuclear Reactor Core - Smarter Every Day 317"
+    },
+    {
+      "topic": "Science",
+      "name": "Crash Course",
+      "handle": "@crashcourse",
+      "hintId": "UCX6b17PVsYBQ0ip5gyeme-Q",
+      "id": "UCX6b17PVsYBQ0ip5gyeme-Q",
+      "videos": 8,
+      "shorts": 8,
+      "newest": "Is the Electoral College Broken?: Crash Course US Government #5"
+    },
+    {
+      "topic": "Math",
+      "name": "3Blue1Brown",
+      "handle": "@3blue1brown",
+      "hintId": "UCYO_jab_esuFRV4b17AJtAw",
+      "id": "UCYO_jab_esuFRV4b17AJtAw",
+      "videos": 4,
+      "shorts": 8,
+      "newest": "There's never been a better time to go into math"
+    },
+    {
+      "topic": "Math",
+      "name": "Numberphile",
+      "handle": "@numberphile",
+      "hintId": "UCoxcjq-8xIDTYp3uz647V5A",
+      "id": "UCoxcjq-8xIDTYp3uz647V5A",
+      "videos": 8,
+      "shorts": 5,
+      "newest": "A New Math Meme - Numberphile"
+    },
+    {
+      "topic": "Math",
+      "name": "Khan Academy",
+      "handle": "@khanacademy",
+      "hintId": "UC4a-Gbdw7vOaccHmFo40b9g",
+      "id": "UC4a-Gbdw7vOaccHmFo40b9g",
+      "videos": 8,
+      "shorts": 8,
+      "newest": "Conservation of electric energy | AP Physics | Khan Academy"
+    },
+    {
+      "topic": "Math",
+      "name": "Stand-up Maths",
+      "handle": "@standupmaths",
+      "hintId": "UCSju5G2aFaWMqn-_0YBtq5A",
+      "id": "UCSju5G2aFaWMqn-_0YBtq5A",
+      "videos": 8,
+      "shorts": 0,
+      "newest": "We tested Babish's 15,000% claim!"
+    },
+    {
+      "topic": "Math",
+      "name": "Mathologer",
+      "handle": "@Mathologer",
+      "hintId": "UC1_uAIS3r8Vu6JjXWvastJg",
+      "id": "UC1_uAIS3r8Vu6JjXWvastJg",
+      "videos": 8,
+      "shorts": 0,
+      "newest": "Parity of permutations, impossible puzzles and the magical determinant"
+    },
+    {
+      "topic": "Space",
+      "name": "PBS Space Time",
+      "handle": "@pbsspacetime",
+      "hintId": "UC7_gcs09iThXybpVgjHZ_7g",
+      "id": "UC7_gcs09iThXybpVgjHZ_7g",
+      "videos": 8,
+      "shorts": 6,
+      "newest": "Why Does -1/12 Keep Appearing Everywhere In Physics?"
+    },
+    {
+      "topic": "Space",
+      "name": "NASA",
+      "handle": "@NASA",
+      "hintId": "UCLA_DiR1FfKNvjuUpBHmylQ",
+      "id": "UCLA_DiR1FfKNvjuUpBHmylQ",
+      "videos": 8,
+      "shorts": 8,
+      "newest": "U.S. Spacewalk Preview News Conference (Oct. 20, 2026)"
+    },
+    {
+      "topic": "Space",
+      "name": "Scott Manley",
+      "handle": "@scottmanley",
+      "hintId": "UCxzC4EngIsMrPmbm6Nxvb-A",
+      "id": "UCxzC4EngIsMrPmbm6Nxvb-A",
+      "videos": 6,
+      "shorts": 8,
+      "newest": "Let's Talk About Tesla's Rocket Car.... Even Though I'm Supposed to be On Vacation"
+    },
+    {
+      "topic": "Space",
+      "name": "Everyday Astronaut",
+      "handle": "@EverydayAstronaut",
+      "hintId": "UC6uKrU_WqJ1R2HMTY3LIx5Q",
+      "id": "UC6uKrU_WqJ1R2HMTY3LIx5Q",
+      "videos": 8,
+      "shorts": 8,
+      "newest": "[4K] Watch the FIRST Orbital Starship Mission!!!"
+    },
+    {
+      "topic": "Engineering",
+      "name": "Real Engineering",
+      "handle": "@RealEngineering",
+      "hintId": "UCR1IuLEqb6UEA_zQ81kwXfg",
+      "id": "UCR1IuLEqb6UEA_zQ81kwXfg",
+      "videos": 8,
+      "shorts": 8,
+      "newest": "The Plane That's 38% Nose"
+    },
+    {
+      "topic": "Engineering",
+      "name": "Practical Engineering",
+      "handle": "@PracticalEngineeringChannel",
+      "hintId": "UCMOqf8ab-42UUQIdVoKwjlQ",
+      "id": "UCMOqf8ab-42UUQIdVoKwjlQ",
+      "videos": 8,
+      "shorts": 8,
+      "newest": "Whatever Happened to Fire Escapes?"
+    },
+    {
+      "topic": "Engineering",
+      "name": "Mark Rober",
+      "handle": "@MarkRober",
+      "hintId": "UCY1kMZp36IQSyNx_9h4mpCg",
+      "id": "UCY1kMZp36IQSyNx_9h4mpCg",
+      "videos": 2,
+      "shorts": 8,
+      "newest": "Last Cheater Standing Wins $10,000"
+    },
+    {
+      "topic": "Engineering",
+      "name": "Engineering Explained",
+      "handle": "@EngineeringExplained",
+      "hintId": "UClqhvGmHcvWL9w3R48t9QXQ",
+      "id": "UClqhvGmHcvWL9w3R48t9QXQ",
+      "videos": 8,
+      "shorts": 8,
+      "newest": "Lucid Bought My Car Back, So I Bought A Mach-E"
+    },
+    {
+      "topic": "Engineering",
+      "name": "Stuff Made Here",
+      "handle": "@StuffMadeHere",
+      "hintId": "UCj1VqrHhDte54oLgPG4xpuQ",
+      "id": "UCj1VqrHhDte54oLgPG4xpuQ",
+      "videos": 8,
+      "shorts": 0,
+      "newest": "I made an apple peel itself"
+    },
+    {
+      "topic": "History",
+      "name": "OverSimplified",
+      "handle": "@OverSimplified",
+      "hintId": "UCNIuvl7V8zACPpTmmNIqP2A",
+      "id": "UCNIuvl7V8zACPpTmmNIqP2A",
+      "videos": 8,
+      "shorts": 0,
+      "newest": "The Second Punic War  - OverSimplified (Part 3)"
+    },
+    {
+      "topic": "History",
+      "name": "Kings and Generals",
+      "handle": "@KingsandGenerals",
+      "hintId": "UCMmaBzfCCwZ2KqaBJjkj0fw",
+      "id": "UCMmaBzfCCwZ2KqaBJjkj0fw",
+      "videos": 7,
+      "shorts": 8,
+      "newest": "The Biggest Rebellion Against the British Empire in History"
+    },
+    {
+      "topic": "History",
+      "name": "Historia Civilis",
+      "handle": "@HistoriaCivilis",
+      "hintId": "UCv_vLHiWVBh_FR9vbeuiY-A",
+      "id": "UCv_vLHiWVBh_FR9vbeuiY-A",
+      "videos": 8,
+      "shorts": 0,
+      "newest": "The City."
+    },
+    {
+      "topic": "History",
+      "name": "The Fat Electrician",
+      "handle": "@the_fat_electrician",
+      "hintId": "UC_T3Zsw2257Ke-g3F20ZCRA",
+      "id": "UC_T3Zsw2257Ke-g3F20ZCRA",
+      "videos": 8,
+      "shorts": 8,
+      "newest": "The Most Gangster Washington - William \"Billy\" Washington"
+    },
+    {
+      "topic": "History",
+      "name": "History Dose",
+      "handle": "@HistoryDose",
+      "hintId": "UCLCckD5PjOk2M3iS_nPcjNQ",
+      "id": "UCLCckD5PjOk2M3iS_nPcjNQ",
+      "videos": 8,
+      "shorts": 8,
+      "newest": "Q&A while Joe paints an Undead Viking"
+    },
+    {
+      "topic": "History",
+      "name": "Crash Course",
+      "handle": "@crashcourse",
+      "hintId": "UCX6b17PVsYBQ0ip5gyeme-Q",
+      "id": "UCX6b17PVsYBQ0ip5gyeme-Q",
+      "videos": 8,
+      "shorts": 8,
+      "newest": "Is the Electoral College Broken?: Crash Course US Government #5"
+    },
+    {
+      "topic": "Coding",
+      "name": "Fireship",
+      "handle": "@Fireship",
+      "hintId": "UCsBjURrPoezykLs9EqgamOA",
+      "id": "UCsBjURrPoezykLs9EqgamOA",
+      "videos": 8,
+      "shorts": 8,
+      "newest": "Did Google just dethrone OpenAI and Anthropic?"
+    },
+    {
+      "topic": "Coding",
+      "name": "freeCodeCamp",
+      "handle": "@freecodecamp",
+      "hintId": "UC8butISFwT-Wl7EV0hUK0BQ",
+      "id": "UC8butISFwT-Wl7EV0hUK0BQ",
+      "videos": 8,
+      "shorts": 8,
+      "newest": "Inside an AI Factory – Power, Cooling, and GPUs Explained"
+    },
+    {
+      "topic": "Coding",
+      "name": "Computerphile",
+      "handle": "@Computerphile",
+      "hintId": "UC9-y-6csu5WGm29I7JiwpnA",
+      "id": "UC9-y-6csu5WGm29I7JiwpnA",
+      "videos": 8,
+      "shorts": 0,
+      "newest": "Multiplayer Gaming & Flight Simulation - Computerphile"
+    },
+    {
+      "topic": "Coding",
+      "name": "CS50",
+      "handle": "@cs50",
+      "hintId": "UCcabW7890RKJzL968QWEykA",
+      "id": "UCcabW7890RKJzL968QWEykA",
+      "videos": 8,
+      "shorts": 8,
+      "newest": "50 Seconds on Binary"
+    },
+    {
+      "topic": "Coding",
+      "name": "The Coding Train",
+      "handle": "@TheCodingTrain",
+      "hintId": "UCvjgXvBlbQiydffZU7m1_aw",
+      "id": "UCvjgXvBlbQiydffZU7m1_aw",
+      "videos": 8,
+      "shorts": 8,
+      "newest": "Why Language Models Surprise You"
+    },
+    {
+      "topic": "Personal finance",
+      "name": "The Plain Bagel",
+      "handle": "@ThePlainBagel",
+      "hintId": "UCFCEuCsyWP0YkP3CZ3Mr01Q",
+      "id": "UCFCEuCsyWP0YkP3CZ3Mr01Q",
+      "videos": 8,
+      "shorts": 4,
+      "newest": "How BAD Are Stock Valuations Really?"
+    },
+    {
+      "topic": "Personal finance",
+      "name": "Ben Felix",
+      "handle": "@BenFelixCSI",
+      "hintId": "UCDXTQ8nWmx_EhZ2v-kp7QxA",
+      "id": "UCDXTQ8nWmx_EhZ2v-kp7QxA",
+      "videos": 8,
+      "shorts": 8,
+      "newest": "Breaking Down My Investment Portfolio"
+    },
+    {
+      "topic": "Personal finance",
+      "name": "Two Cents",
+      "handle": "@TwoCentsPBS",
+      "hintId": "UCL8w_A8p8P1HWI3k6PR5Z6w",
+      "id": "UCL8w_A8p8P1HWI3k6PR5Z6w",
+      "videos": 7,
+      "shorts": 8,
+      "newest": "How Being Single Makes You Poor!"
+    },
+    {
+      "topic": "Aviation",
+      "name": "Mentour Pilot",
+      "handle": "@MentourPilot",
+      "hintId": "UCwpHKudUkP5tNgmMdexB3ow",
+      "id": "UCwpHKudUkP5tNgmMdexB3ow",
+      "videos": 5,
+      "shorts": 8,
+      "newest": "This Should NEVER Have Happened!! | The Insane Story Of Air Niugini Flight 73"
+    },
+    {
+      "topic": "Aviation",
+      "name": "Green Dot Aviation",
+      "handle": "@GreenDotAviation",
+      "hintId": "UCfCNU6LWB66VR48V58d2KOg",
+      "id": "UCfCNU6LWB66VR48V58d2KOg",
+      "videos": 8,
+      "shorts": 0,
+      "newest": "A TINY mistake doomed this flight | Eastern 855"
+    },
+    {
+      "topic": "Aviation",
+      "name": "Captain Joe",
+      "handle": "@flywithcaptainjoe",
+      "hintId": "UC88tlMjiS7kf8uhPWyBTn_A",
+      "id": "UC88tlMjiS7kf8uhPWyBTn_A",
+      "videos": 8,
+      "shorts": 8,
+      "newest": "How does EVAS work?"
+    }
+  ],
+  "swipedTo": "https://www.youtube.com/shorts/NIifnIP_NnQ"
+}

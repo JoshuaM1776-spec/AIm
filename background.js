@@ -63,6 +63,7 @@ const writes = {
   "purpose-refine": m => refinePurpose(m.text),
   "purpose-search": m => addSearch(m.query),
   "purpose-allow": m => allowVideos({ query: m.query, videos: m.videos, lists: m.lists }),
+  "video-check": m => checkVideo(m.video),
   "purpose-done": m => finishPurpose(m.outcome),
   "purpose-pause": () => pausePurpose(),
   "study-start": m => startStudy({ title: m.title, scopeNote: m.scopeNote, topics: m.topics, notes: m.notes }),

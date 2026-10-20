@@ -477,6 +477,19 @@ test("word check: searches that share a meaningful word continue the purpose", a
   assert.strictEqual(await fits("photographic composition"), true, "shared five-letter start");
 });
 
+test("a video the searches didn't find still fits when it's from a channel you watched or plainly on topic", async () => {
+  const env = fresh();
+  await env.run(`startPurpose({ text: "learn how sourdough bread works", search: "sourdough starter" })`);
+  await env.run(`recordTick(20, { id: "w1", title: "Starter maintenance", channel: "The Bread Code" })`);
+  const fits = async v => (await env.run(`checkVideo(${JSON.stringify(v)})`)).fits;
+  assert.strictEqual(await fits({ id: "c1", title: "My oven tour", channel: "The Bread Code" }), true, "same channel as a video you watched for it");
+  assert.strictEqual(await fits({ id: "t1", title: "Sourdough shaping for beginners", channel: "Someone" }), true, "title shares a word");
+  assert.strictEqual(await fits({ id: "n1", title: "Best gaming laptop 2026", channel: "Tech Guy" }), false);
+  assert.ok(env.local.purpose.allowed.some(v => v.id === "c1") && !env.local.purpose.allowed.some(v => v.id === "n1"), "what fits is allowed like a result");
+  await env.run(`setSetting("strict", true)`);
+  assert.strictEqual(await fits({ id: "t2", title: "Sourdough crumb", channel: "Someone" }), false, "strict mode: only what your searches found");
+});
+
 // ---------- activity ----------
 test("recent purposes: newest first, distinct, without the current one", async () => {
   const env = fresh();

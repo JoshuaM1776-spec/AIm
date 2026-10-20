@@ -1,6 +1,6 @@
 // Aim — the welcome tour, opened once when Aim is installed (and from Settings any time after).
-// Four short screens: what Aim is, how it works, an invitation to design your YouTube (design.html),
-// and where to find it.
+// Three short screens: what Aim is and how it works, the few switches that matter (with the full
+// designer, design.html, one button away), and where to find it.
 
 const BRAND = chrome.runtime.getManifest().name;
 for (const n of document.querySelectorAll("[data-brand]")) n.textContent = BRAND;
@@ -37,19 +37,14 @@ async function setSetting(key, value) {
 
 // ---------- the screens ----------
 
-function hello() {
-  return node("div", { className: "hero" },
-    node("div", {}, ...MARK().map(i => (i.classList.add("mark"), i))),
-    node("h1", { textContent: `Welcome to ${BRAND}` }),
-    node("p", { className: "tag" }, "YouTube helps you find something to watch. ", node("b", { textContent: `${BRAND} helps you find what you need.` })),
-    node("p", { className: "lede", textContent: "Here's how it works. It takes about a minute." }));
-}
-
 // The three ideas, each with a small drawing of what you'll see.
 function how() {
   const arrow = node("span", { className: "go", textContent: "›" });
   return node("div", {},
-    node("h1", { textContent: "How it works" }),
+    node("div", { className: "hero" },
+      node("div", {}, ...MARK().map(i => (i.classList.add("mark"), i))),
+      node("h1", { textContent: `Welcome to ${BRAND}` }),
+      node("p", { className: "tag" }, "YouTube helps you find something to watch. ", node("b", { textContent: `${BRAND} helps you find what you need.` }))),
     node("div", { className: "steps" },
       node("div", { className: "how" },
         node("div", { className: "num", textContent: "1" }),
@@ -71,15 +66,26 @@ function how() {
           ...["15 min", "30 min", "1 hour"].map(t => node("span", { className: "pill", textContent: t }))))));
 }
 
-// The choices themselves live in Design your YouTube (design.html): a live preview beats a list.
+// Thirty seconds: the few switches that matter, already set the way most people like them, each
+// saved the moment it changes. The full designer, with its live preview, is one button away.
+const QUICK = [
+  ["hideShorts", "Hide Shorts", "Opening one while you're on an aim asks first."],
+  ["hideRecs", "Hide recommendations", "Beside a video and at its end."],
+  ["hideFeeds", "Hide the subscriptions and trending feeds", "They come back on a break."],
+  ["noAutoplay", "Turn autoplay off", "Back on during breaks if you had it on."]
+];
 function choices() {
   return node("div", {},
-    node("h1", { textContent: "Design your YouTube" }),
-    node("p", { className: "lede", textContent: "Choose what greets you on YouTube, what happens to Shorts, and what steps aside while you watch. A preview of YouTube changes as you choose." }),
-    node("div", { className: "callout" },
-      node("button", { className: "btn", type: "button", id: "design", textContent: "Design your YouTube",
-        onclick: () => send({ type: "open-design" }) }),
-      node("div", { className: "hint", style: "margin:8px 0 0", textContent: "About two minutes. Or skip it: Aim starts with good defaults, and you can design it any time from Settings." })));
+    node("h1", { textContent: "Make it yours" }),
+    node("p", { className: "lede", textContent: "These start on. Switch off anything you'd rather keep." }),
+    node("div", { className: "quick" }, ...QUICK.map(([key, label, hint]) => {
+      const box = node("input", { type: "checkbox", checked: settings[key] !== false, onchange: () => setSetting(key, box.checked) });
+      return node("label", { className: "quick-row" }, box, node("span", {}, node("b", { textContent: label }), node("span", { className: "hint", textContent: hint })));
+    })),
+    node("div", { className: "callout quick-more" },
+      node("span", { textContent: "Want to see it first, or choose your homepage and Shorts?" }),
+      node("button", { className: "btn tonal", type: "button", id: "design", textContent: "Customize with a preview",
+        onclick: () => send({ type: "open-design" }) })));
 }
 
 // Only when this version of Aim has accounts: the librarian is free with an account.
@@ -110,7 +116,7 @@ function ready() {
 
 // ---------- moving through ----------
 
-const screens = () => [hello, how, choices, plusAvailable ? librarian : null, ready].filter(Boolean);
+const screens = () => [how, choices, plusAvailable ? librarian : null, ready].filter(Boolean);
 
 function show(i) {
   const list = screens();

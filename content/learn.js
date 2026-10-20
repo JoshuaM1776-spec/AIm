@@ -156,12 +156,12 @@ function learnBlock() {
   if (activePurpose() || status.totalReached || settings.learnRow === false) return null;
   if (!(settings.learnTopics || []).length && !channelsBy("prefer").length) {
     if (status.onboarding?.tips?.learn) return null;
+    // One quiet line, not a block: the offer is there for whoever wants it.
     return el("div", { class: "wp-learn wp-learn-invite" },
-      el("div", { class: "wp-strong" }, "Learn something new?"),
-      el("div", { class: "wp-muted" }, `Pick topics you'd like to learn about, and ${BRAND} shows new videos from channels that teach them well. Six at a time, no feed.`),
-      el("div", { class: "wp-row" },
-        el("button", { class: "wp-btn wp-btn-tonal", onclick: () => send({ type: "open-options", section: "learn" }) }, "Choose topics"),
-        el("button", { class: "wp-btn wp-btn-text", onclick: e => { send({ type: "onboarding", tip: "learn" }); e.currentTarget.closest(".wp-learn").remove(); } }, "No thanks")));
+      el("span", { class: "wp-muted" }, "Learn something new?"),
+      el("button", { class: "wp-link", onclick: () => send({ type: "open-options", section: "learn" }) }, "Choose topics"),
+      el("button", { class: "wp-icon-btn wp-learn-invite-x", "aria-label": "No thanks", title: "No thanks",
+        onclick: e => { send({ type: "onboarding", tip: "learn" }); e.currentTarget.closest(".wp-learn").remove(); } }, svgIcon("close")));
   }
   const box = el("div", { class: "wp-learn" },
     el("div", { class: "wp-row-between" },

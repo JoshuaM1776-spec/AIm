@@ -45,6 +45,13 @@
   .hint { color: var(--muted); font-size: 13px; line-height: 18px; margin: 4px 0 16px; }
   .callout { background: var(--tonal); border-radius: 12px; padding: 14px 16px; font-size: 14px; line-height: 20px; margin: 4px 0 8px; }
   .callout q { font-style: italic; }
+  .quick { display: flex; flex-direction: column; margin: 4px 0 16px; }
+  .quick-row { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-top: 1px solid var(--divider); cursor: pointer; font-size: 14px; line-height: 20px; }
+  .quick-row:last-child { border-bottom: 1px solid var(--divider); }
+  .quick-row input { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--primary); flex: none; }
+  .quick-row > span { display: flex; flex-direction: column; }
+  .quick-row .hint { margin: 0; }
+  .quick-more { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
   .pin { display: flex; align-items: center; gap: 12px; background: var(--tonal); border-radius: 12px; padding: 14px 16px; margin: 8px 0 4px; font-size: 14px; line-height: 20px; }
   .pin .tb { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 18px; background: var(--surface); border: 1px solid var(--card-border); flex: none; }
   .pin .tb img { width: 18px; height: 18px; }

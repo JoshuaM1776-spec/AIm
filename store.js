@@ -550,7 +550,9 @@ function searchFits(purpose, query) {
   const q = meaningfulWords(query);
   if (!q.length) return true; // nothing to judge by
   // Searches the librarian suggested for this aim count as part of it too.
+  // So do the titles of videos you've watched for it: they're how the topic actually reads.
   const known = [purpose.text, ...(purpose.searches || []).map(s => s.q), ...(purpose.librarian?.searches || []),
+    ...(purpose.videos || []).filter(v => (v.sec || 0) >= 30).map(v => v.title),
     ...(purpose.study?.topics || []).flatMap(t => [t.title, ...t.searches])].flatMap(meaningfulWords);
   const same = (a, b) => a === b || (a.length >= 5 && b.length >= 5 && a.slice(0, 5) === b.slice(0, 5));
   return q.some(w => known.some(k => same(w, k)));
@@ -558,6 +560,22 @@ function searchFits(purpose, query) {
 async function checkSearch(query) {
   const s = await readAll();
   return { fits: !s.purpose || searchFits(s.purpose, clip(query, 200)) };
+}
+
+// A video your searches didn't find still continues the aim, without asking, when it's from a
+// channel you've already watched for it or its title shares a meaningful word with it. It's then
+// allowed like a result. Strict mode skips this: there, only what your searches found plays.
+async function checkVideo(video) {
+  const s = await readAll();
+  const p = s.purpose, v = video || {};
+  if (!p || !v.id || (await getSettings()).strict) return { fits: false };
+  const channel = clip(v.channel, 200);
+  const sameChannel = !!channel && (p.videos || []).some(w => w.channel === channel);
+  const fits = sameChannel || (meaningfulWords(v.title).length > 0 && searchFits(p, clip(v.title, 300)));
+  if (!fits) return { fits: false };
+  allow(p, [{ id: v.id, title: v.title, channel }], [], "");
+  await chrome.storage.local.set({ purpose: p });
+  return { fits: true };
 }
 
 // ---------- the librarian's memory of an aim ----------
@@ -1170,7 +1188,7 @@ async function channelsPage() {
 
 // ---------- strict mode: the reasons you gave ----------
 // Kept in this browser (the last 100), with the aim they were for; the popup shows them.
-const REASON_KINDS = ["more-time", "channel", "search"];
+const REASON_KINDS = ["more-time", "channel", "search", "video"];
 async function addReason({ kind, text, detail }) {
   if (!REASON_KINDS.includes(kind)) return { result: "error", message: "Unknown reason." };
   text = clip(String(text || "").replace(/\s+/g, " ").trim(), 300);

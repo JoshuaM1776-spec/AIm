@@ -170,11 +170,17 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   if (welcome) {
     welcome.on("pageerror", e => errors.push("welcome: " + e.message));
     await welcome.waitForSelector("h1");
-    step("welcome: Aim's line, and a minute to learn it", (await welcome.textContent("main")).includes("Aim helps you find what you need") && (await welcome.textContent("#next")) === "Let's go");
-    await welcome.click("#next");
     const howText = await welcome.textContent("main");
-    step("how it works: Aim, staying on your aim, breaks", ["Say what you're here for", "keeps YouTube on your aim", "Take a break whenever you like"].every(t => howText.includes(t)));
+    step("welcome: Aim's line and how it works on one screen", howText.includes("Aim helps you find what you need") && (await welcome.textContent("#next")) === "Let's go" &&
+      ["Say what you're here for", "keeps YouTube on your aim", "Take a break whenever you like"].every(t => howText.includes(t)));
     await welcome.click("#next");
+    step("make it yours: four switches, already on", (await welcome.$$eval(".quick-row input", b => b.length === 4 && b.every(x => x.checked))));
+    if (process.env.SHOTS) { await welcome.waitForTimeout(500); await welcome.screenshot({ path: `${process.env.SHOTS}/welcome-setup.png`, fullPage: true }); }
+    await welcome.click(".quick-row:has-text('Turn autoplay off')");
+    await welcome.waitForTimeout(300);
+    step("a switch saves the moment it changes", (await store()).settings.noAutoplay === false);
+    await welcome.click(".quick-row:has-text('Turn autoplay off')");
+    await welcome.waitForTimeout(300);
     // ---------- Design your YouTube ----------
     const [design] = await Promise.all([ctx.waitForEvent("page"), welcome.click("#design")]);
     design.on("pageerror", e => errors.push("design: " + e.message));
@@ -308,7 +314,9 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.evaluate(() => ytNav("/watch?v=elsewhere"));
   await p.waitForSelector(".wp-player-card", { timeout: 6000 });
   card = await text(".wp-player-card");
-  step("a video your searches didn't find is not part of the purpose", card.includes("Not on your aim") && card.includes("Change my aim") && !/watch anyway/i.test(card), card.slice(0, 140));
+  step("a video your searches didn't find asks once: back to my aim, or it's part of it", card.includes("Part of your aim?") && card.includes("Back to my aim") &&
+    card.includes("Yes, it's part of it") && card.includes("Change my aim") && !(await p.isVisible(".wp-player-card .wp-more input")), card.slice(0, 140));
+  if (process.env.SHOTS) await p.screenshot({ path: `${process.env.SHOTS}/part-of-your-aim.png` });
   await p.evaluate(() => ytNav("/watch?v=bbb"));
   await p.waitForTimeout(1500);
   step("going back to the purpose's video plays it", !(await p.$(".wp-player-card")));
@@ -377,13 +385,16 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   // ---------- Done ----------
   await p.click("#wp-chip .wp-pill");
   await p.click('.wp-dropdown button:has-text("Done with this aim")');
-  await p.waitForSelector(".wp-done-dialog", { timeout: 3000 });
-  const doneText = await text(".wp-done-dialog");
-  step("Done asks first: found it, partly, not really, or keep going", ["Done with this aim?", "Yes, I'm done", "Partly", "Not really", "Keep going"].every(t => doneText.includes(t)));
-  await p.click('.wp-done-dialog button:text-is("Yes, I\'m done")');
   await p.waitForURL("https://www.youtube.com/", { timeout: 5000 });
-  await p.waitForSelector(".wp-toast", { timeout: 5000 });
-  step("Done lands on the homepage with a short confirmation", (await text(".wp-toast")).includes("Glad you found it"));
+  await p.waitForSelector(".wp-notice .wp-end-rate", { timeout: 5000 });
+  const endText = await text(".wp-notice");
+  step("Done is one tap; a light card follows: time, found it?, and a way back in", !(await p.$(".wp-done-dialog")) &&
+    ["min on Learn how sourdough", "Found what you needed?", "Yes", "Partly", "Not done? Pick it back up"].every(t => endText.includes(t)), endText.slice(0, 160));
+  if (process.env.SHOTS) { await p.waitForTimeout(600); await p.screenshot({ path: `${process.env.SHOTS}/after-done.png` }); }
+  await p.click('.wp-notice .wp-end-rate button:text-is("Yes")');
+  await p.waitForTimeout(400);
+  step("answering is quiet: the card says thanks in place", (await text(".wp-notice")).includes("Nice work"));
+  await p.click('.wp-notice [aria-label="Dismiss"]');
   await p.click("#wp-chip .wp-pill");
   await p.click('.wp-dropdown button:has-text("Set aim")');
   await p.waitForSelector(".wp-dialog .wp-recent", { timeout: 3000 });
@@ -482,7 +493,8 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.waitForTimeout(800);
   step("a preferred channel's results get a Your channel badge", await p.$eval("#normalItem", n => n.hasAttribute("data-wp-preferred")));
   step("Still looking? after three searches with nothing watched", (await text(".wp-rb-still")).includes("Still looking?"));
-  await p.click('.wp-rb-still button:text-is("Not now")');
+  if (process.env.SHOTS) await p.screenshot({ path: `${process.env.SHOTS}/still-looking.png` });
+  await p.click('.wp-rb-still button[aria-label="Dismiss"]');
   step("Not now puts it away", !(await p.$(".wp-rb-still")));
   await sw.evaluate(() => serial(() => finishPurpose("yes")));
   await setLocal({ avoid: { "/@hideme": { name: "Hide Me", action: "hide" } } });
@@ -519,9 +531,8 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     ["Your aim", "learn to sharpen a chisel", "so far", "Resume", "Take a Break", "Done", "Change my aim", "Your activity", "This week", "aims complete", "On your aims", "Breaks", "Found it", "Daily limits"].every(t => popText.includes(t)) &&
     !popText.includes("left") && !(await pop.$eval("#activity", d => d.open)), popText.slice(0, 200));
   await pop.click('button:text-is("Done")');
-  await pop.click('button:text-is("Yes, I\'m done")');
   await pop.waitForTimeout(500);
-  step("Done from the popup asks and ends the purpose", !(await store()).purpose && (await store()).history.pop().outcome === "yes");
+  step("Done from the popup is one tap and ends the aim", !(await store()).purpose && (await store()).history.pop().outcome === null);
 
   // ---------- picking an aim up again ----------
   await sw.evaluate(() => serial(() => setSetting("homeCard", true))); // an earlier check switched the homepage card off
@@ -633,8 +644,9 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await setLocal({ onboarding: { welcomed: true, tips: { home: true, chip: true, results: true }, hsTour: true }, learn: {} });
   await p.goto("https://www.youtube.com/");
   await p.waitForSelector("#wp-home .wp-learn-invite");
-  step("Learn something: an invitation to pick topics, when none are chosen", (await text(".wp-learn-invite")).includes("Choose topics"));
-  await p.click('.wp-learn-invite button:text-is("No thanks")');
+  step("Learn something: one quiet line inviting you to pick topics, when none are chosen", (await text(".wp-learn-invite")).includes("Choose topics") &&
+    (await p.$eval(".wp-learn-invite", n => n.getBoundingClientRect().height)) < 40);
+  await p.click('.wp-learn-invite button[aria-label="No thanks"]');
   await p.waitForTimeout(300);
   step("No thanks puts the invitation away for good", !(await p.$(".wp-learn-invite")) && (await store()).onboarding.tips.learn === true);
   await sw.evaluate(() => serial(() => setSetting("learnTopics", ["math"])));
@@ -789,9 +801,8 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.waitForURL(/results\?search_query=how%20volcanoes%20form/);
   await p.waitForSelector("#wp-results-bar");
   st = await store();
-  await p.waitForSelector(".wp-coach", { timeout: 3000 }).catch(() => {});
-  step("the first search on your aim gets one tip about the bar", (await text(".wp-coach")).includes("This search is on your aim"));
-  await p.click(".wp-coach-next");
+  await p.waitForTimeout(800);
+  step("no tip interrupts the results: the bar explains itself", !(await p.$(".wp-coach")));
   step("Start makes the lesson the aim and searches for it", st.purpose?.plan === "sci1" && st.purpose.text === "Science: How Volcanoes Form" &&
     (await text("#wp-results-bar")).includes("Today's plan"));
   await sw.evaluate(() => serial(() => recordTick(10, { id: "vol1", title: "Volcanoes 101", channel: "Geo", t: 100, d: 600 })));

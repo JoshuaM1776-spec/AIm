@@ -137,14 +137,13 @@ function stillLooking(p) {
 }
 function stillLookingRow(p, key, lib) {
   const dismiss = () => { stillDismissed.add(key); $(".wp-rb-still")?.remove(); };
+  // A hint in one line, not a stop: the results stay where they are.
   return el("div", { class: "wp-rb-still" },
-    el("span", { class: "wp-strong" }, "Still looking?"),
-    lib ? el("span", { class: "wp-muted" }, `Tell ${BRAND} what you need in a sentence, and it'll suggest better searches.`)
-      : el("span", { class: "wp-muted" }, "Try the exact name of the part, error or idea, or fewer words."),
-    lib ? el("button", { class: "wp-btn wp-btn-tonal", onclick: () => {
+    el("span", { class: "wp-muted" }, lib ? "Still looking?" : "Still looking? Try the exact name of the part, error or idea, or fewer words."),
+    lib ? el("button", { class: "wp-link", onclick: () => {
       dismiss(); libOpen = { query: searchQuery().toLowerCase(), open: true }; renderResultsBar();
-      setTimeout(() => $("#wp-lib .wp-lib-input")?.focus(), 0); } }, icon("ask"), "Ask the librarian") : null,
-    el("button", { class: "wp-btn wp-btn-text", onclick: dismiss }, "Not now"));
+      setTimeout(() => $("#wp-lib .wp-lib-input")?.focus(), 0); } }, `Tell ${BRAND} what you need`) : null,
+    el("button", { class: "wp-icon-btn", "aria-label": "Dismiss", title: "Dismiss", onclick: dismiss }, svgIcon("close")));
 }
 
 // The search shares no meaningful word with the purpose: ask once, results hidden meanwhile.

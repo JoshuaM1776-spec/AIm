@@ -48,7 +48,7 @@ On the server, `supabase/functions/ai/homeschool.ts` holds every rule (approval,
 | `content/home.js`, `channels.js` | Homepage card, hidden/warned channels |
 | `content/librarian.js` | The librarian for signed-in accounts: requests vs plain searches, the results bar's note/choices/ask box, and the picks above YouTube's results |
 | `content/plan.js` | Aim Homeschool: the student's Today screen on YouTube's homepage, and the day's plan beside a lesson's video (sample plan for now, turned on in Settings → Advanced) |
-| `content/onboarding.js` | First-time help on YouTube: one-time tips (the homepage box, the Aim button, the results bar) and the Homeschool student's spotlight tour of Today |
+| `content/onboarding.js` | First-time help on YouTube: one-time tips (the homepage box, then the Aim button) and the Homeschool student's spotlight tour of Today |
 | `content/pathways.js` | Pathways on YouTube: "Want more of this?", "Where could this take me?" and the occasional theme offer |
 | `content/video.js` | "In this video" (Aim Plus): beside a video watched for a learning aim, the concepts it covers (from its title, description and chapters), chapter jumps, "See it in another context", and "Test me on this video" when it ends |
 | `content/relax.js` | "Relax with a theme": a break with something you'd enjoy in mind (from a relax request to the librarian), with a slim bar on its results and "More on <theme>" beside each video |
@@ -70,7 +70,7 @@ On the server, `supabase/functions/ai/homeschool.ts` holds every rule (approval,
 | `aim.css` | The shared look for all of Aim's own pages (see Design) |
 | `tokens.css` | Aim's fonts and colors, from the mark (used by `aim.css` and the popup) |
 | `fonts/` | Inter and Inter Display, Latin subsets (SIL Open Font License) |
-| `design.html/js` | Design your YouTube: four stages (Home, Shorts, Watching, Timing) with a live preview drawn from your own topics' videos, click the preview to change that part, then a before-and-after and one Apply. The welcome tour invites you here; Settings links to each stage. |
+| `design.html/js` | Design your YouTube: three stages (Home, Shorts, Watching) with a live preview drawn from your own topics' videos, click the preview to change that part, then a before-and-after and one Apply. The welcome tour invites you here; Settings links to each stage. |
 | `options.html/js` | Settings page (everything, including the finer details the designer leaves out) |
 | `welcome.html/js` | The welcome tour: opens once on install (what Aim is, how it works, a few choices, pin it), and from Settings → "Show the welcome tour again" |
 | `config.js`, `plus.js` | Aim Plus in the service worker: where the server is (empty = Free only), sign-in with an emailed code, calling Aim's AI endpoint. Only Aim's own pages can use it, never YouTube tabs. |

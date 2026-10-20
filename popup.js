@@ -40,7 +40,7 @@ const ICONS = {
 };
 
 let st = null;
-let open = null; // which inline control is open: "break" | "pivot" | "done"
+let open = null; // which inline control is open: "break" | "pivot"
 
 // A ring showing how much of a limit is left.
 function ring(left, total) {
@@ -100,16 +100,6 @@ function pivotControls() {
       el("button", { class: "btn primary", onclick: go }, "Change my aim")));
 }
 
-function doneControls() {
-  return el("div", { class: "stack" },
-    el("div", { class: "strong" }, "Did you find what you were looking for?"),
-    el("button", { class: "btn primary", onclick: () => act({ type: "purpose-done", outcome: "yes" }) }, "Yes, I'm done"),
-    el("div", { class: "pair", style: "margin-top:0" },
-      el("button", { class: "btn", onclick: () => act({ type: "purpose-done", outcome: "partly" }) }, "Partly"),
-      el("button", { class: "btn", onclick: () => act({ type: "purpose-done", outcome: "no" }) }, "Not really")),
-    el("button", { class: "link", onclick: () => { open = null; renderCurrent(); } }, "Keep going"));
-}
-
 function renderCurrent() {
   const box = document.getElementById("session");
   box.replaceChildren();
@@ -138,11 +128,11 @@ function renderCurrent() {
       left !== null ? el("div", { class: "ring-row" }, ring(left, p.limitMin),
         el("div", {}, el("div", { class: "big" }, `${dur(left)} left`), el("div", { class: "muted" }, `of ${dur(p.limitMin)}`)))
         : el("div", { class: "muted elapsed" }, `${dur(Math.max(1, mins(p.usedSec)))} so far`),
-      open === "pivot" ? pivotControls() : open === "done" ? doneControls() : el("div", {},
+      open === "pivot" ? pivotControls() : el("div", {},
         open === "break" ? null : el("button", { class: "btn wide primary", id: "resume", onclick: () => resume(p.id) }, ico(ICONS.play), "Resume"),
         open === "break" ? breakControls() : el("div", { class: "pair" },
           el("button", { class: "btn", onclick: () => { open = "break"; renderCurrent(); } }, ico(ICONS.coffee), "Take a Break"),
-          el("button", { class: "btn", title: "Done with this aim", onclick: () => { open = "done"; renderCurrent(); } }, ico(ICONS.check), "Done")),
+          el("button", { class: "btn", title: "Done with this aim", onclick: () => act({ type: "purpose-done" }) }, ico(ICONS.check), "Done")),
         open === "break" ? null : el("div", { class: "more" },
           el("button", { class: "link", onclick: () => { open = "pivot"; renderCurrent(); } }, "Change my aim"),
           el("button", { class: "link", id: "setAside", onclick: () => act({ type: "purpose-pause" }) }, "Set aside"),
@@ -188,7 +178,7 @@ function renderToday() {
 }
 
 // Strict mode's reasons, newest first: shown when there are any.
-const REASON_LABEL = { "more-time": "More time", channel: "Warned channel", search: "Search" };
+const REASON_LABEL = { "more-time": "More time", channel: "Warned channel", search: "Search", video: "Video" };
 function renderReasons() {
   const list = st.reasons || [], box = document.getElementById("reasons");
   box.hidden = document.getElementById("reasonsHead").hidden = !list.length;
