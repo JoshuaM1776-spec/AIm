@@ -7,128 +7,139 @@
 <title>Design your YouTube</title>
 <link rel="stylesheet" href="aim.css">
 <style>
-  /* Design your YouTube: a configurator. The preview (left) stays in view and changes as you choose;
-     the panel (right) has one stage at a time. The preview is a sketch of YouTube, drawn by Aim
-     (YouTube can't be embedded, and shouldn't be imitated), filled with your own topics' videos. */
-  .page.design { max-width: 1320px; }
-  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; align-items: start; }
-  @media (max-width: 980px) { .layout { grid-template-columns: minmax(0, 1fr); } }
-  .stage-tabs { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
-  .stage-tabs button { height: 32px; padding: 0 14px; border-radius: 16px; border: 0; background: none; color: var(--muted); font: 500 13px var(--font); cursor: pointer; }
-  .stage-tabs button[aria-current="step"] { background: var(--primary); color: var(--on-primary); }
-  .stage-tabs .spacer { flex: 1; }
-  .ba { display: inline-flex; background: var(--tonal); border-radius: 16px; padding: 2px; }
-  .ba button { height: 28px; padding: 0 12px; border-radius: 14px; border: 0; background: none; color: var(--muted); font: 500 12px var(--font); cursor: pointer; }
+  /* Design your YouTube, like a car configurator: the preview large on top, changing as you choose;
+     one question at a time underneath; four stages along the top. The preview is a sketch of YouTube
+     drawn by Aim (YouTube can't be embedded, and Aim doesn't copy its logo), filled with your own
+     topics' videos. */
+  body { background: var(--bg); }
+  .cfg { max-width: 1040px; margin: 0 auto; padding: 28px 24px 80px; }
+  .cfg-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+  .cfg-head h1 { font: 700 34px/1.15 var(--font-display); letter-spacing: -.02em; margin: 0; }
+  .cfg-head p { color: var(--muted); font-size: 17px; margin: 6px 0 0; }
+  .cfg-pills { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .live { height: 34px; padding: 0 16px; border-radius: 17px; background: var(--tonal); font: 500 14px var(--font); display: inline-flex; align-items: center; gap: 8px; }
+  .live i { width: 8px; height: 8px; border-radius: 4px; background: var(--ok); box-shadow: 0 0 0 3px var(--ok-soft); }
+  .ba { display: inline-flex; background: var(--tonal); border-radius: 17px; padding: 3px; }
+  .ba button { height: 28px; padding: 0 12px; border-radius: 14px; border: 0; background: none; color: var(--muted); font: 500 13px var(--font); cursor: pointer; }
   .ba button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+  .more { font-size: 13px; }
 
-  /* The preview: a neutral, simplified video site. */
-  .yt { --yt-bg: #ffffff; --yt-fg: #0f0f0f; --yt-muted: #737373; --yt-line: #e5e5e5; --yt-tile: #ececec;
-    background: var(--yt-bg); color: var(--yt-fg); border-radius: 16px; border: 1px solid var(--card-border); box-shadow: var(--shadow);
-    overflow: hidden; font: 13px/1.35 var(--font); min-height: 560px; position: relative; }
-  @media (prefers-color-scheme: dark) { .yt { --yt-bg: #0f0f0f; --yt-fg: #f1f1f1; --yt-muted: #a3a3a3; --yt-line: #272727; --yt-tile: #222; } }
-  .yt-top { display: flex; align-items: center; gap: 14px; padding: 10px 16px; border-bottom: 1px solid var(--yt-line); }
-  .yt-burger { width: 18px; height: 12px; border-top: 2px solid var(--yt-fg); border-bottom: 2px solid var(--yt-fg); position: relative; }
-  .yt-burger::after { content: ""; position: absolute; left: 0; right: 0; top: 3px; border-top: 2px solid var(--yt-fg); }
-  .yt-site { font: 600 15px var(--font); letter-spacing: -.2px; color: var(--yt-fg); }
-  .yt-search { flex: 1; max-width: 420px; height: 30px; border: 1px solid var(--yt-line); border-radius: 15px; padding: 0 12px; display: flex; align-items: center; color: var(--yt-muted); }
-  .yt-chip { margin-left: auto; display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 15px; background: var(--tonal); color: var(--text); font-weight: 500; position: relative; }
-  .yt-chip img { width: 16px; height: 16px; }
-  .yt-body { display: grid; grid-template-columns: 130px minmax(0, 1fr); min-height: 500px; }
-  .yt-rail { padding: 10px 8px; border-right: 1px solid var(--yt-line); display: flex; flex-direction: column; gap: 2px; }
-  .yt-rail span { padding: 7px 10px; border-radius: 8px; }
-  .yt-rail span.on { background: var(--yt-tile); font-weight: 600; }
-  .yt-main { padding: 16px; min-width: 0; }
-  .yt-label { font-weight: 600; font-size: 14px; margin: 14px 0 8px; display: flex; gap: 8px; align-items: baseline; }
-  .yt-label small { font-weight: 400; color: var(--yt-muted); }
-  .yt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px 12px; }
-  .yt-tile { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-  .yt-thumb { aspect-ratio: 16 / 9; border-radius: 10px; background: var(--yt-tile) center / cover no-repeat; }
-  .yt-thumb.loud { background-image: linear-gradient(135deg, #f6a04d, #e9445a); }
-  .yt-thumb.loud2 { background-image: linear-gradient(135deg, #5a8dee, #9b5de5); }
-  .yt-thumb.loud3 { background-image: linear-gradient(135deg, #2ec4b6, #ff9f1c); }
-  .yt-t { font-weight: 500; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .yt-m { color: var(--yt-muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .yt-bar { height: 8px; border-radius: 4px; background: var(--yt-tile); }
-  .yt-shorts { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
-  .yt-short { aspect-ratio: 9 / 14; border-radius: 10px; background: var(--yt-tile) center / cover no-repeat; position: relative; }
-  .yt-short.loud { background-image: linear-gradient(160deg, #ff5f6d, #ffc371); }
-  .yt-short span { position: absolute; left: 6px; right: 6px; bottom: 6px; color: #fff; font-size: 11px; font-weight: 500; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
-  .aim-card { background: var(--surface); color: var(--text); border: 1px solid var(--card-border); border-radius: 14px; padding: 16px 18px; max-width: 640px; margin: 0 auto 4px; text-align: center; }
-  .aim-card h3 { font: 700 20px var(--font-display); margin: 6px 0 10px; }
-  .aim-card .box { height: 34px; border-radius: 17px; border: 1px solid var(--field-border); text-align: left; padding: 0 14px; display: flex; align-items: center; color: var(--muted); }
-  .aim-tag { display: inline-flex; gap: 6px; align-items: center; font-weight: 600; font-size: 12px; color: var(--learn); }
-  .aim-tag img { width: 14px; height: 14px; }
-  .aim-note { background: var(--tonal); color: var(--text); border-radius: 10px; padding: 10px 12px; font-size: 12px; }
+  /* The four stages: a segmented bar. */
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 26px 0 16px; }
+  .steps button { background: none; border: 0; padding: 0; cursor: pointer; color: var(--muted); font: 500 14px var(--font); display: flex; flex-direction: column; gap: 8px; align-items: center; }
+  .steps button i { display: block; width: 100%; height: 6px; border-radius: 3px; background: var(--tonal-hover); }
+  .steps button.done i { background: var(--primary); }
+  .steps button[aria-current="step"] { color: var(--text); font-weight: 600; }
+
+  /* The preview. */
+  .yt { --yt-bg: #ffffff; --yt-fg: #0f0f0f; --yt-muted: #6b6b6b; --yt-line: #ececec; --yt-tile: #f0f0f0;
+    background: var(--yt-bg); color: var(--yt-fg); border: 1px solid var(--card-border); border-radius: 22px; box-shadow: var(--shadow);
+    overflow: hidden; position: relative; font: 15px/1.35 var(--font); }
+  @media (prefers-color-scheme: dark) { .yt { --yt-bg: #121212; --yt-fg: #f1f1f1; --yt-muted: #a3a3a3; --yt-line: #262626; --yt-tile: #1e1e1e; } }
+  .yt-top { display: flex; align-items: center; gap: 12px; padding: 16px 22px; }
+  .yt-logo { display: flex; align-items: center; gap: 10px; font: 500 24px var(--font); letter-spacing: -.3px; }
+  .yt-logo svg { width: 30px; height: 30px; color: var(--yt-muted); }
+  .yt-tools { margin-left: auto; display: flex; align-items: center; gap: 14px; color: var(--yt-fg); }
+  .yt-tools .search { height: 38px; padding: 0 22px; border-radius: 19px; border: 1px solid var(--yt-line); background: var(--yt-tile); color: var(--yt-muted); display: flex; align-items: center; }
+  .yt-tools svg { width: 22px; height: 22px; }
+  .yt-chip { display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 18px; background: var(--tonal); color: var(--text); font: 500 14px var(--font); position: relative; }
+  .yt-chip img { width: 18px; height: 18px; }
+  .yt-body { display: grid; grid-template-columns: 72px minmax(0, 1fr); padding-bottom: 20px; }
+  .yt-rail { display: flex; flex-direction: column; align-items: center; gap: 22px; padding-top: 30px; color: var(--yt-fg); }
+  .yt-rail svg { width: 26px; height: 26px; }
+  .yt-rail .off { opacity: .25; }
+  .yt-main { padding: 18px 26px 0 8px; min-width: 0; }
+  .yt-head { display: flex; align-items: center; gap: 12px; margin: 10px 0 16px; }
+  .yt-head h3 { font: 600 22px var(--font); margin: 0; }
+  .yt-head small { color: var(--yt-muted); font-size: 15px; }
+  .yt-head .tag { margin-left: auto; height: 34px; padding: 0 14px; border-radius: 17px; background: var(--yt-tile); display: inline-flex; align-items: center; font: 500 15px var(--font); }
+  .yt-head svg { width: 24px; height: 24px; }
+  .yt-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .yt-card { min-width: 0; }
+  .yt-card .img, .yt-short { border-radius: 16px; background: var(--yt-tile) center / cover no-repeat; position: relative; overflow: hidden; }
+  .yt-card .img { aspect-ratio: 16 / 9; }
+  .yt-card .t { font: 500 17px/1.3 var(--font); margin-top: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .yt-card .m { color: var(--yt-muted); font-size: 15px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .yt-shorts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .yt-short { aspect-ratio: 3 / 4; }
+  .yt-short span, .yt-card .img span { position: absolute; left: 14px; right: 14px; bottom: 12px; color: #fff; font: 600 15px/1.25 var(--font); text-shadow: 0 1px 3px rgba(0,0,0,.55); }
+  .ph { background-image: var(--ph) !important; }
+  .yt-rule { border: 0; border-top: 1px solid var(--yt-line); margin: 26px 0 10px; }
+  .yt-gone { color: var(--yt-muted); font-size: 15px; padding: 18px; border: 1px dashed var(--yt-line); border-radius: 16px; text-align: center; }
+  .yt-status { display: flex; align-items: center; gap: 10px; color: var(--yt-fg); font-size: 15px; margin: 22px 0 0; }
+  .yt-status svg { width: 22px; height: 22px; color: var(--learn); flex: none; }
+  .aim-ask { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 16px; background: var(--surface); color: var(--text); border: 1px solid var(--card-border); }
+  .aim-ask img { width: 26px; height: 26px; }
+  .aim-ask b { font: 700 18px var(--font-display); }
+  .aim-ask span { color: var(--muted); font-size: 14px; margin-left: auto; border: 1px solid var(--field-border); border-radius: 18px; padding: 6px 14px; }
   /* The watch page. */
-  .yt-watch { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 14px; }
-  .yt-player { aspect-ratio: 16 / 9; border-radius: 12px; background: #111 center / cover no-repeat; position: relative; overflow: hidden; }
-  .yt-player .play { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: 34px; opacity: .85; }
-  .yt-player .ctl { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 10px; display: flex; gap: 10px; align-items: center; color: #fff; font-size: 11px;
-    background: linear-gradient(transparent, rgba(0,0,0,.7)); }
-  .yt-toggle { display: inline-flex; align-items: center; gap: 4px; }
-  .yt-toggle i { width: 22px; height: 12px; border-radius: 6px; background: rgba(255,255,255,.35); position: relative; }
-  .yt-toggle i::after { content: ""; position: absolute; top: 1px; left: 1px; width: 10px; height: 10px; border-radius: 5px; background: #fff; transition: left .2s; }
-  .yt-toggle.on i { background: #fff; } .yt-toggle.on i::after { left: 11px; background: #111; }
-  .yt-next { position: absolute; right: 10px; top: 10px; background: rgba(0,0,0,.75); color: #fff; border-radius: 8px; padding: 6px 8px; font-size: 11px; }
-  .yt-side { display: flex; flex-direction: column; gap: 8px; }
-  .yt-side .row { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 8px; align-items: start; }
-  /* The Aim menu, for Timing. */
-  .aim-menu { position: absolute; right: 12px; top: 48px; width: 250px; background: var(--surface); color: var(--text); border: 1px solid var(--card-border);
-    border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.18); padding: 12px; z-index: 2; font-size: 12px; }
+  .yt-player { aspect-ratio: 16 / 9; border-radius: 18px; background: #111 center / cover no-repeat; position: relative; overflow: hidden; }
+  .yt-player .play { position: absolute; inset: 0; display: grid; place-items: center; }
+  .yt-player .play i { width: 68px; height: 68px; border-radius: 34px; background: rgba(0,0,0,.55); display: grid; place-items: center; color: #fff; font-style: normal; font-size: 26px; }
+  .yt-player .ctl { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px; display: flex; gap: 12px; align-items: center; color: #fff; font-size: 13px; background: linear-gradient(transparent, rgba(0,0,0,.7)); }
+  .yt-toggle { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
+  .yt-toggle i { width: 30px; height: 16px; border-radius: 8px; background: rgba(255,255,255,.35); position: relative; }
+  .yt-toggle i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 6px; background: #fff; transition: left .2s; }
+  .yt-toggle.on i { background: #fff; } .yt-toggle.on i::after { left: 16px; background: #111; }
+  .yt-next { position: absolute; right: 14px; top: 14px; background: rgba(0,0,0,.75); color: #fff; border-radius: 10px; padding: 8px 12px; font-size: 13px; }
+  .yt-title { font: 600 20px var(--font); margin: 14px 0 2px; }
+  /* Aim's menu, for Timing. */
+  .aim-menu { position: absolute; right: 18px; top: 68px; width: 300px; background: var(--surface); color: var(--text); border: 1px solid var(--card-border);
+    border-radius: 16px; box-shadow: 0 16px 40px rgba(0,0,0,.18); padding: 8px 16px; z-index: 2; font-size: 14px; }
+  .aim-menu div { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; }
   .aim-menu div + div { border-top: 1px solid var(--divider); }
-  .aim-menu div { display: flex; justify-content: space-between; gap: 8px; padding: 7px 0; }
-  .aim-menu b { font-weight: 600; }
+  .aim-menu b { font-weight: 600; text-align: right; }
 
   /* Click the preview to change that part. */
-  [data-go] { cursor: pointer; border-radius: 12px; outline: 2px solid transparent; outline-offset: 3px; transition: outline-color .15s; }
+  [data-go] { cursor: pointer; border-radius: 16px; outline: 2px solid transparent; outline-offset: 4px; transition: outline-color .15s; }
   [data-go]:hover { outline-color: var(--learn); }
-  .changed { animation: glow 1.2s ease-out; }
-  @keyframes glow { from { box-shadow: 0 0 0 4px rgba(43, 110, 82, .45); } to { box-shadow: 0 0 0 0 rgba(43, 110, 82, 0); } }
-  .hidden-note { color: var(--yt-muted); font-size: 12px; font-style: italic; padding: 4px 0; }
-  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .split .yt { min-height: 0; zoom: .62; }
-  .split .cap { font: 600 13px var(--font); margin: 0 0 6px; }
+  .changed { animation: glow 1.1s ease-out; }
+  @keyframes glow { from { box-shadow: 0 0 0 5px rgba(43, 110, 82, .4); } to { box-shadow: 0 0 0 0 rgba(43, 110, 82, 0); } }
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .split .yt { zoom: .58; }
+  .split .cap { font: 600 15px var(--font); margin: 0 0 8px; }
 
-  /* The panel. */
-  .panel { position: sticky; top: 16px; margin-top: 42px; }
-  @media (max-width: 980px) { .panel { margin-top: 0; position: static; } }
-  .panel .count { font: 600 11px var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--learn); }
-  .panel h2 { font: 700 22px var(--font-display); margin: 4px 0 6px; }
-  .panel .q { color: var(--muted); margin: 0 0 14px; }
-  .opt { display: block; width: 100%; text-align: left; border: 1px solid var(--field-border); background: var(--field); color: var(--text); border-radius: 12px;
-    padding: 12px 14px; margin-top: 8px; cursor: pointer; font: 14px var(--font); }
-  .opt b { display: block; font-weight: 600; margin-bottom: 2px; }
-  .opt span { color: var(--muted); font-size: 13px; line-height: 18px; }
-  .opt[aria-pressed="true"] { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); background: var(--learn-soft); }
+  /* The question. */
+  .panel { margin-top: 28px; }
+  .panel .count { font: 500 13px var(--font); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .panel h2 { font: 700 28px/1.2 var(--font-display); margin: 8px 0 8px; letter-spacing: -.01em; }
+  .panel .q { color: var(--muted); font-size: 17px; margin: 0 0 14px; }
+  .group-label { font: 600 15px var(--font); margin: 20px 0 4px; }
+  .opt { display: flex; gap: 16px; align-items: flex-start; width: 100%; text-align: left; background: none; border: 0; padding: 12px 4px; color: var(--text); cursor: pointer; font: 19px/1.3 var(--font); border-radius: 12px; }
+  .opt:hover { background: var(--tonal); }
+  .opt::before { content: ""; flex: none; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--field-border); margin-top: 1px; box-sizing: border-box; }
+  .opt[aria-pressed="true"]::before { border: 7px solid var(--text); }
+  .opt b { font-weight: 400; display: block; }
+  .opt span { display: block; color: var(--muted); font-size: 14px; line-height: 1.4; margin-top: 2px; }
   .opt:disabled { opacity: .55; cursor: default; }
-  .group-label { font: 600 13px var(--font); margin: 18px 0 2px; }
-  .seg button { font-size: 13px; }
-  .nav-row { display: flex; justify-content: space-between; gap: 8px; margin-top: 20px; align-items: center; }
-  .applybar { margin-top: 16px; padding: 12px 14px; border-radius: 12px; background: var(--learn-soft); display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .seg { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .seg button { height: 40px; padding: 0 18px; border-radius: 20px; border: 1px solid var(--field-border); background: var(--field); color: var(--text); font: 500 15px var(--font); cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
+  .hint { color: var(--muted); font-size: 14px; margin: 8px 0 0; }
+  .nav-row { display: flex; gap: 12px; margin-top: 26px; }
+  .nav-row .back { height: 56px; padding: 0 26px; border-radius: 28px; border: 1px solid var(--field-border); background: var(--surface); color: var(--text); font: 500 18px var(--font); cursor: pointer; }
+  .nav-row .go { flex: 1; height: 56px; border-radius: 28px; border: 0; background: var(--primary); color: var(--on-primary); font: 600 18px var(--font); cursor: pointer; text-decoration: none; display: grid; place-items: center; }
+  .nav-row .go:disabled { opacity: .5; }
+  .applybar { margin-top: 22px; padding: 14px 18px; border-radius: 16px; background: var(--learn-soft); display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 15px; }
   .summary { list-style: none; padding: 0; margin: 10px 0 0; }
-  .summary li { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px solid var(--divider); font-size: 13px; }
+  .summary li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0; border-top: 1px solid var(--divider); font-size: 16px; }
   .summary li:first-child { border-top: 0; }
-  .summary li button { background: none; border: 0; color: var(--link); font: 13px var(--font); cursor: pointer; padding: 0; }
+  .summary li span { color: var(--muted); }
+  .summary li b { color: var(--text); display: block; font-weight: 600; }
+  .summary li button { background: none; border: 0; color: var(--link); font: 500 15px var(--font); cursor: pointer; }
   .readonly { margin-bottom: 12px; }
+  @media (max-width: 760px) { .yt-cards, .split { grid-template-columns: 1fr; } .yt-body { grid-template-columns: 52px minmax(0, 1fr); } .cfg-head h1 { font-size: 28px; } }
 </style>
 </head>
 <body>
-<main class="page design">
-  <header class="page-head">
-    <img class="for-light" src="icons/48.png" alt=""><img class="for-dark" src="icons/light/48.png" alt="">
-    <span class="brand" data-brand>Aim</span><span class="crumb">Design your YouTube</span>
-    <span class="end"><a href="options.html">More settings</a></span>
+<main class="cfg">
+  <header class="cfg-head">
+    <div><h1>Design your YouTube</h1><p>Build an environment that works for you.</p></div>
+    <div class="cfg-pills"><span class="live"><i></i>Live preview</span><span id="ba"></span><a class="more" href="options.html">More settings</a></div>
   </header>
-  <h1>Design your YouTube</h1>
-  <p class="lede">Build a YouTube that works for you. Make a choice and watch the preview change.</p>
-  <div class="layout">
-    <section aria-label="Preview">
-      <div class="stage-tabs" id="tabs"></div>
-      <div id="preview" aria-live="polite"></div>
-      <p class="muted small" style="margin-top:8px">A sketch of YouTube, drawn by Aim with your own topics' videos. Click any part to change it.</p>
-    </section>
-    <aside class="card panel" id="panel" aria-label="Choices"></aside>
-  </div>
+  <nav class="steps" id="tabs" aria-label="Stages"></nav>
+  <section id="preview" aria-label="Preview" aria-live="polite"></section>
+  <section class="panel" id="panel" aria-label="Choices"></section>
 </main>
 <div id="toast" role="status"></div>
 <script src="content/topics.js"></script>

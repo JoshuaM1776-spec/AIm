@@ -1,5 +1,6 @@
-// Aim — Design your YouTube. A configurator instead of a settings list: four stages (Home, Shorts,
-// Watching, Timing), each changing a live preview of YouTube as you choose, then a before-and-after
+// Aim — Design your YouTube. A configurator instead of a settings list, laid out like a car
+// configurator: a large preview of YouTube on top that changes as you choose, one question at a time
+// underneath, four stages (Home, Shorts, Watching, Timing) along the top, then a before-and-after
 // and one Apply. The first time, it walks through the stages in order; afterwards any stage opens
 // directly (from Settings, or design.html#shorts). The preview is a sketch drawn by Aim, filled
 // with your own Learn something videos: YouTube can't be embedded in a page, and Aim doesn't copy
@@ -32,7 +33,7 @@ function toast(msg) {
 const STAGES = [
   { id: "home", name: "Home", title: "What should your homepage be?", q: "YouTube's homepage is built to keep you watching. Choose what greets you instead." },
   { id: "shorts", name: "Shorts", title: "What about Shorts?", q: "Shorts are the easiest place to lose an hour. Decide how much of them you want." },
-  { id: "watching", name: "Watching", title: "While you watch", q: `${BRAND} always asks what you're here for, then keeps the videos that fit. Choose what else steps aside.` },
+  { id: "watching", name: "Watching", title: "How should Aim keep you on Target?", q: `${BRAND} always asks what you're here for, then keeps the videos that fit. Choose what else steps aside.` },
   { id: "timing", name: "Timing", title: "How much time, and for what?", q: "Time on your Target is yours. Breaks share a daily allowance; the rest are optional limits." }
 ];
 const KEYS = ["homeCard", "learnTopics", "hideShorts", "learnShorts", "hideRecs", "noAutoplay", "hideFeeds", "strict", "leisureMin", "totalMin", "graceMin", "purposeLimitMin"];
@@ -51,86 +52,119 @@ function topicChannels(d) {
   for (const [path, r] of Object.entries(S.avoid)) if (r.action === "prefer" && path.startsWith("/@")) out.push({ handle: path.slice(1), name: r.name, topic: r.topic || "Your channels" });
   return out;
 }
+// Taking turns between channels, newest first within each, like Learn something on YouTube.
 function videosFor(d, n = 6) {
+  const queues = topicChannels(d).map(c => (S.data.videos[c.handle] || []).map(v => ({ ...v, topic: c.topic }))).filter(q => q.length)
+    .sort((a, b) => (b[0].published || 0) - (a[0].published || 0));
   const out = [], seen = new Set();
-  for (const c of topicChannels(d)) for (const v of S.data.videos[c.handle] || []) if (!seen.has(v.id)) { seen.add(v.id); out.push({ ...v, topic: c.topic }); }
-  out.sort((a, b) => (b.published || 0) - (a.published || 0));
-  if (out.length) return out.slice(0, n);
+  for (let round = 0; out.length < n && queues.some(q => q[round]); round++)
+    for (const q of queues) { const v = q[round]; if (v && !seen.has(v.id) && out.length < n) { seen.add(v.id); out.push(v); } }
+  if (out.length) return out;
   return topicChannels(d).slice(0, n).map(c => ({ id: "", title: `New from ${c.name}`, channel: c.name, topic: c.topic }));
 }
 function shortsFor(d, n = 5) {
+  const queues = topicChannels(d).map(c => (S.data.shorts[c.handle] || []).map(v => ({ ...v, topic: c.topic }))).filter(q => q.length);
   const out = [];
-  for (const c of topicChannels(d)) for (const v of S.data.shorts[c.handle] || []) out.push({ ...v, topic: c.topic });
-  return out.length ? out.slice(0, n) : topicChannels(d).slice(0, n).map(c => ({ id: "", title: c.name }));
+  for (let round = 0; out.length < n && queues.some(q => q[round]); round++) for (const q of queues) if (q[round] && out.length < n) out.push(q[round]);
+  return out.length ? out : topicChannels(d).slice(0, n).map(c => ({ id: "", title: c.name }));
 }
-const thumb = (v, cls = "yt-thumb") => node("div", { class: cls, style: v.id ? `background-image:url("https://i.ytimg.com/vi/${encodeURIComponent(v.id)}/mqdefault.jpg")` : "" });
+
+// ---------- pieces of the preview ----------
+const ICONS = {
+  play: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2.5" y="5" width="19" height="14" rx="4"/><path d="M10 9.2v5.6l4.8-2.8z" fill="currentColor" stroke="none"/></svg>',
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>',
+  bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>',
+  home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3.5 11 12 4l8.5 7"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5h4v5"/></svg>',
+  video: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="13" height="12" rx="3"/><path d="m16 10.5 5-3v9l-5-3z"/></svg>',
+  clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l-2 3"/></svg>',
+  list: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h11M4 12h11M4 17h7"/><path d="M17 14.5v5l4-2.5z" fill="currentColor"/></svg>',
+  shorts: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M4 9.5h16M8 5l2 4.5M13 5l2 4.5"/></svg>',
+  shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3.5 19 6v5.5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="m9 12 2 2 4-4"/></svg>'
+};
+const icon = name => { const t = document.createElement("template"); t.innerHTML = ICONS[name]; return t.content.firstChild; };
+
+// A video card: its real thumbnail when Learn something has it, else a soft tile with its channel.
+const TINTS = ["#e8d5b7,#c98a5b", "#cfe3d9,#5f9c82", "#d6dcf3,#7186c9", "#f3d6d6,#c97171", "#e3daf3,#9278c4", "#d8ecf0,#5aa3b3"];
+const tint = s => TINTS[[...String(s)].reduce((n, c) => n + c.charCodeAt(0), 0) % TINTS.length];
+function img(v, cls, size = "hqdefault") {
+  if (v.id) return node("div", { class: cls, style: `background-image:url("https://i.ytimg.com/vi/${encodeURIComponent(v.id)}/${size}.jpg")` });
+  return node("div", { class: `${cls} ph`, style: `--ph: linear-gradient(140deg, ${tint(v.channel || v.title)})` }, node("span", {}, v.channel || v.title));
+}
+const card = v => node("div", { class: "yt-card" }, img(v, "img"), node("div", { class: "t" }, v.title), node("div", { class: "m" }, v.channel ? `${v.channel}${v.topic ? ` · ${v.topic}` : ""}` : ""));
 const LOUD = ["You WON'T believe what happened next", "I tried it for 30 days…", "The most satisfying video ever", "Top 10 moments (gone wrong)", "Reacting to the internet's worst ideas",
   "Why everyone is talking about this", "24 hours in a box", "This changes everything", "Don't watch this at night"];
-const loudTile = i => node("div", { class: "yt-tile" }, node("div", { class: `yt-thumb loud${["", "2", "3"][i % 3]}` }), node("div", { class: "yt-t" }, LOUD[i % LOUD.length]),
-  node("div", { class: "yt-m" }, "Recommended for you · 2.1M views"));
+const LOUD_TINTS = ["#ff9a3c,#e9445a", "#5a8dee,#9b5de5", "#2ec4b6,#ff9f1c", "#ff5f6d,#ffc371"];
+const loudCard = i => node("div", { class: "yt-card" }, node("div", { class: "img ph", style: `--ph: linear-gradient(135deg, ${LOUD_TINTS[i % 4]})` }),
+  node("div", { class: "t" }, LOUD[i % LOUD.length]), node("div", { class: "m" }, "Recommended for you · 2.1M views"));
+const loudShort = i => node("div", { class: "yt-short ph", style: `--ph: linear-gradient(160deg, ${LOUD_TINTS[(i + 3) % 4]})` }, node("span", {}, LOUD[(i + 3) % LOUD.length]));
 
-// ---------- the preview ----------
+// The line under the preview: what's keeping you on Target.
+function statusLine(d) {
+  const parts = [d.strict ? "Strict: a reason before bending a rule" : "Asks what you're here for", d.hideRecs ? "recommendations hidden" : "recommendations shown",
+    d.noAutoplay ? "autoplay off" : "autoplay on"];
+  return node("div", { class: "yt-status", "data-go": "watching" }, icon("shield"), parts.join(" · "));
+}
+
 function topBar(d, after, { menu } = {}) {
-  return node("div", { class: "yt-top" }, node("div", { class: "yt-burger" }), node("span", { class: "yt-site" }, "YouTube"),
-    node("div", { class: "yt-search" }, "Search"),
-    after ? node("div", { class: "yt-chip", "data-go": "timing", title: "Timing" }, node("img", { src: MARK, alt: "" }), "Set Target", menu ? timingMenu(d) : null) : null);
+  return node("div", { class: "yt-top" }, node("div", { class: "yt-logo" }, icon("play"), "YouTube"),
+    node("div", { class: "yt-tools" }, node("div", { class: "search" }, "Search"), icon("search"), icon("bell"),
+      after ? node("div", { class: "yt-chip", "data-go": "timing", title: "Timing" }, node("img", { src: MARK, alt: "" }), "Set Target", menu ? timingMenu(d) : null) : null));
 }
-function rail(d, after, on = "Home") {
-  return node("div", { class: "yt-rail" }, node("span", { class: on === "Home" ? "on" : "" }, "Home"),
-    !after || !d.hideShorts ? node("span", { "data-go": "shorts" }, "Shorts") : null,
-    node("span", { "data-go": after ? "watching" : null }, after && d.hideFeeds ? "Subscriptions (quiet)" : "Subscriptions"),
-    !after || !d.hideFeeds ? node("span", {}, "Trending") : null);
+function rail(d, after) {
+  const shortsOff = after && d.hideShorts && !d.learnShorts;
+  return node("div", { class: "yt-rail" }, icon("home"), (() => { const n = icon("video"); if (shortsOff) n.classList.add("off"); n.setAttribute("data-go", "shorts"); return n; })(), icon("clock"), icon("list"));
 }
+
 function homeView(d, after, opts = {}) {
   const main = node("div", { class: "yt-main" });
   if (after && d.homeCard) {
+    main.append(node("div", { class: "aim-ask", "data-go": "home" }, node("img", { src: MARK, alt: "" }), node("b", {}, "What brings you here?"), node("span", {}, "Tell me what you're looking for…")));
+    const vids = videosFor(d, 2);
     main.append(node("div", { "data-go": "home" },
-      node("div", { class: "aim-card" }, node("span", { class: "aim-tag" }, node("img", { src: MARK, alt: "" }), BRAND), node("h3", {}, "What brings you here?"),
-        node("div", { class: "box" }, "Tell me what you're looking for…"))));
-    const vids = videosFor(d);
-    if (vids.length) main.append(node("div", { "data-go": "home" }, node("div", { class: "yt-label" }, "Learn something", node("small", {}, "from channels you choose")),
-      node("div", { class: "yt-grid" }, vids.map(v => node("div", { class: "yt-tile" }, thumb(v), node("div", { class: "yt-t" }, v.title), node("div", { class: "yt-m" }, `${v.channel} · ${v.topic}`))))));
-    else main.append(node("div", { class: "aim-note", "data-go": "home", style: "margin-top:12px" }, "Pick topics to learn about, and new videos from channels that teach them well show here. Six at a time, no feed."));
+      node("div", { class: "yt-head" }, node("h3", {}, "Learn something"), node("small", {}, "From channels you choose"), node("span", { class: "tag" }, "Curated")),
+      vids.length ? node("div", { class: "yt-cards" }, vids.map(card)) : node("div", { class: "yt-gone" }, "Pick topics below, and new videos from channels that teach them show here.")));
   } else {
-    main.append(node("div", { "data-go": "home" }, node("div", { class: "yt-grid" }, Array.from({ length: 6 }, (_, i) => loudTile(i)))));
+    main.append(node("div", { "data-go": "home" }, node("div", { class: "yt-head" }, node("h3", {}, "Recommended for you")),
+      node("div", { class: "yt-cards" }, [0, 1].map(loudCard))));
   }
+  main.append(node("hr", { class: "yt-rule" }));
   const mode = shortsMode(d);
-  if (!after || mode === "all") main.append(node("div", { "data-go": "shorts" }, node("div", { class: "yt-label" }, "Shorts"),
-    node("div", { class: "yt-shorts" }, Array.from({ length: 6 }, (_, i) => node("div", { class: "yt-short loud" }, node("span", {}, LOUD[(i + 3) % LOUD.length]))))));
-  else if (mode === "topics") main.append(node("div", { "data-go": "shorts" }, node("div", { class: "yt-label" }, "Quick review", node("small", {}, "Shorts from your topics, on what you've learned")),
-    node("div", { class: "yt-shorts" }, shortsFor(d).map(v => node("div", { class: "yt-short", style: v.id ? `background-image:url("https://i.ytimg.com/vi/${encodeURIComponent(v.id)}/hqdefault.jpg")` : "" }, node("span", {}, v.title))))));
-  else main.append(node("div", { class: "hidden-note", "data-go": "shorts" }, "No Shorts. (They're back on a break.)"));
-  if (!after || !(d.homeCard)) main.append(node("div", { "data-go": "home" }, node("div", { class: "yt-label" }, "Trending"), node("div", { class: "yt-grid" }, Array.from({ length: 3 }, (_, i) => loudTile(i + 6)))));
+  if (!after || mode === "all") main.append(node("div", { "data-go": "shorts" },
+    node("div", { class: "yt-head" }, icon("shorts"), node("h3", {}, "Shorts"), node("small", {}, "Everything, endlessly")),
+    node("div", { class: "yt-shorts" }, [0, 1, 2].map(loudShort))));
+  else if (mode === "topics") main.append(node("div", { "data-go": "shorts" },
+    node("div", { class: "yt-head" }, icon("shorts"), node("h3", {}, "Shorts"), node("small", {}, "Quick review, from your topics' channels")),
+    node("div", { class: "yt-shorts" }, shortsFor(d, 3).map(v => img(v, "yt-short", "oar2")))));
+  else main.append(node("div", { "data-go": "shorts" }, node("div", { class: "yt-head" }, icon("shorts"), node("h3", {}, "Shorts")),
+    node("div", { class: "yt-gone" }, "No Shorts. (They're back on a break.)")));
+  if (after) main.append(statusLine(d));
   return node("div", { class: "yt" }, topBar(d, after, opts), node("div", { class: "yt-body" }, rail(d, after), main));
 }
+
 function watchView(d, after) {
-  const v = videosFor(d, 4);
+  const v = videosFor(d, 3);
   const lead = v[0] || { id: "", title: "How volcanoes form", channel: "A science channel" };
   const autoplay = !after || !d.noAutoplay, recs = !after || !d.hideRecs;
-  const side = recs
-    ? node("div", { class: "yt-side", "data-go": "watching" }, node("div", { class: "yt-label", style: "margin-top:0" }, "Recommended"),
-      Array.from({ length: 6 }, (_, i) => node("div", { class: "row" }, node("div", { class: `yt-thumb loud${["", "2", "3"][i % 3]}` }), node("div", {}, node("div", { class: "yt-t" }, LOUD[(i + 2) % LOUD.length]), node("div", { class: "yt-m" }, "1.4M views")))))
-    : node("div", { class: "yt-side", "data-go": "watching" }, node("div", { class: "yt-label", style: "margin-top:0" }, "Up next from your search"),
-      (v.length > 1 ? v.slice(1) : [{ title: "Plate tectonics, explained" }, { title: "Inside a volcano" }]).map(x => node("div", { class: "row" }, thumb(x), node("div", {}, node("div", { class: "yt-t" }, x.title), node("div", { class: "yt-m" }, x.channel || "")))),
-      node("div", { class: "aim-note" }, "Only videos your own searches found. No rabbit holes."));
-  const player = node("div", { class: "yt-player", style: lead.id ? `background-image:url("https://i.ytimg.com/vi/${encodeURIComponent(lead.id)}/hqdefault.jpg")` : "", "data-go": "watching" },
-    node("div", { class: "play" }, "▶"),
+  const player = node("div", { class: "yt-player", style: lead.id ? `background-image:url("https://i.ytimg.com/vi/${encodeURIComponent(lead.id)}/hqdefault.jpg")` : `background-image:linear-gradient(140deg, ${tint(lead.channel)})`, "data-go": "watching" },
+    node("div", { class: "play" }, node("i", {}, "▶")),
     autoplay ? node("div", { class: "yt-next" }, "Up next in 5…") : null,
-    node("div", { class: "ctl" }, "0:42 / 12:10", node("span", { style: "margin-left:auto", class: `yt-toggle${autoplay ? " on" : ""}` }, "Autoplay", node("i"))));
-  return node("div", { class: "yt" }, topBar(d, after), node("div", { class: "yt-body" }, rail(d, after, ""),
-    node("div", { class: "yt-main" }, node("div", { class: "yt-watch" },
-      node("div", {}, player, node("div", { class: "yt-t", style: "margin-top:10px;font-size:15px" }, lead.title), node("div", { class: "yt-m" }, lead.channel),
-        after ? node("div", { class: "aim-note", style: "margin-top:10px", "data-go": "watching" },
-          d.strict ? "Strict: want more time, a warned channel or an off-Target search? Aim asks for a short reason first." : "Off your Target? Aim asks first, and you can always say yes.") : null),
-      side))));
+    node("div", { class: "ctl" }, "0:42 / 12:10", node("span", { class: `yt-toggle${autoplay ? " on" : ""}` }, "Autoplay", node("i"))));
+  const next = recs
+    ? node("div", { "data-go": "watching" }, node("div", { class: "yt-head" }, node("h3", {}, "Recommended")), node("div", { class: "yt-cards" }, [2, 3].map(loudCard)))
+    : node("div", { "data-go": "watching" }, node("div", { class: "yt-head" }, node("h3", {}, "Up next from your search"), node("small", {}, "Only what you searched for")),
+      node("div", { class: "yt-cards" }, (v.length > 1 ? v.slice(1, 3) : [{ title: "Plate tectonics, explained", channel: "A science channel" }, { title: "Inside a volcano", channel: "A geology channel" }]).map(card)));
+  return node("div", { class: "yt" }, topBar(d, after), node("div", { class: "yt-body" }, rail(d, after),
+    node("div", { class: "yt-main" }, player, node("div", { class: "yt-title" }, lead.title), node("div", { class: "yt-card" }, node("div", { class: "m" }, lead.channel)),
+      node("hr", { class: "yt-rule" }), next, after ? statusLine(d) : null)));
 }
+
 const minutes = m => (m >= 60 ? `${m / 60} h` : `${m} min`);
 function timingMenu(d) {
   return node("div", { class: "aim-menu", "data-go": "timing" },
     node("div", {}, node("span", {}, "Breaks today"), node("b", {}, d.leisureMin ? `${minutes(d.leisureMin)} left` : "No limit")),
     node("div", {}, node("span", {}, "YouTube today"), node("b", {}, d.totalMin ? `${minutes(d.totalMin)} max` : "No limit")),
-    node("div", {}, node("span", {}, "A video playing when time's up"), node("b", {}, d.graceMin ? `may finish (${d.graceMin} min)` : "stops")),
-    node("div", {}, node("span", {}, "Target time limit"), node("b", {}, d.purposeLimitMin ? minutes(d.purposeLimitMin) : "None")));
+    node("div", {}, node("span", {}, "Time's up mid-video"), node("b", {}, d.graceMin ? `may finish (${d.graceMin} min)` : "stops")),
+    node("div", {}, node("span", {}, "Each Target"), node("b", {}, d.purposeLimitMin ? minutes(d.purposeLimitMin) : "No limit")));
 }
 
 function preview() {
@@ -152,9 +186,9 @@ function preview() {
   for (const n of box.querySelectorAll(`[data-go="${id}"]`)) n.classList.add("changed");
 }
 
-// ---------- the panel ----------
+// ---------- the question ----------
 function opt(label, sub, on, pick) {
-  return node("button", { class: "opt", type: "button", "aria-pressed": String(!!on), disabled: S.readonly, onclick: pick }, node("b", {}, label), sub ? node("span", {}, sub) : null);
+  return node("button", { class: "opt", type: "button", "aria-pressed": String(!!on), disabled: S.readonly, onclick: pick }, node("div", {}, node("b", {}, label), sub ? node("span", {}, sub) : null));
 }
 function seg(label, values, key) {
   return [node("div", { class: "group-label" }, label), node("div", { class: "seg", role: "group", "aria-label": label },
@@ -175,7 +209,7 @@ function stagePanel(id) {
       node("div", { class: "group-label" }, "Learn something about…"),
       node("div", { class: "seg", role: "group", "aria-label": "Topics" }, LEARN_TOPICS.map(t => node("button", { type: "button", "aria-pressed": String(on.has(t.id)), disabled: S.readonly,
         onclick: () => set("learnTopics", on.has(t.id) ? [...on].filter(x => x !== t.id) : [...on, t.id]) }, t.name))),
-      node("p", { class: "muted small", style: "margin:8px 0 0" }, learnFrom ? `Plus ${learnFrom} channel${learnFrom === 1 ? "" : "s"} you learn from. ` : "",
+      node("p", { class: "hint" }, learnFrom ? `Plus ${learnFrom} channel${learnFrom === 1 ? "" : "s"} you learn from. ` : "",
         node("a", { href: "channels.html", target: "_blank" }, learnFrom ? "Sort your channels" : "Add the channels you subscribe to"))];
   }
   if (id === "shorts") {
@@ -185,27 +219,26 @@ function stagePanel(id) {
       opt("Only from my topics", topics ? "A few from your Learn something channels, as a Quick review of what you've learned. Any other Short waits." : "Pick topics on Home first: these come from their channels.",
         mode === "topics", () => { S.d = { ...S.d, hideShorts: true, learnShorts: true }; draw(); }),
       opt("As usual", "YouTube's Shorts everywhere.", mode === "all", () => { S.d = { ...S.d, hideShorts: false, learnShorts: false }; draw(); }),
-      node("p", { class: "muted small", style: "margin:10px 0 0" }, "On a break, Shorts are back either way.")];
+      node("p", { class: "hint" }, "On a break, Shorts are back either way.")];
   }
   if (id === "watching") return [
-    node("div", { class: "group-label", style: "margin-top:0" }, "Beside the video"),
+    opt("Ask once, then trust me", "Off your Target? Aim checks once, and you can always say yes.", !d.strict, () => set("strict", false)),
+    opt("Keep me strictly on Target", "Bending a rule (more time, a warned channel, an off-Target search) needs a short reason first.", d.strict, () => set("strict", true)),
+    node("div", { class: "group-label" }, "Beside the video"),
     opt("Only what my search found", "No recommendations; Up next lists videos from your own searches.", d.hideRecs, () => set("hideRecs", true)),
     opt("YouTube's recommendations", null, !d.hideRecs, () => set("hideRecs", false)),
     node("div", { class: "group-label" }, "When a video ends"),
     opt("Stop", "Autoplay off. You choose what's next.", d.noAutoplay, () => set("noAutoplay", true)),
     opt("Play the next one", "Autoplay on.", !d.noAutoplay, () => set("noAutoplay", false)),
     node("div", { class: "group-label" }, "Subscriptions and trending"),
-    opt("Quiet", "A short note instead of the feed, until a break.", d.hideFeeds, () => set("hideFeeds", true)),
-    opt("As usual", null, !d.hideFeeds, () => set("hideFeeds", false)),
-    node("div", { class: "group-label" }, "Bending a rule"),
-    opt("Just ask me", "More time, a warned channel, an off-Target search: Aim checks once.", !d.strict, () => set("strict", false)),
-    opt("Make me give a reason", "Strict: a short reason first, kept in this browser. Easy to read back later.", d.strict, () => set("strict", true))];
+    opt("Quiet until a break", "A short note instead of the feed.", d.hideFeeds, () => set("hideFeeds", true)),
+    opt("As usual", null, !d.hideFeeds, () => set("hideFeeds", false))];
   return [
     ...seg("Breaks each day", [[30, "30 min"], [60, "1 hour"], [120, "2 hours"], [0, "No limit"]], "leisureMin"),
-    node("p", { class: "muted small", style: "margin:6px 0 0" }, "All your breaks share this. Time on your Target doesn't count."),
+    node("p", { class: "hint" }, "All your breaks share this. Time on your Target doesn't count."),
     ...seg("YouTube each day, in all", [[0, "No limit"], [60, "1 hour"], [120, "2 hours"], [180, "3 hours"]], "totalMin"),
     ...seg("When time's up mid-video", [[0, "Stop"], [5, "5 min"], [15, "15 min"], [30, "30 min"]], "graceMin"),
-    node("p", { class: "muted small", style: "margin:6px 0 0" }, "How long that video may keep playing."),
+    node("p", { class: "hint" }, "How long that video may keep playing."),
     ...seg("Each Target, by default", [[0, "No limit"], [30, "30 min"], [60, "1 hour"]], "purposeLimitMin")];
 }
 
@@ -213,23 +246,26 @@ const LABELS = {
   homeCard: d => (d.homeCard ? "Asks what brings you here" : "YouTube's feed"),
   learnTopics: d => ((d.learnTopics || []).length ? LEARN_TOPICS.filter(t => d.learnTopics.includes(t.id)).map(t => t.name).join(", ") : "No topics"),
   shorts: d => ({ off: "No Shorts", topics: "Only from your topics", all: "As usual" }[shortsMode(d)]),
-  watching: d => [d.hideRecs ? "Only your search's videos" : "Recommendations", d.noAutoplay ? "autoplay off" : "autoplay on", d.strict ? "strict" : null].filter(Boolean).join(", "),
+  watching: d => [d.strict ? "Strictly on Target" : "Asks once", d.hideRecs ? "only your search's videos" : "recommendations", d.noAutoplay ? "autoplay off" : "autoplay on"].join(", "),
   timing: d => [`Breaks ${d.leisureMin ? minutes(d.leisureMin) : "no limit"}`, d.totalMin ? `${minutes(d.totalMin)} a day` : null].filter(Boolean).join(", ")
 };
+// replaceChildren, leaving out the parts that aren't there (null).
+const fill = (el, ...kids) => el.replaceChildren(...kids.flat().filter(k => k != null && k !== false));
+
 function reviewPanel() {
   const rows = [["Homepage", LABELS.homeCard, 0], ["Learn something", LABELS.learnTopics, 0], ["Shorts", LABELS.shorts, 1], ["Watching", LABELS.watching, 2], ["Timing", LABELS.timing, 3]];
-  return [node("div", { class: "count" }, "Your design"), node("h2", {}, S.applied ? "It's on" : "Ready?"),
-    node("p", { class: "q" }, S.applied ? "Open YouTube to see it. Change anything here any time." : "Here's YouTube before, and with your choices. Apply it, and that's how YouTube looks from now on."),
-    node("ul", { class: "summary" }, rows.map(([label, fn, i]) => node("li", {}, node("span", {}, node("b", {}, label), node("br"), fn(S.d)),
+  return [node("div", { class: "count" }, "Your design"), node("h2", {}, S.applied ? "It's on" : "Here's your YouTube"),
+    node("p", { class: "q" }, S.applied ? "Open YouTube to see it. Change anything here any time." : "Before, and with your choices. Apply it, and that's how YouTube looks from now on."),
+    node("ul", { class: "summary" }, rows.map(([label, fn, i]) => node("li", {}, node("span", {}, node("b", {}, label), fn(S.d)),
       node("button", { type: "button", onclick: () => { S.review = false; S.applied = false; go(i); } }, "Change")))),
-    node("div", { class: "nav-row" }, node("button", { class: "btn text", type: "button", onclick: () => { S.review = false; go(STAGES.length - 1); } }, "Back"),
-      S.applied ? node("a", { class: "btn", href: "https://www.youtube.com/", target: "_blank", id: "openYouTube" }, "Open YouTube")
-        : node("button", { class: "btn", type: "button", id: "apply", disabled: S.readonly, onclick: apply }, "Apply to YouTube"))];
+    node("div", { class: "nav-row" }, node("button", { class: "back", type: "button", onclick: () => { S.review = false; go(STAGES.length - 1); } }, "← Back"),
+      S.applied ? node("a", { class: "go", href: "https://www.youtube.com/", target: "_blank", id: "openYouTube" }, "Open YouTube →")
+        : node("button", { class: "go", type: "button", id: "apply", disabled: S.readonly, onclick: apply }, "Apply to YouTube"))];
 }
 
 function panel() {
   const p = $("panel");
-  if (S.review) return p.replaceChildren(...reviewPanel());
+  if (S.review) return fill(p, ...reviewPanel());
   const st = STAGES[S.stage];
   fill(p,
     S.readonly ? node("div", { class: "note readonly" }, "Your parent set up Aim for you, so these are shown, not changed here.") : null,
@@ -237,22 +273,19 @@ function panel() {
     node("h2", {}, st.title), node("p", { class: "q" }, st.q),
     ...stagePanel(st.id),
     S.wizard ? node("div", { class: "nav-row" },
-      S.stage ? node("button", { class: "btn text", type: "button", onclick: () => go(S.stage - 1) }, "Back") : node("span"),
-      node("button", { class: "btn", type: "button", id: "next", onclick: () => (S.stage < STAGES.length - 1 ? go(S.stage + 1) : (S.review = true, draw())) },
-        S.stage < STAGES.length - 1 ? "Next" : "See the before and after"))
+      S.stage ? node("button", { class: "back", type: "button", onclick: () => go(S.stage - 1) }, "← Back") : null,
+      node("button", { class: "go", type: "button", id: "next", onclick: () => (S.stage < STAGES.length - 1 ? go(S.stage + 1) : (S.review = true, draw())) },
+        S.stage < STAGES.length - 1 ? "Next →" : "See the before and after →"))
       : dirty() && !S.readonly ? node("div", { class: "applybar" }, node("span", {}, "Changes not applied yet"),
         node("span", {}, node("button", { class: "btn text", type: "button", onclick: () => { S.d = { ...S.cur }; draw(); } }, "Undo"),
           node("button", { class: "btn", type: "button", id: "apply", onclick: () => { S.review = true; draw(); } }, "Review and apply"))) : null);
 }
 
-// replaceChildren, leaving out the parts that aren't there (null).
-const fill = (el, ...kids) => el.replaceChildren(...kids.flat().filter(k => k != null && k !== false));
 function tabs() {
-  fill($("tabs"),
-    ...STAGES.map((s, i) => node("button", { type: "button", "aria-current": !S.review && i === S.stage ? "step" : null, onclick: () => { S.review = false; S.applied = false; go(i); } }, s.name)),
-    node("span", { class: "spacer" }),
-    S.review ? null : node("div", { class: "ba", role: "group", "aria-label": "Before or after" },
-      ...[["before", "Before"], ["after", `With ${BRAND}`]].map(([v, t]) => node("button", { type: "button", "aria-pressed": String(S.view === v), onclick: () => { S.view = v; draw(); } }, t))));
+  fill($("tabs"), ...STAGES.map((s, i) => node("button", { type: "button", class: S.review || (S.wizard ? i <= S.stage : true) ? "done" : "",
+    "aria-current": !S.review && i === S.stage ? "step" : null, onclick: () => { S.review = false; S.applied = false; go(i); } }, node("i"), s.name)));
+  fill($("ba"), S.review ? null : node("span", { class: "ba", role: "group", "aria-label": "Before or after" },
+    ...[["before", "Before"], ["after", `With ${BRAND}`]].map(([v, t]) => node("button", { type: "button", "aria-pressed": String(S.view === v), onclick: () => { S.view = v; draw(); } }, t))));
 }
 
 function go(i) {
