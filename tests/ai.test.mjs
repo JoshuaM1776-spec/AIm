@@ -4,6 +4,7 @@ import assert from "node:assert";
 import { handle } from "../supabase/functions/ai/handler.ts";
 import { memDb, memHs, memSync } from "./helpers/memdb.mjs";
 import { difficulty } from "../supabase/functions/ai/teachback.ts";
+import { splitCurriculum, mergeBuilt } from "../supabase/functions/ai/homeschool.ts";
 import { checkoutUrl, handleStripeEvent, handleStripeWebhook, planForStatus, stripeApi, verifyStripeSignature } from "../supabase/functions/ai/billing.ts";
 
 const EXT = "chrome-extension://" + "a".repeat(32);
@@ -890,6 +891,30 @@ test("homeschool: a video chosen by link; materials you own; project status on b
   const m = await hs(h, "hs-materials-save", { owned: ["Tray", "tray", "Goggles"] });
   assert.deepStrictEqual([...h.hs.store.docs.values()].find(d => d.kind === "materials").data.owned, ["tray", "goggles"]);
   assert.strictEqual((await hs(h, "hs-materials-save", { owned: [], version: m.body.version + 5 })).status, 409);
+});
+
+test("homeschool: a long curriculum is organized in parts at once, joined in order; a big upload fits", async () => {
+  const unit = n => `Unit ${n}: Topic ${n}\n` + `Lesson about topic ${n}. `.repeat(120) + "\n\n";
+  const text = Array.from({ length: 8 }, (_, n) => unit(n + 1)).join("");
+  const parts = splitCurriculum(text);
+  assert.ok(parts.length >= 3 && parts.every(p => p.length <= 9000), parts.map(p => p.length).join());
+  assert.ok(parts.slice(1).every(p => /^Unit \d/.test(p)), "parts start at a unit");
+  assert.strictEqual(parts.join("").replace(/\s/g, ""), text.replace(/\s/g, ""), "nothing lost");
+  const merged = mergeBuilt([{ subjects: [{ name: "Science", units: [{ title: "A" }] }], note: "" }, { subjects: [{ name: "science", units: [{ title: "B" }] }, { name: "Math", units: [{ title: "C" }] }], note: "x" }]);
+  assert.deepStrictEqual(merged.subjects.map(s => [s.name, s.units.map(u => u.title).join()]), [["Science", "A,B"], ["Math", "C"]]);
+  // End to end: three parts, three AI calls at once; a unit split across parts becomes one.
+  const h = hsDeps();
+  h.config = { ...h.config, maxBodyBytes: 24 * 1024, maxSyncBytes: 1024 * 1024 };
+  const alex = (await hs(h, "hs-learner-save", { name: "Alex", levels: {} })).body.id;
+  const big = (await hs(h, "hs-upload-add", { title: "Big", kind: "own", confirmed: true, text: text + text }));
+  assert.strictEqual(big.status, 200, "an upload bigger than other requests is accepted");
+  const u = (n, objs) => ({ title: `Topic ${n}`, weeks: 1, weeks_inferred: false, objectives: objs.map(t => ({ text: t, inferred: false })), requires: [], project: "" });
+  const replies = [{ note: "", subjects: [{ name: "Science", units: [u(1, ["a"]), u(2, ["b"])] }] }, { note: "", subjects: [{ name: "Science", units: [u(2, ["c"]), u(3, ["d"])] }] }];
+  h.callClaude = async req => { h.calls.push(req); return { ok: true, text: JSON.stringify(replies[h.calls.length - 1] || { note: "", subjects: [] }), model: "m", inputTokens: 1, outputTokens: 1 }; };
+  const r = await hs(h, "hs-curriculum-build", { learnerId: alex, uploadIds: [big.body.id] });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.ok(r.body.parts > 2 && h.calls.length === r.body.parts && /part 1 of/.test(h.calls[0].prompt));
+  assert.deepStrictEqual(r.body.draft.subjects[0].units.map(x => [x.title, x.objectives.map(o => o.text).join()]), [["Topic 1", "a"], ["Topic 2", "b,c"], ["Topic 3", "d"]]);
 });
 
 test("the one-file dashboard version is up to date with supabase/functions/ai", async () => {

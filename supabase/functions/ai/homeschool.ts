@@ -230,7 +230,14 @@ function parseJson(raw: string) {
 function curriculumFromAi(r: Record<string, unknown>, levels: Record<string, string>, startDate: string): Curriculum {
   const subjects = hsArr(r.subjects).map(s0 => {
     const s = hsObj(s0);
-    const units = hsArr(s.units).map(u0 => ({ ...hsObj(u0), id: hsId() })) as Record<string, unknown>[];
+    // A unit split across two parts comes back twice: one unit, with both parts' objectives.
+    const byName = new Map<string, Record<string, unknown>>();
+    for (const u0 of hsArr(s.units)) {
+      const u = hsObj(u0), k = hsText(u.title, 120).toLowerCase(), had = byName.get(k);
+      if (had) had.objectives = [...hsArr(had.objectives), ...hsArr(u.objectives)];
+      else byName.set(k, { ...u, id: hsId() });
+    }
+    const units = [...byName.values()];
     const byTitle = new Map(units.map(u => [hsText(u.title, 120).toLowerCase(), u.id as string]));
     return { name: s.name, level: levels[hsText(s.name, 40)] || "", units: units.map(u => ({ ...u,
       objectives: hsArr(u.objectives).map(o => ({ ...hsObj(o), id: hsId() })),
@@ -390,6 +397,40 @@ export async function hsUploadDelete(ctx: HsCtx) {
 
 // Build a draft curriculum from the family's uploads (or text typed or pasted now). Replaces the
 // draft, never the approved version.
+// A long curriculum in parts of about this many characters, organized at the same time and joined
+// back in order: one long answer can outlast the server's time limit (about 150 seconds).
+export const BUILD_PART_CHARS = 9000;
+export function splitCurriculum(text: string, size = BUILD_PART_CHARS): string[] {
+  const parts: string[] = [];
+  let rest = text;
+  while (rest.length > size) {
+    const window = rest.slice(0, size);
+    // Break before a heading or unit in the second half if there is one; else a lesson or week; else
+    // a blank line; else a line end.
+    const at = [/\n(?=#+ |unit\b|chapter\b|module\b)/gi, /\n(?=lesson\b|week\b)/gi, /\n\s*\n/g, /\n/g].map(re => {
+      let last = -1;
+      for (const m of window.matchAll(re)) if (m.index! > size / 2) last = m.index!;
+      return last;
+    }).find(x => x > 0) ?? size;
+    parts.push(rest.slice(0, at).trim());
+    rest = rest.slice(at);
+  }
+  if (rest.trim()) parts.push(rest.trim());
+  return parts.filter(Boolean);
+}
+
+// The parts' subjects joined by name, units in order (titles still name prerequisites across parts).
+export function mergeBuilt(results: Record<string, unknown>[]) {
+  const subjects = new Map<string, { name: unknown; units: unknown[] }>();
+  for (const r of results) for (const s0 of hsArr(r.subjects)) {
+    const s = hsObj(s0), key = hsText(s.name, 40).toLowerCase();
+    if (!key) continue;
+    if (!subjects.has(key)) subjects.set(key, { name: s.name, units: [] });
+    subjects.get(key)!.units.push(...hsArr(s.units));
+  }
+  return { subjects: [...subjects.values()], note: results.map(r => hsText(r.note, 200)).filter(Boolean).join(" ") };
+}
+
 export async function hsCurriculumBuild(ctx: HsCtx) {
   const h = await parentHousehold(ctx), i = hsObj(ctx.input);
   const l = await learnerIn(ctx, h.id, i.learnerId);
@@ -398,14 +439,17 @@ export async function hsCurriculumBuild(ctx: HsCtx) {
   const source = [...ups.map(u => `### ${u.title}\n${u.text}`), typed ? `### Typed by the parent\n${typed}` : ""].filter(Boolean).join("\n\n").slice(0, HS_LIMITS.buildChars);
   if (source.length < 40) throw new TaskError(400, "input", "Upload or paste the curriculum first.");
   const subjects = hsArr(i.subjects).map(s => hsText(s, 40)).filter(Boolean).slice(0, HS_LIMITS.subjects);
-  const r = parseJson(await ctx.ai("hs-curriculum-build", { tier: "main", maxTokens: 16000, schema: BUILD_SCHEMA, system: BUILD_SYSTEM,
-    prompt: `Student: ${l.name}. ${subjects.length ? `Subjects the parent wants Aim to plan: ${subjects.join(", ")}. Leave out other subjects.` : ""}\n\nThe family's curriculum:\n\n${source}` }));
+  const parts = splitCurriculum(source);
+  const head = `Student: ${l.name}. ${subjects.length ? `Subjects the parent wants Aim to plan: ${subjects.join(", ")}. Leave out other subjects.` : ""}`;
+  const results = await Promise.all(parts.map((part, n) => ctx.ai("hs-curriculum-build", { tier: "main", maxTokens: 8000, schema: BUILD_SCHEMA, system: BUILD_SYSTEM,
+    prompt: `${head}${parts.length > 1 ? `\n\nThis is part ${n + 1} of ${parts.length} of the curriculum, in order. Organize only what's in this part; if it starts partway through a unit, use that unit's title as written (or the subject's name).` : ""}\n\nThe family's curriculum:\n\n${part}` }).then(parseJson)));
+  const r = mergeBuilt(results);
   const draft = curriculumFromAi(r, l.levels, hsDate(i.startDate) || mondayOf(ctx.now));
   if (!draft.subjects.length) throw new TaskError(422, "empty", "Aim couldn't find units and objectives in that text. Check it's the curriculum, or type the units yourself.");
   const cur = await docData(ctx, h.id, "curriculum", l.id);
   const data = { ...(cur?.data || {}), draft, ...(cur?.data.baseline ? {} : { baseline: draft }), sources: ups.map(u => u.id) };
   const version = await save(ctx, h.id, "curriculum", l.id, data, cur?.version || 0);
-  return { draft, note: hsText(r.note, 400), version };
+  return { draft, note: hsText(r.note, 400), version, parts: parts.length };
 }
 
 export async function hsCurriculumSave(ctx: HsCtx) {

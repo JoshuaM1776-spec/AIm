@@ -88,6 +88,7 @@ export async function call(task, input) {
     if (!t) throw new ApiError("Your sign-in has expired. Sign in again.", 401, "auth");
     ({ res, data } = await request("/functions/v1/ai", { body: { task, input }, token: t }));
   }
-  if (!res.ok || !data.ok) throw new ApiError(data.error?.message || "Something went wrong. Try again.", res.status, data.error?.code || "");
+  if (!res.ok || !data.ok) throw new ApiError(data.error?.message || ([502, 503, 504, 546].includes(res.status)
+    ? `Aim's server stopped before finishing (status ${res.status}). Try again in a minute.` : `Something went wrong (status ${res.status}). Try again.`), res.status, data.error?.code || "");
   return data;
 }

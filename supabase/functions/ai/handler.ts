@@ -26,7 +26,7 @@ export interface Config {
   limits: Limits;      // Plus accounts
   freeLimits?: Limits; // free accounts (the librarian only); defaults to a tenth of `limits`
   maxBodyBytes: number;
-  maxSyncBytes?: number; // a sync round carries more (up to 100 Targets); defaults to maxBodyBytes
+  maxSyncBytes?: number; // a sync round, a curriculum upload or a whole plan carries more; defaults to maxBodyBytes
 }
 
 export type ClaudeResult =
@@ -99,6 +99,9 @@ export const TASKS: Record<string, Task> = {
   // "In this video": a video's concepts from its title, description and chapters. See video.ts.
   "video-concepts": { plan: "plus", run: videoConcepts }
 };
+
+// Requests that may carry more than a few pages: up to maxSyncBytes.
+const BIG_TASKS = new Set(["sync", "hs-upload-add", "hs-curriculum-build", "hs-curriculum-save", "hs-week-save"]);
 
 // Handled directly in handle(), without AI.
 const ACCOUNT_TASKS = new Set(["status", "account-export", "account-delete", "billing-checkout", "billing-portal", "sync", "sync-erase"]);
@@ -182,7 +185,7 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
   let body: { task?: unknown; input?: unknown };
   try { body = JSON.parse(raw || "{}"); } catch { return fail(400, "bad_json", "The request isn't valid JSON.", cors); }
   const name = typeof body?.task === "string" ? body.task : "";
-  if (size > (name === "sync" ? cfg.maxSyncBytes || cfg.maxBodyBytes : cfg.maxBodyBytes)) return fail(413, "too_large", "That request is too large.", cors);
+  if (size > (BIG_TASKS.has(name) ? cfg.maxSyncBytes || cfg.maxBodyBytes : cfg.maxBodyBytes)) return fail(413, "too_large", "That request is too large.", cors);
   if (!ACCOUNT_TASKS.has(name) && !Object.hasOwn(TASKS, name) && !Object.hasOwn(HS_TASKS, name)) return fail(400, "task", "Unknown task.", cors);
 
   let user;
@@ -260,7 +263,11 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
     const ctx = { userId, input: body.input, now: deps.now(), db: deps.db || NO_DB, hs: deps.hs, ownerPlan: deps.getPlan,
       ai: (taskName: string, req: AiRequest) => useAI(deps, userId, taskName, req, limitsFor("plus", deps.config)) };
     try { return json(200, { ok: true, ...(await HS_TASKS[name](ctx)) }, cors); }
-    catch (e) { if (e instanceof TaskError) return fail(e.status, e.code, e.message, cors); throw e; }
+    catch (e) {
+      if (!(e instanceof TaskError)) throw e;
+      if (e.status >= 500) console.error("homeschool", name, e.status, e.code, e.message); // so it's in the function's logs
+      return fail(e.status, e.code, e.message, cors);
+    }
   }
 
   const task = TASKS[name];
