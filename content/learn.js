@@ -153,7 +153,7 @@ async function startLearning(v, row) {
 
 // The home card's block: the row once loaded (filled in when the feeds arrive), or the invitation.
 function learnBlock() {
-  if (activePurpose() || status.totalReached) return null;
+  if (activePurpose() || status.totalReached || settings.learnRow === false) return null;
   if (!(settings.learnTopics || []).length && !channelsBy("prefer").length) {
     if (status.onboarding?.tips?.learn) return null;
     return el("div", { class: "wp-learn wp-learn-invite" },

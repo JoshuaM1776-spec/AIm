@@ -75,7 +75,7 @@ function how() {
 function choices() {
   return node("div", {},
     node("h1", { textContent: "Design your YouTube" }),
-    node("p", { className: "lede", textContent: "Choose what your homepage shows, what happens to Shorts, what steps aside while you watch, and how much time you want. A preview of YouTube changes as you choose." }),
+    node("p", { className: "lede", textContent: "Choose what greets you on YouTube, what happens to Shorts, and what steps aside while you watch. A preview of YouTube changes as you choose." }),
     node("div", { className: "callout" },
       node("button", { className: "btn", type: "button", id: "design", textContent: "Design your YouTube",
         onclick: () => send({ type: "open-design" }) }),

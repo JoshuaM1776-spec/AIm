@@ -23,6 +23,8 @@ const DEFAULT_SETTINGS = {
   learnTopics: [], learnOff: [],
   // Shorts from your Learn something channels only: a few at a time, as quick reviews of what you've learned.
   learnShorts: false,
+  // The Learn something row on the homepage (off: a clean page, just "What brings you here?").
+  learnRow: true,
   // Your own topics for channels you learn from (the Your channels page).
   myTopics: []
 };
@@ -42,6 +44,7 @@ const SETTING_RULES = {
   learnTopics: v => Array.isArray(v) && v.length <= 20 && v.every(x => typeof x === "string" && /^[a-z]{2,20}$/.test(x)),
   learnOff: v => Array.isArray(v) && v.length <= 200 && v.every(x => typeof x === "string" && /^@[\w.-]{1,60}$/.test(x)),
   learnShorts: v => typeof v === "boolean",
+  learnRow: v => typeof v === "boolean",
   myTopics: v => Array.isArray(v) && v.length <= 30 && v.every(x => typeof x === "string" && x.trim().length >= 1 && x.length <= 40)
 };
 

@@ -1,6 +1,6 @@
 // Aim — Design your YouTube. A configurator instead of a settings list, laid out like a car
 // configurator: a large preview of YouTube on top that changes as you choose, one question at a time
-// underneath, four stages (Home, Shorts, Watching, Timing) along the top, then a before-and-after
+// underneath, three stages (Home, Shorts, Watching) along the top, then a before-and-after
 // and one Apply. The first time, it walks through the stages in order; afterwards any stage opens
 // directly (from Settings, or design.html#shorts). The preview is a sketch drawn by Aim, filled
 // with your own Learn something videos: YouTube can't be embedded in a page, and Aim doesn't copy
@@ -30,13 +30,14 @@ function toast(msg) {
   clearTimeout(toast.timer); toast.timer = setTimeout(() => (t.style.display = "none"), 3000);
 }
 
+// Timing (break allowance, daily total) isn't a stage for now: it stays in More settings.
 const STAGES = [
-  { id: "home", name: "Home", title: "What should your homepage be?", q: "YouTube's homepage is built to keep you watching. Choose what greets you instead." },
-  { id: "shorts", name: "Shorts", title: "What about Shorts?", q: "Shorts are the easiest place to lose an hour. Decide how much of them you want." },
-  { id: "watching", name: "Watching", title: "How should Aim keep you on Target?", q: `${BRAND} always asks what you're here for, then keeps the videos that fit. Choose what else steps aside.` },
-  { id: "timing", name: "Timing", title: "How much time, and for what?", q: "Time on your Target is yours. Breaks share a daily allowance; the rest are optional limits." }
+  { id: "home", name: "Home", title: "What should greet you?", q: "Choose what you see when you open YouTube." },
+  { id: "shorts", name: "Shorts", title: "What about Shorts?", q: "Keep them, curate them, or remove them." },
+  { id: "watching", name: "Watching", title: "How should Aim keep you on Target?", q: `${BRAND} always asks what you're here for, then keeps the videos that fit. Choose what else steps aside.` }
 ];
-const KEYS = ["homeCard", "learnTopics", "hideShorts", "learnShorts", "hideRecs", "noAutoplay", "hideFeeds", "strict", "leisureMin", "totalMin", "graceMin", "purposeLimitMin"];
+const KEYS = ["homeCard", "learnRow", "learnTopics", "hideShorts", "learnShorts", "hideRecs", "noAutoplay", "hideFeeds", "strict"];
+const greeting = d => (!d.homeCard ? "feed" : d.learnRow === false ? "clean" : "channels");
 
 const S = { cur: null, d: null, stage: 0, review: false, wizard: true, view: "after", data: { videos: {}, shorts: {} }, avoid: {}, readonly: false, applied: false };
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -105,22 +106,22 @@ function statusLine(d) {
   return node("div", { class: "yt-status", "data-go": "watching" }, icon("shield"), parts.join(" · "));
 }
 
-function topBar(d, after, { menu } = {}) {
+function topBar(d, after) {
   return node("div", { class: "yt-top" }, node("div", { class: "yt-logo" }, icon("play"), "YouTube"),
     node("div", { class: "yt-tools" }, node("div", { class: "search" }, "Search"), icon("search"), icon("bell"),
-      after ? node("div", { class: "yt-chip", "data-go": "timing", title: "Timing" }, node("img", { src: MARK, alt: "" }), "Set Target", menu ? timingMenu(d) : null) : null));
+      after ? node("div", { class: "yt-chip" }, node("img", { src: MARK, alt: "" }), "Set Target") : null));
 }
 function rail(d, after) {
   const shortsOff = after && d.hideShorts && !d.learnShorts;
   return node("div", { class: "yt-rail" }, icon("home"), (() => { const n = icon("video"); if (shortsOff) n.classList.add("off"); n.setAttribute("data-go", "shorts"); return n; })(), icon("clock"), icon("list"));
 }
 
-function homeView(d, after, opts = {}) {
+function homeView(d, after) {
   const main = node("div", { class: "yt-main" });
   if (after && d.homeCard) {
     main.append(node("div", { class: "aim-ask", "data-go": "home" }, node("img", { src: MARK, alt: "" }), node("b", {}, "What brings you here?"), node("span", {}, "Tell me what you're looking for…")));
     const vids = videosFor(d, 2);
-    main.append(node("div", { "data-go": "home" },
+    if (d.learnRow !== false) main.append(node("div", { "data-go": "home" },
       node("div", { class: "yt-head" }, node("h3", {}, "Learn something"), node("small", {}, "From channels you choose"), node("span", { class: "tag" }, "Curated")),
       vids.length ? node("div", { class: "yt-cards" }, vids.map(card)) : node("div", { class: "yt-gone" }, "Pick topics below, and new videos from channels that teach them show here.")));
   } else {
@@ -138,7 +139,7 @@ function homeView(d, after, opts = {}) {
   else main.append(node("div", { "data-go": "shorts" }, node("div", { class: "yt-head" }, icon("shorts"), node("h3", {}, "Shorts")),
     node("div", { class: "yt-gone" }, "No Shorts. (They're back on a break.)")));
   if (after) main.append(statusLine(d));
-  return node("div", { class: "yt" }, topBar(d, after, opts), node("div", { class: "yt-body" }, rail(d, after), main));
+  return node("div", { class: "yt" }, topBar(d, after), node("div", { class: "yt-body" }, rail(d, after), main));
 }
 
 function watchView(d, after) {
@@ -158,15 +159,6 @@ function watchView(d, after) {
       node("hr", { class: "yt-rule" }), next, after ? statusLine(d) : null)));
 }
 
-const minutes = m => (m >= 60 ? `${m / 60} h` : `${m} min`);
-function timingMenu(d) {
-  return node("div", { class: "aim-menu", "data-go": "timing" },
-    node("div", {}, node("span", {}, "Breaks today"), node("b", {}, d.leisureMin ? `${minutes(d.leisureMin)} left` : "No limit")),
-    node("div", {}, node("span", {}, "YouTube today"), node("b", {}, d.totalMin ? `${minutes(d.totalMin)} max` : "No limit")),
-    node("div", {}, node("span", {}, "Time's up mid-video"), node("b", {}, d.graceMin ? `may finish (${d.graceMin} min)` : "stops")),
-    node("div", {}, node("span", {}, "Each Target"), node("b", {}, d.purposeLimitMin ? minutes(d.purposeLimitMin) : "No limit")));
-}
-
 function preview() {
   const box = $("preview"), id = STAGES[S.stage].id;
   if (S.review) {
@@ -175,7 +167,7 @@ function preview() {
       node("div", {}, node("p", { class: "cap" }, `With ${BRAND}`), homeView(S.d, true))));
   } else {
     const after = S.view === "after";
-    box.replaceChildren(id === "watching" ? watchView(S.d, after) : homeView(S.d, after, { menu: id === "timing" && after }));
+    box.replaceChildren(id === "watching" ? watchView(S.d, after) : homeView(S.d, after));
   }
   // Click a part to change it.
   for (const n of box.querySelectorAll("[data-go]")) n.addEventListener("click", e => {
@@ -198,30 +190,37 @@ function set(key, value) {
   S.d = { ...S.d, [key]: value };
   draw();
 }
+// Topic picks and the way to your channels: under "Videos from channels I choose", and under
+// "Only Shorts from selected channels" while none are chosen.
+function channelPicks(d) {
+  const on = new Set(d.learnTopics || []);
+  const learnFrom = Object.values(S.avoid).filter(r => r.action === "prefer").length;
+  return node("div", { class: "under" }, node("div", { class: "group-label", style: "margin-top:4px" }, "Learn something about…"),
+    node("div", { class: "seg", role: "group", "aria-label": "Topics" }, LEARN_TOPICS.map(t => node("button", { type: "button", "aria-pressed": String(on.has(t.id)), disabled: S.readonly,
+      onclick: () => set("learnTopics", on.has(t.id) ? [...on].filter(x => x !== t.id) : [...on, t.id]) }, t.name))),
+    node("p", { class: "hint" }, learnFrom ? `Plus ${learnFrom} channel${learnFrom === 1 ? "" : "s"} you learn from. ` : "",
+      node("a", { href: "channels.html", target: "_blank" }, learnFrom ? "Sort your channels" : "Add the channels you subscribe to")));
+}
+const hasChannels = d => (d.learnTopics || []).length > 0 || Object.values(S.avoid).some(r => r.action === "prefer");
 function stagePanel(id) {
   const d = S.d;
   if (id === "home") {
-    const on = new Set(d.learnTopics || []);
-    const learnFrom = Object.values(S.avoid).filter(r => r.action === "prefer").length;
+    const g = greeting(d);
     return [
-      opt("Ask what brings me here", "Aim's card, and new videos from topics you pick. The feed only on a break.", d.homeCard, () => set("homeCard", true)),
-      opt("YouTube's usual feed", "Recommendations, as YouTube chooses them.", !d.homeCard, () => set("homeCard", false)),
-      node("div", { class: "group-label" }, "Learn something about…"),
-      node("div", { class: "seg", role: "group", "aria-label": "Topics" }, LEARN_TOPICS.map(t => node("button", { type: "button", "aria-pressed": String(on.has(t.id)), disabled: S.readonly,
-        onclick: () => set("learnTopics", on.has(t.id) ? [...on].filter(x => x !== t.id) : [...on, t.id]) }, t.name))),
-      node("p", { class: "hint" }, learnFrom ? `Plus ${learnFrom} channel${learnFrom === 1 ? "" : "s"} you learn from. ` : "",
-        node("a", { href: "channels.html", target: "_blank" }, learnFrom ? "Sort your channels" : "Add the channels you subscribe to"))];
+      opt("A clean page with my Target", "Just \u201cWhat brings you here?\u201d", g === "clean", () => { S.d = { ...S.d, homeCard: true, learnRow: false }; draw(); }),
+      opt("Videos from channels I choose", "Your Target, plus a few new videos from channels that teach what you want to learn.", g === "channels", () => { S.d = { ...S.d, homeCard: true, learnRow: true }; draw(); }),
+      g === "channels" ? channelPicks(d) : null,
+      opt("The regular YouTube feed", "Recommendations, as YouTube chooses them.", g === "feed", () => { S.d = { ...S.d, homeCard: false }; draw(); })].flat();
   }
   if (id === "shorts") {
-    const mode = shortsMode(d), topics = (d.learnTopics || []).length > 0;
+    const mode = shortsMode(d);
     return [
-      opt("No Shorts", "Gone from the homepage, results and the menu. A Short you open asks first.", mode === "off", () => { S.d = { ...S.d, hideShorts: true, learnShorts: false }; draw(); }),
-      opt("Only from my topics", topics ? "A few from your Learn something channels, as a Quick review of what you've learned. Any other Short waits." : "Pick topics on Home first: these come from their channels.",
-        mode === "topics", () => { S.d = { ...S.d, hideShorts: true, learnShorts: true }; draw(); }),
-      opt("As usual", "YouTube's Shorts everywhere.", mode === "all", () => { S.d = { ...S.d, hideShorts: false, learnShorts: false }; draw(); }),
-      node("p", { class: "hint" }, "On a break, Shorts are back either way.")];
+      opt("Hide Shorts", "A Short you open asks first. They're back on a break.", mode === "off", () => { S.d = { ...S.d, hideShorts: true, learnShorts: false }; draw(); }),
+      opt("Only Shorts from selected channels", "A quick review of what you've learned. Any other Short waits.", mode === "topics", () => { S.d = { ...S.d, hideShorts: true, learnShorts: true }; draw(); }),
+      mode === "topics" && !hasChannels(d) ? [node("p", { class: "hint" }, "Choose channels first: pick a topic, or add your own."), channelPicks(d)] : null,
+      opt("Show all Shorts", null, mode === "all", () => { S.d = { ...S.d, hideShorts: false, learnShorts: false }; draw(); })].flat(2);
   }
-  if (id === "watching") return [
+  return [
     opt("Ask once, then trust me", "Off your Target? Aim checks once, and you can always say yes.", !d.strict, () => set("strict", false)),
     opt("Keep me strictly on Target", "Bending a rule (more time, a warned channel, an off-Target search) needs a short reason first.", d.strict, () => set("strict", true)),
     node("div", { class: "group-label" }, "Beside the video"),
@@ -233,27 +232,19 @@ function stagePanel(id) {
     node("div", { class: "group-label" }, "Subscriptions and trending"),
     opt("Quiet until a break", "A short note instead of the feed.", d.hideFeeds, () => set("hideFeeds", true)),
     opt("As usual", null, !d.hideFeeds, () => set("hideFeeds", false))];
-  return [
-    ...seg("Breaks each day", [[30, "30 min"], [60, "1 hour"], [120, "2 hours"], [0, "No limit"]], "leisureMin"),
-    node("p", { class: "hint" }, "All your breaks share this. Time on your Target doesn't count."),
-    ...seg("YouTube each day, in all", [[0, "No limit"], [60, "1 hour"], [120, "2 hours"], [180, "3 hours"]], "totalMin"),
-    ...seg("When time's up mid-video", [[0, "Stop"], [5, "5 min"], [15, "15 min"], [30, "30 min"]], "graceMin"),
-    node("p", { class: "hint" }, "How long that video may keep playing."),
-    ...seg("Each Target, by default", [[0, "No limit"], [30, "30 min"], [60, "1 hour"]], "purposeLimitMin")];
 }
 
 const LABELS = {
-  homeCard: d => (d.homeCard ? "Asks what brings you here" : "YouTube's feed"),
+  homeCard: d => ({ clean: "A clean page with your Target", channels: "Videos from channels you choose", feed: "The regular feed" }[greeting(d)]),
   learnTopics: d => ((d.learnTopics || []).length ? LEARN_TOPICS.filter(t => d.learnTopics.includes(t.id)).map(t => t.name).join(", ") : "No topics"),
-  shorts: d => ({ off: "No Shorts", topics: "Only from your topics", all: "As usual" }[shortsMode(d)]),
+  shorts: d => ({ off: "Hidden", topics: "Only from selected channels", all: "All Shorts" }[shortsMode(d)]),
   watching: d => [d.strict ? "Strictly on Target" : "Asks once", d.hideRecs ? "only your search's videos" : "recommendations", d.noAutoplay ? "autoplay off" : "autoplay on"].join(", "),
-  timing: d => [`Breaks ${d.leisureMin ? minutes(d.leisureMin) : "no limit"}`, d.totalMin ? `${minutes(d.totalMin)} a day` : null].filter(Boolean).join(", ")
 };
 // replaceChildren, leaving out the parts that aren't there (null).
 const fill = (el, ...kids) => el.replaceChildren(...kids.flat().filter(k => k != null && k !== false));
 
 function reviewPanel() {
-  const rows = [["Homepage", LABELS.homeCard, 0], ["Learn something", LABELS.learnTopics, 0], ["Shorts", LABELS.shorts, 1], ["Watching", LABELS.watching, 2], ["Timing", LABELS.timing, 3]];
+  const rows = [["Homepage", LABELS.homeCard, 0], ...(greeting(S.d) === "channels" || shortsMode(S.d) === "topics" ? [["Learn something", LABELS.learnTopics, 0]] : []), ["Shorts", LABELS.shorts, 1], ["Watching", LABELS.watching, 2]];
   return [node("div", { class: "count" }, "Your design"), node("h2", {}, S.applied ? "It's on" : "Here's your YouTube"),
     node("p", { class: "q" }, S.applied ? "Open YouTube to see it. Change anything here any time." : "Before, and with your choices. Apply it, and that's how YouTube looks from now on."),
     node("ul", { class: "summary" }, rows.map(([label, fn, i]) => node("li", {}, node("span", {}, node("b", {}, label), fn(S.d)),

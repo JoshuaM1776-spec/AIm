@@ -345,8 +345,9 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] Settings → Disconnect the browser: on its next refresh, the student's Chrome is back to plain Aim.
 
 ### 36. Design your YouTube (0.48)
-- [ ] The welcome tour's third screen offers **Design your YouTube**; it opens at Step 1 of 4 with a preview of YouTube's homepage.
-- [ ] Every choice changes the preview at once: the homepage (Aim's card or the feed), topics (Learn something with your channels' real thumbnails once they've loaded on YouTube), Shorts (none, Quick review, or as usual), Watching (the watch page: Up next from your search or recommendations, autoplay), Timing (Aim's menu with your limits).
+- [ ] The welcome tour's third screen offers **Design your YouTube**; it opens at Step 1 of 3 with a preview of YouTube's homepage.
+- [ ] Every choice changes the preview at once. Home: **A clean page with my Target** (no videos), **Videos from channels I choose** (topic picks appear under it; real thumbnails once they've loaded on YouTube), **The regular YouTube feed**. Shorts: **Hide**, **Only from selected channels** (asks for channels if none), **Show all**. Watching: the watch page, with Up next from your search or recommendations, and autoplay. (Time limits aren't a stage for now; they're in More settings.)
+- [ ] After applying **A clean page**, YouTube's homepage shows only What brings you here?, even with topics picked.
 - [ ] **Before** shows YouTube as it was. Nothing changes on YouTube until **Apply to YouTube** on the before-and-after; then YouTube matches the design.
 - [ ] Settings → **Design your YouTube**, and its Jump to links, open a stage directly. Clicking a part of the preview opens its stage. A change shows **Changes not applied yet**, with Undo.
 - [ ] A student's browser connected to a family shows the design but can't change it.
