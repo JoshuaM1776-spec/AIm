@@ -94,14 +94,15 @@ export function cleanCurriculum(x: unknown) {
 }
 export type Curriculum = ReturnType<typeof cleanCurriculum>;
 
-// Warnings for the parent, never blocks: a unit placed before one it builds on, or one that builds
-// on a unit no longer in the plan.
+// Warnings for the parent, never blocks: a unit placed before one it builds on, one that builds on a
+// unit no longer in the plan, or one with no objectives (weeks leave it out: Aim won't invent them).
 export function curriculumWarnings(c: Curriculum) {
   const out: { unitId: string; text: string }[] = [];
   for (const s of c.subjects) {
     const pos = new Map(s.units.map((u, i) => [u.id, i]));
     const all = new Map(c.subjects.flatMap(x => x.units.map(u => [u.id, u.title] as const)));
     s.units.forEach((u, i) => {
+      if (!u.objectives.length) out.push({ unitId: u.id, text: `${s.name}: “${u.title}” has no objectives yet. Weeks leave it out until it has some (Aim won't make them up).` });
       for (const r of u.requires) {
         if (!all.has(r)) out.push({ unitId: u.id, text: `“${u.title}” built on a unit that's no longer in the plan.` });
         else if (pos.has(r) && pos.get(r)! > i) out.push({ unitId: u.id, text: `“${u.title}” now comes before “${all.get(r)}”, which it builds on.` });
@@ -176,7 +177,7 @@ export function cleanWeek(x: unknown, weekStart: string) {
     prep: hsArr(p.prep).map(d => hsText(d, 200)).filter(Boolean).slice(0, 6),
     safety: hsText(p.safety, 300), status: hsOneOf(p.status, PROJECT_STATUS, "proposed")
   } : null;
-  return { weekStart, days, project, note: hsText(w.note, 300) };
+  return { weekStart, days, project, note: hsText(w.note, 600) };
 }
 export type Week = ReturnType<typeof cleanWeek>;
 
@@ -256,7 +257,8 @@ Rules:
 - Respect the school days and the time per day. Leave non-school days empty.
 - One featured project for the featured subject, on its day (usually Friday): a practical culmination that applies the week's objectives, with materials (household items where possible; quantity; consumable or reusable), deliverables, preparation steps for the parent, and safety or supervision notes when needed. involvement: how much the parent takes part.
 - Mark together: true on at most two items a parent would enjoy doing with the student.
-- If the parent asked for something, follow it as long as it stays within the approved objectives, and say in "note" what you changed. Keep everything else as it was.`;
+- If the parent asked for something, follow it as long as it stays within the approved objectives, and say in "note" what you changed. Keep everything else as it was.
+- Always plan the subjects listed, even if something else seems missing; mention a concern in "note" rather than leaving the week empty.`;
 
 const WEEK_ITEM = { type: "object", properties: {
   kind: { type: "string", enum: [...ITEM_KINDS] }, subject: { type: "string" }, title: { type: "string" }, objectiveId: { type: "string" },
@@ -491,8 +493,13 @@ async function weekAi(ctx: HsCtx, mode: "propose" | "revise") {
   const settings = h.settings, schoolDays = hsArr(settings.schoolDays).length ? hsArr(settings.schoolDays) as string[] : ["Mon", "Tue", "Wed", "Thu", "Fri"];
   const chDoc = await docData(ctx, h.id, "channels", "all"), ch = chDoc?.data || {};
   const statuses = objectiveStatuses(await ctx.hs.progress([l.id]));
-  const now = unitsForWeek(curriculum, weekStart).filter(x => x.unit);
-  if (!now.length) throw new TaskError(400, "curriculum", "The approved curriculum has nothing scheduled for this week. Check its start date and unit lengths.");
+  const scheduled = unitsForWeek(curriculum, weekStart).filter(x => x.unit);
+  if (!scheduled.length) throw new TaskError(400, "curriculum", "The approved curriculum has nothing scheduled for this week. Check its start date and unit lengths.");
+  // A unit without objectives can't be taught (the AI doesn't make them up): left out, and said so.
+  const now = scheduled.filter(x => x.unit!.objectives.length);
+  const skipped = scheduled.filter(x => !x.unit!.objectives.length).map(x => `${x.subject} (“${x.unit!.title}”)`);
+  const skipNote = skipped.length ? `Left out this week (no objectives yet): ${skipped.join(", ")}. Add its objectives on the Curriculum page and approve; then “Ask for a change” to include it.` : "";
+  if (!now.length) throw new TaskError(400, "curriculum", `Nothing to plan this week: ${skipped.join(", ")} ${skipped.length === 1 ? "has" : "have"} no objectives yet. Add them on the Curriculum page, approve, and try again.`);
   const rotation = (hsArr(settings.rotation).length ? hsArr(settings.rotation) as string[] : curriculum.subjects.map(s => s.name)).filter(s => now.some(x => x.subject === s));
   const weekIndex = Math.max(0, Math.round((Date.parse(weekStart) - Date.parse(mondayOf(curriculum.startDate || weekStart))) / (7 * 864e5)));
   const featured = rotation[weekIndex % Math.max(1, rotation.length)] || now[0].subject;
@@ -511,10 +518,13 @@ async function weekAi(ctx: HsCtx, mode: "propose" | "revise") {
   const week = cleanWeek({ ...r, days: hsArr(r.days).map(d0 => { const d = hsObj(d0); return { ...d, items: schoolDays.includes(String(d.day)) ? hsArr(d.items).map(it0 => {
     const it = hsObj(it0); return { ...it, objective: objectives.get(hsText(it.objectiveId, 12)) || "", video: oldVideos.get(`${it.subject}|${it.title}`) || null };
   }) : [] }; }), project: { ...hsObj(r.project), objective: objectives.get(hsText(hsObj(r.project).objectiveId, 12)) || "" } }, weekStart);
+  // An empty plan isn't saved: the parent hears why instead.
+  if (!week.days.some(d => d.items.length)) throw new TaskError(422, "empty", hsText(r.note, 400) || "Aim couldn't plan lessons for this week from the approved curriculum. Check the curriculum's objectives and try again.");
+  week.note = [skipNote, hsText(r.note, 300)].filter(Boolean).join(" ").slice(0, 600);
   const status = existing && ["approved", "changed"].includes(String(existing.data.status)) ? "changed" : "proposed";
   const data = { ...(existing?.data || {}), status, draft: week, curriculumVersion: Number(cur.data.approvedVersion) || 0 };
   const version = await save(ctx, h.id, "week", key, data, existing?.version || 0);
-  return { week, status, note: hsText(r.note, 400), version, gaps: weekGaps(week, ch) };
+  return { week, status, note: week.note, version, gaps: weekGaps(week, ch) };
 }
 export const hsWeekPropose = (ctx: HsCtx) => weekAi(ctx, "propose");
 export const hsWeekRevise = (ctx: HsCtx) => weekAi(ctx, "revise");

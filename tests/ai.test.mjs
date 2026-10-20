@@ -917,6 +917,27 @@ test("homeschool: a long curriculum is organized in parts at once, joined in ord
   assert.deepStrictEqual(r.body.draft.subjects[0].units.map(x => [x.title, x.objectives.map(o => o.text).join()]), [["Topic 1", "a"], ["Topic 2", "b,c"], ["Topic 3", "d"]]);
 });
 
+test("homeschool: a unit with no objectives is warned about, left out of the week (never made up), and an empty week isn't saved", async () => {
+  const h = hsDeps();
+  const alex = (await hs(h, "hs-learner-save", { name: "Alex", levels: { Science: "Grade 5", Math: "Grade 10" } })).body.id;
+  h.replies.push({ note: "", subjects: [...BUILT.subjects, { name: "Math", units: [{ title: "New unit", weeks: 2, weeks_inferred: false, objectives: [], requires: [], project: "" }] }] });
+  await hs(h, "hs-curriculum-build", { learnerId: alex, text: "Science units and a Math placeholder, long enough to build from.", startDate: "2026-10-19" });
+  const home = (await hs(h, "hs-home")).body.learners[0].curriculum;
+  assert.ok(home.warnings.some(w => /Math: “New unit” has no objectives yet/.test(w.text)), JSON.stringify(home.warnings));
+  await hs(h, "hs-curriculum-approve", { learnerId: alex });
+  const ids = (await hs(h, "hs-home")).body.learners[0].curriculum.approved.subjects[0].units[0].objectives.map(o => o.id);
+  // The AI answers with nothing: not saved, and the parent hears why.
+  h.replies.push({ note: "Math has no objectives.", days: [], project: weekReply(ids).project });
+  let r = await hs(h, "hs-week-propose", { learnerId: alex, weekStart: "2026-10-19" });
+  assert.strictEqual(r.status, 422);
+  assert.strictEqual((await hs(h, "hs-home")).body.learners[0].weeks.length, 0, "no empty week saved");
+  h.replies.push(weekReply(ids));
+  r = await hs(h, "hs-week-propose", { learnerId: alex, weekStart: "2026-10-19" });
+  assert.strictEqual(r.status, 200);
+  assert.doesNotMatch(h.calls.at(-1).prompt, /New unit/, "the empty unit isn't sent to plan");
+  assert.match(r.body.note, /Left out this week \(no objectives yet\): Math \(“New unit”\)/);
+});
+
 test("the one-file dashboard version is up to date with supabase/functions/ai", async () => {
   const fs = await import("node:fs");
   const { build, OUT, buildWebhook, OUT_WEBHOOK } = await import("../tools/bundle-ai.mjs");
