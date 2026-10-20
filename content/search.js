@@ -93,7 +93,7 @@ async function renderResultsBar() {
   showTips();
 }
 
-// One compact row: the Target, a small Change action, Done, and (signed in) the librarian, which
+// One compact row: the aim, a small Change action, Done, and (signed in) the librarian, which
 // stays folded away unless it has something new to say about this search. The videos stay the
 // main event.
 let libOpen = null; // { query, open }: the reader's own choice for this search
@@ -111,7 +111,7 @@ function purposeBar(p, lib) {
   bar.append(...[
     el("div", { class: "wp-rb-purpose" },
       el("span", { class: "wp-rb-mark" }, icon("logo")),
-      el("span", { class: "wp-rb-label" }, p.plan ? "Today's plan" : "Target"),
+      el("span", { class: "wp-rb-label" }, p.plan ? "Today's plan" : "Your aim"),
       el("span", { class: "wp-strong wp-ellipsis wp-rb-text", title: p.text }, p.text),
       el("button", { class: "wp-link wp-rb-change", onclick: () => openPivotDialog() }, "Change")),
     left !== null ? el("span", { class: "wp-muted wp-rb-left" }, `${fmtMin(left)} left`) : null,
@@ -124,7 +124,7 @@ function purposeBar(p, lib) {
   return bar;
 }
 
-// "Still looking?": three searches for this Target with nothing watched for more than a minute and
+// "Still looking?": three searches for this aim with nothing watched for more than a minute and
 // a half since. Offered once per streak; signed in, it opens the librarian, otherwise a tip.
 const stillDismissed = new Set();
 function stillLooking(p) {
@@ -151,16 +151,16 @@ function stillLookingRow(p, key, lib) {
 function pendingBar(p, query) {
   return el("div", { id: "wp-results-bar", class: "wp wp-results-bar wp-rb-pending" },
     el("div", { class: "wp-rb-purpose" },
-      el("div", { class: "wp-strong" }, `Is “${query}” part of your Target?`),
-      el("div", { class: "wp-muted wp-ellipsis" }, `Current Target: ${p.text}`)),
+      el("div", { class: "wp-strong" }, `Is “${query}” part of your aim?`),
+      el("div", { class: "wp-muted wp-ellipsis" }, `Your aim: ${p.text}`)),
     el("div", { class: "wp-actions wp-actions-start" },
-      el("button", { class: "wp-btn wp-btn-primary", onclick: () => withReason("search", `How is “${query}” part of your Target?`, query, async () => {
+      el("button", { class: "wp-btn wp-btn-primary", onclick: () => withReason("search", `How is “${query}” part of your aim?`, query, async () => {
         await acceptSearch(query);
         renderResultsBar();
         captureResults();
       }) }, "Yes, it's part of it"),
       el("button", { class: "wp-btn wp-btn-tonal", onclick: () =>
-        openPivotDialog(query, { afterConfirm: () => send({ type: "purpose-search", query }) }) }, "Change Target"),
+        openPivotDialog(query, { afterConfirm: () => send({ type: "purpose-search", query }) }) }, "Change my aim"),
       el("button", { class: "wp-btn wp-btn-text", onclick: () => history.back() }, "Back")),
     el("div", { class: "wp-rb-break" }, el("div", { class: "wp-label" }, "Or take a break"), breakChips(takeBreak)));
 }

@@ -1,6 +1,6 @@
 // Aim — Shorts from your topics (Settings → Learn something). Shorts stay hidden, except those from
 // your Learn something channels and channels you marked Prefer, offered on YouTube's home page as a
-// "Quick review" of things you've already learned. Opening one starts a Quick review Target; a Short
+// "Quick review" of things you've already learned. Opening one starts a Quick review aim; a Short
 // from anywhere else (YouTube's swipe to the next one) waits behind a card that offers your next
 // review instead. No AI: Shorts are matched to what you learned by the words they share.
 
@@ -36,7 +36,7 @@ function fillReview(box, shorts) {
   });
 }
 
-// A Quick review Target with the row's Shorts, played one after another from here.
+// A Quick review aim with the row's Shorts, played one after another from here.
 async function startReview(picks, i) {
   const v = picks[i], about = picks.find(x => x.review)?.review || v.topic;
   const r = await send({ type: "purpose-start", text: `Quick review: ${about}`.slice(0, 300), video: { id: v.id, title: v.title, channel: v.channel },

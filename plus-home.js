@@ -21,7 +21,7 @@ function features(ctx) {
   const st = ctx.study;
   return [
     { icon: "▤", title: "Study sessions", text: "Turn a learning goal into a few topics in order, each with a clear video picked from your own searches. Upload your syllabus or study guide and the topics match your class.",
-      how: "Starts on YouTube: set a learning Target, then Organize a study session above the results.",
+      how: "Starts on YouTube: set a learning aim, then Organize a study session above the results.",
       live: st ? `Now: ${st.title}, ${st.done} of ${st.of} topics checked` : null,
       action: st ? ["Open your session", () => open("study.html")] : ["Go to YouTube", youtube] },
     { icon: "?", title: "TeachBack", text: "Check your understanding by explaining it, the way you'd teach a friend. You get what you've shown, what to review, and a search for each gap. Not a grade.",
@@ -30,15 +30,15 @@ function features(ctx) {
     { icon: "✎", title: "Put it to work", text: "At the end of a study session, one small project that uses what you learned, aimed at what your checks say to practice.",
       how: "In a study session's summary, once a topic is checked." },
     { icon: "▶", title: "In this video", text: "Beside a video you're watching to learn: the ideas it covers, a jump to each chapter, the same idea in another context, and a test on the video when it ends.",
-      how: "Appears on its own for learning Targets." },
-    { icon: "✦", title: "The librarian", text: "Ask YouTube's home box in a sentence (\"help me prepare for my flight review\"). The librarian turns it into better searches, picks the best results with a reason for each, and remembers your Target.",
+      how: "Appears on its own for learning aims." },
+    { icon: "✦", title: "The librarian", text: "Ask YouTube's home box in a sentence (\"help me prepare for my flight review\"). The librarian turns it into better searches, picks the best results with a reason for each, and remembers your aim.",
       how: "Type a request instead of a search on YouTube's home page. Free accounts get a small daily allowance; Plus gets more." },
     { icon: "⇢", title: "Pathways", text: "What interests you, what you could do with it, and what it would take: careers connected to what you've been learning, with real ways to try them.",
       action: ["Open Pathways", () => open("pathways.html")] },
     { icon: "☰", title: "Learning record", text: "Everything you've worked on, with what your checks showed and what you made. Print it or save it as a PDF.",
-      live: ctx.record ? `${ctx.record.targets} Targets completed · ${ctx.record.topicsChecked} topics checked · ${ctx.record.projects} projects` : null,
+      live: ctx.record ? `${ctx.record.targets} aims completed · ${ctx.record.topicsChecked} topics checked · ${ctx.record.projects} projects` : null,
       action: ["Open your record", () => open("record.html")] },
-    { icon: "⇄", title: "Sync across devices", text: "Your Targets, study sessions and learning record, saved videos and settings, on every computer where you sign in. Start at school, pick it up at home.",
+    { icon: "⇄", title: "Sync across devices", text: "Your aims, study sessions and learning record, saved videos and settings, on every computer where you sign in. Start at school, pick it up at home.",
       how: "Off until you turn it on in Settings → Aim Plus.",
       live: ctx.sync?.on ? (ctx.sync.lastAt ? "On" : "On, syncing") : null,
       action: ["Open Settings", () => open("options.html#plus")] }

@@ -7,7 +7,7 @@ Everything the Chrome Web Store submission form asks for, ready to paste. Items 
 **Name:** Aim (from `manifest.json`)
 
 **Summary** (132 characters max, currently 115):
-> Study on YouTube without getting distracted. Your search becomes your Target, and Aim helps you stay focused on it.
+> Study on YouTube without getting distracted. Your search becomes your aim, and Aim helps you stay focused on it.
 
 **Rule for this listing:** describe only what works in the submitted build. Don't mention AI study sessions, TeachBack or Aim Plus until they ship (Chrome Web Store policy requires an accurate listing).
 
@@ -19,15 +19,15 @@ Everything the Chrome Web Store submission form asks for, ready to paste. Items 
 
 > Want to study on YouTube without getting distracted? You came to YouTube for a reason. Aim helps you accomplish it, whether you're preparing for an exam, learning a new skill or finding a quick answer, without blocking what's useful about YouTube.
 >
-> **Your search becomes your Target.** Search YouTube as usual. Aim remembers why you're there, keeps later searches on the same Target, and asks only when a search seems to head somewhere new.
+> **Your search becomes your aim.** Search YouTube as usual. Aim remembers why you're there, keeps later searches on the same aim, and asks only when a search seems to head somewhere new.
 >
-> **Stay on track without trying.** While you're on Target you watch what your own searches found. Shorts, recommendations, end screens and autoplay step out of the way, and the sidebar shows "Up next from your search" instead.
+> **Stay on track without trying.** While you're on your aim you watch what your own searches found. Shorts, recommendations, end screens and autoplay step out of the way, and the sidebar shows "Up next from your search" instead.
 >
-> **Change direction deliberately.** Changing your Target is one tap. Changing it without noticing is what Aim prevents.
+> **Change direction deliberately.** Changing your aim is one tap. Changing it without noticing is what Aim prevents.
 >
 > **Take a break when you want one.** Browse YouTube freely for 15 minutes, an hour, or just one video. Breaks share a daily leisure allowance you set, and Aim lets the video you're watching finish when time runs out.
 >
-> **Reach your Target.** Tell Aim when you've found what you needed. It won't push you to keep watching.
+> **Reach your aim.** Tell Aim when you've found what you needed. It won't push you to keep watching.
 >
 > **Looks like YouTube.** Aim follows YouTube's light and dark themes and fits into its top bar.
 >
@@ -40,7 +40,7 @@ Everything the Chrome Web Store submission form asks for, ready to paste. Items 
 | Asset | Size | Notes |
 |---|---|---|
 | Store icon | 128×128 | `icons/128.png` |
-| Screenshots | 1280×800 (1 to 5) | Suggested: homepage card · results with your Target · watch page with Up next · "Not on your Target" · the popup |
+| Screenshots | 1280×800 (1 to 5) | Suggested: homepage card · results with your aim · watch page with Up next · "Not on your aim" · the popup |
 | Small promo tile | 440×280 | `icons/wordmark.png` on cream (#f8f1e7) + one line |
 | Marquee (optional) | 1400×560 | |
 
@@ -49,10 +49,10 @@ Don't show YouTube's logo prominently in screenshots or promos, and don't make t
 ## Privacy practices tab
 
 **Single purpose:**
-> Help people use YouTube intentionally: set a Target for each visit, keep viewing on that Target, and take deliberate, time-limited breaks.
+> Help people use YouTube intentionally: set an aim for each visit, keep viewing on that aim, and take deliberate, time-limited breaks.
 
 **Permission justifications:**
-- `storage`: stores the user's Targets, searches, watch time, settings and history locally on their device. Nothing is transmitted.
+- `storage`: stores the user's aims, searches, watch time, settings and history locally on their device. Nothing is transmitted.
 - Host access to `https://www.youtube.com/*` (content scripts): shows Aim's interface on YouTube and hides distractions. Aim runs on no other site.
 
 **Remote code:** No, Aim does not use remote code. All code is in the package.

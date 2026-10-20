@@ -162,7 +162,7 @@ async function migrateTo4(old) {
   await chrome.storage.local.remove(["apiKey", "model"]);
 }
 
-// 5: Targets can be set aside and resumed (the `paused` list), and remember when they were last
+// 5: Aims can be set aside and resumed (the `paused` list), and remember when they were last
 // active and the last video watched, so resuming picks up where you left off.
 async function migrateTo5(old) {
   const purpose = old.purpose ? { lastActiveAt: old.purpose.startedAt || Date.now(), last: null, ...old.purpose } : null;
@@ -243,9 +243,9 @@ function weekSummary(usage, history, now = new Date()) {
     breaks: history.filter(h => h.type === "break" && (h.endedAt || 0) >= since).length };
 }
 
-// ---------- Targets you can pick up again ----------
-// The home screen shows the current Target and at most two others; the Targets page shows all.
-// Set-aside Targets come first (they're unfinished), then recently completed ones.
+// ---------- Aims you can pick up again ----------
+// The home screen shows the current aim and at most two others; the aims page shows all.
+// Set-aside aims come first (they're unfinished), then recently completed ones.
 function resumable(s) {
   const pausedList = s.paused.map(p => summary(p, "paused"));
   const done = s.history.filter(h => h.type === "purpose" && h.text).slice().reverse().map(h => summary(h, "completed"));
@@ -257,7 +257,7 @@ function summary(p, state) {
     outcome: p.outcome || null, last: p.last || null, study: studyProgress(p), notes: p.notes || "", elsewhere: !!p.elsewhere, recent: recentVideos(p), trail: searchTrail(p) };
 }
 
-// The way a Target went, from its searches: "truck ac recharge → refrigerant types → ac compressor".
+// The way an aim went, from its searches: "truck ac recharge → refrigerant types → ac compressor".
 // Each search once, in order; the last six.
 function searchTrail(p) {
   const seen = new Set(), out = [];
@@ -265,9 +265,9 @@ function searchTrail(p) {
   return out.slice(-6);
 }
 
-// The videos watched for a Target, most recently watched first (the one you'd continue leads),
+// The videos watched for an aim, most recently watched first (the one you'd continue leads),
 // with where you stopped in each and its length in seconds when known: the thumbnails on
-// "Pick up where you left off" and the Targets page. Only videos you chose; never suggestions.
+// "Pick up where you left off" and the aims page. Only videos you chose; never suggestions.
 function recentVideos(p, n = 7) {
   const lengths = new Map((p.allowed || []).map(v => [v.id, v.length]));
   const toSec = l => (l ? String(l).split(":").reduce((s, x) => s * 60 + Number(x), 0) : 0);
@@ -291,8 +291,8 @@ function studyProgress(p) {
   return { topic: Math.min(st.topics.length, (st.current || 0) + 1), of: st.topics.length, checked: st.topics.filter(t => t.check).length };
 }
 
-// Where to land when a Target is resumed: the last video, at the moment you left it; otherwise
-// the last search; otherwise the homepage, which shows the Target.
+// Where to land when an aim is resumed: the last video, at the moment you left it; otherwise
+// the last search; otherwise the homepage, which shows the aim.
 function resumeUrl(p) {
   if (p.last?.id) return `https://www.youtube.com/watch?v=${encodeURIComponent(p.last.id)}${p.last.t > 5 ? `&t=${Math.floor(p.last.t)}s` : ""}`;
   const q = p.searches?.[p.searches.length - 1]?.q;
@@ -310,7 +310,7 @@ function purposeRecord(p, outcome) {
     kind: p.librarian?.kind || null, study: studySnapshot(p.study) };
 }
 
-// What a study session showed, kept when its Target ends, for the learning record.
+// What a study session showed, kept when its aim ends, for the learning record.
 function studySnapshot(st) {
   if (!st?.topics?.length) return null;
   return { title: st.title, startedAt: st.startedAt || null, endedAt: st.endedAt || null,
@@ -320,7 +320,7 @@ function studySnapshot(st) {
 }
 
 // ---------- the learning record ----------
-// Every Target with something to show (time spent or videos watched), newest first: the current one,
+// Every aim with something to show (time spent or videos watched), newest first: the current one,
 // those set aside, and finished ones, with study sessions' checks and projects. All from this browser.
 function learningRecord(s) {
   const entry = (p, state) => {
@@ -360,8 +360,8 @@ function newPurpose(text, search, limitMin) {
   };
 }
 
-// Starting a Target ends any break (the break is what you were doing instead), and sets aside
-// the Target you had, so you can pick it up again later.
+// Starting an aim ends any break (the break is what you were doing instead), and sets aside
+// the aim you had, so you can pick it up again later.
 async function startPurpose({ text, search, limitMin, video, learn }) {
   text = clip(text, 300);
   if (text.length < 2) return { result: "error", message: "Write what you're here for." };
@@ -381,15 +381,15 @@ async function startPurpose({ text, search, limitMin, video, learn }) {
   return { result: "applied", purpose, setAside: setAside ? setAside.text : null };
 }
 
-// Changing Target is a deliberate change of objective: the old Target is set aside (resumable,
+// Changing aim is a deliberate change of objective: the old aim is set aside (resumable,
 // with its searches and videos) and the new one starts fresh, with the video that prompted it.
 async function pivotPurpose(text, limitMin, video) {
   text = clip(text, 300);
-  if (text.length < 2) return { result: "error", message: "Write your new Target." };
+  if (text.length < 2) return { result: "error", message: "Write your new aim." };
   return startPurpose({ text, limitMin: limitMin ?? undefined, video });
 }
 
-// Set-aside Targets: newest first, at most 20. The oldest beyond that become history, unfinished.
+// Set-aside aims: newest first, at most 20. The oldest beyond that become history, unfinished.
 const MAX_PAUSED = 20;
 function park(s, p) {
   const parked = { ...p, suspended: false, lastCountAt: 0, pausedAt: Date.now(), lastActiveAt: p.lastActiveAt || Date.now() };
@@ -398,18 +398,18 @@ function park(s, p) {
   return parked;
 }
 
-// Set the current Target aside on purpose, without starting another.
+// Set the current aim aside on purpose, without starting another.
 async function pausePurpose() {
   const s = await readAll();
-  if (!s.purpose) return { result: "error", message: "No Target set." };
+  if (!s.purpose) return { result: "error", message: "No aim set." };
   const parked = park(s, s.purpose);
   const stop = s.stop?.kind === "purpose" ? null : s.stop;
   await chrome.storage.local.set({ purpose: null, paused: s.paused, history: s.history, stop });
   return { result: "applied", setAside: parked.text };
 }
 
-// Pick a Target up again: a set-aside one comes back as it was; a completed one starts again
-// with its searches and the videos you watched for it. The current Target, if any, is set aside.
+// Pick an aim up again: a set-aside one comes back as it was; a completed one starts again
+// with its searches and the videos you watched for it. The current aim, if any, is set aside.
 // Returns where to go: the last video at the moment you left it, or the last search.
 async function resumePurpose(id) {
   const s = await readAll();
@@ -423,7 +423,7 @@ async function resumePurpose(id) {
     if (next.last?.id) allow(next, [next.last], [], "");
   } else {
     const done = s.history.find(h => h.type === "purpose" && h.id === id);
-    if (!done) return { result: "error", message: "That Target isn't available any more." };
+    if (!done) return { result: "error", message: "That aim isn't available any more." };
     next = newPurpose(done.text, null, 0);
     next.searches = (done.searches || []).slice(-50);
     allow(next, done.videos || [], [], "");
@@ -440,7 +440,7 @@ async function resumePurpose(id) {
   return { result: "applied", purpose: next, url: resumeUrl(next) };
 }
 
-// Remove a set-aside Target you don't want to come back to. It stays in history, unfinished.
+// Remove a set-aside aim you don't want to come back to. It stays in history, unfinished.
 async function dropPaused(id) {
   const s = await readAll();
   const p = s.paused.find(x => x.id === id);
@@ -458,7 +458,7 @@ function setLimitFromNow(p, minutes) {
 async function setPurposeLimit({ minutes, add }) {
   const s = await readAll();
   const p = s.purpose;
-  if (!p) return { result: "error", message: "No Target set." };
+  if (!p) return { result: "error", message: "No aim set." };
   if (add) setLimitFromNow(p, Math.max(0, p.limitMin ? p.limitMin - Math.ceil(p.usedSec / 60) : 0) + parseInt(add, 10));
   else setLimitFromNow(p, parseInt(minutes, 10) || 0);
   p.timeUp = !!p.limitMin && p.usedSec >= p.limitMin * 60;
@@ -483,7 +483,7 @@ async function refinePurpose(text) {
 async function addSearch(query) {
   const s = await readAll();
   query = clip(query, 200);
-  if (!s.purpose || !query) return { result: "error", message: "No Target set." };
+  if (!s.purpose || !query) return { result: "error", message: "No aim set." };
   const last = s.purpose.searches[s.purpose.searches.length - 1];
   if (last?.q !== query) s.purpose.searches.push({ q: query, at: Date.now() });
   s.purpose.searches = s.purpose.searches.slice(-50);
@@ -519,7 +519,7 @@ function allow(p, videos, lists, query) {
 
 async function allowVideos({ query, videos, lists }) {
   const s = await readAll();
-  if (!s.purpose) return { result: "error", message: "No Target set." };
+  if (!s.purpose) return { result: "error", message: "No aim set." };
   allow(s.purpose, Array.isArray(videos) ? videos.slice(0, 100) : [], Array.isArray(lists) ? lists.slice(0, 20) : [], query);
   await chrome.storage.local.set({ purpose: s.purpose });
   return { result: "applied", count: s.purpose.allowed.length };
@@ -549,7 +549,7 @@ function meaningfulWords(text) {
 function searchFits(purpose, query) {
   const q = meaningfulWords(query);
   if (!q.length) return true; // nothing to judge by
-  // Searches the librarian suggested for this Target count as part of it too.
+  // Searches the librarian suggested for this aim count as part of it too.
   const known = [purpose.text, ...(purpose.searches || []).map(s => s.q), ...(purpose.librarian?.searches || []),
     ...(purpose.study?.topics || []).flatMap(t => [t.title, ...t.searches])].flatMap(meaningfulWords);
   const same = (a, b) => a === b || (a.length >= 5 && b.length >= 5 && a.slice(0, 5) === b.slice(0, 5));
@@ -560,8 +560,8 @@ async function checkSearch(query) {
   return { fits: !s.purpose || searchFits(s.purpose, clip(query, 200)) };
 }
 
-// ---------- the librarian's memory of a Target ----------
-// What the librarian said, kept with the Target in this browser (never on Aim's server), so a
+// ---------- the librarian's memory of an aim ----------
+// What the librarian said, kept with the aim in this browser (never on Aim's server), so a
 // follow-up like "explain that last part more clearly" has context, and resuming keeps it.
 // answer: { target, kind, note, searches, refine, sameTarget } from the librarian-ask task.
 async function applyLibrarian({ request, answer, newTarget }) {
@@ -594,7 +594,7 @@ async function applyLibrarian({ request, answer, newTarget }) {
 // The librarian's picks for one search, so returning to it doesn't ask the AI again.
 async function savePicks({ query, groups }) {
   const s = await readAll();
-  if (!s.purpose?.librarian) return { result: "error", message: "No librarian for this Target." };
+  if (!s.purpose?.librarian) return { result: "error", message: "No librarian for this aim." };
   query = clip(query, 150);
   const picks = s.purpose.librarian.picks || {};
   picks[query] = (Array.isArray(groups) ? groups : []).slice(0, 3).map(g => ({
@@ -609,12 +609,12 @@ async function savePicks({ query, groups }) {
 }
 
 // ---------- study sessions (Aim Plus) ----------
-// A study session is a plan attached to the Target: ordered topics, each with a short brief, its
+// A study session is a plan attached to the aim: ordered topics, each with a short brief, its
 // searches, the videos picked for it, which of them you watched, and a TeachBack check. It lives
-// with the Target in this browser; sessions are temporary and goal-oriented.
+// with the aim in this browser; sessions are temporary and goal-oriented.
 async function startStudy({ title, scopeNote, topics, notes }) {
   const s = await readAll();
-  if (!s.purpose) return { result: "error", message: "No Target set." };
+  if (!s.purpose) return { result: "error", message: "No aim set." };
   const list = (Array.isArray(topics) ? topics : []).slice(0, 6).map(t => ({
     id: uid(), title: clip(t.title, 80), brief: clip(t.brief, 500),
     searches: (Array.isArray(t.searches) ? t.searches : []).map(q => clip(q, 150)).filter(Boolean).slice(0, 2),
@@ -655,7 +655,7 @@ async function updateStudy({ topicId, videos, current, check, end, apply, applyD
 // Done. The record is also left as a reflection for the next YouTube page to show.
 async function finishPurpose(outcome) {
   const s = await readAll();
-  if (!s.purpose) return { result: "error", message: "No Target set." };
+  if (!s.purpose) return { result: "error", message: "No aim set." };
   outcome = ["yes", "partly", "no"].includes(outcome) ? outcome : null;
   const record = purposeRecord(s.purpose, outcome);
   const stop = s.stop?.kind === "purpose" ? null : s.stop;
@@ -724,11 +724,11 @@ async function addThemeVideos(videos) {
   return { result: "applied" };
 }
 
-// Notes on a Target: questions for a call, things to remember. They stay with the Target when it's
+// Notes on an aim: questions for a call, things to remember. They stay with the aim when it's
 // set aside, completed or resumed.
 async function setTargetNotes(text) {
   const s = await readAll();
-  if (!s.purpose) return { result: "error", message: "No Target set." };
+  if (!s.purpose) return { result: "error", message: "No aim set." };
   s.purpose.notes = String(text || "").slice(0, 4000);
   await chrome.storage.local.set({ purpose: s.purpose });
   return { result: "applied", notes: s.purpose.notes };
@@ -783,7 +783,7 @@ async function recordTick(seconds, video) {
     activity.usedSec += credit(activity.lastCountAt, now, seconds);
     activity.lastCountAt = now;
     activity.lastActiveAt = now;
-    // Where you are in the video, so resuming the Target can return to it.
+    // Where you are in the video, so resuming the aim can return to it.
     if (activity === purpose && video?.id) purpose.last = { id: clip(video.id, 20), title: clip(video.title, 300), t: Math.max(0, Number(video.t) || 0), at: now };
     // In a study session, a topic's video counts as watched once it has played a little.
     if (activity === purpose && video?.id && purpose.study && !purpose.study.endedAt) {
@@ -1029,13 +1029,13 @@ function planUrl(item) {
   return `https://www.youtube.com/results?search_query=${encodeURIComponent(item.search || item.title)}`;
 }
 
-// Start (or continue) a video lesson: it becomes the Target. A plan lesson you were on is simply
-// archived (the plan is what you pick up again), any other Target is set aside as usual.
+// Start (or continue) a video lesson: it becomes the aim. A plan lesson you were on is simply
+// archived (the plan is what you pick up again), any other aim is set aside as usual.
 async function planStart(id) {
   const { homeschool: hs } = await chrome.storage.local.get("homeschool");
   const item = hs?.items.find(i => i.id === id);
   if (!item) return { result: "error", message: "That isn't in today's plan." };
-  if (item.kind !== "video") return { result: "error", message: "Only video lessons start a Target." };
+  if (item.kind !== "video") return { result: "error", message: "Only video lessons start an aim." };
   const s = await readAll();
   if (s.purpose?.plan === id && !s.brk) return { result: "applied", url: planUrl(item) };
   const writes = {};
@@ -1055,7 +1055,7 @@ async function planDone(id, done = true) {
   if (!item) return { result: "error", message: "That isn't in today's plan." };
   item.doneAt = done ? Date.now() : null;
   if (done) await queueFamilyReport(item, "done");
-  // The whole day done: the last lesson stops being the Target, so YouTube is just YouTube again.
+  // The whole day done: the last lesson stops being the aim, so YouTube is just YouTube again.
   const writes = { homeschool: hs };
   if (hs.items.every(i => i.doneAt)) {
     const s = await readAll();
@@ -1124,7 +1124,7 @@ async function notePlanVideo(id, video) {
 
 // ---------- channels ----------
 // action: "prefer" (Learn from: a channel you learn from, optionally under a topic of yours) |
-// "break" (For breaks: free on a break; on a Target, Aim asks first) | "hide" | "warn" (Keep out:
+// "break" (For breaks: free on a break; on an aim, Aim asks first) | "hide" | "warn" (Keep out:
 // hidden, or asked about) | null (remove: not sorted).
 const CHANNEL_ACTIONS = ["prefer", "break", "hide", "warn"];
 async function setAvoid(key, name, action, topic) {
@@ -1157,7 +1157,7 @@ async function saveSubs(channels, complete) {
 }
 
 // What the Your channels page needs: subscriptions, your rules, your topics, and which channels
-// you've watched for Targets (to suggest Learn from).
+// you've watched for aims (to suggest Learn from).
 async function channelsPage() {
   const { subs = {}, avoid = {}, history = [], paused = [], purpose = null } = await chrome.storage.local.get(["subs", "avoid", "history", "paused", "purpose"]);
   const watched = {};
@@ -1169,7 +1169,7 @@ async function channelsPage() {
 }
 
 // ---------- strict mode: the reasons you gave ----------
-// Kept in this browser (the last 100), with the Target they were for; the popup shows them.
+// Kept in this browser (the last 100), with the aim they were for; the popup shows them.
 const REASON_KINDS = ["more-time", "channel", "search"];
 async function addReason({ kind, text, detail }) {
   if (!REASON_KINDS.includes(kind)) return { result: "error", message: "Unknown reason." };
@@ -1207,7 +1207,7 @@ async function learnSeen() {
 
 // ---------- quick review with Shorts ----------
 // What you've learned, as things to review: study topics (those a TeachBack check said need work
-// count most), then each Target and its searches. Each Short from your topics' channels is matched to
+// count most), then each aim and its searches. Each Short from your topics' channels is matched to
 // the one it shares the most meaningful words with. No AI.
 function reviewConcepts(s) {
   const out = [];
@@ -1275,7 +1275,7 @@ async function clearHistory() {
 }
 
 // ---------- sync across devices (Aim Plus, sync.js) ----------
-// What sync carries, as items: each Target (current, set aside or finished, with its study session),
+// What sync carries, as items: each aim (current, set aside or finished, with its study session),
 // each Saved for later video, settings, and channel rules. Usage, breaks, reasons and Pathways stay
 // in this browser. Something you delete on purpose (Clear history, removing a saved video) is noted,
 // so it's deleted in your other browsers too; things that only age out of the lists aren't.
@@ -1286,7 +1286,7 @@ async function noteDeleted(kind, ids) {
   await chrome.storage.local.set({ syncDeleted: [...syncDeleted, ...ids.map(id => ({ kind, id }))].slice(-1000) });
 }
 
-// A Target as synced: without what only this browser's timer uses, and with its longest lists cut short.
+// An aim as synced: without what only this browser's timer uses, and with its longest lists cut short.
 function syncTarget(p, state) {
   const { lastCountAt, suspended, elsewhere, ...rec } = p;
   if (rec.allowed?.length > 150) rec.allowed = rec.allowed.slice(-150);
@@ -1319,7 +1319,7 @@ async function syncMerge(items, first = false) {
     const data = it.data && typeof it.data === "object" ? it.data : null;
     if (it.kind === "target") {
       const rec = data?.record && typeof data.record === "object" ? { ...data.record, id: it.id } : null;
-      if (!rec || typeof rec.text !== "string") {  // deleted elsewhere (not the Target you're on here)
+      if (!rec || typeof rec.text !== "string") {  // deleted elsewhere (not the aim you're on here)
         paused = paused.filter(p => p.id !== it.id);
         history = history.filter(h => h.id !== it.id);
         continue;

@@ -1,4 +1,4 @@
-// Aim — the learning record: every Target with something to show, newest first, with the time and
+// Aim — the learning record: every aim with something to show, newest first, with the time and
 // videos behind it, and for study sessions the topics, what each check showed, and the project you
 // did. Read-only; printable. Checks are estimates from TeachBack, not grades.
 
@@ -46,12 +46,12 @@ async function render() {
   const shown = r.entries.filter(e => filter === "all" || (filter === "study" ? e.study : e.state === "completed"));
   box.replaceChildren(
     node("div", { className: "totals" },
-      [[t.targets, "Targets completed"], [hours(t.learningSec), "time on Target"], [t.topicsChecked, "study topics checked"],
+      [[t.targets, "Aims completed"], [hours(t.learningSec), "time on aims"], [t.topicsChecked, "study topics checked"],
         [t.demonstrated, "ideas demonstrated"], [t.projects, "projects done"]].map(([n, l]) => node("div", {}, node("b", { textContent: String(n) }), node("span", { textContent: l })))),
     node("div", { className: "filters no-print seg" }, [["all", "Everything"], ["study", "Study sessions"], ["completed", "Completed"]].map(([k, l]) =>
       node("button", { type: "button", textContent: l, ariaPressed: String(filter === k), onclick: () => { filter = k; render(); } }))),
     ...(shown.length ? shown.map(entryCard) : [node("p", { className: "muted", textContent: r.entries.length ? "Nothing here yet." :
-      "Nothing yet. Set a Target on YouTube; what you work on shows up here." })]),
+      "Nothing yet. Set an aim on YouTube; what you work on shows up here." })]),
     node("p", { className: "muted small", style: "margin-top:20px", textContent: "Checks are estimates from TeachBack conversations, based only on what you wrote. They aren't grades." }));
 }
 

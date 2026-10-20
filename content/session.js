@@ -1,5 +1,5 @@
 // Aim — the indicator in YouTube's top bar and what it opens: the current purpose or break,
-// time left, Take a break, Change Target, Target complete.
+// time left, Take a break, Change my aim, Done.
 
 // ---------------- top-bar indicator ----------------
 // One pill shaped like YouTube's own Create button. It sits beside the search box when the
@@ -12,7 +12,7 @@ function chipContent() {
   if (brk) return { label: brk.theme ? `Relax: ${shorten(brk.theme.text, 22)}` : "Break", time: brk.oneVideoId ? "1 video" : `${fmtClock((breakEndsAt - Date.now()) / 1000)} left` };
   const p = activePurpose();
   if (p) return { label: shorten(p.text, 28), time: p.timeUp ? "Time's up" : purposeLeft(p) !== null ? fmtMin(purposeLeft(p)) : null };
-  return { label: "Set Target", time: null };
+  return { label: "Set aim", time: null };
 }
 
 function renderChip() {
@@ -81,18 +81,18 @@ function purposeMenu() {
   const p = activePurpose();
   const left = purposeLeft(p);
   const head = el("button", { class: "wp-menu-head", onclick: () => { closeDropdown(); openPivotDialog(); } },
-    el("div", {}, el("div", { class: "wp-label" }, "Current Target"), el("div", { class: "wp-strong" }, p.text)),
+    el("div", {}, el("div", { class: "wp-label" }, "Your aim"), el("div", { class: "wp-strong" }, p.text)),
     icon("right"));
   const time = left !== null ? timeBlock("Time limit", left, p.limitMin * 60)
     : el("div", { class: "wp-menu-block wp-row-between" },
         el("span", { class: "wp-muted" }, "No time limit"),
         el("button", { class: "wp-link", onclick: () => { closeDropdown(); openLimitDialog(); } }, "Set one"));
   const searches = p.searches.length > 1 ? el("div", { class: "wp-menu-block" },
-    el("div", { class: "wp-label" }, "Searches toward this Target"),
+    el("div", { class: "wp-label" }, "Searches toward this aim"),
     el("div", { class: "wp-muted" }, p.searches.slice(-4).map(s => s.q).join(" · "))) : null;
   return [head, time, searches, focusBlock(), breakBlock(), el("div", { class: "wp-menu-items" },
     menuItem("check2", doneLabel(activePurpose()), doneAction(activePurpose())),
-    menuItem("pivot", "Change Target", () => openPivotDialog()),
+    menuItem("pivot", "Change my aim", () => openPivotDialog()),
     menuItem("pause", "Set aside for later", setAsideTarget),
     menuItem("book", p.notes ? "Notes" : "Add notes", openNotesDialog),
     left !== null ? menuItem("clock", "Change time limit", openLimitDialog) : null,
@@ -106,10 +106,10 @@ function breakMenu() {
     el("div", { class: "wp-label" }, brk.theme ? `Relaxing: ${brk.theme.text}` : "On a break"),
     el("div", { class: "wp-strong" }, brk.oneVideoId ? "Just this video" : `${fmtMin(left)} left`),
     left !== null ? el("div", { class: "wp-bar" }, el("i", { style: `width:${Math.min(100, (left / (brk.durationMin * 60)) * 100)}%` })) : null,
-    waiting ? el("div", { class: "wp-muted wp-ellipsis", style: "margin-top:8px" }, `Your Target is waiting: ${waiting.text}`) : null);
+    waiting ? el("div", { class: "wp-muted wp-ellipsis", style: "margin-top:8px" }, `Your aim is waiting: ${waiting.text}`) : null);
   return [head, el("div", { class: "wp-menu-items" },
-    waiting ? menuItem("play", "Back on Target", endBreakNow) : menuItem("pivot", "Set Target", () => openStartDialog()),
-    // The homepage card is hidden during a break, so set-aside Targets can be picked up from here.
+    waiting ? menuItem("play", "Back to my aim", endBreakNow) : menuItem("pivot", "Set aim", () => openStartDialog()),
+    // The homepage card is hidden during a break, so set-aside aims can be picked up from here.
     ...(waiting ? [] : (status.paused || []).slice(0, 2).map(t => menuItem("play", `Resume: ${shorten(t.text, 34)}`, () => resumeTarget(t.id)))),
     !brk.oneVideoId && !leisureUsedUp() ? menuItem("clock", "Add 15 minutes", extendBreakNow) : null,
     menuItem("end", "End break", endBreakNow),
@@ -119,8 +119,8 @@ function breakMenu() {
 function idleMenu() {
   return [el("div", { class: "wp-menu-block wp-menu-first" },
     el("div", { class: "wp-strong" }, status.totalReached ? "That's today's YouTube time" : "What brings you here?"),
-    el("div", { class: "wp-muted" }, status.totalReached ? "Your daily limit resets at midnight." : "Set a Target, or take a break.")),
-    status.totalReached ? null : el("div", { class: "wp-menu-items" }, menuItem("pivot", "Set Target", () => openStartDialog())),
+    el("div", { class: "wp-muted" }, status.totalReached ? "Your daily limit resets at midnight." : "Set an aim, or take a break.")),
+    status.totalReached ? null : el("div", { class: "wp-menu-items" }, menuItem("pivot", "Set aim", () => openStartDialog())),
     status.totalReached ? null : focusBlock(),
     status.totalReached ? null : breakBlock()].filter(Boolean);
 }
@@ -129,7 +129,7 @@ async function endBreakNow() {
   applyStatus(await send({ type: "break-end" }) && await send({ type: "status" }));
   renderChip();
   route();
-  toast(purpose ? `Back on Target: ${purpose.text}` : "Break ended.");
+  toast(purpose ? `Back to my aim: ${purpose.text}` : "Break ended.");
   if (currentId) regate(currentId);
 }
 
@@ -142,19 +142,19 @@ async function extendBreakNow() {
 }
 
 // ---------------- dialogs ----------------
-// "Recent Targets": one tap fills the box (it still needs confirming).
+// "Recent aims": one tap fills the box (it still needs confirming).
 function recentList(input) {
   const recent = (status.recent || []).filter(t => t !== purpose?.text);
   if (!recent.length) return null;
   return el("div", { class: "wp-recent" },
-    el("div", { class: "wp-label" }, "Recent Targets"),
+    el("div", { class: "wp-label" }, "Recent aims"),
     ...recent.map(t => el("button", { class: "wp-recent-item", onclick: () => { input.value = t; input.focus(); } }, icon("clock"), el("span", { class: "wp-ellipsis" }, t))));
 }
 
 // Set a purpose from the indicator (the homepage card and searching do the same).
 function openStartDialog() {
   closeDropdown();
-  const input = el("input", { type: "text", placeholder: "What do you want to find or learn?", "aria-label": "Your Target" });
+  const input = el("input", { type: "text", placeholder: "What do you want to find or learn?", "aria-label": "Your aim" });
   const err = el("div", { class: "wp-error" });
   const start = async () => {
     // Set from a video page, the purpose includes the video on screen.
@@ -174,39 +174,39 @@ function openStartDialog() {
     el("div", { class: "wp-field" }, icon("search"), input), recentList(input), err,
     el("div", { class: "wp-actions" },
       el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Cancel"),
-      el("button", { class: "wp-btn wp-btn-primary", onclick: start }, "Set Target"))));
+      el("button", { class: "wp-btn wp-btn-primary", onclick: start }, "Set aim"))));
   setTimeout(() => input.focus(), 50);
 }
 
-// The intentional pivot: a new Target. The current one is set aside, to resume later.
-// From a video that didn't fit, pass it as `video`: the new Target includes it.
+// The intentional pivot: a new aim. The current one is set aside, to resume later.
+// From a video that didn't fit, pass it as `video`: the new aim includes it.
 function openPivotDialog(prefill = "", { afterConfirm = null, video = null } = {}) {
   closeDropdown();
   if (!purpose) return openStartDialog();
-  const input = el("input", { type: "text", placeholder: "What do you want to find or learn?", "aria-label": "New Target" });
+  const input = el("input", { type: "text", placeholder: "What do you want to find or learn?", "aria-label": "New aim" });
   input.value = typeof prefill === "string" ? prefill : "";
   const err = el("div", { class: "wp-error" });
   const confirm = async () => {
     const v = video ? { id: video.id, title: video.title, channel: video.channel } : undefined;
     const r = await send({ type: "purpose-pivot", text: input.value, video: v });
-    if (!r || r.result !== "applied") { err.textContent = r?.message || "Couldn't change the Target. Try again."; return; }
+    if (!r || r.result !== "applied") { err.textContent = r?.message || "Couldn't change the aim. Try again."; return; }
     if (afterConfirm) await afterConfirm();
     applyStatus(await send({ type: "status" }));
     closeModal();
     renderChip();
     route();
-    toast(r.setAside ? `New Target. "${shorten(r.setAside, 40)}" is set aside for later.` : `New Target: ${purpose.text}`);
+    toast(r.setAside ? `New aim. "${shorten(r.setAside, 40)}" is set aside for later.` : `New aim: ${purpose.text}`);
     if (currentId) regate(currentId);
   };
   keepKeys(input, confirm);
   openModal(el("div", { class: "wp-dialog", role: "dialog", "aria-modal": "true" },
-    el("div", { class: "wp-title" }, "Change Target"),
-    el("div", { class: "wp-current" }, el("div", { class: "wp-label" }, "Current Target"), el("div", { class: "wp-strong" }, purpose.text)),
+    el("div", { class: "wp-title" }, "Change my aim"),
+    el("div", { class: "wp-current" }, el("div", { class: "wp-label" }, "Your aim"), el("div", { class: "wp-strong" }, purpose.text)),
     el("div", { class: "wp-field" }, icon("search"), input), recentList(input),
-    el("p", { class: "wp-muted" }, "Your current Target is set aside with its searches and videos. Pick it up again from the homepage anytime."), err,
+    el("p", { class: "wp-muted" }, "Your current aim is set aside with its searches and videos. Pick it up again from the homepage anytime."), err,
     el("div", { class: "wp-actions" },
       el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Cancel"),
-      el("button", { class: "wp-btn wp-btn-primary", onclick: confirm }, "Change Target"))));
+      el("button", { class: "wp-btn wp-btn-primary", onclick: confirm }, "Change my aim"))));
   setTimeout(() => input.focus(), 50);
 }
 
@@ -217,8 +217,8 @@ function openRefineDialog() {
   input.value = purpose.text;
   keepKeys(input);
   openModal(el("div", { class: "wp-dialog", role: "dialog", "aria-modal": "true" },
-    el("div", { class: "wp-title" }, "Edit your Target"),
-    el("p", { class: "wp-muted" }, "Say the same goal more precisely. To go somewhere new, use Change Target."),
+    el("div", { class: "wp-title" }, "Edit your aim"),
+    el("p", { class: "wp-muted" }, "Say the same goal more precisely. To go somewhere new, use Change my aim."),
     input,
     el("div", { class: "wp-actions" },
       el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Cancel"),
@@ -264,7 +264,7 @@ async function addPurposeTime(minutes) {
 // A quick lookup ("how do I reset my router?") ends in one tap: "Got my answer", with no
 // questions or follow-up offers. The librarian decides what's a lookup.
 const isLookup = p => p?.librarian?.kind === "lookup" && !p.study && !p.plan;
-const doneLabel = p => (isLookup(p) ? "Got my answer" : "Target complete");
+const doneLabel = p => (isLookup(p) ? "Got my answer" : "Done with this aim");
 const doneAction = p => (isLookup(p) ? () => finishPurpose("yes") : askDone);
 
 async function askDone() {
@@ -274,7 +274,7 @@ async function askDone() {
   const plus = (await send({ type: "plus-brief" }))?.plus === true;
   openModal(el("div", { class: "wp-dialog wp-dialog-center wp-done-dialog", role: "dialog", "aria-modal": "true" },
     el("div", { class: "wp-done-check" }, icon("check")),
-    el("div", { class: "wp-title" }, "Target complete?"),
+    el("div", { class: "wp-title" }, "Done with this aim?"),
     el("div", { class: "wp-muted" }, p.text),
     el("label", { class: "wp-q wp-q-sm" }, "Did you find what you were looking for?"),
     el("div", { class: "wp-done-actions" },
@@ -283,7 +283,7 @@ async function askDone() {
         el("button", { class: "wp-btn wp-btn-tonal", style: "flex:1", onclick: () => finishPurpose("partly") }, "Partly"),
         el("button", { class: "wp-btn wp-btn-tonal", style: "flex:1", onclick: () => finishPurpose("no") }, "Not really")),
       el("button", { class: "wp-btn wp-btn-text wp-btn-block", onclick: closeModal }, "Keep going")),
-    // With Pathways on, a learning Target asks once whether you'd like more of it.
+    // With Pathways on, a learning aim asks once whether you'd like more of it.
     status.pathways && (p.librarian?.kind === "learn" || p.study) ? interestChips({ topic: p.study?.title || p.text, source: "target" }) : null,
     plus && (p.librarian?.kind === "learn" || p.study || p.plan || !p.librarian) ? el("div", { class: "wp-done-teachback" },
       el("span", { class: "wp-muted" }, "Learned something?"),
@@ -308,7 +308,7 @@ async function showReflection() {
   if (!s) return;
   await send({ type: "reflection-clear" });
   if (Date.now() - (s.endedAt || 0) > 10 * 60 * 1000) return; // ended long ago, e.g. from the popup
-  if (s.outcome) return toast(s.outcome === "yes" ? "Target complete. Glad you found it." : "Target complete. Noted for next time.");
+  if (s.outcome) return toast(s.outcome === "yes" ? "Done. Glad you found it." : "Done. Noted for next time.");
   const mins = Math.max(1, Math.round(s.usedSec / 60));
   const pathText = s.path?.length > 1 ? s.path.map(p => p.text).join(" → ") : null;
   const rate = outcome => async () => {

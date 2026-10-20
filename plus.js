@@ -279,7 +279,7 @@ async function plusWelcome() {
 }
 
 // Your data: one file with everything on Aim's server for this account, plus what Aim keeps in this
-// browser (Targets, history, settings). The sign-in session itself is never included.
+// browser (aims, history, settings). The sign-in session itself is never included.
 async function plusExport() {
   const server = await plusCall("account-export");
   const browser = await chrome.storage.local.get(null);

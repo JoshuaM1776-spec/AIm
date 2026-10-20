@@ -2,7 +2,7 @@
    Colors come from YouTube's own theme variables (--yt-spec-*), so Aim follows YouTube's light
    and dark themes exactly; the fallbacks only apply if YouTube ever renames them. Aim's one accent
    is Aim coral (--wp-accent, the arrowhead in the Aim mark), used sparingly: getting back on
-   Target (Continue, Resume, Back on Target), the selected choice and the break indicator. Main
+   Aim (Continue, Resume, Back to my aim), the selected choice and the break indicator. Main
    buttons are Aim's forest green (cream in the dark theme), Homeschool's accent is Aim's learning
    green, and headlines use Inter Display, as on Aim's own pages (tokens.css). Cards and dialogs are
    a little rounder and roomier than YouTube's menus, so Aim's moments of decision read as calm and
@@ -310,7 +310,7 @@ html.wp-boot ytd-browse[page-subtype="home"] ytd-feed-filter-chip-bar-renderer {
 .wp-home-hint { margin: -8px 0 0 16px; font-size: 13px; }
 .wp-home-lede { margin: -8px 0 0; font-size: 14px; line-height: 20px; max-width: 560px; }
 .wp-home-alt { display: flex; align-items: center; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
-/* "Pick up where you left off": the current Target, then at most two set-aside ones. */
+/* "Pick up where you left off": the current aim, then at most two set-aside ones. */
 .wp-home-resume { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .wp-home-current { border: 1px solid var(--wp-divider, rgba(0,0,0,.1)); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 4px; }
 .wp-home-current .wp-home-purpose { margin-top: 0; }
@@ -320,8 +320,8 @@ html.wp-boot ytd-browse[page-subtype="home"] ytd-feed-filter-chip-bar-renderer {
 .wp-home-row { display: flex; align-items: center; gap: 16px; padding: 10px 0; border-top: 1px solid var(--wp-divider, rgba(0,0,0,.1)); }
 .wp-home-sub + .wp-home-row { border-top: 0; }
 .wp-home-row-text { flex: 1; min-width: 0; }
-/* Thumbnails of what you watched for a Target: the one you'd continue, "See more" of the rest, and a
-   small one beside each recent Target. YouTube's shapes; the progress line is Aim coral. */
+/* Thumbnails of what you watched for an aim: the one you'd continue, "See more" of the rest, and a
+   small one beside each recent aim. YouTube's shapes; the progress line is Aim coral. */
 .wp-thumb { position: relative; display: block; flex: none; border-radius: 8px; overflow: hidden; background: var(--wp-tonal) center / cover no-repeat; }
 .wp-thumb-lg { width: 168px; height: 94px; }
 .wp-thumb-sm { width: 112px; height: 63px; }
@@ -395,7 +395,7 @@ html.wp-boot ytd-browse[page-subtype="home"] ytd-feed-filter-chip-bar-renderer {
    Polish: Aim's primary actions, roomier cards, segmented choices.
    ====================================================================== */
 .wp .wp-btn-primary:disabled, .wp .wp-btn-accent:disabled { opacity: .5; cursor: default; }
-/* Coral is for getting back on Target: Continue, Resume, Back on Target. */
+/* Coral is for getting back on your aim: Continue, Resume, Back to my aim. */
 .wp .wp-btn-accent { background: var(--wp-accent); color: var(--wp-on-accent); }
 .wp .wp-btn-accent:hover { background: var(--wp-accent-hover); }
 .wp-btn-block { width: 100%; height: 44px; border-radius: 22px; font-size: 15px; }
@@ -437,14 +437,14 @@ html.wp-boot ytd-browse[page-subtype="home"] ytd-feed-filter-chip-bar-renderer {
 .wp-pill-break .wp-pill-label { color: var(--wp-accent); }
 .wp-pill-break .wp-pill-time { color: var(--wp-text); font-weight: 500; font-variant-numeric: tabular-nums; }
 
-/* "Target complete?": a green check. */
+/* "Done with this aim?": a green check. */
 .wp .wp-done-check { width: 56px; height: 56px; border-radius: 50%; background: var(--wp-success); color: #fff; display: flex;
   align-items: center; justify-content: center; transform: none; margin: 4px 0 2px; }
 .wp .wp-done-check .wp-icon { transform: scale(1.4); }
 .wp .wp-done-check svg circle { display: none; }
 .wp .wp-done-check svg path { stroke: #fff; }
 
-/* "Break time is up": the Target you're returning to. */
+/* "Break time is up": the aim you're returning to. */
 .wp-return { display: flex; gap: 12px; align-items: center; width: 100%; padding: 10px; border-radius: 12px;
   border: 1px solid var(--wp-divider); text-align: left; }
 .wp-return-thumb { width: 96px; height: 54px; flex: none; border-radius: 8px; background: var(--wp-tonal) center / cover no-repeat; }
@@ -463,7 +463,7 @@ html.wp-boot ytd-browse[page-subtype="home"] ytd-feed-filter-chip-bar-renderer {
 .wp-home-card .wp-break-pick .wp-chips { justify-content: center; }
 
 /* ---------- Aim Homeschool: the student's Today screen (content/plan.js) ----------
-   Homeschool's accent is Aim's learning green; Aim coral stays the extension's "back to your Target" color.
+   Homeschool's accent is Aim's learning green; Aim coral stays the extension's "back to your aim" color.
    Everything else uses YouTube's own light and dark theme colors, like the rest of Aim. */
 .wp-today, .wp-plan-panel, .wp-plan-guide { --wp-hs: #2b6e52; --wp-hs-hover: #22583f; --wp-hs-soft: rgba(43, 110, 82, 0.08); --wp-on-hs: #ffffff;
   --wp-sub-science: #e8590c; --wp-sub-math: #1a66d6; --wp-sub-history: #b7791f; --wp-sub-project: #2f9e44; --wp-sub-english: #7048e8; }
@@ -646,7 +646,7 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 .wp-rb-relax > .wp-lib { padding: 4px 8px 4px 0; }
 .wp-theme-panel { margin-bottom: 16px; }
 
-/* ---------- Notes on a Target (content/notes.js) ---------- */
+/* ---------- Notes on an aim (content/notes.js) ---------- */
 .wp-notes-dialog { width: min(560px, 100%); }
 .wp .wp-notes-input { width: 100%; min-height: 200px; resize: vertical; font: 400 14px/20px "Roboto", Arial, sans-serif; padding: 10px 12px; }
 .wp-notes-status:empty { display: none; }

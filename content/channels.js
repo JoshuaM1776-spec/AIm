@@ -2,18 +2,18 @@
 // the Your channels page (channels.html), or one at a time from the menu while watching.
 
 // A channel you chose to hide or be warned about: ask before watching, never force. A break channel,
-// on a Target: take a break to watch it, or back to the Target.
+// on an aim: take a break to watch it, or back to the aim.
 function openChannelWarning(info, action) {
   hold();
   const name = info.channel || "this channel";
   if (action === "break") return showPlayerCard(
     brandLine(),
     el("div", { class: "wp-title" }, `${name} is one of your break channels.`),
-    el("div", { class: "wp-muted" }, `Take a break to watch it, or get back to your Target.`),
+    el("div", { class: "wp-muted" }, `Take a break to watch it, or get back to your aim.`),
     el("div", { class: "wp-actions wp-actions-start" },
-      el("button", { class: "wp-btn wp-btn-primary", onclick: goBack }, "Back on Target"),
-      el("button", { class: "wp-btn wp-btn-text", onclick: () => withReason("channel", `Why watch ${name} on your Target?`, name,
-        () => { overridden.add(info.id); closePlayerCard(); continueAfterRules(info); }) }, "It's for my Target")),
+      el("button", { class: "wp-btn wp-btn-primary", onclick: goBack }, "Back to my aim"),
+      el("button", { class: "wp-btn wp-btn-text", onclick: () => withReason("channel", `Why watch ${name} on your aim?`, name,
+        () => { overridden.add(info.id); closePlayerCard(); continueAfterRules(info); }) }, "It's for my aim")),
     el("div", { class: "wp-label" }, "Or take a break"),
     breakChips(takeBreak, { oneVideoId: info.id }));
   showPlayerCard(
@@ -41,7 +41,7 @@ function openAvoidDialog() {
   openModal(el("div", { class: "wp-dialog", role: "dialog", "aria-modal": "true" },
     el("div", { class: "wp-title" }, `How should ${BRAND} treat ${info.channel || "this channel"}?`),
     el("p", { class: "wp-muted" }, `Learn from: its new videos show in Learn something, and they get a “Your channel” badge in results${account.on ? `; ${BRAND}'s librarian puts them first when they fit` : ""}. ` +
-      `For breaks: watch it freely on a break; on a Target, ${BRAND} asks first. Hide: its videos disappear from your homepage, search results and sidebar.`),
+      `For breaks: watch it freely on a break; on an aim, ${BRAND} asks first. Hide: its videos disappear from your homepage, search results and sidebar.`),
     el("div", { class: "wp-actions" },
       el("button", { class: "wp-btn wp-btn-text", onclick: () => { closeModal(); send({ type: "open-channels" }); } }, "All your channels"),
       el("button", { class: "wp-btn wp-btn-tonal", onclick: pick("hide") }, "Hide"),

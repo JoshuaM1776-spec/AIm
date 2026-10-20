@@ -1,4 +1,4 @@
--- Aim Plus sync: Targets (with their study sessions), Saved for later, settings and channel rules,
+-- Aim Plus sync: Aims (with their study sessions), Saved for later, settings and channel rules,
 -- kept on Aim's server so every browser signed in to the account has them. Opt-in, in Settings.
 -- Each item is one row; the newest change wins (rev: when the browser made it, in ms). seq orders
 -- changes, so a browser asks only for what changed since it last looked.

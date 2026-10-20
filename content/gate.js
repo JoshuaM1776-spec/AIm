@@ -56,7 +56,7 @@ function avoidFor(key) {
 }
 
 // Watch something from "Saved for later": during a break it just plays; otherwise it's a
-// one-video break, so it doesn't count toward your Target.
+// one-video break, so it doesn't count toward your aim.
 async function watchSaved(v) {
   if (!brk) {
     const r = await send({ type: "break-start", oneVideoId: v.id });
@@ -82,7 +82,7 @@ async function gate(id, known = null) {
   if (graced(id)) { release(id); return showGraceNotice(); }
   if (status.totalReached) return showTotalCard();
   // Hidden channels always ask; warned channels ask unless they fit your purpose; break channels ask
-  // while you're on a Target (on a break they're what you're there for).
+  // while you're on an aim (on a break they're what you're there for).
   const a = avoidFor(info.channelKey);
   if (a && !overridden.has(id) && (a.action === "hide" || (a.action === "warn" && !activePurpose()) || (a.action === "break" && activePurpose() && !brk)))
     return openChannelWarning(info, a.action);
@@ -128,7 +128,7 @@ async function evaluateVideo(info) {
 // Neither a purpose nor a break: choose one. There's no third way to watch.
 function showChoiceCard(info) {
   hold();
-  const input = el("input", { class: "wp-input", type: "text", placeholder: "What do you want to find or learn?", "aria-label": "Your Target" });
+  const input = el("input", { class: "wp-input", type: "text", placeholder: "What do you want to find or learn?", "aria-label": "Your aim" });
   const err = el("div", { class: "wp-error" });
   const start = async () => {
     const text = input.value.trim();
@@ -145,7 +145,7 @@ function showChoiceCard(info) {
     brandLine(),
     el("div", { class: "wp-title" }, "What brings you here?"),
     el("div", { class: "wp-muted wp-ellipsis" }, info.title),
-    el("div", { class: "wp-row" }, input, el("button", { class: "wp-btn wp-btn-primary", onclick: start }, "Set Target")),
+    el("div", { class: "wp-row" }, input, el("button", { class: "wp-btn wp-btn-primary", onclick: start }, "Set aim")),
     err,
     el("div", { class: "wp-label" }, "Or take a break"),
     breakChips(takeBreak, { oneVideoId: info.id }));
@@ -157,20 +157,20 @@ function showChoiceCard(info) {
 function showDriftCard(info) {
   hold();
   const p = activePurpose();
-  const input = el("input", { class: "wp-input", type: "text", placeholder: "Search toward your Target", "aria-label": "Search toward your Target" });
+  const input = el("input", { class: "wp-input", type: "text", placeholder: "Search toward your aim", "aria-label": "Search toward your aim" });
   const search = () => { const q = input.value.trim(); if (q) location.href = "/results?search_query=" + encodeURIComponent(q); };
   keepKeys(input, search);
   showPlayerCard(
     brandLine(),
-    el("div", { class: "wp-title" }, "Not on your Target"),
-    el("div", { class: "wp-current" }, el("div", { class: "wp-label" }, "Current Target"), el("div", { class: "wp-strong" }, p.text)),
+    el("div", { class: "wp-title" }, "Not on your aim"),
+    el("div", { class: "wp-current" }, el("div", { class: "wp-label" }, "Your aim"), el("div", { class: "wp-strong" }, p.text)),
     el("div", { class: "wp-muted" }, p.searches.length
-      ? "While you have a Target, you watch what your searches for it found. This video wasn't among them."
+      ? "While you have an aim, you watch what your searches for it found. This video wasn't among them."
       : "Search for what you're looking for, and the results are yours to watch."),
     el("div", { class: "wp-row" }, input, el("button", { class: "wp-btn wp-btn-tonal", onclick: search }, "Search")),
     el("div", { class: "wp-actions wp-actions-start" },
       history.length > 1 ? el("button", { class: "wp-btn wp-btn-primary", onclick: goBack }, "Back") : null,
-      el("button", { class: "wp-btn wp-btn-tonal", onclick: () => openPivotDialog("", { video: info }) }, "Change Target"),
+      el("button", { class: "wp-btn wp-btn-tonal", onclick: () => openPivotDialog("", { video: info }) }, "Change my aim"),
       el("button", { class: "wp-btn wp-btn-text", onclick: () => saveCurrent(true) }, "Save for later")),
     el("div", { class: "wp-label" }, "Or take a break"),
     breakChips(takeBreak, { oneVideoId: info.id }));
@@ -206,7 +206,7 @@ function showTotalCard() {
 const STOP_TEXT = {
   break: "Your break is over.",
   leisure: "That's today's leisure time.",
-  purpose: "Time's up for this Target.",
+  purpose: "Time's up for this aim.",
   total: "That's today's YouTube time."
 };
 

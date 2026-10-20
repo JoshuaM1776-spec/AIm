@@ -1,9 +1,9 @@
 // Aim — Your channels: the channels you subscribe to (read from YouTube by content/subs.js) and the
 // ones you've sorted from YouTube's menu, in four columns. Learn from: new videos in Learn something
 // and its Quick review, a "Your channel" badge, first in the librarian's picks; under a topic of
-// yours if you like. For breaks: free on a break; on a Target, Aim asks first. Keep out: hidden, or
+// yours if you like. For breaks: free on a break; on an aim, Aim asks first. Keep out: hidden, or
 // asked about. Not sorted: as before. Tap a button or drag a card; suggestions come from Learn
-// something's hand-picked channels and the channels you've watched for Targets.
+// something's hand-picked channels and the channels you've watched for aims.
 
 const BRAND = chrome.runtime.getManifest().name;
 for (const n of document.querySelectorAll("[data-brand]")) n.textContent = BRAND;
@@ -26,7 +26,7 @@ function toast(msg) {
 const COLS = [
   { cat: "none", title: "Not sorted", text: "As YouTube shows them. Sort the ones that matter; the rest can wait." },
   { cat: "learn", title: "Learn from", text: "Their new videos show in Learn something (and Quick review Shorts), with a “Your channel” badge in results." },
-  { cat: "break", title: "For breaks", text: "Watch freely on a break. On a Target, Aim asks first." },
+  { cat: "break", title: "For breaks", text: "Watch freely on a break. On an aim, it asks first." },
   { cat: "out", title: "Keep out", text: "Hidden from your homepage, results and sidebar, or Aim asks before you watch." }
 ];
 const catOf = rule => !rule ? "none" : rule.action === "prefer" ? "learn" : rule.action === "break" ? "break" : "out";
@@ -42,12 +42,12 @@ function channels() {
 }
 
 // Where a channel probably belongs: Learn something's hand-picked channels (under their topic), or a
-// channel you've watched for two or more Targets.
+// channel you've watched for two or more aims.
 const CURATED = new Map(LEARN_TOPICS.flatMap(t => t.channels.map(c => [c.handle.toLowerCase(), t.name])));
 function suggestion(c) {
   const topic = CURATED.get(c.key.slice(1).toLowerCase());
   if (topic) return { cat: "learn", topic, why: `Teaches ${topic}` };
-  if ((state.watched[c.name] || 0) >= 2) return { cat: "learn", topic: "", why: `You watched it for ${state.watched[c.name]} Targets` };
+  if ((state.watched[c.name] || 0) >= 2) return { cat: "learn", topic: "", why: `You watched it for ${state.watched[c.name]} aims` };
   return null;
 }
 

@@ -101,13 +101,13 @@ test("a purpose has no time limit by default and records searches and videos", a
   assert.strictEqual(Math.round(env.today().purpose), 60);
 });
 
-test("Change Target sets the old Target aside, with its searches and videos, and starts fresh", async () => {
+test("Change my aim sets the old aim aside, with its searches and videos, and starts fresh", async () => {
   const env = fresh();
   await env.run(`startPurpose({ text: "learn sourdough", search: "sourdough starter", limitMin: 30 })`);
   await env.ticks(6, 10, { ...VIDEO, t: 95 });
   const r = await env.run(`pivotPurpose("fix my truck's AC", undefined, { id: "ac1", title: "AC recharge" })`);
   assert.strictEqual(r.purpose.text, "fix my truck's AC");
-  assert.strictEqual(r.purpose.searches.length, 0, "the new Target starts fresh");
+  assert.strictEqual(r.purpose.searches.length, 0, "the new aim starts fresh");
   assert.ok(r.purpose.allowed.some(v => v.id === "ac1"), "with the video that prompted it");
   assert.strictEqual(r.setAside, "learn sourdough");
   const parked = env.local.paused[0];
@@ -117,7 +117,7 @@ test("Change Target sets the old Target aside, with its searches and videos, and
   assert.strictEqual(env.local.history.length, 0, "set aside, not finished");
 });
 
-test("resuming a set-aside Target restores it and returns to the video where you left off", async () => {
+test("resuming a set-aside aim restores it and returns to the video where you left off", async () => {
   const env = fresh();
   await env.run(`startPurpose({ text: "learn sourdough", search: "sourdough starter" })`);
   await env.run(`allowVideos({ query: "sourdough starter", videos: [{ id: "abc123", title: "Feeding" }, { id: "zzz" }], lists: [] })`);
@@ -131,8 +131,8 @@ test("resuming a set-aside Target restores it and returns to the video where you
   assert.strictEqual(r.purpose.searches[0].q, "sourdough starter");
   assert.strictEqual(r.purpose.allowed.length, 2, "what its searches found is still watchable");
   assert.strictEqual(r.url, "https://www.youtube.com/watch?v=abc123&t=412s");
-  assert.deepStrictEqual(env.local.paused.map(p => p.text), ["fix my truck's AC"], "the Target you had is set aside in turn");
-  // Resuming the current Target just says where to go.
+  assert.deepStrictEqual(env.local.paused.map(p => p.text), ["fix my truck's AC"], "the aim you had is set aside in turn");
+  // Resuming the current aim just says where to go.
   assert.strictEqual((await env.run(`resumePurpose(${JSON.stringify(r.purpose.id)})`)).url, r.url);
 });
 
@@ -148,14 +148,14 @@ test("resuming without a video goes back to the last search; resuming ends a bre
   assert.strictEqual(env.local.purpose.suspended, false);
 });
 
-test("a completed Target can be started again with its searches and watched videos", async () => {
+test("a completed aim can be started again with its searches and watched videos", async () => {
   const env = fresh();
   await env.run(`startPurpose({ text: "learn sourdough", search: "sourdough starter" })`);
   await env.ticks(3, 10, VIDEO);
   await env.run(`finishPurpose("yes")`);
   const done = env.local.history[0];
   const r = await env.run(`resumePurpose(${JSON.stringify(done.id)})`);
-  assert.notStrictEqual(r.purpose.id, done.id, "a new Target");
+  assert.notStrictEqual(r.purpose.id, done.id, "a new aim");
   assert.strictEqual(r.purpose.text, "learn sourdough");
   assert.strictEqual(r.purpose.searches[0].q, "sourdough starter");
   assert.ok(r.purpose.allowed.some(v => v.id === VIDEO.id));
@@ -164,7 +164,7 @@ test("a completed Target can be started again with its searches and watched vide
   assert.strictEqual((await env.run(`resumePurpose("nope")`)).result, "error");
 });
 
-test("set-aside Targets: newest first, at most 20, removable, and searches never become Targets", async () => {
+test("set-aside aims: newest first, at most 20, removable, and searches never become aims", async () => {
   const env = fresh();
   for (let i = 0; i < 22; i++) await env.run(`startPurpose({ text: "target ${i}" })`);
   assert.strictEqual(env.local.paused.length, 20);
@@ -172,16 +172,16 @@ test("set-aside Targets: newest first, at most 20, removable, and searches never
   assert.deepStrictEqual(env.local.history.map(h => h.text), ["target 0"], "the oldest beyond 20 moves to history");
   await env.run(`dropPaused(${JSON.stringify(env.local.paused[0].id)})`);
   assert.strictEqual(env.local.paused.length, 19);
-  // More searches on the same Target stay part of it.
+  // More searches on the same aim stay part of it.
   await env.run(`addSearch("spark plugs")`);
   await env.run(`addSearch("ignition coils")`);
   assert.strictEqual(env.local.paused.length, 19);
   assert.strictEqual(env.local.purpose.searches.length, 2);
 });
 
-test("study sessions: a plan on the Target, topic videos become watchable, watching and checks are recorded", async () => {
+test("study sessions: a plan on the aim, topic videos become watchable, watching and checks are recorded", async () => {
   const env = fresh();
-  assert.strictEqual((await env.run(`startStudy({ title: "x", topics: [] })`)).result, "error", "needs a Target");
+  assert.strictEqual((await env.run(`startStudy({ title: "x", topics: [] })`)).result, "error", "needs an aim");
   await env.run(`startPurpose({ text: "Cellular respiration exam Friday" })`);
   const r = await env.run(`startStudy({ title: "Cellular respiration", topics: [
     { title: "Glycolysis", brief: "In the cytoplasm.", searches: ["glycolysis explained"] },
@@ -190,7 +190,7 @@ test("study sessions: a plan on the Target, topic videos become watchable, watch
   assert.strictEqual(r.url, "https://www.youtube.com/results?search_query=glycolysis%20explained");
   const st = env.local.purpose.study;
   assert.deepStrictEqual(st.topics.map(t => t.title), ["Glycolysis", "Krebs cycle"]);
-  assert.strictEqual((await env.run(`checkSearch("citric acid cycle")`)).fits, true, "topic searches are part of the Target");
+  assert.strictEqual((await env.run(`checkSearch("citric acid cycle")`)).fits, true, "topic searches are part of the aim");
   const t1 = st.topics[0].id;
   await env.run(`updateStudy({ topicId: ${JSON.stringify(t1)}, videos: [{ id: "gly1", title: "Glycolysis in 5 minutes", reason: "Short and clear" }] })`);
   assert.ok(env.local.purpose.allowed.some(v => v.id === "gly1"), "a topic's videos are watchable");
@@ -207,7 +207,7 @@ test("study sessions: a plan on the Target, topic videos become watchable, watch
   assert.deepStrictEqual(env.local.purpose.study.topics[0].watched, ["gly1"], "an ended session stops recording");
 });
 
-test("migrating to v5 adds the set-aside list and when the Target was last active", async () => {
+test("migrating to v5 adds the set-aside list and when the aim was last active", async () => {
   const env = makeEnv({ schemaVersion: 4, purpose: { id: "p1", text: "learn sourdough", startedAt: 1000, usedSec: 0, searches: [], videos: [], allowed: [] } });
   await env.run(`migrateStorage()`);
   assert.strictEqual(env.local.schemaVersion, 5);
@@ -426,7 +426,7 @@ test("relax with a theme: a break that keeps its theme and the videos its search
   assert.strictEqual(r.result, "applied");
   assert.strictEqual(env.local.brk.theme.text, "Aviation engineering");
   assert.strictEqual(env.local.brk.durationMin, 30);
-  assert.strictEqual(env.local.purpose.suspended, true, "the Target waits, as with any break");
+  assert.strictEqual(env.local.purpose.suspended, true, "the aim waits, as with any break");
   await env.run(`addThemeVideos([{ id: "j1", title: "How a Jet Engine Works", length: "11:30" }, { id: "ad", title: "" }, { id: "j1", title: "How a Jet Engine Works" }])`);
   assert.deepStrictEqual(env.local.brk.theme.videos.map(v => [v.id, v.length]), [["j1", "11:30"]], "untitled (sponsored) entries and repeats are skipped");
   await env.run(`endBreak()`);
@@ -436,7 +436,7 @@ test("relax with a theme: a break that keeps its theme and the videos its search
   assert.strictEqual(one.local.brk.theme, null, "a one-video break has no theme");
 });
 
-test("notes stay with a Target: set aside, resumed, completed and started again", async () => {
+test("notes stay with an aim: set aside, resumed, completed and started again", async () => {
   const env = fresh();
   await env.run(`startPurpose({ text: "Research Gated Rentals before my call" })`);
   await env.run(`setTargetNotes("- Ask about occupancy")`);
@@ -448,7 +448,7 @@ test("notes stay with a Target: set aside, resumed, completed and started again"
   await env.run(`finishPurpose("yes")`);
   assert.strictEqual(env.local.history.at(-1).notes, "- Ask about occupancy");
   await env.run(`resumePurpose("${id}")`);
-  assert.strictEqual(env.local.purpose.notes, "- Ask about occupancy", "starting a finished Target again brings its notes");
+  assert.strictEqual(env.local.purpose.notes, "- Ask about occupancy", "starting a finished aim again brings its notes");
   assert.strictEqual((await env.run(`setTargetNotes("x")`)).result, "applied");
 });
 
@@ -458,7 +458,7 @@ test("a purpose set from a video, or a pivot from one, includes that video", asy
   assert.deepStrictEqual(env.local.purpose.allowed.map(v => v.id), ["f1"]);
   await env.run(`pivotPurpose("replace a faucet cartridge", undefined, { id: "f2", title: "Cartridge" })`);
   assert.deepStrictEqual(env.local.purpose.allowed.map(v => v.id), ["f2"]);
-  assert.deepStrictEqual(env.local.paused[0].allowed.map(v => v.id), ["f1"], "the first video stays with the set-aside Target");
+  assert.deepStrictEqual(env.local.paused[0].allowed.map(v => v.id), ["f1"], "the first video stays with the set-aside aim");
 });
 
 test("word check: searches that share a meaningful word continue the purpose", async () => {
@@ -518,7 +518,7 @@ test("settings are validated", async () => {
   assert.strictEqual((await env.run(`setSetting("noAutoplay", "yes")`)).result, "error");
 });
 
-test("a Target's recent videos: the one you'd continue first, then most recently watched, with where you stopped", async () => {
+test("an aim's recent videos: the one you'd continue first, then most recently watched, with where you stopped", async () => {
   const env = fresh();
   const r = JSON.parse(env.run(`JSON.stringify(recentVideos({
     last: { id: "b", t: 120 },
@@ -530,20 +530,20 @@ test("a Target's recent videos: the one you'd continue first, then most recently
       { id: "", title: "no id" }
     ] }))`));
   assert.deepStrictEqual(r.map(v => v.id), ["b", "c", "a"], "the last video leads, then by when it was last watched");
-  assert.strictEqual(r[0].t, 120, "the last video resumes where the Target left off");
+  assert.strictEqual(r[0].t, 120, "the last video resumes where the aim left off");
   assert.strictEqual(r[1].d, 600, "a length YouTube showed in results fills in a missing duration");
   assert.strictEqual(r[2].t, 30);
   assert.strictEqual(env.run(`recentVideos({}).length`), 0);
 });
 
-test("a Target's path: each search once, in order, the last six", async () => {
+test("an aim's path: each search once, in order, the last six", async () => {
   const env = fresh();
   const trail = JSON.parse(env.run(`JSON.stringify(searchTrail({ searches: ["truck ac recharge", "refrigerant types", "Truck AC recharge", "ac compressor", "a", "b", "c", "d"].map(q => ({ q })) }))`));
   assert.deepStrictEqual(trail, ["refrigerant types", "ac compressor", "a", "b", "c", "d"]);
   assert.strictEqual(env.run(`searchTrail({}).length`), 0);
 });
 
-test("the learning record: Targets with something to show, study sessions kept after they end, and totals", async () => {
+test("the learning record: Aims with something to show, study sessions kept after they end, and totals", async () => {
   const env = fresh();
   await env.run(`startPurpose({ text: "Cellular respiration exam", search: "cellular respiration" })`);
   await env.tick(120, { id: "v1", title: "Glycolysis", channel: "Bio", t: 100, d: 600 });
@@ -553,10 +553,10 @@ test("the learning record: Targets with something to show, study sessions kept a
   await env.run(`finishPurpose("yes")`);
   await env.run(`startPurpose({ text: "nothing yet" })`);
   const r = JSON.parse(await env.run(`readAll().then(s => JSON.stringify(learningRecord(s)))`));
-  assert.deepStrictEqual(r.entries.map(e => e.text), ["Cellular respiration exam"], "a Target with nothing to show is left out");
+  assert.deepStrictEqual(r.entries.map(e => e.text), ["Cellular respiration exam"], "an aim with nothing to show is left out");
   const e = r.entries[0];
   assert.strictEqual(e.state, "completed");
-  assert.strictEqual(e.study.topics[0].check.objectives[1].status, "partial", "the study session is kept after the Target ends");
+  assert.strictEqual(e.study.topics[0].check.objectives[1].status, "partial", "the study session is kept after the aim ends");
   assert.strictEqual(e.study.apply.note, "drew it");
   assert.deepStrictEqual(JSON.parse(JSON.stringify(r.totals)), { targets: 1, learningSec: e.usedSec, topicsChecked: 1, demonstrated: 1, projects: 1 });
 });
@@ -613,7 +613,7 @@ test("your channels: subscriptions are kept by channel; a complete read replaces
 });
 
 // ---------- sync across devices ----------
-test("sync: another browser's changes merge in; the Target you're on stays yours", async () => {
+test("sync: another browser's changes merge in; the aim you're on stays yours", async () => {
   const env = fresh();
   await env.run(`startPurpose({ text: "Learn to solder" })`);
   const cur = env.local.purpose;
@@ -637,7 +637,7 @@ test("sync: another browser's changes merge in; the Target you're on stays yours
   assert.strictEqual(env.local.settings.strict, true);
   assert.strictEqual(env.local.settings.leisureMin, 60, "invalid settings are ignored");
   assert.deepStrictEqual(Object.keys(env.local.avoid), ["/@x"]);
-  // Finished elsewhere: finished here; deleted elsewhere: gone (not the current Target).
+  // Finished elsewhere: finished here; deleted elsewhere: gone (not the current aim).
   await env.run(`syncMerge(${JSON.stringify([{ kind: "target", id: cur.id, rev: 3, data: { state: "completed", record: rec(cur.id, "Learn to solder", { endedAt: 9, outcome: "partly" }) } },
     { kind: "target", id: "p1", rev: 3, data: null }])})`);
   assert.strictEqual(env.local.purpose, null);

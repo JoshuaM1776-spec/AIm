@@ -311,7 +311,7 @@ await yt.press(".wp-home-input", "Enter");
 await yt.waitForURL(/results\?search_query=2014%20tacoma%20alternator%20replacement/);
 await yt.waitForSelector("#wp-lib .wp-lib-note");
 let bar = await yt.textContent("#wp-results-bar");
-step("the request becomes a Target and the librarian's best search runs on YouTube",
+step("the request becomes an aim and the librarian's best search runs on YouTube",
   bar.includes("Replace the alternator on my 2014 Tacoma") && bar.includes("The steps differ between the 2.7L and 4.0L engines."), bar.slice(0, 160));
 step("one question, as choices, plus its other search", bar.includes("Which engine does it have?") && bar.includes("4.0L V6") && bar.includes("tacoma alternator removal tools"));
 await yt.waitForSelector("#wp-picks .wp-pick");
@@ -327,18 +327,18 @@ step("picks are remembered for that search (no second AI call)", srv.rankCalls =
 await yt.click("#wp-lib button:text-is('4.0L V6')");
 await yt.waitForURL(/search_query=2014%20tacoma%204\.0%20v6/);
 await yt.waitForSelector("#wp-lib .wp-lib-note:text('V6-specific')");
-step("answering the question continues the same Target, with context", srv.lastAskPrompt.includes("CURRENT TARGET: Replace the alternator on my 2014 Tacoma") &&
+step("answering the question continues the same aim, with context", srv.lastAskPrompt.includes("CURRENT TARGET: Replace the alternator on my 2014 Tacoma") &&
   srv.lastAskPrompt.includes("Which engine does it have?") && srv.lastAskPrompt.includes("THE PERSON NOW SAYS: 4.0L V6"));
 const libState = await sw.evaluate(() => chrome.storage.local.get("purpose").then(d => d.purpose));
-step("the conversation is kept with the Target, in this browser", libState.librarian.thread.length === 4 && libState.text === "Replace the alternator on my 2014 Tacoma");
-step("the results bar is one compact row: Target, Change, done and the librarian", bar.includes("Change") &&
-  !!(await yt.$("#wp-results-bar [aria-label='Target complete']")) && !!(await yt.$("#wp-results-bar [aria-label='Hide the librarian']")));
+step("the conversation is kept with the aim, in this browser", libState.librarian.thread.length === 4 && libState.text === "Replace the alternator on my 2014 Tacoma");
+step("the results bar is one compact row: Aim, Change, done and the librarian", bar.includes("Change") &&
+  !!(await yt.$("#wp-results-bar [aria-label='Done with this aim']")) && !!(await yt.$("#wp-results-bar [aria-label='Hide the librarian']")));
 const asksBefore = srv.ask.length, callsBefore = srv.aiCalls;
 await yt.fill(".wp-lib-input", "serpentine belt");
 await yt.press(".wp-lib-input", "Enter");
 await yt.waitForURL(/search_query=serpentine%20belt/);
 step("a plain search goes straight to YouTube, no AI", srv.aiCalls === callsBefore && srv.ask.length === asksBefore);
-// It shares no word with the Target, so Aim asks first, as with any search.
+// It shares no word with the aim, so Aim asks first, as with any search.
 await yt.click("button:text-is(\"Yes, it's part of it\")");
 // When the librarian can't help, the request still searches YouTube.
 srv.ask.push(undefined);
@@ -548,7 +548,7 @@ await overview.waitForSelector("text=Session ended");
 step("ending the session keeps the summary", true);
 await overview.close();
 
-// ---------- notes on a Target ----------
+// ---------- notes on an aim ----------
 await yt.click("#wp-chip .wp-pill");
 await yt.click(".wp-dropdown button:has-text('Add notes')");
 await yt.waitForSelector(".wp-notes-dialog textarea");
@@ -558,7 +558,7 @@ await yt.waitForFunction(() => /most ATP/.test(document.querySelector(".wp-notes
 await yt.click(".wp-notes-dialog button:text-is('Done')");
 await yt.waitForTimeout(700);
 let notesNow = (await sw.evaluate(() => chrome.storage.local.get("purpose"))).purpose.notes;
-step("notes on a Target save as you type, and Suggest questions adds to them", notesNow.startsWith("Exam Friday 9am.") && notesNow.includes("- Which steps make the most ATP?"), JSON.stringify(notesNow));
+step("notes on an aim save as you type, and Suggest questions adds to them", notesNow.startsWith("Exam Friday 9am.") && notesNow.includes("- Which steps make the most ATP?"), JSON.stringify(notesNow));
 step("the results bar shows there are notes", !!(await yt.$("#wp-results-bar .wp-rb-icon.has[aria-label='Notes']")));
 
 // ---------- relax with a theme ----------
@@ -570,19 +570,19 @@ await yt.press(".wp-home-input", "Enter");
 await yt.waitForURL(/search_query=weird%20biology/);
 await yt.waitForSelector("#wp-results-bar.wp-rb-relax");
 let relaxState = await sw.evaluate(() => chrome.storage.local.get(["brk", "purpose"]));
-step("a request to relax starts a break with a theme, and the Target waits", relaxState.brk?.theme?.text === "Fun biology" && relaxState.brk.durationMin === 30 &&
+step("a request to relax starts a break with a theme, and the aim waits", relaxState.brk?.theme?.text === "Fun biology" && relaxState.brk.durationMin === 30 &&
   relaxState.purpose?.suspended === true && (await yt.textContent("#wp-chip")).includes("Relax: Fun biology"));
-step("the librarian sees recent Targets, for a vague request", srv.lastAskPrompt.includes("THEIR RECENT TARGETS:"));
+step("the librarian sees recent aims, for a vague request", srv.lastAskPrompt.includes("THEIR RECENT TARGETS:"));
 step("relaxing: no study offers, no picks to work through", !(await yt.$("button:text-is('Organize a study session')")) && (await yt.textContent("#wp-results-bar")).includes("Relaxing"));
 await yt.waitForTimeout(500);
 await yt.goto("https://www.youtube.com/watch?v=alt2bbb");
 await yt.waitForSelector("#wp-theme-panel");
 step("beside a video: More on the theme, from its searches", (await yt.textContent("#wp-theme-panel")).includes("More on fun biology") && !(await yt.$("#wp-concepts")));
 await yt.click("#wp-chip .wp-pill");
-await yt.click(".wp-dropdown button:has-text('Back on Target')");
+await yt.click(".wp-dropdown button:has-text('Back to my aim')");
 await yt.waitForTimeout(600);
 relaxState = await sw.evaluate(() => chrome.storage.local.get(["brk", "history"]));
-step("back on Target: the themed break is over and recorded with its theme", !relaxState.brk && relaxState.history.some(h => h.type === "break" && h.theme === "Fun biology"));
+step("back on your aim: the themed break is over and recorded with its theme", !relaxState.brk && relaxState.history.some(h => h.type === "break" && h.theme === "Fun biology"));
 await yt.close();
 
 // An expired access token refreshes quietly, once, even with calls racing.
@@ -607,7 +607,7 @@ async function signInHere(page) {
   await page.waitForSelector("button:text-is('Sign out')");
 }
 await signInHere(opt);
-// Browser A: a Target set aside, one finished (with a study session), a saved video, strict mode, a hidden channel.
+// Browser A: an aim set aside, one finished (with a study session), a saved video, strict mode, a hidden channel.
 const sinkId = await sw.evaluate(async () => {
   await serial(() => startPurpose({ text: "Fix the kitchen sink drain", search: "sink drain clog" }));
   const { purpose } = await chrome.storage.local.get("purpose");
@@ -626,7 +626,7 @@ const shotSync = async name => { if (process.env.SHOTS) { await opt.setViewportS
 await opt.click("#plusSync");
 await opt.waitForFunction(() => /Synced/.test(document.getElementById("plusMsg").textContent));
 await shotSync("sync-on");
-step("turning sync on sends this browser's Targets, saved videos and settings", [...deps.sync.rows.values()].some(r => r.id === sinkId) && [...deps.sync.rows.values()].some(r => r.data?.record?.text === "Understand derivatives") &&
+step("turning sync on sends this browser's aims, saved videos and settings", [...deps.sync.rows.values()].some(r => r.id === sinkId) && [...deps.sync.rows.values()].some(r => r.data?.record?.text === "Understand derivatives") &&
   [...deps.sync.rows.values()].some(r => r.kind === "saved") && (await opt.textContent("#plusSyncState")).includes("Last synced"));
 
 const ctx2 = await chromium.launchPersistentContext(fs.mkdtempSync(path.join(os.tmpdir(), "aim-")), {
@@ -644,24 +644,24 @@ await opt2.waitForSelector("#plusSync");
 await opt2.click("#plusSync");
 await opt2.waitForFunction(() => /Synced/.test(document.getElementById("plusMsg").textContent));
 const b1 = await sw2.evaluate(() => chrome.storage.local.get(["paused", "history", "saved", "settings", "avoid"]));
-step("the second browser gets the set-aside Target, ready to resume", b1.paused.some(p => p.id === sinkId && p.text === "Fix the kitchen sink drain" && p.searches?.[0]?.q === "sink drain clog"));
+step("the second browser gets the set-aside aim, ready to resume", b1.paused.some(p => p.id === sinkId && p.text === "Fix the kitchen sink drain" && p.searches?.[0]?.q === "sink drain clog"));
 step("…the finished one, with its study session, for the learning record", b1.history.some(h => h.text === "Understand derivatives" && h.outcome === "yes" && h.study?.title === "Derivatives"));
 step("…saved videos, settings and channel rules", b1.saved.some(v => v.id === "vidSaved01") && b1.settings.strict === true && b1.avoid["/@noisy"]?.action === "hide");
 const rec2 = await sw2.evaluate(() => readAll().then(learningRecord));
 step("the learning record in the second browser includes the first browser's study", rec2.entries.some(e => e.study?.title === "Derivatives"));
 
-// Browser B finishes the sink Target and removes the saved video; A catches up with Sync now.
+// Browser B finishes the sink aim and removes the saved video; A catches up with Sync now.
 await sw2.evaluate(async id => { await serial(() => resumePurpose(id)); await serial(() => finishPurpose("partly")); await serial(() => removeSaved("vidSaved01")); return syncNow(); }, sinkId);
 await opt.click("#plusSyncNow");
 await opt.waitForFunction(() => /Synced/.test(document.getElementById("plusMsg").textContent));
 const a2 = await sw.evaluate(() => chrome.storage.local.get(["paused", "history", "saved"]));
-step("finishing a Target in one browser finishes it in the other", !a2.paused.some(p => p.id === sinkId) && a2.history.some(h => h.id === sinkId && h.outcome === "partly"));
+step("finishing an aim in one browser finishes it in the other", !a2.paused.some(p => p.id === sinkId) && a2.history.some(h => h.id === sinkId && h.outcome === "partly"));
 step("removing a saved video removes it everywhere", !a2.saved.some(v => v.id === "vidSaved01"));
 step("nothing is sent back and forth once both agree", (await sw.evaluate(() => syncNow())).sent === 0 && (await sw2.evaluate(() => syncNow())).sent === 0);
-// A Target in progress in one browser shows up in the other as one to pick up.
+// An aim in progress in one browser shows up in the other as one to pick up.
 await sw.evaluate(async () => { await serial(() => startPurpose({ text: "Wire a three-way switch" })); return syncNow(); });
 await sw2.evaluate(() => syncNow());
-step("a Target in progress elsewhere can be picked up here", (await sw2.evaluate(() => chrome.storage.local.get("paused"))).paused.some(p => p.text === "Wire a three-way switch" && p.elsewhere));
+step("an aim in progress elsewhere can be picked up here", (await sw2.evaluate(() => chrome.storage.local.get("paused"))).paused.some(p => p.text === "Wire a three-way switch" && p.elsewhere));
 await ctx2.close();
 
 await opt.click("#plusSyncErase");

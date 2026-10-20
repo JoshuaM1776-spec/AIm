@@ -40,8 +40,8 @@ async function renderHome() {
   const findBtn = el("button", { class: "wp-home-go", "aria-label": "Go", title: "Go" }, icon("right"));
   const card = el("div", { id: "wp-home", class: "wp wp-home-card", "data-key": key });
   const lib = account.on;
-  const hintText = p ? "Searching for something new? If it isn't part of your Target, Aim asks first."
-    : lib ? `Tell ${BRAND} what you want to accomplish. It'll help you find it.` : "What you type becomes your Target. Be specific.";
+  const hintText = p ? "Searching for something new? If it isn't part of your aim, Aim asks first."
+    : lib ? `Tell ${BRAND} what you want to accomplish. It'll help you find it.` : "What you type becomes your aim. Be specific.";
   const hint = el("div", { class: "wp-muted wp-home-hint" }, hintText);
   // Signed in, a request or goal goes to the librarian; a plain search goes straight to YouTube.
   const busy = on => {
@@ -69,9 +69,9 @@ async function renderHome() {
     el("div", { class: "wp-label" }, "Pick up where you left off"),
     p ? currentTargetRow(p) : null,
     others.length ? el("div", { class: "wp-home-recent" },
-      el("div", { class: "wp-label wp-home-sub" }, "Recent Targets"),
+      el("div", { class: "wp-label wp-home-sub" }, "Recent aims"),
       ...others.map(pausedTargetRow)) : null,
-    el("button", { class: "wp-btn wp-btn-text wp-home-all", onclick: () => send({ type: "open-targets" }) }, "View all Targets")) : null;
+    el("button", { class: "wp-btn wp-btn-text wp-home-all", onclick: () => send({ type: "open-targets" }) }, "View all aims")) : null;
 
   card.append(...[
     brandLine(),
@@ -106,7 +106,7 @@ function lastActive(ts) {
 
 function targetMeta(t) {
   const mins = Math.round((t.usedSec || 0) / 60);
-  // A study session says where it stands; the full Target (current) carries the session itself.
+  // A study session says where it stands; the full aim (current) carries the session itself.
   const st = t.study?.of ? t.study : t.study?.topics && !t.study.endedAt
     ? { topic: Math.min(t.study.topics.length, (t.study.current || 0) + 1), of: t.study.topics.length, checked: t.study.topics.filter(x => x.check).length } : null;
   return [lastActive(t.lastActiveAt), st ? `Study session: topic ${st.topic} of ${st.of}${st.checked ? `, ${st.checked} checked` : ""}` : null,
@@ -118,12 +118,12 @@ function targetMeta(t) {
 // It never starts anything else, AI included.
 async function resumeTarget(id) {
   const r = await send({ type: "purpose-resume", id });
-  if (!r || r.result !== "applied") return toast(r?.message || "Couldn't resume that Target. Try again.");
+  if (!r || r.result !== "applied") return toast(r?.message || "Couldn't resume that aim. Try again.");
   location.href = r.url;
 }
 
-// ---------- thumbnails of what you watched for a Target ----------
-// Only videos you chose for that Target (never suggestions), with nothing that plays or previews.
+// ---------- thumbnails of what you watched for an aim ----------
+// Only videos you chose for that aim (never suggestions), with nothing that plays or previews.
 const thumbUrl = id => `https://i.ytimg.com/vi/${encodeURIComponent(id)}/mqdefault.jpg`;
 function thumb(v, cls) {
   const pct = v.d > 0 && v.t > 0 ? Math.min(100, Math.round((v.t / v.d) * 100)) : 0;
@@ -131,7 +131,7 @@ function thumb(v, cls) {
     v.d ? el("span", { class: "wp-thumb-len" }, fmtClock(v.d)) : null,
     pct ? el("span", { class: "wp-thumb-progress" }, el("i", { style: `width: ${pct}%` })) : null);
 }
-// Play one of the Target's videos from where you stopped (from the start if you'd finished it).
+// Play one of the aim's videos from where you stopped (from the start if you'd finished it).
 async function playTargetVideo(v) {
   await send({ type: "purpose-allow", query: "", videos: [{ id: v.id, title: v.title, channel: v.channel }], lists: [] });
   const from = v.t > 5 && !(v.d && v.t > v.d - 15) ? `&t=${Math.floor(v.t)}s` : "";
@@ -162,7 +162,7 @@ function moreVideos(list) {
 }
 
 // "Saved for later": videos you set aside for another time. Watching one is a one-video break, so
-// it never counts toward a Target. A video leaves the list once you've watched it.
+// it never counts toward an aim. A video leaves the list once you've watched it.
 function savedRow(list, max) {
   return el("div", { class: "wp-home-minis wp-saved-row" }, ...list.slice(0, max).map(v => el("div", { class: "wp-mini" },
     el("button", { class: "wp-mini-play", title: v.title, onclick: () => watchSaved(v) }, thumb(v, "wp-thumb-sm"), el("span", { class: "wp-mini-title" }, v.title)),
@@ -186,7 +186,7 @@ function savedBlock() {
 function currentTargetRow(p) {
   const vids = status.currentVideos || [];
   return el("div", { class: "wp-home-current" },
-    el("div", { class: "wp-label" }, "Current Target"),
+    el("div", { class: "wp-label" }, "Your aim"),
     el("div", { class: "wp-home-purpose" }, p.text),
     el("div", { class: "wp-muted wp-home-meta" }, targetMeta({ ...p, videos: (p.videos || []).length })),
     studyTodayBlock(p),

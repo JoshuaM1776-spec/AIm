@@ -1,4 +1,4 @@
-// Aim Plus — "In this video": beside a video watched for a learning Target, the concepts it covers,
+// Aim Plus — "In this video": beside a video watched for a learning aim, the concepts it covers,
 // each with a jump to its chapter and a couple of places to see the same idea in another context;
 // and "Test me on this video", offered when it ends. Aim works the concepts out from what the page
 // shows (title, description, chapters), never the transcript, and says so. One AI call per video,
@@ -7,7 +7,7 @@
 let concepts = null; // { id, state: "loading" | "ready" | "error", data, info, message }
 let conceptsEndedFor = null;
 
-// A learning Target, on Aim Plus: a study session, today's Homeschool plan, or a goal the
+// A learning aim, on Aim Plus: a study session, today's Homeschool plan, or a goal the
 // librarian classed as learning.
 const conceptsWanted = p => !!(account.plus && p && !brk && (p.librarian?.kind === "learn" || p.study || p.plan));
 

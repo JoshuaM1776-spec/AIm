@@ -1,5 +1,5 @@
 // Aim — study sessions on YouTube (Aim Plus). Offered when the librarian sees a learning goal:
-// Aim breaks the Target into topics, the librarian picks a video for each from YouTube's own
+// Aim breaks the aim into topics, the librarian picks a video for each from YouTube's own
 // results, and TeachBack checks understanding topic by topic. On the watch page the study plan
 // takes the place of "Up next"; on a topic's results page it heads the results bar.
 
@@ -95,7 +95,7 @@ function openStudyDialog(p) {
   };
   openModal(el("div", { class: "wp-dialog", role: "dialog", "aria-modal": "true" },
     el("div", { class: "wp-title" }, "Organize a study session"),
-    el("div", { class: "wp-current" }, el("div", { class: "wp-label" }, "Current Target"), el("div", { class: "wp-strong" }, p.text)),
+    el("div", { class: "wp-current" }, el("div", { class: "wp-label" }, "Your aim"), el("div", { class: "wp-strong" }, p.text)),
     el("p", { class: "wp-muted" }, `${BRAND} breaks this into a few topics in order, finds a clear video for each, and lets you check your understanding as you go.`),
     upload, notes, err,
     el("div", { class: "wp-actions" }, el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Cancel"), start)));

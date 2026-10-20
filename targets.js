@@ -1,4 +1,4 @@
-// Aim — every Target: the current one, the ones set aside, and finished ones to start again.
+// Aim — every aim: the current one, the ones set aside, and finished ones to start again.
 // Resuming returns to the last video at the moment you left it, or else to the last search.
 
 const BRAND = chrome.runtime.getManifest().name;
@@ -41,7 +41,7 @@ async function resume(id) {
   location.href = r.url;
 }
 
-// Thumbnails of what you watched for a Target, as on YouTube's home screen: only videos you chose.
+// Thumbnails of what you watched for an aim, as on YouTube's home screen: only videos you chose.
 const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 function thumb(v, cls) {
   const pct = v.d > 0 && v.t > 0 ? Math.min(100, Math.round((v.t / v.d) * 100)) : 0;
@@ -51,7 +51,7 @@ function thumb(v, cls) {
   n.style.backgroundImage = `url("https://i.ytimg.com/vi/${encodeURIComponent(v.id)}/mqdefault.jpg")`;
   return n;
 }
-// Pick the Target back up, then play this video from where you stopped.
+// Pick the aim back up, then play this video from where you stopped.
 async function playVideo(t, v) {
   const r = await send({ type: "purpose-resume", id: t.id });
   if (!r || r.result !== "applied") return toast(r?.message || "Couldn't do that. Try again.");
@@ -83,9 +83,9 @@ function row(t, actions, lead) {
 async function render() {
   const d = await send({ type: "targets" });
   const list = document.getElementById("list");
-  if (!d) { list.replaceChildren(node("p", { className: "error", textContent: "Couldn't load your Targets. Reload this page." })); return; }
+  if (!d) { list.replaceChildren(node("p", { className: "error", textContent: "Couldn't load your aims. Reload this page." })); return; }
   const sections = [];
-  if (d.current) sections.push(node("section", { className: "card" }, node("h2", { textContent: "Current Target" }),
+  if (d.current) sections.push(node("section", { className: "card" }, node("h2", { textContent: "Your aim" }),
     row(d.current, btn("Continue", "", () => resume(d.current.id)), `Last active ${when(d.current.lastActiveAt)}`)));
   if (d.paused.length) sections.push(node("section", { className: "card" }, node("h2", { textContent: "Set aside" }),
     d.paused.map(t => row(t, [
@@ -98,7 +98,7 @@ async function render() {
   if (d.completed.length) sections.push(node("section", { className: "card" }, node("h2", { textContent: "Completed" }),
     d.completed.map(t => row(t, btn("Start again", "tonal", () => resume(t.id)), `Finished ${when(t.lastActiveAt)}`))));
   if (!sections.length) sections.push(node("p", { className: "muted",
-    textContent: "No Targets yet. Search on YouTube and your search becomes your Target." }));
+    textContent: "No aims yet. Search on YouTube and your search becomes your aim." }));
   list.replaceChildren(...sections);
 }
 

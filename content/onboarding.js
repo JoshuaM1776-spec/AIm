@@ -71,19 +71,19 @@ function showTips() {
   const home = $("#wp-home.wp-home-card .wp-home-search");
   if (home && !tipSeen("home")) {
     return showCoach(home, { title: "Start here", step: 1, of: 2, primary: "Next",
-      body: `Tell ${BRAND} what you're looking for, the way you'd ask a librarian. That becomes your Target, and ${BRAND} keeps YouTube on it.`,
+      body: `Tell ${BRAND} what you're looking for, the way you'd ask a librarian. That becomes your aim, and ${BRAND} keeps YouTube on it.`,
       onPrimary: async () => { await markTip("home"); closeCoach(); showTips(); } });
   }
   const chip = $("#wp-chip .wp-pill");
   if (chip && tipSeen("home") && !tipSeen("chip") && location.pathname === "/") {
-    return showCoach(chip, { title: "Your Target lives here", step: 2, of: 2, primary: "Got it",
-      body: "Open this anytime to take a break, change your Target, or say you found what you needed.",
+    return showCoach(chip, { title: "Your aim lives here", step: 2, of: 2, primary: "Got it",
+      body: "Open this anytime to take a break, change your aim, or say you found what you needed.",
       onPrimary: async () => { await markTip("chip"); closeCoach(); } });
   }
   const bar = $("#wp-results-bar:not(.wp-rb-pending) .wp-rb-purpose");
   if (bar && !tipSeen("results")) {
-    return showCoach(bar, { title: "This search is on Target", primary: "Got it",
-      body: "Change your Target here, or tap the check when you've found what you needed. The videos below are YouTube's own results.",
+    return showCoach(bar, { title: "This search is on your aim", primary: "Got it",
+      body: "Change your aim here, or tap the check when you've found what you needed. The videos below are YouTube's own results.",
       onPrimary: async () => { await markTip("results"); closeCoach(); } });
   }
 }

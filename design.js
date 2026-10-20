@@ -34,7 +34,7 @@ function toast(msg) {
 const STAGES = [
   { id: "home", name: "Home", title: "What should greet you?", q: "Choose what you see when you open YouTube." },
   { id: "shorts", name: "Shorts", title: "What about Shorts?", q: "Keep them, curate them, or remove them." },
-  { id: "watching", name: "Watching", title: "How should Aim keep you on Target?", q: `${BRAND} always asks what you're here for, then keeps the videos that fit. Choose what else steps aside.` }
+  { id: "watching", name: "Watching", title: "How strict should Aim be?", q: `${BRAND} always asks what you're here for, then keeps the videos that fit. Choose what else steps aside.` }
 ];
 const KEYS = ["homeCard", "learnRow", "learnTopics", "hideShorts", "learnShorts", "hideRecs", "noAutoplay", "hideFeeds", "strict"];
 const greeting = d => (!d.homeCard ? "feed" : d.learnRow === false ? "clean" : "channels");
@@ -99,7 +99,7 @@ const loudCard = i => node("div", { class: "yt-card" }, node("div", { class: "im
   node("div", { class: "t" }, LOUD[i % LOUD.length]), node("div", { class: "m" }, "Recommended for you · 2.1M views"));
 const loudShort = i => node("div", { class: "yt-short ph", style: `--ph: linear-gradient(160deg, ${LOUD_TINTS[(i + 3) % 4]})` }, node("span", {}, LOUD[(i + 3) % LOUD.length]));
 
-// The line under the preview: what's keeping you on Target.
+// The line under the preview: what's keeping you on your aim.
 function statusLine(d) {
   const parts = [d.strict ? "Strict: a reason before bending a rule" : "Asks what you're here for", d.hideRecs ? "recommendations hidden" : "recommendations shown",
     d.noAutoplay ? "autoplay off" : "autoplay on"];
@@ -109,7 +109,7 @@ function statusLine(d) {
 function topBar(d, after) {
   return node("div", { class: "yt-top" }, node("div", { class: "yt-logo" }, icon("play"), "YouTube"),
     node("div", { class: "yt-tools" }, node("div", { class: "search" }, "Search"), icon("search"), icon("bell"),
-      after ? node("div", { class: "yt-chip" }, node("img", { src: MARK, alt: "" }), "Set Target") : null));
+      after ? node("div", { class: "yt-chip" }, node("img", { src: MARK, alt: "" }), "Set aim") : null));
 }
 function rail(d, after) {
   const shortsOff = after && d.hideShorts && !d.learnShorts;
@@ -207,8 +207,8 @@ function stagePanel(id) {
   if (id === "home") {
     const g = greeting(d);
     return [
-      opt("A clean page with my Target", "Just \u201cWhat brings you here?\u201d", g === "clean", () => { S.d = { ...S.d, homeCard: true, learnRow: false }; draw(); }),
-      opt("Videos from channels I choose", "Your Target, plus a few new videos from channels that teach what you want to learn.", g === "channels", () => { S.d = { ...S.d, homeCard: true, learnRow: true }; draw(); }),
+      opt("A clean page with my aim", "Just \u201cWhat brings you here?\u201d", g === "clean", () => { S.d = { ...S.d, homeCard: true, learnRow: false }; draw(); }),
+      opt("Videos from channels I choose", "Your aim, plus a few new videos from channels that teach what you want to learn.", g === "channels", () => { S.d = { ...S.d, homeCard: true, learnRow: true }; draw(); }),
       g === "channels" ? channelPicks(d) : null,
       opt("The regular YouTube feed", "Recommendations, as YouTube chooses them.", g === "feed", () => { S.d = { ...S.d, homeCard: false }; draw(); })].flat();
   }
@@ -221,8 +221,8 @@ function stagePanel(id) {
       opt("Show all Shorts", null, mode === "all", () => { S.d = { ...S.d, hideShorts: false, learnShorts: false }; draw(); })].flat(2);
   }
   return [
-    opt("Ask once, then trust me", "Off your Target? Aim checks once, and you can always say yes.", !d.strict, () => set("strict", false)),
-    opt("Keep me strictly on Target", "Bending a rule (more time, a warned channel, an off-Target search) needs a short reason first.", d.strict, () => set("strict", true)),
+    opt("Ask once, then trust me", "Off your aim? Aim checks once, and you can always say yes.", !d.strict, () => set("strict", false)),
+    opt("Keep me strictly on my aim", "Bending a rule (more time, a warned channel, an off-aim search) needs a short reason first.", d.strict, () => set("strict", true)),
     node("div", { class: "group-label" }, "Beside the video"),
     opt("Only what my search found", "No recommendations; Up next lists videos from your own searches.", d.hideRecs, () => set("hideRecs", true)),
     opt("YouTube's recommendations", null, !d.hideRecs, () => set("hideRecs", false)),
@@ -235,10 +235,10 @@ function stagePanel(id) {
 }
 
 const LABELS = {
-  homeCard: d => ({ clean: "A clean page with your Target", channels: "Videos from channels you choose", feed: "The regular feed" }[greeting(d)]),
+  homeCard: d => ({ clean: "A clean page with your aim", channels: "Videos from channels you choose", feed: "The regular feed" }[greeting(d)]),
   learnTopics: d => ((d.learnTopics || []).length ? LEARN_TOPICS.filter(t => d.learnTopics.includes(t.id)).map(t => t.name).join(", ") : "No topics"),
   shorts: d => ({ off: "Hidden", topics: "Only from selected channels", all: "All Shorts" }[shortsMode(d)]),
-  watching: d => [d.strict ? "Strictly on Target" : "Asks once", d.hideRecs ? "only your search's videos" : "recommendations", d.noAutoplay ? "autoplay off" : "autoplay on"].join(", "),
+  watching: d => [d.strict ? "Strictly on my aim" : "Asks once", d.hideRecs ? "only your search's videos" : "recommendations", d.noAutoplay ? "autoplay off" : "autoplay on"].join(", "),
 };
 // replaceChildren, leaving out the parts that aren't there (null).
 const fill = (el, ...kids) => el.replaceChildren(...kids.flat().filter(k => k != null && k !== false));

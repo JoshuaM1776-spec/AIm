@@ -7,7 +7,7 @@
 <title>Learning record</title>
 <link rel="stylesheet" href="aim.css">
 <style>
-  /* The learning record: totals, then one card per Target. Prints cleanly (Save as PDF). */
+  /* The learning record: totals, then one card per aim. Prints cleanly (Save as PDF). */
   .totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin: 16px 0 20px; }
   .totals div { background: var(--surface); border: 1px solid var(--card-border); border-radius: 12px; padding: 12px 14px; }
   .totals b { display: block; font: 700 24px/30px var(--font-display); }
@@ -33,7 +33,7 @@
     <span class="end no-print"><button class="btn tonal" id="print" type="button">Print or save as PDF</button></span>
   </header>
   <h1>Your learning record</h1>
-  <p class="muted">What you've worked on with <span data-brand>Aim</span>: your Targets, the time and videos behind them, and, for study sessions, what your checks showed and what you made. Kept in this browser.</p>
+  <p class="muted">What you've worked on with <span data-brand>Aim</span>: your aims, the time and videos behind them, and, for study sessions, what your checks showed and what you made. Kept in this browser.</p>
   <div id="record" aria-live="polite"></div>
 </main>
 <div id="toast" role="status"></div>

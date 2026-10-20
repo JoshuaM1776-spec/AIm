@@ -164,7 +164,7 @@ function syncView(sy) {
   const box = node("div", { className: "setting", style: "display:block" },
     node("div", { className: "setting", style: "padding:0;border:0" },
       node("div", { className: "what" }, node("b", { textContent: "Sync across devices" }),
-        node("span", { textContent: "Your Targets, study sessions and learning record, Saved for later, settings and channel rules, in every browser where you sign in. Kept on Aim's server with your account. Time spent per day stays in each browser." })),
+        node("span", { textContent: "Your aims, study sessions and learning record, Saved for later, settings and channel rules, in every browser where you sign in. Kept on Aim's server with your account. Time spent per day stays in each browser." })),
       node("label", { className: "switch" }, sw, node("i"))));
   if (state) box.append(node("p", { className: "note", id: "plusSyncState", textContent: state }));
   const row = node("div", { className: "form" });
@@ -209,7 +209,7 @@ function yourData() {
   cancel.onclick = () => { confirmBox.hidden = true; typed.value = ""; really.disabled = true; };
   del.onclick = () => { confirmBox.hidden = false; setTimeout(() => typed.focus()); };
   confirmBox.append(
-    node("p", { className: "note", textContent: "This permanently deletes your Aim account and everything stored with it on Aim's server: your plan, AI use, TeachBack sessions and progress. Aim's data in this browser (Targets, history, settings) stays. It can't be undone." }),
+    node("p", { className: "note", textContent: "This permanently deletes your Aim account and everything stored with it on Aim's server: your plan, AI use, TeachBack sessions and progress. Aim's data in this browser (aims, history, settings) stays. It can't be undone." }),
     node("div", { className: "form" }, typed, really, cancel));
   return node("div", { className: "setting", style: "display:block" },
     node("div", { className: "what" }, node("b", { textContent: "Your data" }),

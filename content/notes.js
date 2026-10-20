@@ -1,5 +1,5 @@
-// Aim — notes on a Target: questions for a call, things to remember for the exam. They save as
-// you type and stay with the Target when it's set aside, completed or resumed. Signed in, the
+// Aim — notes on an aim: questions for a call, things to remember for the exam. They save as
+// you type and stay with the aim when it's set aside, completed or resumed. Signed in, the
 // librarian can suggest questions to add (it never answers them).
 
 let notesTimer = null;
@@ -19,7 +19,7 @@ async function openNotesDialog() {
   const p = activePurpose();
   if (!p) return;
   await librarianOn();
-  const box = el("textarea", { class: "wp-input wp-notes-input", rows: "10", maxlength: "4000", "aria-label": "Notes for this Target",
+  const box = el("textarea", { class: "wp-input wp-notes-input", rows: "10", maxlength: "4000", "aria-label": "Notes for this aim",
     placeholder: "Questions to ask, things to remember…" });
   box.value = p.notes || "";
   box.addEventListener("input", () => saveNotes(box.value));
@@ -36,7 +36,7 @@ async function openNotesDialog() {
   } }, icon("ask"), "Suggest questions") : null;
   openModal(el("div", { class: "wp-dialog wp-notes-dialog", role: "dialog", "aria-modal": "true", "aria-label": "Notes" },
     el("div", { class: "wp-title" }, "Notes"),
-    el("div", { class: "wp-current" }, el("div", { class: "wp-label" }, "Target"), el("div", { class: "wp-strong" }, p.text)),
+    el("div", { class: "wp-current" }, el("div", { class: "wp-label" }, "Your aim"), el("div", { class: "wp-strong" }, p.text)),
     box, status_,
     el("div", { class: "wp-actions" }, suggest, el("span", { style: "flex:1" }),
       el("button", { class: "wp-btn wp-btn-primary", onclick: () => { saveNotes(box.value); closeModal(); } }, "Done"))));

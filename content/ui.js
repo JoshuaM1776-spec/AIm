@@ -159,7 +159,7 @@ function withReason(kind, question, detail, then) {
   setTimeout(() => input.focus(), 50);
 }
 
-// A break ran out: back to your Target (already resumed), or more break while leisure time lasts.
+// A break ran out: back to your aim (already resumed), or more break while leisure time lasts.
 function showBreakOver(kind) {
   const p = activePurpose();
   const more = kind === "break" && !leisureUsedUp();
@@ -167,13 +167,13 @@ function showBreakOver(kind) {
   openModal(el("div", { class: "wp-dialog wp-dialog-center wp-break-over", role: "dialog", "aria-modal": "true" },
     el("span", { class: "wp-icon" }, svgIcon("logo")),
     el("div", { class: "wp-title" }, kind === "leisure" ? "That's today's leisure time" : "Break time is up"),
-    el("div", { class: "wp-sub" }, p ? "Ready to get back to your Target?" : "What's next?"),
+    el("div", { class: "wp-sub" }, p ? "Ready to get back to your aim?" : "What's next?"),
     p ? el("div", { class: "wp-return" },
       p.last?.id ? el("div", { class: "wp-return-thumb", style: `background-image:url("https://i.ytimg.com/vi/${encodeURIComponent(p.last.id)}/mqdefault.jpg")` }) : null,
       el("div", { style: "min-width:0" }, el("div", { class: "wp-strong wp-ellipsis" }, p.text),
         el("div", { class: "wp-muted" }, left !== null ? `${fmtMin(left)} remaining` : `${fmtMin(p.usedSec || 0)} so far`))) : null,
-    p ? el("button", { class: "wp-btn wp-btn-accent wp-btn-block", onclick: closeModal }, "Back on Target")
-      : el("button", { class: "wp-btn wp-btn-primary wp-btn-block", onclick: () => { closeModal(); openStartDialog(); } }, "Set Target"),
+    p ? el("button", { class: "wp-btn wp-btn-accent wp-btn-block", onclick: closeModal }, "Back to my aim")
+      : el("button", { class: "wp-btn wp-btn-primary wp-btn-block", onclick: () => { closeModal(); openStartDialog(); } }, "Set aim"),
     more ? el("button", { class: "wp-btn wp-btn-tonal wp-btn-block", onclick: () => { closeModal(); takeBreak({ minutes: 15 }); } }, "Extend break (15 min)") : null,
     el("button", { class: "wp-btn wp-btn-text wp-btn-block", onclick: closeModal }, "Keep browsing for now")));
 }

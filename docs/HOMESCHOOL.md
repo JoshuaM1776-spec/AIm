@@ -89,9 +89,9 @@ For a student in an Aim Homeschool household, **YouTube's homepage becomes Today
 - Progress counts are labelled for what they are ("done"), separate from what TeachBack showed.
 
 **Watching**
-- Start opens the lesson's video on YouTube's own watch page, as a Target. Aim's panel replaces Up next with the plan: this item, "Mark done", the next item, and Back to Today.
+- Start opens the lesson's video on YouTube's own watch page, as an aim. Aim's panel replaces Up next with the plan: this item, "Mark done", the next item, and Back to Today.
 - A video lesson counts as done once it has played to about 90%, or when marked done.
-- Colors: Homeschool's accent is blue; Aim coral stays for the extension's "back to your Target" moments. Both follow YouTube's light and dark themes. The mark (README → Rebranding) is the same for every tier.
+- Colors: Homeschool's accent is blue; Aim coral stays for the extension's "back to your aim" moments. Both follow YouTube's light and dark themes. The mark (README → Rebranding) is the same for every tier.
 
 **Before release:** check how under-13 students can use this (Google requires supervised accounts; confirm YouTube access and parent-approved extensions under Family Link). Students who can't run the extension use the student website with embedded videos instead.
 

@@ -1,4 +1,4 @@
-// Aim Plus sync across devices, in the service worker: your Targets (with study sessions, so the
+// Aim Plus sync across devices, in the service worker: your aims (with study sessions, so the
 // learning record), Saved for later, settings and channel rules, in every browser you sign in to.
 // Off until you turn it on in Settings. Loaded after store.js and plus.js.
 //
@@ -93,7 +93,7 @@ async function syncRound() {
   }
 }
 
-// After a change worth carrying (a Target started, finished or set aside, a video saved, a setting),
+// After a change worth carrying (an aim started, finished or set aside, a video saved, a setting),
 // sync shortly, so another browser opened soon after already has it.
 let syncTimer = null;
 function syncSoon() {

@@ -4,7 +4,7 @@ Where Aim stands, what comes next, and the decisions that shape it. Includes Add
 
 ## Product principles
 
-**Brand idea:** Set a Target. Stay on Target. Reach your Target. This is a guiding concept, not a tagline that has to appear everywhere. Aim should feel useful and encouraging, not militaristic, rigid or productivity-obsessed.
+**Brand idea:** Set an aim. Stay on it. Reach your aim. This is a guiding concept, not a tagline that has to appear everywhere. Aim should feel useful and encouraging, not militaristic, rigid or productivity-obsessed.
 
 From the original specification:
 
@@ -27,21 +27,21 @@ Added by Addendum 01:
 
 No gamification: no points, streaks or badges. This already matches Aim Free.
 
-## Terminology: Target (done in 0.15.0)
+## Terminology: Aim (done in 0.15.0)
 
 | Interface element | Wording |
 |---|---|
 | Opening prompt | What brings you here? |
 | Search placeholder | What do you want to find or learn? |
-| Establish | Set Target |
-| Active objective | Current Target |
-| Change | Change Target |
-| Finish | Target complete |
+| Establish | Set aim |
+| Active objective | Your aim |
+| Change | Change my aim |
+| Finish | Done with this aim |
 | Browse freely | Take a break |
-| Return after a break | Back on Target |
+| Return after a break | Back to my aim |
 
-- **"Target" is capitalized** as Aim's own term. Everything else keeps YouTube's sentence case ("Take a break", "Target complete").
-- **Natural phrasing stays where it reads better:** "What brings you here?", "Not on your Target", "Is … part of your Target?".
+- **"aim" is lowercase**, a plain word, so it never competes with the product name Aim. Everything else keeps YouTube's sentence case ("Take a break", "Done with this aim").
+- **Natural phrasing stays where it reads better:** "What brings you here?", "Not on your aim", "Is … part of your aim?".
 - **Code and stored data keep `purpose`.** Renaming them would need a storage migration for no user benefit.
 
 ## Out of scope: ad blocking
@@ -52,7 +52,7 @@ No gamification: no points, streaks or badges. This already matches Aim Free.
 
 ## Development order (approved)
 
-1. **Aim Free:** the focused YouTube experience. Native searches, Targets, fewer distractions, Take a break, student-focused copy. *Built; real-YouTube testing pending.*
+1. **Aim Free:** the focused YouTube experience. Native searches, aims, fewer distractions, Take a break, student-focused copy. *Built; real-YouTube testing pending.*
 2. **Aim Plus, study sessions:** short-term objectives, study guidance, video selection, and TeachBack. Transcript-dependent features wait for the legal review.
 3. **Aim Plus, learning paths:** a persistent curriculum over many sessions, with progress and personalization.
 4. **Aim Homeschool:** a separate platform, outside the extension (see HOMESCHOOL.md).
@@ -75,23 +75,23 @@ Validate study sessions with real students before investing heavily in learning 
 | Step | What | State |
 |---|---|---|
 | 0–3, A–D | **Aim Free.** Purpose from search, word check, allowed list, breaks with a daily leisure allowance, grace period, distractions hidden, Done and reflection, popup with a week view, Advanced settings | Built and tested against mock pages; **automated real-YouTube check passing (Oct 19, 2026)**: home, results, watch, Learn something, Quick review. The manual checklist on a real computer is still the final word |
-| — | **Target wording** in every Aim Free screen (0.15.0) | Done, tests updated |
+| — | **aim wording** in every Aim Free screen (0.15.0) | Done, tests updated |
 | — | **Student-focused copy:** store summary, description, homepage line and example (0.16.0) | Done |
 | — | **Account controls (0.22.0):** Download my data (server + this browser, one JSON file) and Delete account (type DELETE; removes the account and all its server data via cascade) in Settings | Built and tested |
-| F2 | **Study sessions (0.20.0, Aim Plus):** offered on learning goals; topics planned from the goal and an optional pasted study guide; the librarian picks each topic's videos; the plan in the watch page's sidebar; TeachBack per topic, reported back; summary page. Kept with the Target in the browser. Not yet: file uploads (PDF/DOCX), the instructor's discussion after videos | Built and tested on stand-in pages |
-| — | **The librarian v1 (0.19.0):** for signed-in accounts (free has a small daily allowance). Requests vs plain searches; better YouTube searches, a short note, at most one question as choices; picks from YouTube's own results, grouped with reasons; Target memory kept in the browser. **Needs the real-YouTube quality check** (does ranking from titles and snippets pick well?) | Built and tested on stand-in pages |
+| F2 | **Study sessions (0.20.0, Aim Plus):** offered on learning goals; topics planned from the goal and an optional pasted study guide; the librarian picks each topic's videos; the plan in the watch page's sidebar; TeachBack per topic, reported back; summary page. Kept with the aim in the browser. Not yet: file uploads (PDF/DOCX), the instructor's discussion after videos | Built and tested on stand-in pages |
+| — | **The librarian v1 (0.19.0):** for signed-in accounts (free has a small daily allowance). Requests vs plain searches; better YouTube searches, a short note, at most one question as choices; picks from YouTube's own results, grouped with reasons; aim memory kept in the browser. **Needs the real-YouTube quality check** (does ranking from titles and snippets pick well?) | Built and tested on stand-in pages |
 | — | **Design your YouTube (0.48, Free):** a configurator in place of the settings list: Home ("What should greet you?": a clean page, videos from channels you choose, or the feed), Shorts (hide, only from selected channels, all), Watching, each changing a live sketch of YouTube (your own topics' videos), click the preview to change that part, before-and-after, one Apply. First run walks through the stages; later, any stage opens directly. No "watch freely" option (decided: Aim always asks what you're here for); no schedules yet; Timing left out of the designer for now (limits stay in More settings) | Built and tested on stand-in pages and with real YouTube thumbnails |
 | — | **Aim Homeschool, parent website MVP (0.47, pilot):** PARENT_WEBSITE.md §13 built: parent and student profiles (levels per subject; students have no logins, their Chrome is paired with a one-time code), the curriculum from the family's own (organized by AI, never invented; edited, prerequisite warnings, baseline comparison, approved versions), weekly plans proposed from the approved curriculum and approved as a week (edits after approval wait for approval again; plain-language changes; videos by link), preferred channels per subject with grouped gap decisions, projects four weeks ahead with one materials list, and objective-level progress from evidence. The student's Today comes from the approved day. Not yet: Portfolio, Library, parent-led TeachBack guides, field trips; a Homeschool price in Stripe. | Built and tested end to end against a stand-in server (website, extension, SQL on Postgres). **Before real families:** children's privacy and legal design, upload terms and takedown process, lawyer review; then SETUP.md Part 11 |
-| — | **Your channels (0.46, Free):** your YouTube subscriptions (read on youtube.com/feed/channels, in the browser) sorted into Learn from (with your own topics; they feed Learn something and Quick review), For breaks (on a Target, Aim asks first), Keep out (Hide or Ask first), or left unsorted; tap or drag; suggestions from Learn something's list and channels watched for Targets. Channel rows checked on real YouTube (channel search results; the subscriptions page itself needs a signed-in account) | Built and tested on stand-in pages; **try it signed in to YouTube** |
-| — | **Plus sync across devices (0.45):** opt-in in Settings → Aim Plus. Targets (with study sessions, so the learning record), Saved for later, settings and channel rules, one row per item on the server (`sync_items`, migration 0004); the newest change wins, decided in the database. A Target in progress in another browser shows up as one to pick up; finishing it anywhere finishes it everywhere. "Remove synced copy" erases the server copy. Time per day stays per browser | Built and tested (two browsers against a stand-in, plus the SQL on Postgres); **run migration 0004 and redeploy ai-dashboard.ts** (SETUP.md Part 10) |
-| — | **Shorts from your topics (0.45, Free):** a Learn something setting. Shorts stay hidden except those from your topics' channels (and preferred channels), read from each channel's public Shorts list; a Quick review row of five on the home page, matched by shared words to study topics (weak ones first) and past Targets; a Short from anywhere else waits behind a card offering the next review | Built and tested on stand-in pages; **check on real YouTube** that the UUSH Shorts playlists load |
+| — | **Your channels (0.46, Free):** your YouTube subscriptions (read on youtube.com/feed/channels, in the browser) sorted into Learn from (with your own topics; they feed Learn something and Quick review), For breaks (on an aim, Aim asks first), Keep out (Hide or Ask first), or left unsorted; tap or drag; suggestions from Learn something's list and channels watched for aims. Channel rows checked on real YouTube (channel search results; the subscriptions page itself needs a signed-in account) | Built and tested on stand-in pages; **try it signed in to YouTube** |
+| — | **Plus sync across devices (0.45):** opt-in in Settings → Aim Plus. Aims (with study sessions, so the learning record), Saved for later, settings and channel rules, one row per item on the server (`sync_items`, migration 0004); the newest change wins, decided in the database. An aim in progress in another browser shows up as one to pick up; finishing it anywhere finishes it everywhere. "Remove synced copy" erases the server copy. Time per day stays per browser | Built and tested (two browsers against a stand-in, plus the SQL on Postgres); **run migration 0004 and redeploy ai-dashboard.ts** (SETUP.md Part 10) |
+| — | **Shorts from your topics (0.45, Free):** a Learn something setting. Shorts stay hidden except those from your topics' channels (and preferred channels), read from each channel's public Shorts list; a Quick review row of five on the home page, matched by shared words to study topics (weak ones first) and past aims; a Short from anywhere else waits behind a card offering the next review | Built and tested on stand-in pages; **check on real YouTube** that the UUSH Shorts playlists load |
 | H | **Plus billing (0.43):** Stripe Checkout and customer portal from Settings (Upgrade to Plus, Manage subscription, renewal and payment status); the `stripe-webhook` function verifies Stripe's signature and keeps `profiles.plan` current, each event once. Tested with stand-ins | **Needs you:** Stripe account, price, webhook and secrets (SETUP.md Part 9); test-mode purchase |
-| — | **Learn something (0.42, Free):** pick topics in Settings; with no Target, YouTube's home page shows six new videos from hand-picked channels for them (plus channels you prefer), from YouTube's public channel feeds, cached a day, nothing you've watched; picking one starts a light Target with More from your topics. Every handle and id now checked on real YouTube (Oct 19, 2026); YouTube's channel feeds were failing then, so Aim reads the channel's own page when a feed doesn't answer. **Which channels are on the list is still yours to review** | Built and tested on stand-in pages |
-| — | **Today and the learning record (0.40–0.41):** a study session's day on YouTube's home page (next topic, reviews a day after a check that found gaps, then Put it to work); the learning record page (every Target with something to show, study checks and projects kept after a Target ends; printable). The record works for everyone; its study evidence comes from Plus | Built and tested on stand-in pages |
-| — | **Plus, from Homeschool (0.38–0.39):** your path through a Target; optional strict mode (reasons kept in the browser); **Put it to work** (one small project at the end of a study session, aimed at what needs practice; "I did it" with a note); **upload a syllabus** (.docx, .pdf, .txt read in the browser into the study guide) | Built and tested on stand-in pages and real files; **redeploy ai-dashboard.ts** |
-| — | **Back from the original idea, and Plus channels (0.37.0):** Saved for later on the homepage (thumbnails, remove ×; watching one is a one-video break; a video leaves once watched) and offered when a break starts. "Still looking?" after three searches with nothing watched (signed in: opens the librarian). "Got my answer" ends a lookup Target in one tap. Preferred channels (Prefer / Warn / Hide): a "Your channel" badge on results, and the librarian puts them first when they fit | Built and tested on stand-in pages; **redeploy ai-dashboard.ts** |
-| — | **Resume Targets (0.18.0):** Targets are active, set aside or completed. "Pick up where you left off" on the homepage (current + two recent), View all Targets page, Resume to the last video and moment, Start again for completed ones. Change Target now sets the old Target aside instead of rewriting it | Built and tested |
-| F2a | **TeachBack, text MVP (0.17.0):** questions only, five students, hints and skips recorded, results derived from quoted evidence, learners/assessments/progress tables. Entry: Settings and "Target complete?" (Plus) | **Live:** sign-in (custom SMTP via Resend), Plus plan, AI connection and TeachBack confirmed working on the Supabase project (Oct 2026) |
+| — | **Learn something (0.42, Free):** pick topics in Settings; with no aim, YouTube's home page shows six new videos from hand-picked channels for them (plus channels you prefer), from YouTube's public channel feeds, cached a day, nothing you've watched; picking one starts a light aim with More from your topics. Every handle and id now checked on real YouTube (Oct 19, 2026); YouTube's channel feeds were failing then, so Aim reads the channel's own page when a feed doesn't answer. **Which channels are on the list is still yours to review** | Built and tested on stand-in pages |
+| — | **Today and the learning record (0.40–0.41):** a study session's day on YouTube's home page (next topic, reviews a day after a check that found gaps, then Put it to work); the learning record page (every aim with something to show, study checks and projects kept after an aim ends; printable). The record works for everyone; its study evidence comes from Plus | Built and tested on stand-in pages |
+| — | **Plus, from Homeschool (0.38–0.39):** your path through an aim; optional strict mode (reasons kept in the browser); **Put it to work** (one small project at the end of a study session, aimed at what needs practice; "I did it" with a note); **upload a syllabus** (.docx, .pdf, .txt read in the browser into the study guide) | Built and tested on stand-in pages and real files; **redeploy ai-dashboard.ts** |
+| — | **Back from the original idea, and Plus channels (0.37.0):** Saved for later on the homepage (thumbnails, remove ×; watching one is a one-video break; a video leaves once watched) and offered when a break starts. "Still looking?" after three searches with nothing watched (signed in: opens the librarian). "Got my answer" ends a lookup aim in one tap. Preferred channels (Prefer / Warn / Hide): a "Your channel" badge on results, and the librarian puts them first when they fit | Built and tested on stand-in pages; **redeploy ai-dashboard.ts** |
+| — | **Resume aims (0.18.0):** Aims are active, set aside or completed. "Pick up where you left off" on the homepage (current + two recent), View all aims page, Resume to the last video and moment, Start again for completed ones. Change my aim now sets the old aim aside instead of rewriting it | Built and tested |
+| F2a | **TeachBack, text MVP (0.17.0):** questions only, five students, hints and skips recorded, results derived from quoted evidence, learners/assessments/progress tables. Entry: Settings and "Done with this aim?" (Plus) | **Live:** sign-in (custom SMTP via Resend), Plus plan, AI connection and TeachBack confirmed working on the Supabase project (Oct 2026) |
 | E | **Plus backend foundation.** Accounts with an emailed code, plans, AI endpoint with per-user limits, Settings sign-in | **Live** on the Supabase project, verified end to end (Oct 2026). |
 
 ## The three learning experiences share one flow
@@ -118,14 +118,14 @@ Purpose (search box, as today)
   | User | What they see |
   |---|---|
   | Signed out | Aim Free with no account asked for. Sign-in is offered only when they start something that needs an account. |
-  | Free account | An occasional invitation to Plus, only when they ask for a study capability (for example "Organize a study session?" on a clearly study-shaped Target). |
+  | Free account | An occasional invitation to Plus, only when they ask for a study capability (for example "Organize a study session?" on a clearly study-shaped aim). |
   | Plus | The feature itself, offered directly, with no upgrade pitch. |
 
 - **Rules for every offer:**
-  - It never interrupts a video someone is watching for their Target.
-  - It shows at most once per Target and is easy to dismiss.
+  - It never interrupts a video someone is watching for their aim.
+  - It shows at most once per aim and is easy to dismiss.
   - It never makes Aim Free feel like an advertisement.
-- **When to offer:** at first, a word-based check of the Target ("exam", "study for", "learn", "certificate", "course"). For signed-in users, a cheap AI classification later.
+- **When to offer:** at first, a word-based check of the aim ("exam", "study for", "learn", "certificate", "course"). For signed-in users, a cheap AI classification later.
 
 ## Revised Plus roadmap
 
@@ -140,9 +140,9 @@ Study sessions come **before** learning paths. They're smaller, they serve the s
 
 ### F2 — Study sessions, with TeachBack
 
-**TeachBack's text MVP is the first deliverable of this stage.** It needs only a Target (or a typed topic), so it can ship and gather feedback before the rest of study sessions. See [TeachBack](#teachback).
+**TeachBack's text MVP is the first deliverable of this stage.** It needs only an aim (or a typed topic), so it can ship and gather feedback before the rest of study sessions. See [TeachBack](#teachback).
 
-**Shared foundation built here** and reused by F3: `objectives` (per plan or standalone Target), `assessments` and `assessment_turns`, and progress events.
+**Shared foundation built here** and reused by F3: `objectives` (per plan or standalone aim), `assessments` and `assessment_turns`, and progress events.
 
 - Objective, plus optional topics, plus an **optional upload**: study guide, syllabus, notes, reading (PDF, DOCX, text, pasted text).
 - **Ordered video list:**
@@ -181,14 +181,14 @@ Study sessions come **before** learning paths. They're smaller, they serve the s
 
 ### I — Pathways (Plus and Homeschool)
 
-**Built in 0.26.0 (first version):** "Where could this take me?" (any signed-in account: TeachBack results, study sessions, Today's lessons), "Want more of this?" (TeachBack, study sessions, learning Targets marked complete, Today), and Pathways itself for Plus: themes, careers or kinds of work, a path's page with See it / Try it / Meet it / Prepare for it, reflections, theme offers on the homepage and Today. All of it stored in the browser for now (the server writes content and keeps nothing); moving it to server-side progress events comes with F1's data model. **Not yet:** adding a Try it to the Homeschool weekly plan with the parent's approval, and the parent's termly summary (both need the parent website).
+**Built in 0.26.0 (first version):** "Where could this take me?" (any signed-in account: TeachBack results, study sessions, Today's lessons), "Want more of this?" (TeachBack, study sessions, learning aims marked complete, Today), and Pathways itself for Plus: themes, careers or kinds of work, a path's page with See it / Try it / Meet it / Prepare for it, reflections, theme offers on the homepage and Today. All of it stored in the browser for now (the server writes content and keeps nothing); moving it to server-side progress events comes with F1's data model. **Not yet:** adding a Try it to the Homeschool weekly plan with the parent's approval, and the parent's termly summary (both need the parent website).
 
 What interests me → what could I do with it → what would it take to get there. Designed in HOMESCHOOL.md → "Pathways"; this is the Plus version, for students who use Aim Plus on their own (many Plus users are students, and they already generate the evidence: learning goals, study sessions, TeachBack).
 
 - **"Where could this take me?" first, and for everyone.** A link on study session topics and TeachBack results (and an answer in the librarian to "why do I need to learn this?"): where the subject is used, each with a short real-world problem from that field. It uses no profile, so it needs no opt-in. It's the smallest piece and can ship before the rest.
 - **Interests lead to paths.** No assessment to start. Once Pathways is on, Aim notices a theme in what the user chose to study and offers it once, lightly ("You've been studying aviation and weather. Want to see some careers connected to them?"), never during a video, easy to dismiss.
 - **Opt-in by the user.** The first such offer is also the opt-in, with a plain explanation of what it uses; it can be turned on or off in Settings, and off deletes it.
-- **What feeds it:** "Want more of this?" (Yes / Maybe / Not really) at the end of a study session, a TeachBack check and a completed learning Target; TeachBack results by topic; and the topics of study sessions and learning Targets the librarian classed as `learn`. Only topics and ratings leave the browser, never watch history, and only after opting in.
+- **What feeds it:** "Want more of this?" (Yes / Maybe / Not really) at the end of a study session, a TeachBack check and a completed learning aim; TeachBack results by topic; and the topics of study sessions and learning aims the librarian classed as `learn`. Only topics and ratings leave the browser, never watch history, and only after opting in.
 - **Stage instead of age:** "middle school / high school / college / working / other" at opt-in. Middle school: kinds of work, See it and Try it. High school and up: specific occupations and Prepare for it (Plus is 13+).
 - **Explore a path:** See it, **Try it** (the heart: a realistic brief with real constraints and a deliverable), Meet it, Prepare for it. Built on F3's plan model, so a path is a learning path, not a new system.
 - **Reflection, not scores:** each Try It and each stopped path ends with "What did you enjoy? What was harder or less interesting than expected? Explore further?" "Not for me" is a success. No match percentages.
@@ -211,7 +211,7 @@ Conversational assessment for Aim Plus: AI "students" ask questions, and the lea
 **Where it runs:** a dedicated extension page, `teachback.html`, in its own tab. A conversation doesn't fit the popup or a card on YouTube.
 
 **Ways in:**
-- **Test My Understanding** in the "Target complete?" dialog (Plus users only).
+- **Test My Understanding** in the "Done with this aim?" dialog (Plus users only).
 - Plan checkpoints in the side panel (F2 and F3).
 - A standalone start where you type a topic.
 
@@ -221,7 +221,7 @@ Conversational assessment for Aim Plus: AI "students" ask questions, and the lea
 
 | Task | Does |
 |---|---|
-| `teachback-start` | Builds 2–4 learning objectives from the Target, the plan, or uploaded material (when available) and asks the first question |
+| `teachback-start` | Builds 2–4 learning objectives from the aim, the plan, or uploaded material (when available) and asks the first question |
 | `teachback-turn` | Evaluates one answer against its objective as structured JSON (evidence quote, rating per dimension, misconception, whether help was given), then picks the next move: follow up, harder, different angle, next objective, or finish |
 | `teachback-finish` | Writes the results from the recorded evidence |
 
@@ -241,7 +241,7 @@ Conversational assessment for Aim Plus: AI "students" ask questions, and the lea
 - strengths;
 - gaps and misconceptions;
 - evidence quotes;
-- recommended review, with links to the plan's video for that objective, or a suggested search that becomes a new Target;
+- recommended review, with links to the plan's video for that objective, or a suggested search that becomes a new aim;
 - **next actions:** Review weak areas, Try again, or Continue learning.
 
 **Progress:**
@@ -277,7 +277,7 @@ Conversational assessment for Aim Plus: AI "students" ask questions, and the lea
 | Phase | Scope |
 |---|---|
 | A | Inspect the prototype source; map what to reuse |
-| B | Text-only Questions Only MVP: standalone and from "Target complete?" |
+| B | Text-only Questions Only MVP: standalone and from "Done with this aim?" |
 | C | Study session and learning path checkpoints; review links to plan items |
 | D | Voice input (Web Speech API on the TeachBack page), refined student styles, history, and a full "teach the class" format |
 
@@ -297,11 +297,11 @@ The prototype (`TeachBack.html`) is a complete single-page app: learn-by-teachin
 | **Content types** shaping the questions: concepts, events (causes and patterns rather than dates, which fits Precedent), procedures (steps, limits, failure cases; fits safety-critical subjects), texts, language | Kept as an objective-set property |
 | **Skills with "untested" when no question targeted them** | Becomes **Not assessed**, as Addendum 02 requires |
 | **Grading rules:** don't flag reasonable simplifications; an uncorrected misconception counts heavily; "I don't know, let me check" followed by a right answer beats bluffing | Kept in the `teachback-finish` instructions |
-| **Gaps,** each with an explanation and a search query, and **fact flags** with an "I think I was right" re-check | Gaps become review links. A gap's search query starts a new Target on YouTube |
+| **Gaps,** each with an explanation and a search query, and **fact flags** with an "I think I was right" re-check | Gaps become review links. A gap's search query starts a new aim on YouTube |
 | **Research break** (limited, and recorded on the question) | Becomes **"Give me a hint"**: limited, and recorded as assistance |
 | **Retry:** the same students re-ask what was missed, plus new questions; unresolved gaps come back in the next session | Kept. This is "Try again", and gaps resurface at the next checkpoint |
 | **Voice:** Web Speech recognition (push to talk, or open mic), a different synthesized voice per student, "let me check" detection | Phase D, on the TeachBack page |
-| **Study planner:** chunks with goals and named sources, each with a YouTube search query | The seed of study sessions and learning paths (F2 and F3). Its source queries open as Targets |
+| **Study planner:** chunks with goals and named sources, each with a YouTube search query | The seed of study sessions and learning paths (F2 and F3). Its source queries open as aims |
 
 **Change for Aim:**
 
@@ -321,10 +321,10 @@ The prototype (`TeachBack.html`) is a complete single-page app: learn-by-teachin
 YouTube now has two Gemini features: the per-video **Ask** button (questions about the video it's on, quizzes on some academic videos) and **Ask YouTube**, a conversational search across videos (both mostly for Premium members 18+ in the US so far, with no public API).
 
 - **Don't drive it.** Aim won't type into, click through or read YouTube's AI: there's no API, automating it would be fragile and likely against YouTube's terms, it only exists for some adults, and what it returns comes from the same transcripts that wait on legal review.
-- **Work alongside it.** When a person uses it themselves, Aim treats its searches and the videos it leads to like any other search toward the Target, and doesn't get in its way. **Built in 0.29.0:** any video link on the results page counts as a result (including an AI answer's), and a video picked from a search-style page of YouTube's own (where Ask YouTube may open) counts toward the Target; feeds, channels and videos still ask first. Selectors to confirm against the real pages once seen.
+- **Work alongside it.** When a person uses it themselves, Aim treats its searches and the videos it leads to like any other search toward the aim, and doesn't get in its way. **Built in 0.29.0:** any video link on the results page counts as a result (including an AI answer's), and a video picked from a search-style page of YouTube's own (where Ask YouTube may open) counts toward the aim; feeds, channels and videos still ask first. Selectors to confirm against the real pages once seen.
 - **Aim asks, YouTube answers (built in 0.29.0).** In "In this video", each concept has "Ask YouTube about this": Aim copies a good question and points to YouTube's Ask button under the video, or, without one (no Premium), to Ask in the search bar with the video named in the question. Aim doesn't type into it or read the answer.
 - **Don't duplicate it.** Within-one-video Q&A and summaries are YouTube's job now; the transcript stage of "In this video" drops in priority, since anyone with YouTube's Ask already has exact answers about a single video.
-- **What Aim is for, that YouTube's AI isn't:** the person's goal across many videos and days (Targets, study sessions, Resume), keeping YouTube from pulling them off it (no feed, no recommendations, time limits, breaks that end), evidence of understanding in their own words (TeachBack), Pathways, and everything for under-18s and their parents (YouTube's AI is 18+). YouTube's AI is built to help you watch; Aim is built to help you do what you came for, and stop.
+- **What Aim is for, that YouTube's AI isn't:** the person's goal across many videos and days (aims, study sessions, Resume), keeping YouTube from pulling them off it (no feed, no recommendations, time limits, breaks that end), evidence of understanding in their own words (TeachBack), Pathways, and everything for under-18s and their parents (YouTube's AI is 18+). YouTube's AI is built to help you watch; Aim is built to help you do what you came for, and stop.
 
 ## Decisions needed now (to avoid rework)
 
@@ -377,7 +377,7 @@ The Data API allows about **100 searches a day for the whole app** (10,000 quota
   - reading the transcript from the page is a grey area under YouTube's terms.
 - **Decision:** the legal review is a **prelaunch dependency** for anything that retrieves, stores or processes transcripts. Qualified counsel reviews the specific implementation; a review isn't a guarantee of permission.
 - **Until then,** F2 and TeachBack work from metadata, chapters, the student's own notes and uploads, and other authorized material.
-- **"In this video" (built in 0.27.0, stage 1):** for a learning Target on Plus, the concepts a video covers, worked out from its title, description and chapters only, and labelled that way; chapter jumps; "See it in another context" (two searches per concept, run in the student's own tab); and "Test me on this video" (TeachBack with the concepts as notes) offered when the video ends, never during it. Regulated subjects name their authoritative references (for a private pilot checkride: the FAA Airman Certification Standards and the Pilot's Handbook of Aeronautical Knowledge).
+- **"In this video" (built in 0.27.0, stage 1):** for a learning aim on Plus, the concepts a video covers, worked out from its title, description and chapters only, and labelled that way; chapter jumps; "See it in another context" (two searches per concept, run in the student's own tab); and "Test me on this video" (TeachBack with the concepts as notes) offered when the video ends, never during it. Regulated subjects name their authoritative references (for a private pilot checkride: the FAA Airman Certification Standards and the Pilot's Handbook of Aeronautical Knowledge).
 - **Stage 2, waiting on the transcript review:** the same features from the transcript: concepts with exact timestamps, quotes, and test questions about what the video actually said ("At 12:40 the examiner asks about…"). Nothing about transcripts is built until counsel has reviewed the specific implementation.
   - Addendum §4.6 ("summary or transcript" in homeschool lesson review) depends on the same review.
 
@@ -422,7 +422,7 @@ The Data API allows about **100 searches a day for the whole app** (10,000 quota
 - The landing page waits until approved.
 - **Homeschool teaser:** on the future website only, not in the extension. The website can introduce Aim Plus and Aim Homeschool, including the parent dashboard. The extension's message stays: *You came to YouTube for a reason. Aim helps you accomplish it.*
 - **Done in 0.16.0:**
-  - **Store summary:** "Study on YouTube without getting distracted. Your search becomes your Target, and Aim helps you stay focused on it."
+  - **Store summary:** "Study on YouTube without getting distracted. Your search becomes your aim, and Aim helps you stay focused on it."
   - **Store description** opens with the student hook.
   - **Homepage line:** "Whether you're preparing for an exam, learning a new skill, or finding a quick answer, Aim helps you stay focused on what you came to YouTube to accomplish."
   - **Homepage example:** "Study for my biology exam".

@@ -1,10 +1,10 @@
-/* Aim — one look for all of Aim's own pages: Settings, Targets, TeachBack, study sessions,
+/* Aim — one look for all of Aim's own pages: Settings, aims, TeachBack, study sessions,
    Pathways, the welcome tour, sign-in and the popup. Its colors come from the Aim mark: warm
    parchment, green-black ink, deep forest green, and coral. Following Chrome's light/dark mode
    (dark: deep green-black with cream). A page adds only what's truly its own, in its own <style>.
 
    Color rules: the main button is forest green (cream in dark mode). Aim coral (--accent) marks only
-   the way back to your Target (Resume, Continue), like the arrowhead in the mark. Green (--learn) is
+   the way back to your aim (Resume, Continue), like the arrowhead in the mark. Green (--learn) is
    the learning accent for Homeschool and Pathways details (pills, step markers).
    Fonts and color tokens: tokens.css. */
 
@@ -134,7 +134,7 @@ input::placeholder, textarea::placeholder { color: var(--muted); }
 .pw-use .pw-problem { margin: 6px 0; } .pw-reveal { background: var(--tonal); border-radius: 8px; padding: 8px 10px; margin: 6px 0; }
 .pw-use .pw-links { display: flex; gap: 16px; } .pw-use .pw-links button { background: none; border: 0; padding: 0; color: var(--link); font: 500 13px var(--font); cursor: pointer; }
 
-/* ---------- video thumbnails (Targets page): only videos you chose; the progress line is coral ---------- */
+/* ---------- video thumbnails (aims page): only videos you chose; the progress line is coral ---------- */
 .thumb { position: relative; display: block; flex: none; border-radius: 8px; overflow: hidden; background: var(--tonal) center / cover no-repeat; }
 .thumb-md { width: 120px; height: 68px; } .thumb-sm { width: 112px; height: 63px; }
 .thumb-len { position: absolute; right: 4px; bottom: 6px; background: rgba(0, 0, 0, .8); color: #fff; font-size: 11px; line-height: 14px; font-weight: 500; padding: 0 4px; border-radius: 4px; }

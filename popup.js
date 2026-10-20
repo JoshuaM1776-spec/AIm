@@ -1,4 +1,4 @@
-// Aim — toolbar popup: the current Target (Resume, Take a Break, Done), and your activity folded below.
+// Aim — toolbar popup: the current aim (Resume, Take a Break, Done), and your activity folded below.
 // Reads and changes data through the background worker.
 
 function el(tag, attrs = {}, ...kids) {
@@ -59,7 +59,7 @@ function ring(left, total) {
 // Back to where you left off: the last video at the moment you left it, or the last search.
 async function resume(id) {
   const r = await send({ type: "purpose-resume", id });
-  if (!r || r.result !== "applied") return alert(r?.message || "Couldn't resume that Target. Try again.");
+  if (!r || r.result !== "applied") return alert(r?.message || "Couldn't resume that aim. Try again.");
   // On a YouTube tab, go there in place; anywhere else, open a new tab rather than leave the page you're on.
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true }).catch(() => []);
   const here = tab ? await chrome.tabs.sendMessage(tab.id, { type: "go", url: r.url }).catch(() => null) : null;
@@ -89,7 +89,7 @@ function breakControls() {
 }
 
 function pivotControls() {
-  const input = el("input", { class: "field", placeholder: "What do you want to focus on instead?", "aria-label": "New Target" });
+  const input = el("input", { class: "field", placeholder: "What do you want to focus on instead?", "aria-label": "New aim" });
   const go = () => input.value.trim() && act({ type: "purpose-pivot", text: input.value });
   input.addEventListener("keydown", e => { if (e.key === "Enter") go(); });
   setTimeout(() => input.focus(), 0);
@@ -97,7 +97,7 @@ function pivotControls() {
     ...(st.recent || []).slice(0, 4).map(t => el("button", { class: "link muted", onclick: () => { input.value = t; input.focus(); } }, `↺ ${t}`)),
     el("div", { class: "pair" },
       el("button", { class: "btn", onclick: () => { open = null; renderCurrent(); } }, "Cancel"),
-      el("button", { class: "btn primary", onclick: go }, "Change Target")));
+      el("button", { class: "btn primary", onclick: go }, "Change my aim")));
 }
 
 function doneControls() {
@@ -122,9 +122,9 @@ function renderCurrent() {
         left !== null ? ring(left, b.durationMin) : null,
         el("div", {}, el("div", { class: "big" }, b.oneVideoId ? "Just this video" : `${dur(left)} left`),
           left !== null ? el("div", { class: "muted" }, `of ${dur(b.durationMin)}`) : null)),
-      p ? el("div", { class: "muted" }, `Your Target is waiting: ${p.text}`) : null,
+      p ? el("div", { class: "muted" }, `Your aim is waiting: ${p.text}`) : null,
       el("div", { class: "pair" },
-        el("button", { class: "btn primary", onclick: () => act({ type: "break-end" }) }, p ? "Back on Target" : "End break"),
+        el("button", { class: "btn primary", onclick: () => act({ type: "break-end" }) }, p ? "Back to my aim" : "End break"),
         b.durationMin && !(st.leisureLeftMin !== null && st.leisureLeftMin < 1)
           ? el("button", { class: "btn", onclick: () => act({ type: "break-extend", minutes: 15 }) }, "+15 min") : null)));
     return;
@@ -133,7 +133,7 @@ function renderCurrent() {
     // Time left only when you set a limit; otherwise just how long you've been at it.
     const left = p.limitMin ? mins(p.limitMin * 60 - p.usedSec) : null;
     box.append(el("div", { class: "card" },
-      el("div", { class: "tag" }, "Current Target"),
+      el("div", { class: "tag" }, "Your aim"),
       el("div", { class: "strong big cur-text" }, p.text),
       left !== null ? el("div", { class: "ring-row" }, ring(left, p.limitMin),
         el("div", {}, el("div", { class: "big" }, `${dur(left)} left`), el("div", { class: "muted" }, `of ${dur(p.limitMin)}`)))
@@ -142,15 +142,15 @@ function renderCurrent() {
         open === "break" ? null : el("button", { class: "btn wide primary", id: "resume", onclick: () => resume(p.id) }, ico(ICONS.play), "Resume"),
         open === "break" ? breakControls() : el("div", { class: "pair" },
           el("button", { class: "btn", onclick: () => { open = "break"; renderCurrent(); } }, ico(ICONS.coffee), "Take a Break"),
-          el("button", { class: "btn", title: "Target complete", onclick: () => { open = "done"; renderCurrent(); } }, ico(ICONS.check), "Done")),
+          el("button", { class: "btn", title: "Done with this aim", onclick: () => { open = "done"; renderCurrent(); } }, ico(ICONS.check), "Done")),
         open === "break" ? null : el("div", { class: "more" },
-          el("button", { class: "link", onclick: () => { open = "pivot"; renderCurrent(); } }, "Change Target"),
+          el("button", { class: "link", onclick: () => { open = "pivot"; renderCurrent(); } }, "Change my aim"),
           el("button", { class: "link", id: "setAside", onclick: () => act({ type: "purpose-pause" }) }, "Set aside"),
-          el("button", { class: "link", onclick: () => send({ type: "open-targets" }) }, "All Targets")))));
+          el("button", { class: "link", onclick: () => send({ type: "open-targets" }) }, "All aims")))));
     return;
   }
   box.append(el("div", { class: "card" },
-    el("div", { class: "strong" }, "No Target set"),
+    el("div", { class: "strong" }, "No aim set"),
     el("div", { class: "muted", style: "margin-bottom:10px" }, "Open YouTube and tell Aim what you're looking for."),
     breakControls()));
 }
@@ -163,17 +163,17 @@ function renderWeek() {
   const max = Math.max(1, ...w.days.map(d => d.purpose + d.leisure));
   const total = k => Math.round(w.days.reduce((s, d) => s + d[k], 0) / 60);
   box.replaceChildren(
-    el("div", { class: "bars", title: "Time on Target (dark) and on breaks (light), per day" },
-      ...w.days.map(d => el("div", { class: "bar7", title: `${d.day}: ${mins(d.purpose)} min on Target, ${mins(d.leisure)} min on breaks` },
+    el("div", { class: "bars", title: "Time on your aim (dark) and on breaks (light), per day" },
+      ...w.days.map(d => el("div", { class: "bar7", title: `${d.day}: ${mins(d.purpose)} min on your aims, ${mins(d.leisure)} min on breaks` },
         el("div", { class: "p", style: `height:${(d.purpose / max) * 100}%` }),
         el("div", { class: "l", style: `height:${(d.leisure / max) * 100}%` })))),
     el("div", { class: "days" }, ...w.days.map(d => el("span", {}, d.label))),
     el("div", { class: "row item" },
-      el("span", {}, el("span", { class: "key", style: "background:var(--text)" }), "On Target ", el("b", {}, dur(total("purpose")))),
+      el("span", {}, el("span", { class: "key", style: "background:var(--text)" }), "On your aims ", el("b", {}, dur(total("purpose")))),
       el("span", {}, el("span", { class: "key", style: "background:var(--muted)" }), "Breaks ", el("b", {}, dur(total("leisure"))))),
     el("div", { class: "muted" }, w.purposes
-      ? `${w.purposes} Target${w.purposes > 1 ? "s" : ""} complete · found what you needed in ${w.found}`
-      : "Completed Targets show up here."));
+      ? `${w.purposes} aim${w.purposes > 1 ? "s" : ""} complete · found what you needed in ${w.found}`
+      : "Completed aims show up here."));
 }
 
 function renderToday() {
@@ -182,7 +182,7 @@ function renderToday() {
   const line = (label, value) => el("div", { class: "row item" }, el("span", {}, label), el("span", { class: "muted" }, value));
   const all = t.purpose + t.leisure + t.other;
   document.getElementById("today").replaceChildren(
-    line("On Target", `${mins(t.purpose)} min`),
+    line("On your aims", `${mins(t.purpose)} min`),
     line("Breaks", S.leisureMin ? `${mins(t.leisure)} of ${S.leisureMin} min` : `${mins(t.leisure)} min`),
     line("All YouTube", S.totalMin ? `${mins(all)} of ${S.totalMin} min` : `${mins(all)} min`));
 }
@@ -213,7 +213,7 @@ function renderHistory() {
   const box = document.getElementById("history");
   box.replaceChildren();
   const recent = st.history.slice(-5).reverse();
-  if (!recent.length) { box.append(el("div", { class: "muted" }, "Completed Targets and breaks show up here.")); return; }
+  if (!recent.length) { box.append(el("div", { class: "muted" }, "Completed aims and breaks show up here.")); return; }
   const OUT = { yes: "Found it", partly: "Partly", no: "Didn't find it" };
   for (const h of recent) {
     const videos = h.videos?.length ? `${h.videos.length} video${h.videos.length > 1 ? "s" : ""}` : null;
@@ -241,7 +241,7 @@ document.getElementById("plusPage").addEventListener("click", () => chrome.tabs.
 // Only when this copy of Aim has a Plus server to talk to.
 send({ type: "plus-brief" }).then(r => { document.getElementById("plusPage").hidden = !r?.configured; });
 document.getElementById("clear").addEventListener("click", async () => {
-  if (!confirm("Clear your history of Targets and breaks?")) return;
+  if (!confirm("Clear your history of aims and breaks?")) return;
   await send({ type: "history-clear" });
   render();
 });

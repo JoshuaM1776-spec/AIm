@@ -1,7 +1,7 @@
-// Aim — "Learn something": on YouTube's home page, when you're not working on a Target, one row of
+// Aim — "Learn something": on YouTube's home page, when you're not working on an aim, one row of
 // new videos from channels that teach the topics you picked (content/topics.js), plus channels you
 // marked Prefer. Finite (six), refreshed once a day, nothing autoplays. Picking one starts a light
-// Target, so it's on purpose: Up next then shows more from your topics. No AI: each channel's public
+// Aim, so it's on purpose: Up next then shows more from your topics. No AI: each channel's public
 // feed on youtube.com (or its channel page when the feed fails), read here and cached by the background.
 
 const LEARN_REFRESH_MS = 24 * 60 * 60 * 1000;
@@ -143,7 +143,7 @@ async function loadLearn() {
   return promise;
 }
 
-// Start a light Target from a video you picked, with the rest of the row for Up next.
+// Start a light aim from a video you picked, with the rest of the row for Up next.
 async function startLearning(v, row) {
   const r = await send({ type: "purpose-start", text: `Exploring: ${v.title}`.slice(0, 300),
     video: { id: v.id, title: v.title, channel: v.channel }, learn: { topic: v.topic, videos: row.filter(x => x.id !== v.id).map(x => ({ id: x.id, title: x.title, channel: x.channel })) } });

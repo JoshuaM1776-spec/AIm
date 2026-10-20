@@ -2,7 +2,7 @@
 // notes) into a short, ordered set of topics. Each topic gets a brief introduction to the ideas to
 // watch for, and YouTube searches the extension runs in the student's own tab; the librarian then
 // picks videos from those results. Checks of understanding use TeachBack, per topic.
-// Sessions are temporary and goal-oriented: the plan lives with the Target in the student's browser.
+// Sessions are temporary and goal-oriented: the plan lives with the aim in the student's browser.
 
 import { type TaskCtx, TaskError } from "./teachback.ts";
 

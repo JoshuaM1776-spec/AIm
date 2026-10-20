@@ -173,7 +173,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     step("welcome: Aim's line, and a minute to learn it", (await welcome.textContent("main")).includes("Aim helps you find what you need") && (await welcome.textContent("#next")) === "Let's go");
     await welcome.click("#next");
     const howText = await welcome.textContent("main");
-    step("how it works: Target, staying on Target, breaks", ["Say what you're here for", "keeps YouTube on Target", "Take a break whenever you like"].every(t => howText.includes(t)));
+    step("how it works: Aim, staying on your aim, breaks", ["Say what you're here for", "keeps YouTube on your aim", "Take a break whenever you like"].every(t => howText.includes(t)));
     await welcome.click("#next");
     // ---------- Design your YouTube ----------
     const [design] = await Promise.all([ctx.waitForEvent("page"), welcome.click("#design")]);
@@ -183,7 +183,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     step("Design your YouTube: step 1 of 3, with a live preview of the homepage", (await design.textContent(".panel .count")) === "Step 1 of 3" && (await prev()).includes("What brings you here?"));
     await design.click(".opt:has-text('The regular YouTube feed')");
     step("choosing YouTube's feed changes the preview at once", !(await prev()).includes("What brings you here?") && (await prev()).includes("Recommended for you"));
-    await design.click(".opt:has-text('A clean page with my Target')");
+    await design.click(".opt:has-text('A clean page with my aim')");
     step("a clean page: just What brings you here, no videos", (await prev()).includes("What brings you here?") && !(await prev()).includes("Learn something"));
     await design.click(".opt:has-text('Videos from channels I choose')");
     await design.click(".seg button:text-is('Math')");
@@ -239,15 +239,15 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("feed hidden before Aim's main scripts run", await p.evaluate(() =>
     document.documentElement.classList.contains("wp-boot") || document.documentElement.classList.contains("wp-home")));
   await p.waitForSelector("#wp-chip .wp-pill", { timeout: 5000 });
-  step("indicator invites a purpose", (await text("#wp-chip")).includes("Set Target") && !(await text("#wp-chip")).includes("null"));
+  step("indicator invites a purpose", (await text("#wp-chip")).includes("Set aim") && !(await text("#wp-chip")).includes("null"));
   await p.waitForSelector("#wp-home", { timeout: 5000 });
   step("homepage card replaces the feed", await p.isHidden("ytd-rich-grid-renderer"));
   // First-time tips: the box, then the Aim button. Once each.
   await p.waitForSelector(".wp-coach", { timeout: 5000 }).catch(() => {});
   step("first visit: a tip points at the box", (await text(".wp-coach")).includes("Start here") && (await text(".wp-coach")).includes("1 of 2"));
   await p.click(".wp-coach-next");
-  await p.waitForSelector(".wp-coach:has-text('Your Target lives here')", { timeout: 3000 }).catch(() => {});
-  step("then one at the Aim button", (await text(".wp-coach")).includes("Your Target lives here"));
+  await p.waitForSelector(".wp-coach:has-text('Your aim lives here')", { timeout: 3000 }).catch(() => {});
+  step("then one at the Aim button", (await text(".wp-coach")).includes("Your aim lives here"));
   await p.click(".wp-coach-next");
   await p.waitForTimeout(300);
   await p.reload(); await p.waitForSelector("#wp-home"); await p.waitForTimeout(600);
@@ -295,7 +295,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("moving to another video ends the one-video break", !st.brk && st.history.some(h => h.type === "break" && h.oneVideo));
 
   await p.fill(".wp-player-card input", "Learn how sourdough starters work");
-  await p.click('.wp-player-card button:text-is("Set Target")');
+  await p.click('.wp-player-card button:text-is("Set aim")');
   await p.waitForTimeout(800);
   st = await store();
   step("setting a purpose from the card plays the video", st.purpose?.text === "Learn how sourdough starters work" && st.purpose.limitMin === null && !(await p.$(".wp-player-card")));
@@ -304,11 +304,11 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("with a purpose: autoplay switched off", (await p.getAttribute(".ytp-autonav-toggle-button", "aria-checked")) === "false" &&
     (await p.evaluate(() => localStorage.getItem("aim-autoplay-restore"))) === "1");
   step("with a purpose: Shorts link hidden", await p.isHidden("#guideShorts"));
-  step("Up next shows what the purpose has so far (nothing searched yet)", (await text("#wp-upnext")).includes("Search toward your Target"));
+  step("Up next shows what the purpose has so far (nothing searched yet)", (await text("#wp-upnext")).includes("Search toward your aim"));
   await p.evaluate(() => ytNav("/watch?v=elsewhere"));
   await p.waitForSelector(".wp-player-card", { timeout: 6000 });
   card = await text(".wp-player-card");
-  step("a video your searches didn't find is not part of the purpose", card.includes("Not on your Target") && card.includes("Change Target") && !/watch anyway/i.test(card), card.slice(0, 140));
+  step("a video your searches didn't find is not part of the purpose", card.includes("Not on your aim") && card.includes("Change my aim") && !/watch anyway/i.test(card), card.slice(0, 140));
   await p.evaluate(() => ytNav("/watch?v=bbb"));
   await p.waitForTimeout(1500);
   step("going back to the purpose's video plays it", !(await p.$(".wp-player-card")));
@@ -316,8 +316,8 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   // ---------- the menu ----------
   await p.click("#wp-chip .wp-pill");
   let menu = await text(".wp-dropdown");
-  step("menu: purpose, no time limit, what's hidden, break choices, Done, Change Target",
-    ["Current Target", "No time limit", "Shorts, recommendations and feeds hidden · autoplay off", "Adjust", "Take a break", "Target complete", "Change Target", "Save this video", "Sort this channel"].every(t => menu.includes(t)) &&
+  step("menu: purpose, no time limit, what's hidden, break choices, Done, Change my aim",
+    ["Your aim", "No time limit", "Shorts, recommendations and feeds hidden · autoplay off", "Adjust", "Take a break", "Done with this aim", "Change my aim", "Save this video", "Sort this channel"].every(t => menu.includes(t)) &&
     !/Pause|Explore|Add 15/.test(menu), menu.slice(0, 200));
 
   // ---------- take a break and come back ----------
@@ -335,8 +335,8 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     (await p.getAttribute(".ytp-autonav-toggle-button", "aria-checked")) === "true");
   await p.click("#wp-chip .wp-pill");
   menu = await text(".wp-dropdown");
-  step("break menu offers going back to the purpose", menu.includes("Back on Target") && menu.includes("Your Target is waiting"));
-  await p.click('.wp-dropdown button:has-text("Back on Target")');
+  step("break menu offers going back to the purpose", menu.includes("Back to my aim") && menu.includes("Your aim is waiting"));
+  await p.click('.wp-dropdown button:has-text("Back to my aim")');
   await p.waitForTimeout(600);
   st = await store();
   step("ending the break resumes the purpose", !st.brk && st.purpose?.suspended === false);
@@ -353,9 +353,9 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("a break that runs out ends and the purpose resumes", !st.brk && st.purpose && !st.purpose.suspended && st.stop?.kind === "break");
   await p.waitForSelector(".wp-break-over", { timeout: 5000 });
   const over = await text(".wp-break-over");
-  step("a \"Break time is up\" card offers the purpose or more break", over.includes("Break time is up") && over.includes("Back on Target") && over.includes("Extend break"), over);
+  step("a \"Break time is up\" card offers the purpose or more break", over.includes("Break time is up") && over.includes("Back to my aim") && over.includes("Extend break"), over);
   step("the break-over card also lets you keep browsing", over.includes("Keep browsing for now"));
-  await p.click('.wp-break-over button:has-text("Back on Target")');
+  await p.click('.wp-break-over button:has-text("Back to my aim")');
 
   // ---------- a purpose time limit ----------
   await p.click("#wp-chip .wp-pill");
@@ -368,7 +368,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await sw.evaluate(async () => { const { purpose } = await chrome.storage.local.get("purpose"); await chrome.storage.local.set({ purpose: { ...purpose, usedSec: purpose.limitMin * 60 - 3 } }); });
   await p.waitForSelector(".wp-player-card", { timeout: 15000 });
   card = await text(".wp-player-card");
-  step("time up shows a card on the player", card.includes("Time's up") && card.includes("Target complete") && card.includes("Add 15 minutes"), card.slice(0, 100));
+  step("time up shows a card on the player", card.includes("Time's up") && card.includes("Done with this aim") && card.includes("Add 15 minutes"), card.slice(0, 100));
   await p.click('.wp-player-card button:text-is("Add 15 minutes")');
   await p.waitForTimeout(800);
   st = await store();
@@ -376,16 +376,16 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
 
   // ---------- Done ----------
   await p.click("#wp-chip .wp-pill");
-  await p.click('.wp-dropdown button:has-text("Target complete")');
+  await p.click('.wp-dropdown button:has-text("Done with this aim")');
   await p.waitForSelector(".wp-done-dialog", { timeout: 3000 });
   const doneText = await text(".wp-done-dialog");
-  step("Done asks first: found it, partly, not really, or keep going", ["Target complete?", "Yes, I'm done", "Partly", "Not really", "Keep going"].every(t => doneText.includes(t)));
+  step("Done asks first: found it, partly, not really, or keep going", ["Done with this aim?", "Yes, I'm done", "Partly", "Not really", "Keep going"].every(t => doneText.includes(t)));
   await p.click('.wp-done-dialog button:text-is("Yes, I\'m done")');
   await p.waitForURL("https://www.youtube.com/", { timeout: 5000 });
   await p.waitForSelector(".wp-toast", { timeout: 5000 });
   step("Done lands on the homepage with a short confirmation", (await text(".wp-toast")).includes("Glad you found it"));
   await p.click("#wp-chip .wp-pill");
-  await p.click('.wp-dropdown button:has-text("Set Target")');
+  await p.click('.wp-dropdown button:has-text("Set aim")');
   await p.waitForSelector(".wp-dialog .wp-recent", { timeout: 3000 });
   step("setting a purpose offers recent ones", (await text(".wp-dialog .wp-recent")).includes("Learn how sourdough starters work"));
   await p.click('.wp-dialog .wp-recent-item');
@@ -400,8 +400,8 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.waitForSelector("#wp-results-bar", { timeout: 5000 });
   st = await store();
   step("a search with no purpose becomes the purpose (no time limit)", st.purpose?.text === "how to fix a leaky faucet" && st.purpose.limitMin === null && st.purpose.searches[0].q === "how to fix a leaky faucet");
-  step("results bar is a compact row: Target, Change and done", (await text("#wp-results-bar")).includes("how to fix a leaky faucet") &&
-    (await text("#wp-results-bar")).includes("Change") && !!(await p.$("#wp-results-bar [aria-label='Target complete']")) && !(await text("#wp-results-bar")).includes("left"));
+  step("results bar is a compact row: Aim, Change and done", (await text("#wp-results-bar")).includes("how to fix a leaky faucet") &&
+    (await text("#wp-results-bar")).includes("Change") && !!(await p.$("#wp-results-bar [aria-label='Done with this aim']")) && !(await text("#wp-results-bar")).includes("left"));
   step("in results: Shorts shelf and Shorts hidden, videos shown", (await p.isHidden("#shortsShelf")) && (await p.isHidden("#shortItem")) && (await p.isVisible("#normalItem")));
   await p.waitForTimeout(800);
   st = await store();
@@ -418,13 +418,13 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.goto("https://www.youtube.com/results?search_query=faucet+cartridge+replacement");
   await p.waitForSelector("#wp-results-bar", { timeout: 5000 });
   await p.waitForTimeout(500);
-  step("a related search continues silently", !(await text("#wp-results-bar")).includes("part of your Target?") &&
+  step("a related search continues silently", !(await text("#wp-results-bar")).includes("part of your aim?") &&
     (await store()).purpose.searches.some(s => s.q === "faucet cartridge replacement"));
-  // Ask YouTube: videos in an AI answer, and picked from its own page, count toward the Target.
+  // Ask YouTube: videos in an AI answer, and picked from its own page, count toward the aim.
   await p.goto("https://www.youtube.com/results?search_query=why+is+my+faucet+dripping");
   await p.waitForSelector("#wp-results-bar", { timeout: 5000 });
   await p.waitForTimeout(800);
-  step("a video in an AI answer on the results page counts toward the Target", (await store()).purpose.allowed.some(v => v.id === "ai1" && v.title === "Why faucets drip, explained"));
+  step("a video in an AI answer on the results page counts toward the aim", (await store()).purpose.allowed.some(v => v.id === "ai1" && v.title === "Why faucets drip, explained"));
   await p.goto("https://www.youtube.com/new");
   await p.waitForTimeout(600);
   await p.click("#ask-answer a");
@@ -436,7 +436,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.goto("https://www.youtube.com/results?search_query=gaming+laptop+deals");
   await p.waitForSelector("#wp-results-bar", { timeout: 5000 });
   await p.waitForTimeout(500);
-  step("an unrelated search asks first, results hidden", (await text("#wp-results-bar")).includes("Is “gaming laptop deals” part of your Target?") &&
+  step("an unrelated search asks first, results hidden", (await text("#wp-results-bar")).includes("Is “gaming laptop deals” part of your aim?") &&
     await p.evaluate(() => document.documentElement.classList.contains("wp-search-pending")));
   await p.click('#wp-results-bar button:has-text("Yes, it\'s part of it")');
   await p.waitForTimeout(800);
@@ -445,10 +445,10 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     st.purpose.searches.some(s => s.q === "gaming laptop deals"));
   await p.goto("https://www.youtube.com/shorts/s9");
   await p.waitForSelector("#shorts-player .wp-player-card", { timeout: 6000 });
-  step("opening a Short during a purpose asks first", (await text(".wp-player-card")).includes("Shorts are hidden while you're on Target"));
+  step("opening a Short during a purpose asks first", (await text(".wp-player-card")).includes("Shorts are hidden while you're on your aim"));
   await p.goto("https://www.youtube.com/feed/subscriptions");
   await p.waitForSelector("#wp-feed-note", { timeout: 6000 });
-  step("subscriptions feed replaced by a note during a purpose", (await p.isHidden("#subsGrid")) && (await text("#wp-feed-note")).includes("Feeds are hidden while you're on Target"));
+  step("subscriptions feed replaced by a note during a purpose", (await p.isHidden("#subsGrid")) && (await text("#wp-feed-note")).includes("Feeds are hidden while you're on your aim"));
   await sw.evaluate(() => finishPurpose(null));
 
   // ---------- leisure used up ----------
@@ -498,7 +498,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.click('.wp-dialog button:text-is("Continue")');
   await p.waitForSelector("#wp-results-bar:not(.wp-rb-pending)");
   st = await store();
-  step("strict mode: an unrelated search asks why first, and keeps the reason with its Target", strictBlocked &&
+  step("strict mode: an unrelated search asks why first, and keeps the reason with its aim", strictBlocked &&
     st.reasons?.[0]?.kind === "search" && st.reasons[0].text.includes("laptop review") && st.reasons[0].target === "fix a leaky faucet" &&
     st.purpose.searches.some(s => s.q === "gaming laptop deals"));
   await sw.evaluate(() => serial(async () => { await setSetting("strict", false); await finishPurpose("yes"); }));
@@ -515,15 +515,15 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("no AI, no API key anywhere in settings", !/API key|Claude|AI check/i.test(optText));
   step("no Aim Plus section while config.js is empty", plusHidden);
   step("no Aim Plus link in the popup when this copy has no Plus server", await pop.$eval("#plusPage", n => n.hidden));
-  step("popup leads with the Target: Resume, Take a Break, Done; activity folded below",
-    ["Current Target", "learn to sharpen a chisel", "so far", "Resume", "Take a Break", "Done", "Change Target", "Your activity", "This week", "Targets complete", "On Target", "Breaks", "Found it", "Daily limits"].every(t => popText.includes(t)) &&
+  step("popup leads with the aim: Resume, Take a Break, Done; activity folded below",
+    ["Your aim", "learn to sharpen a chisel", "so far", "Resume", "Take a Break", "Done", "Change my aim", "Your activity", "This week", "aims complete", "On your aims", "Breaks", "Found it", "Daily limits"].every(t => popText.includes(t)) &&
     !popText.includes("left") && !(await pop.$eval("#activity", d => d.open)), popText.slice(0, 200));
   await pop.click('button:text-is("Done")');
   await pop.click('button:text-is("Yes, I\'m done")');
   await pop.waitForTimeout(500);
   step("Done from the popup asks and ends the purpose", !(await store()).purpose && (await store()).history.pop().outcome === "yes");
 
-  // ---------- picking a Target up again ----------
+  // ---------- picking an aim up again ----------
   await sw.evaluate(() => serial(() => setSetting("homeCard", true))); // an earlier check switched the homepage card off
   await sw.evaluate(() => serial(() => startPurpose({ text: "Study for my biology exam", search: "cell biology" })));
   await sw.evaluate(() => serial(() => allowVideos({ query: "cell biology", videos: [{ id: "bio1", title: "Cells" }], lists: [] })));
@@ -534,35 +534,35 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.goto("https://www.youtube.com/");
   await p.waitForSelector("#wp-home .wp-home-resume");
   let home = await text("#wp-home");
-  step("home: Pick up where you left off, with the current Target and Continue",
-    home.includes("Pick up where you left off") && home.includes("Current Target") && home.includes("Fix my truck's AC") && home.includes("Continue"), home.slice(0, 160));
-  step("home: the set-aside Target under Recent Targets, with when and Resume",
-    home.includes("Recent Targets") && home.includes("Study for my biology exam") && home.includes("Last active today") && !!(await p.$(".wp-home-row button:text-is('Resume')")));
-  step("home: a Target with no videos yet keeps the text-only card; a recent Target shows its last video small",
+  step("home: Pick up where you left off, with the current aim and Continue",
+    home.includes("Pick up where you left off") && home.includes("Your aim") && home.includes("Fix my truck's AC") && home.includes("Continue"), home.slice(0, 160));
+  step("home: the set-aside aim under Recent aims, with when and Resume",
+    home.includes("Recent aims") && home.includes("Study for my biology exam") && home.includes("Last active today") && !!(await p.$(".wp-home-row button:text-is('Resume')")));
+  step("home: an aim with no videos yet keeps the text-only card; a recent aim shows its last video small",
     !(await p.$(".wp-home-current .wp-home-video")) && !!(await p.$(".wp-home-row .wp-home-row-thumb .wp-thumb-xs")) &&
     (await p.$eval(".wp-home-row .wp-thumb-xs", n => n.style.backgroundImage)).includes("i.ytimg.com/vi/bio1/"));
-  step("home: no example chips once there's something to pick up", !home.includes("Try asking") && home.includes("View all Targets") && !/\bnull\b/.test(home));
+  step("home: no example chips once there's something to pick up", !home.includes("Try asking") && home.includes("View all aims") && !/\bnull\b/.test(home));
   await p.click(".wp-home-row button:text-is('Resume')");
   await p.waitForURL(/watch\?v=bio1/);
   step("Resume returns to the last video at the moment you left it", p.url().includes("watch?v=bio1&t=300s"), p.url());
   await p.waitForTimeout(800);
   st = await store();
-  step("the resumed Target is current and the other is set aside", st.purpose?.text === "Study for my biology exam" &&
+  step("the resumed aim is current and the other is set aside", st.purpose?.text === "Study for my biology exam" &&
     st.paused.map(x => x.text).join() === "Fix my truck's AC" && !(await p.$(".wp-player-card")));
   await p.goto("https://www.youtube.com/");
   await p.waitForSelector("#wp-home .wp-home-current .wp-home-video");
   const lastCard = await text("#wp-home .wp-home-video");
-  step("home: the current Target leads with its last video: thumbnail, title, channel, where you stopped, a coral progress line",
+  step("home: the current aim leads with its last video: thumbnail, title, channel, where you stopped, a coral progress line",
     lastCard.includes("Video bio1") && lastCard.includes("Chan bio1") && lastCard.includes("Stopped at 5:00") &&
     (await p.$eval(".wp-home-video .wp-thumb-progress i", n => n.style.width)) === "33%" && (await text(".wp-home-video .wp-thumb-len")) === "15:00", lastCard);
-  step("home: See more is closed at first and lists the Target's other videos",
+  step("home: See more is closed at first and lists the aim's other videos",
     (await text(".wp-home-see-more")) === "See more (2)" && (await p.$eval(".wp-home-minis", n => n.hidden)));
   await p.click(".wp-home-see-more");
   step("See more opens a row of small thumbnails, newest first",
     (await p.$$eval(".wp-home-minis .wp-mini", ns => ns.map(n => n.title).join())) === "Video bio3,Video bio2" && (await text(".wp-home-see-more")) === "See less");
   await p.click(".wp-home-minis .wp-mini");
   await p.waitForURL(/watch\?v=bio3/);
-  step("a small thumbnail plays that video from where you stopped, still on the Target",
+  step("a small thumbnail plays that video from where you stopped, still on the aim",
     p.url().includes("watch?v=bio3&t=90s") && (await store()).purpose?.text === "Study for my biology exam", p.url());
   await p.click("#wp-chip .wp-pill");
   await p.click('.wp-dropdown button:has-text("Set aside for later")');
@@ -570,14 +570,14 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.waitForSelector("#wp-home .wp-home-recent");
   st = await store();
   home = await text("#wp-home");
-  step("Set aside for later: no current Target, both waiting on the homepage", !st.purpose && st.paused.length === 2 &&
-    !home.includes("Current Target") && home.includes("Study for my biology exam") && home.includes("Fix my truck's AC"));
-  const [all] = await Promise.all([ctx.waitForEvent("page"), p.click("button:text-is('View all Targets')")]);
+  step("Set aside for later: no current aim, both waiting on the homepage", !st.purpose && st.paused.length === 2 &&
+    !home.includes("Your aim") && home.includes("Study for my biology exam") && home.includes("Fix my truck's AC"));
+  const [all] = await Promise.all([ctx.waitForEvent("page"), p.click("button:text-is('View all aims')")]);
   await all.waitForSelector("h2:text-is('Set aside')");
   const allText = await all.textContent("main");
-  step("View all Targets lists set-aside and completed Targets", allText.includes("Study for my biology exam") && allText.includes("Start again") &&
+  step("View all aims lists set-aside and completed aims", allText.includes("Study for my biology exam") && allText.includes("Start again") &&
     allText.includes("learn to sharpen a chisel"), allText.slice(0, 200));
-  step("Targets page: a Target's last video as a thumbnail, and See more videos for the rest",
+  step("Aims page: an aim's last video as a thumbnail, and See more videos for the rest",
     !!(await all.$(".item:has-text('Study for my biology exam') .lead-thumb .thumb")) &&
     (await all.textContent(".item:has-text('Study for my biology exam') details.videos summary")) === "See more videos (2)" &&
     !(await all.$(".item:has-text(\"Fix my truck's AC\") .lead-thumb")));
@@ -585,12 +585,12 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await rec.goto(`chrome-extension://${extId}/record.html`);
   await rec.waitForSelector("#record .totals");
   const recText = await rec.textContent("#record");
-  step("Learning record: totals and the Targets you worked on, with their videos", recText.includes("Targets completed") && recText.includes("Study for my biology exam") &&
+  step("Learning record: totals and the aims you worked on, with their videos", recText.includes("Aims completed") && recText.includes("Study for my biology exam") &&
     recText.includes("Video bio1") && (await rec.$$("#record .entry")).length >= 2 && !/undefined|null|NaN/.test(recText), recText.slice(0, 200));
   await rec.close();
   await all.click(".item:has-text(\"Fix my truck's AC\") button:text-is('Resume')");
   await all.waitForURL(/results\?search_query=truck/);
-  step("resuming a Target without a video goes back to its last search", (await store()).purpose?.text === "Fix my truck's AC");
+  step("resuming an aim without a video goes back to its last search", (await store()).purpose?.text === "Fix my truck's AC");
   await all.close();
   await sw.evaluate(() => serial(() => finishPurpose("yes")));
 
@@ -622,12 +622,12 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   }));
   await p.goto("https://www.youtube.com/");
   await p.waitForSelector("#wp-home .wp-home-current");
-  step("a lookup Target says Got my answer instead of Target complete",
-    !!(await p.$('.wp-home-current button:has-text("Got my answer")')) && !(await p.$('.wp-home-current button:has-text("Target complete")')));
+  step("a lookup aim says Got my answer instead of Done with this aim",
+    !!(await p.$('.wp-home-current button:has-text("Got my answer")')) && !(await p.$('.wp-home-current button:has-text("Done with this aim")')));
   await p.click('.wp-home-current button:has-text("Got my answer")');
   await p.waitForTimeout(800);
   st = await store();
-  step("Got my answer ends the Target as found, with no questions", !st.purpose && st.history[st.history.length - 1].outcome === "yes" && !(await p.$(".wp-done-dialog")));
+  step("Got my answer ends the aim as found, with no questions", !st.purpose && st.history[st.history.length - 1].outcome === "yes" && !(await p.$(".wp-done-dialog")));
 
   // ---------- Learn something ----------
   await setLocal({ onboarding: { welcomed: true, tips: { home: true, chip: true, results: true }, hsTour: true }, learn: {} });
@@ -650,7 +650,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.click(".wp-learn-row .wp-learn-item");
   await p.waitForURL(/watch\?v=tbobvid1/);
   st = await store();
-  step("picking one starts a light Target from your topics", st.purpose?.text === "Exploring: 3Blue1Brown lesson 1 & more" && st.purpose.learn === "Math" &&
+  step("picking one starts a light aim from your topics", st.purpose?.text === "Exploring: 3Blue1Brown lesson 1 & more" && st.purpose.learn === "Math" &&
     st.purpose.allowed.length >= 6);
   await p.waitForSelector("#wp-upnext");
   step("Up next shows more from your topics", (await text("#wp-upnext")).includes("More from your topics") && (await text("#wp-upnext")).includes("Numberphile lesson 1"));
@@ -664,7 +664,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await sw.evaluate(() => serial(async () => { await startPurpose({ text: "fix a leaky faucet" }); }));
   await p.goto("https://www.youtube.com/");
   await p.waitForSelector("#wp-home .wp-home-current");
-  step("with a Target going, Learn something stays out of the way", !(await p.$(".wp-learn")));
+  step("with an aim going, Learn something stays out of the way", !(await p.$(".wp-learn")));
 
   // ---------- Shorts from your topics: a Quick review ----------
   await sw.evaluate(() => serial(async () => {
@@ -686,7 +686,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.waitForURL(/shorts\/shderiv01/);
   await p.waitForSelector(".wp-notice");
   st = await store();
-  step("opening one starts a Quick review Target, and the Short plays", st.purpose?.text === "Quick review: Derivatives" && !(await p.$("#shorts-player .wp-player-card")) &&
+  step("opening one starts a Quick review aim, and the Short plays", st.purpose?.text === "Quick review: Derivatives" && !(await p.$("#shorts-player .wp-player-card")) &&
     (await text(".wp-notice")).includes("Quick review · 1 of"), st.purpose?.text);
   await p.goto("https://www.youtube.com/shorts/s9");
   await p.waitForSelector("#shorts-player .wp-player-card", { timeout: 6000 });
@@ -725,8 +725,8 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await chPage.bringToFront();
   await chPage.waitForFunction(() => document.querySelectorAll(".ch").length >= 10);
   const unsorted = await chPage.textContent(".col:nth-child(1)");
-  step("they arrive unsorted, with suggestions: Learn something's channels under their topic, and one you watched for two Targets",
-    unsorted.includes("Suggested: Learn from · Math") && unsorted.includes("You watched it for 2 Targets") && !unsorted.includes("Gamer Guy (Suggested") &&
+  step("they arrive unsorted, with suggestions: Learn something's channels under their topic, and one you watched for two aims",
+    unsorted.includes("Suggested: Learn from · Math") && unsorted.includes("You watched it for 2 aims") && !unsorted.includes("Gamer Guy (Suggested") &&
     (await chPage.textContent("#acceptAll")) === "Accept 3 suggestions", (await chPage.textContent("#acceptAll")));
   await chPage.click("#acceptAll");
   await chPage.waitForFunction(() => document.querySelector(".col:nth-child(2) .count").textContent === "3");
@@ -753,12 +753,12 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await chPage.fill("#filter", "");
   if (process.env.SHOTS) { await chPage.setViewportSize({ width: 1280, height: 900 }); await chPage.screenshot({ path: `${process.env.SHOTS}/channels.png`, fullPage: true }); }
   await chPage.close();
-  // A break channel, on a Target: Aim asks first, even for a video your search found.
+  // A break channel, on an aim: Aim asks first, even for a video your search found.
   await sw.evaluate(() => serial(async () => { await startPurpose({ text: "fix a leaky faucet" }); await allowVideos({ query: "x", videos: [{ id: "brk1", title: "Gaming", channel: "Chan brk1" }], lists: [] });
     await setAvoid("/@chanbrk1", "Chan brk1", "break"); }));
   await p.goto("https://www.youtube.com/watch?v=brk1");
   await p.waitForSelector(".wp-player-card", { timeout: 8000 });
-  step("a For breaks channel on a Target: Aim asks, with a break as the way to watch it", (await text(".wp-player-card")).includes("is one of your break channels") &&
+  step("a For breaks channel on an aim: Aim asks, with a break as the way to watch it", (await text(".wp-player-card")).includes("is one of your break channels") &&
     (await text(".wp-player-card")).includes("Just this video"));
   await sw.evaluate(() => serial(() => finishPurpose("yes")));
   await setLocal({ avoid: { "/@hideme": { name: "Hide Me", action: "hide" } } });
@@ -790,9 +790,9 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.waitForSelector("#wp-results-bar");
   st = await store();
   await p.waitForSelector(".wp-coach", { timeout: 3000 }).catch(() => {});
-  step("the first search on Target gets one tip about the bar", (await text(".wp-coach")).includes("This search is on Target"));
+  step("the first search on your aim gets one tip about the bar", (await text(".wp-coach")).includes("This search is on your aim"));
   await p.click(".wp-coach-next");
-  step("Start makes the lesson the Target and searches for it", st.purpose?.plan === "sci1" && st.purpose.text === "Science: How Volcanoes Form" &&
+  step("Start makes the lesson the aim and searches for it", st.purpose?.plan === "sci1" && st.purpose.text === "Science: How Volcanoes Form" &&
     (await text("#wp-results-bar")).includes("Today's plan"));
   await sw.evaluate(() => serial(() => recordTick(10, { id: "vol1", title: "Volcanoes 101", channel: "Geo", t: 100, d: 600 })));
   let hs = (await store()).homeschool;
@@ -828,7 +828,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("Mark done beside the video", !!(await store()).homeschool.items[1].doneAt);
   await sw.evaluate(() => serial(async () => { for (const id of ["hist1", "read1", "tb1"]) await planDone(id); }));
   st = await store();
-  step("the whole day done: the last lesson stops being the Target", !st.purpose && st.homeschool.items.every(i => i.doneAt));
+  step("the whole day done: the last lesson stops being the aim", !st.purpose && st.homeschool.items.every(i => i.doneAt));
   await p.goto("https://www.youtube.com/");
   await p.waitForSelector(".wp-plan-finished");
   step("You're done for today, with optional Go deeper and a break", (await text(".wp-plan-finished")).includes("You're done for today.") &&

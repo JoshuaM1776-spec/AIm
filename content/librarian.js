@@ -24,8 +24,8 @@ function looksLikeRequest(text) {
   return t.split(/\s+/).length >= 6;
 }
 
-// What the librarian knows about the current Target: kept in this browser, sent with each request.
-// Recent Targets (set aside or finished), so "something fun to watch" can lean toward them.
+// What the librarian knows about the current aim: kept in this browser, sent with each request.
+// Recent aims (set aside or finished), so "something fun to watch" can lean toward them.
 const recentTargets = () => [...(status.paused || []).map(t => t.text), ...(status.recent || [])].filter(t => t !== activePurpose()?.text).slice(0, 5);
 
 function librarianContext(p) {
@@ -60,7 +60,7 @@ async function librarianAsk(request, busy) {
     if (r?.code === "limit") toast("That's today's Aim searches. Searching YouTube directly.");
     return goSearch(request);
   }
-  // "I just want to enjoy…": a break with a theme. The Target, if any, waits, as with any break.
+  // "I just want to enjoy…": a break with a theme. The aim, if any, waits, as with any break.
   if (r.kind === "relax") {
     const b = await send({ type: "break-start", minutes: 30, theme: { text: r.target, note: r.note, searches: r.searches } });
     busy?.(false);
@@ -81,8 +81,8 @@ async function librarianAsk(request, busy) {
 function librarianBlock(p) {
   const L = p.librarian || null;
   const query = searchQuery().toLowerCase();
-  const input = el("input", { class: "wp-input wp-lib-input", type: "text", placeholder: "Ask, search, or refine your Target…",
-    "aria-label": "Ask, search, or refine your Target" });
+  const input = el("input", { class: "wp-input wp-lib-input", type: "text", placeholder: "Ask, search, or refine your aim…",
+    "aria-label": "Ask, search, or refine your aim" });
   const go = el("button", { class: "wp-btn wp-btn-tonal", "aria-label": "Search" }, icon("search"));
   const busy = on => {
     input.disabled = on; go.disabled = on;
@@ -109,7 +109,7 @@ function librarianBlock(p) {
 }
 
 // The librarian's picks among the results YouTube showed, grouped, each with a reason. Asked once
-// per search and kept with the Target; YouTube's own results stay below.
+// per search and kept with the aim; YouTube's own results stay below.
 let picksInFlight = null;
 async function librarianPicks() {
   const p = activePurpose();

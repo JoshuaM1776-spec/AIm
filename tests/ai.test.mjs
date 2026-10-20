@@ -657,7 +657,7 @@ test("video concepts: Plus only; chapters are evidence; descriptions keep their 
   assert.strictEqual((await call(makeDeps({ plan: "free" }), { task: "video-concepts", input: { title: "x y" } })).status, 403);
 });
 
-test("librarian: 'relax' is its own kind, never the same Target, and sees recent Targets", async () => {
+test("librarian: 'relax' is its own kind, never the same aim, and sees recent aims", async () => {
   let prompt = "";
   const deps = makeDeps({ plan: "free", claude: req => {
     prompt = req.prompt;
@@ -666,7 +666,7 @@ test("librarian: 'relax' is its own kind, never the same Target, and sees recent
   } });
   const r = await call(deps, { task: "librarian-ask", input: { request: "some engineering videos", target: "Research Gated Rentals", recent: ["Prepare for my flight review", "Research Gated Rentals"] } });
   assert.strictEqual(r.body.kind, "relax");
-  assert.strictEqual(r.body.sameTarget, false, "relaxing never continues the current Target");
+  assert.strictEqual(r.body.sameTarget, false, "relaxing never continues the current aim");
   assert.match(prompt, /THEIR RECENT TARGETS: Prepare for my flight review \| Research Gated Rentals/);
   assert.match(deps.calls[0].system, /"relax"/);
 });

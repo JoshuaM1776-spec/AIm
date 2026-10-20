@@ -241,7 +241,7 @@ Until this is done, Plus is given by hand: in Supabase's **Table Editor**, open 
 
 1. **Add sync's table:** in Supabase, **SQL Editor** → **New query**, paste all of `supabase/migrations/0004_sync.sql`, and choose **Run**.
 2. **Update the `ai` function** with the current `ai-dashboard.ts` (Part 6, "Updating later").
-3. **Test it:** sign in to the same Plus account in two Chrome profiles, turn on **Sync across devices** in Settings → Aim Plus in both, and set a Target aside in one. **Sync now** in the other shows it under Set aside on the Targets page.
+3. **Test it:** sign in to the same Plus account in two Chrome profiles, turn on **Sync across devices** in Settings → Aim Plus in both, and set an aim aside in one. **Sync now** in the other shows it under Set aside on the aims page.
 
 ## Part 11 — Aim Homeschool: the parent website (pilot)
 

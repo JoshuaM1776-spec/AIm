@@ -58,8 +58,8 @@ function renderFeedNote() {
   existing?.remove();
   host.prepend(el("div", { id: "wp-feed-note", class: "wp wp-home-card wp-feed-note", "data-key": key },
     brandLine(),
-    el("div", { class: "wp-title" }, p ? "Feeds are hidden while you're on Target" : "Feeds are hidden until you choose"),
-    el("div", { class: "wp-muted" }, p ? `Current Target: ${p.text}` : "Search for what you came for, or take a break to browse."),
+    el("div", { class: "wp-title" }, p ? "Feeds are hidden while you're on your aim" : "Feeds are hidden until you choose"),
+    el("div", { class: "wp-muted" }, p ? `Your aim: ${p.text}` : "Search for what you came for, or take a break to browse."),
     el("div", { class: "wp-label wp-home-break-label" }, "Take a break to browse"),
     breakChips(takeBreak)));
 }
@@ -73,10 +73,10 @@ function showShortsCard() {
   if (review) closeNotice(); // the review bar of the Short before
   showPlayerCard(
     brandLine(),
-    el("div", { class: "wp-title" }, review ? review.title : "Shorts are hidden while you're on Target"),
-    p ? el("div", { class: "wp-current" }, el("div", { class: "wp-label" }, "Current Target"), el("div", { class: "wp-strong" }, p.text)) : null,
+    el("div", { class: "wp-title" }, review ? review.title : "Shorts are hidden while you're on your aim"),
+    p ? el("div", { class: "wp-current" }, el("div", { class: "wp-label" }, "Your aim"), el("div", { class: "wp-strong" }, p.text)) : null,
     el("div", { class: "wp-actions wp-actions-start" },
-      ...(review?.actions || [el("button", { class: "wp-btn wp-btn-primary", onclick: goBack }, "Back on Target")])),
+      ...(review?.actions || [el("button", { class: "wp-btn wp-btn-primary", onclick: goBack }, "Back to my aim")])),
     el("div", { class: "wp-label" }, "Or take a break"),
     breakChips(takeBreak));
 }

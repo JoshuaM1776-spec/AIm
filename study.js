@@ -99,7 +99,7 @@ async function render() {
   const st = s?.purpose?.study;
   if (!st) {
     screen.replaceChildren(node("div", { className: "card" }, node("h1", { textContent: "No study session" }),
-      node("p", { className: "muted", textContent: `Study sessions start from a learning Target's results on YouTube, with ${BRAND} Plus.` })));
+      node("p", { className: "muted", textContent: `Study sessions start from a learning aim's results on YouTube, with ${BRAND} Plus.` })));
     return;
   }
   const checked = st.topics.filter(t => t.check).length;
@@ -117,7 +117,7 @@ async function render() {
     st.endedAt ? null : node("div", { className: "row" },
       btn("Continue studying", "", () => { const t = st.topics[st.current] || st.topics[0]; location.href = yt(`/results?search_query=${encodeURIComponent(t.searches[0])}`); }),
       btn("End study session", "text", async () => {
-        if (!confirm("End this study session? Your Target stays, and this summary remains here.")) return;
+        if (!confirm("End this study session? Your aim stays, and this summary remains here.")) return;
         await send({ type: "study-update", end: true });
         render();
       })),

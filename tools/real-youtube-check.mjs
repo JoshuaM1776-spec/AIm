@@ -93,7 +93,7 @@ try {
   check("results: most have a length (badge or spoken label)", share("length") >= 0.8, share("length").toFixed(2));
   check("results: Aim's results bar (or its question) appears", await page.$("#wp-results-bar"));
   const kept = (await (await worker()).evaluate(() => chrome.storage.local.get("purpose"))).purpose?.allowed || [];
-  check("results: Aim keeps them for the Target, most with a length", kept.length >= 5 && kept.filter(v => v.length).length >= kept.length * 0.8,
+  check("results: Aim keeps them for the aim, most with a length", kept.length >= 5 && kept.filter(v => v.length).length >= kept.length * 0.8,
     `${kept.filter(v => v.length).length} of ${kept.length}: ${kept.slice(0, 4).map(v => v.length).join(" ")}`);
 
   // ---------- watch ----------
@@ -123,7 +123,7 @@ try {
   // channel page when the feed fails) and the background caches what it found.
   await worker();
   const handles = [...new Set(TOPICS.flatMap(t => t.channels.map(c => c.handle)))];
-  // The search above started a Target, and Learn something only shows without one.
+  // The search above started an aim, and Learn something only shows without one.
   await sw.evaluate(async ids => { await serial(() => finishPurpose("yes")); await serial(() => setOnboarding({ seenAll: true }));
     await serial(() => setSetting("learnTopics", ids)); await serial(() => setSetting("learnShorts", true)); }, TOPICS.map(t => t.id));
   await page.goto("https://www.youtube.com/", { waitUntil: "domcontentloaded" });
