@@ -205,7 +205,7 @@ function settingsPage() {
             btn("Delete account…", "text small danger", async () => {
               const typed = prompt("This deletes your account and everything with it: your family, students, plans, curriculum files and progress. Type DELETE to confirm.");
               if (typed !== "DELETE") return;
-              try { await call("account-delete", { confirm: "DELETE" }); await signOut(); S.home = null; location.hash = ""; start(); } catch (e) { toast(e.message); }
+              try { await call("account-delete", { confirm: "DELETE" }); await signOut(); S.home = null; location.hash = ""; start(); } catch (e) { toast(e.message, { error: true }); }
             }))))));
 }
 

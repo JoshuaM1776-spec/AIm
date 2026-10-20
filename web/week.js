@@ -80,7 +80,7 @@ function itemCard(l, w, draft, di, ii, gapIds) {
   const link = h("input", { type: "text", placeholder: "Paste a YouTube video link", "aria-label": "Video link", style: "flex:1;min-width:0" });
   pickBox.append(link, btn("Use it", "small", async () => {
     try { const r = await call("hs-video-info", { url: link.value }); it.video = r.video; await saveWeek(l, w, draft, "Video chosen for this lesson."); }
-    catch (e) { toast(e.message); }
+    catch (e) { toast(e.message, { error: true }); }
   }));
   return card;
 }

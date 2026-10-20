@@ -17,12 +17,14 @@ export function h(tag, props = {}, ...kids) {
 }
 export const btn = (label, cls, onclick, extra = {}) => h("button", { class: `btn ${cls || ""}`.trim(), type: "button", onclick, ...extra }, label);
 
-export function toast(text) {
+// A short message. Errors stay until closed, so there's time to read (and copy) them.
+export function toast(text, { error = false } = {}) {
   const t = document.getElementById("toast");
-  t.textContent = text;
+  t.classList.toggle("error", error);
+  t.replaceChildren(h("span", {}, text), error ? h("button", { type: "button", class: "toast-x", "aria-label": "Close", onclick: () => (t.hidden = true) }, "✕") : "");
   t.hidden = false;
   clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => (t.hidden = true), 3500);
+  if (!error) toast.timer = setTimeout(() => (t.hidden = true), 3500);
 }
 
 // The family's data, from Aim's server, and which student the pages are about.
@@ -45,7 +47,7 @@ export async function act(task, input, { done, quiet } = {}) {
     return r;
   } catch (e) {
     if (e instanceof ApiError && e.code === "conflict") { await reload(); window.dispatchEvent(new Event("aim:render")); }
-    if (!quiet) toast(e.message || "Something went wrong.");
+    if (!quiet) toast(e.message || "Something went wrong.", { error: true });
     throw e;
   }
 }

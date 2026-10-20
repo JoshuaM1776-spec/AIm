@@ -33,7 +33,7 @@ async function saveNow(l) {
     window.dispatchEvent(new Event("aim:curriculum-saved"));
   }).catch(async e => {
     w.saving = false;
-    toast(e.message);
+    toast(e.message, { error: true });
     if (e instanceof ApiError && e.code === "conflict") { work.delete(l.id); await reload(); window.dispatchEvent(new Event("aim:render")); }
   });
   return saving;
@@ -132,7 +132,7 @@ export function uploadBox({ onAdded } = {}) {
     const f = e.target.files[0];
     if (!f) return;
     try { text.value = await window.readFileText(f); if (!title.value) title.value = f.name.replace(/\.[^.]+$/, ""); toast("Read. Check the text, then add it."); }
-    catch (err) { toast(err.message); }
+    catch (err) { toast(err.message, { error: true }); }
   } });
   return h("div", { class: "card" },
     h("h2", {}, "Use your own curriculum"),
