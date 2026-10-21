@@ -123,9 +123,13 @@ function renderLearn(S) {
   }
 }
 
-// The librarian's memory: each idea, when, and Forget.
+// The librarian's memory: each idea, when, and Forget. And whether it may read captions, with how
+// often they were there when it looked.
 async function renderMemory(S) {
-  const [brief, items] = await Promise.all([send({ type: "plus-brief" }), send({ type: "memory-list" })]);
+  const [brief, items, stats] = await Promise.all([send({ type: "plus-brief" }), send({ type: "memory-list" }), send({ type: "captions-stats" })]);
+  $("captionsCard").hidden = !brief?.plus;
+  $("captions").checked = S.captions === true;
+  $("captionsNote").textContent = stats?.tried ? `Captions were there for ${stats.found} of the last ${stats.tried} videos it looked at.` : "Aim Plus. Off until you turn it on.";
   const list = Array.isArray(items) ? items : [];
   $("memoryCard").hidden = !brief?.plus && !list.length;
   $("librarianMemory").checked = S.librarianMemory !== false;
@@ -142,6 +146,7 @@ async function renderMemory(S) {
   }) : [Object.assign(document.createElement("div"), { className: "empty", textContent: "Nothing yet. Talk a session through, and what you explain shows up here." })]));
 }
 $("librarianMemory").onchange = () => setSetting("librarianMemory", $("librarianMemory").checked);
+$("captions").onchange = () => setSetting("captions", $("captions").checked);
 $("forgetAll").onclick = async () => {
   if (!confirm("Forget everything the librarian remembers? This can't be undone.")) return;
   await send({ type: "memory-forget", id: "all" });
@@ -154,10 +159,10 @@ if (location.hash === "#advanced") setTimeout(() => $("time").scrollIntoView({ b
 
 // The menu on the left: groups with nothing in them stay out of it, and the one you're reading is marked.
 function syncGroups() {
-  $("librarian").hidden = $("navLibrarian").hidden = $("memoryCard").hidden;
+  $("librarian").hidden = $("navLibrarian").hidden = $("memoryCard").hidden && $("captionsCard").hidden;
   $("plusGroup").hidden = $("navPlus").hidden = $("plus").hidden;
 }
-for (const id of ["memoryCard", "plus"]) new MutationObserver(syncGroups).observe($(id), { attributes: true, attributeFilter: ["hidden"] });
+for (const id of ["memoryCard", "captionsCard", "plus"]) new MutationObserver(syncGroups).observe($(id), { attributes: true, attributeFilter: ["hidden"] });
 syncGroups();
 const navLinks = [...document.querySelectorAll(".settings-nav a")];
 const groupOf = { general: "general", youtube: "youtube", librarian: "librarian", plus: "plusGroup" };

@@ -1,12 +1,12 @@
 // Aim Plus — "In this video": the concepts a video covers, worked out from what YouTube shows on the
-// page (title, channel, description and chapters), never from its transcript. Transcripts wait on
-// the legal review (docs/ROADMAP.md → Decisions 6). Each concept gets its chapter, if one matches,
+// page (title, channel, description and chapters) and, when the person has turned captions on, from
+// caption excerpts with their times (a preview until the legal review: docs/ROADMAP.md → Decisions). Each concept gets its chapter, if one matches,
 // and a couple of YouTube searches that show the same idea in a different context. The extension
 // keeps the answer with the video, so a video is looked at once.
 
 import { type TaskCtx, TaskError } from "./teachback.ts";
 
-export const VIDEO_LIMITS = { title: 200, channel: 100, description: 5000, chapters: 60, target: 300, concepts: 8 };
+export const VIDEO_LIMITS = { title: 200, channel: 100, description: 5000, chapters: 60, target: 300, concepts: 8, captions: 9000 };
 
 const vObject = (x: unknown): Record<string, unknown> => (x && typeof x === "object" && !Array.isArray(x) ? x as Record<string, unknown> : {});
 const vText = (x: unknown, max: number) => (typeof x === "string" ? x.replace(/\s+/g, " ").trim().slice(0, max) : "");
@@ -21,6 +21,7 @@ const VIDEO_SYSTEM = `You help a student learn from a YouTube video. From the vi
   - contexts: 2 YouTube searches that show the same concept applied somewhere else (a different situation, field or real case), each with a short label saying what that context is ("Hot-day takeoff accident analysis").
 - subject: the field, in a few words.
 - regulated: true for safety-critical or regulated fields (aviation, medicine, law, electrical work and similar). references: for those, the authoritative sources the concepts come from, by title (for a private pilot checkride: the FAA Airman Certification Standards for Private Pilot, the Pilot's Handbook of Aeronautical Knowledge). Otherwise empty.
+- With CAPTIONS (excerpts of what was said, with [m:ss] times): concepts may come from them too ("listed"), and at is the second where the concept is explained (from a time in the excerpts), otherwise -1. Captions only cover speech and automatic ones contain errors; never invent a time.
 - If the video isn't educational (music, entertainment, vlogs), return no concepts.`;
 
 const VIDEO_SCHEMA = {
@@ -34,10 +35,10 @@ const VIDEO_SCHEMA = {
       items: {
         type: "object",
         properties: {
-          name: { type: "string" }, summary: { type: "string" }, chapter: { type: "integer" }, basis: { type: "string", enum: ["listed", "likely"] },
+          name: { type: "string" }, summary: { type: "string" }, chapter: { type: "integer" }, at: { type: "integer" }, basis: { type: "string", enum: ["listed", "likely"] },
           contexts: { type: "array", items: { type: "object", properties: { label: { type: "string" }, search: { type: "string" } }, required: ["label", "search"], additionalProperties: false } }
         },
-        required: ["name", "summary", "chapter", "basis", "contexts"],
+        required: ["name", "summary", "chapter", "at", "basis", "contexts"],
         additionalProperties: false
       }
     }
@@ -57,6 +58,8 @@ export async function videoConcepts(ctx: TaskCtx) {
     return { t: Number.isFinite(o.t) ? Math.max(0, Math.floor(o.t as number)) : 0, title: vText(o.title, 120) };
   }).filter(c => c.title);
   const target = vText(input.target, VIDEO_LIMITS.target);
+  const captions = typeof input.captions === "string" ? input.captions.replace(/[^\S\n]+/g, " ").trim().slice(0, VIDEO_LIMITS.captions) : "";
+  const times = new Set([...captions.matchAll(/\[(\d{1,3}):(\d{2})\]/g)].map(m => Number(m[1]) * 60 + Number(m[2])));
   const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   let reply: Record<string, unknown>;
   try {
@@ -65,7 +68,8 @@ export async function videoConcepts(ctx: TaskCtx) {
       prompt: `TITLE: ${title}\nCHANNEL: ${vText(input.channel, VIDEO_LIMITS.channel) || "unknown"}\n` +
         (target ? `THE STUDENT'S GOAL: ${target}\n` : "") +
         (chapters.length ? `CHAPTERS:\n${chapters.map((c, i) => `${i}. ${mmss(c.t)} ${c.title}`).join("\n")}\n` : "CHAPTERS: none\n") +
-        `DESCRIPTION:\n${description || "(none)"}`
+        `DESCRIPTION:\n${description || "(none)"}` +
+        (captions ? `\nCAPTIONS (${input.auto ? "automatic, may contain errors" : "the creator's"}; excerpts):\n${captions}` : "")
     })));
   } catch (e) {
     if (e instanceof TaskError) throw e;
@@ -77,8 +81,10 @@ export async function videoConcepts(ctx: TaskCtx) {
     return {
       name: vText(o.name, 80), summary: vText(o.summary, 300),
       // A matched chapter is the evidence for "listed"; without one, it's at most "likely".
-      chapter: ch >= 0 ? { t: chapters[ch].t, title: chapters[ch].title } : null,
-      basis: o.basis === "listed" && (ch >= 0 || description.toLowerCase().includes(vText(o.name, 80).toLowerCase())) ? "listed" : "likely",
+      // A chapter when one matches; otherwise the moment in the captions, if it's a time that's really there.
+      chapter: ch >= 0 ? { t: chapters[ch].t, title: chapters[ch].title }
+        : captions && Number.isInteger(o.at) && nearTime(times, o.at as number) !== null ? { t: nearTime(times, o.at as number)!, title: "" } : null,
+      basis: o.basis === "listed" && (ch >= 0 || description.toLowerCase().includes(vText(o.name, 80).toLowerCase()) || (captions && Number.isInteger(o.at) && (o.at as number) >= 0)) ? "listed" : "likely",
       contexts: (Array.isArray(o.contexts) ? o.contexts : []).map(x => { const k = vObject(x); return { label: vText(k.label, 100), search: vText(k.search, 120) }; })
         .filter(k => k.label && k.search).slice(0, 2)
     };
@@ -88,6 +94,14 @@ export async function videoConcepts(ctx: TaskCtx) {
     regulated: reply.regulated === true,
     references: (Array.isArray(reply.references) ? reply.references : []).map(r => vText(r, 160)).filter(Boolean).slice(0, 4),
     concepts,
-    basis: chapters.length ? "title, description and chapters" : "title and description"
+    basis: [captions ? "captions" : "", "title", "description", chapters.length ? "chapters" : ""].filter(Boolean).join(", ").replace(/, ([^,]+)$/, " and $1")
   };
+}
+
+// A time the model gave, if it's within a passage of the excerpts (each passage starts at a listed time).
+function nearTime(times: Set<number>, at: number): number | null {
+  if (at < 0) return null;
+  let best: number | null = null;
+  for (const t of times) if (t <= at && at - t <= 60 && (best === null || t > best)) best = t;
+  return best === null ? null : at;
 }

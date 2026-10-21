@@ -31,7 +31,7 @@ function makeEnv(initial = {}) {
 const VIDEO = { id: "abc123", title: "Feeding a sourdough starter", channel: "Bread Co" };
 const fresh = () => makeEnv({ schemaVersion: 5 });
 const DEFAULTS = { homeCard: true, leisureMin: 60, graceMin: 15, totalMin: 0, purposeLimitMin: 0,
-  hideShorts: true, hideRecs: true, hideFeeds: true, noAutoplay: true, strict: false, learnTopics: [], learnOff: [], learnShorts: false, learnRow: true, librarianMemory: true, myTopics: [] };
+  hideShorts: true, hideRecs: true, hideFeeds: true, noAutoplay: true, strict: false, learnTopics: [], learnOff: [], learnShorts: false, learnRow: true, librarianMemory: true, captions: false, myTopics: [] };
 
 const tests = [];
 const test = (name, fn) => tests.push([name, fn]);
@@ -513,14 +513,14 @@ test("a set-aside study aim knows its next step: review first, then the next top
   assert.deepStrictEqual(JSON.parse(JSON.stringify((await env.run(`studyProgress(${JSON.stringify(p)})`)).next)), { kind: "review", title: "Glycolysis" });
 });
 
-test("talk: the session the librarian sees is titles, time and searches, never more; explore or focus", async () => {
+test("talk: the session the librarian sees is titles, time and searches (captions are added in the browser, with Plus); explore or focus", async () => {
   const env = fresh();
   await env.run(`startPurpose({ text: "Why did Rome fall", search: "fall of rome" })`);
   await env.run(`recordTick(30, { id: "r1", title: "The Fall of Rome", channel: "OverSimplified", t: 590, d: 600 })`);
   await env.run(`recordTick(5, { id: "r2", title: "A glance", channel: "X" })`);
   const t = JSON.parse(JSON.stringify(await env.run(`talkSession(null)`)));
   assert.strictEqual(t.mode, "focus");
-  assert.deepStrictEqual(t.session.videos, [{ title: "The Fall of Rome", channel: "OverSimplified", minutes: 1, finished: true }], "a glance isn't part of it");
+  assert.deepStrictEqual(t.session.videos, [{ id: "r1", title: "The Fall of Rome", channel: "OverSimplified", minutes: 1, finished: true }], "a glance isn't part of it");
   assert.deepStrictEqual(t.session.searches, ["fall of rome"]);
   await env.run(`startPurpose({ text: "Exploring History", learn: { topic: "History", videos: [] } })`);
   assert.strictEqual((await env.run(`talkSession(null)`)).mode, "explore");

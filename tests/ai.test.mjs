@@ -465,6 +465,7 @@ function talkDeps(plan, reply = talkReply) {
   const d = makeDeps({ plan, claude: req => reply(req) });
   d.config.limits = { dayCalls: 50, dayTokens: 1e6, minuteCalls: 50 };
   d.config.freeLimits = { dayCalls: 50, dayTokens: 1e6, minuteCalls: 50 };
+  d.config.maxSyncBytes = 1024 * 1024; // as in production (index.ts)
   d.taskCountSince = async (_u, task) => d.rows.filter(r => r.task === task).length;
   return d;
 }
@@ -543,6 +544,23 @@ test("talk: it sees what the aim takes and aims at the gaps; putting it together
   assert.match(d.calls[0].system, /evidence of understanding, not a certificate/);
   const focus = await call(d, { task: "librarian-talk", input: { mode: "focus", session, thread } });
   assert.strictEqual(focus.body.verdict, null, "only putting it together gives a verdict");
+});
+
+test("talk: with caption excerpts (Plus), questions can be grounded in what was said, citing only captioned videos", async () => {
+  const d = talkDeps("plus", () => talkReply({ message: "OverSimplified pins it on the army [V1 0:45], Historia Civilis on the Gracchi [V2 3:10]. Which do you buy?" }));
+  const session = { ...SESSION, videos: [{ ...SESSION.videos[0], transcript: "[0:00] Welcome back\n[0:45] the Marian reforms made soldiers loyal to generals", captions: "creator" }, SESSION.videos[1]] };
+  const r = await call(d, { task: "librarian-talk", input: { mode: "focus", opening: true, session } });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.match(d.calls[0].prompt, /V1: The Fall of the Roman Republic[^\n]*\n  WHAT WAS SAID \(the creator's captions; excerpts\):\n\[0:00\] Welcome back\n\[0:45\] the Marian reforms/);
+  assert.match(d.calls[0].prompt, /V2: The Gracchi Brothers \(Historia Civilis\), 12 min\n/, "no captions for V2");
+  assert.match(d.calls[0].system, /cite it exactly as \[V2 6:40\]/);
+  assert.strictEqual(r.body.message, "OverSimplified pins it on the army [V1 0:45], Historia Civilis on the Gracchi. Which do you buy?", "a citation of an uncaptioned video is dropped");
+  const free = talkDeps("free");
+  await call(free, { task: "librarian-talk", input: { mode: "focus", opening: true, session } });
+  assert.ok(!/WHAT WAS SAID/.test(free.calls[0].prompt), "captions are Aim Plus");
+  const big = { ...session, videos: [{ ...session.videos[0], transcript: "[0:00] " + "word ".repeat(4000) }] };
+  assert.strictEqual((await call(d, { task: "librarian-talk", input: { mode: "focus", opening: true, session: big } })).status, 200, "a long excerpt fits the request");
+  assert.ok(d.calls.at(-1).prompt.length < 8000, "and is trimmed on the server");
 });
 
 // ---------- billing (Stripe) ----------

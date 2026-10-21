@@ -288,10 +288,17 @@ const ytWatch = id => ytPage(`<ytd-watch-flexy video-id="${id}"><ytd-watch-metad
 0:00 Intro
 2:15 Glucose comes in
 6:40 Pyruvate goes out</div><div id="actions"><button aria-label="Like">Like</button><button aria-label="Ask">Ask</button></div></ytd-watch-metadata>
-  <div id="movie_player"><video class="html5-main-video" muted></video></div><div id="secondary"><div id="related">related</div></div></ytd-watch-flexy>`);
+  <div id="movie_player"><video class="html5-main-video" muted></video></div><div id="secondary"><div id="related">related</div></div></ytd-watch-flexy>
+  <script>var ytInitialPlayerResponse = ${JSON.stringify({ videoDetails: { videoId: id }, captions: { playerCaptionsTracklistRenderer: { captionTracks: id.startsWith("rom")
+    ? [{ languageCode: "en", baseUrl: `https://www.youtube.com/api/timedtext?v=${id}&lang=en` }] : [] } } })};</script>`);
+// Caption tracks (json3): the Roman videos have them; others have none.
+const CAPTIONS = { rom1: [[0, "Welcome back to another episode"], [45, "after the Marian reforms soldiers were loyal to the general who paid them"], [130, "and the Senate could not stop him"]],
+  rom2: [[0, "The Gracchi brothers tried land reform"], [190, "and both were killed for it"]] };
 await ctx.route(/^https:\/\/www\.youtube\.com\//, route => {
   const u = new URL(route.request().url());
   if (u.pathname === "/oembed") return route.fulfill({ contentType: "application/json", body: '{"title":"x","author_name":"y","author_url":"https://www.youtube.com/@y"}' });
+  if (u.pathname === "/api/timedtext") { srv.captionFetches = (srv.captionFetches || 0) + 1;
+    return route.fulfill({ contentType: "application/json", body: JSON.stringify({ events: (CAPTIONS[u.searchParams.get("v")] || []).map(([t, text]) => ({ tStartMs: t * 1000, segs: [{ utf8: text }] })) }) }); }
   const body = u.pathname === "/results" ? ytResults(u.searchParams.get("search_query") || "")
     : u.pathname === "/watch" ? ytWatch(u.searchParams.get("v"))
     : ytPage(`<ytd-browse page-subtype="home"><div id="primary"><ytd-rich-grid-renderer></ytd-rich-grid-renderer></div></ytd-browse>`);
@@ -386,7 +393,7 @@ step("on the video, the study plan replaces Up next", panel.includes("Study sess
 await yt.waitForSelector("#wp-concepts .wp-concept");
 const conceptsText = await yt.textContent("#wp-concepts");
 step("In this video: the concepts, from the title, description and chapters", conceptsText.includes("Glycolysis") && conceptsText.includes("2:15") &&
-  conceptsText.includes("not its audio") && conceptsText.includes("likely") && srv.videoPrompt.includes("1. 2:15 Glucose comes in") && srv.videoPrompt.includes("THE STUDENT'S GOAL:"));
+  conceptsText.includes("not what was said") && conceptsText.includes("likely") && srv.videoPrompt.includes("1. 2:15 Glucose comes in") && srv.videoPrompt.includes("THE STUDENT'S GOAL:"));
 await yt.click("#wp-concepts .wp-concept >> nth=0");
 await ctx.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "https://www.youtube.com" });
 await yt.click("#wp-concepts .wp-concept-ask >> nth=0");
@@ -586,8 +593,9 @@ relaxState = await sw.evaluate(() => chrome.storage.local.get(["brk", "history"]
 step("back on your aim: the themed break is over and recorded with its theme", !relaxState.brk && relaxState.history.some(h => h.type === "break" && h.theme === "Fun biology"));
 
 // ---------- talking it through with the librarian ----------
+await sw.evaluate(() => serial(() => setSetting("captions", true)));
 srv.talk.push(
-  { message: "You watched two different takes on why the Republic fell. If you had to bet on one cause, which would it be?", done: false, memory: [], marks: [] },
+  { message: "You watched two different takes on why the Republic fell. OverSimplified puts it on the army [V1 0:45]. If you had to bet on one cause, which would it be?", done: false, memory: [], marks: [] },
   { message: "The generals, then. Why would a soldier back his general over the Senate?", done: false, memory: [], marks: [] },
   { message: "That's the Marian reforms in a nutshell, as I understand it: the army became a career, and the general was the one paying.", done: true,
     memory: [{ subject: "Marian reforms", idea: "Soldiers backed the generals who paid and settled them, not the Senate", understood: "solid" }], marks: [] });
@@ -606,8 +614,13 @@ await yt.waitForSelector("#wp-home .wp-home-end .wp-talk-q", { timeout: 10000 })
 const endCard = (await yt.textContent(".wp-home-end")).replace(/\s+/g, " ");
 step("after Done, the librarian asks one specific question about the session, in place of the rating and the test",
   endCard.includes("bet on one cause") && !endCard.includes("Found what you needed?") && !(await yt.isVisible(".wp-home-end button:text-is('Test my understanding')")), endCard.slice(0, 200));
-step("it sees titles, time and searches, never a transcript, and knows this was focused work",
+step("it sees titles, time and searches, and knows this was focused work",
   srv.talkPrompts[0].includes("The Fall of the Roman Republic (OverSimplified), 15 min, watched to the end") && srv.talkPrompts[0].includes("MODE: Focus"), srv.talkPrompts[0].slice(0, 300));
+step("with captions on (Plus): what was said in the videos watched longest, with times",
+  srv.talkPrompts[0].includes("WHAT WAS SAID (the creator's captions; excerpts):\n[0:00] Welcome back") && srv.talkPrompts[0].includes("[0:45] after the Marian reforms") &&
+  srv.talkPrompts[0].includes("[3:10] and both were killed"), srv.talkPrompts[0].slice(0, 600));
+step("a moment it points to is a link to that time in that video", (await yt.getAttribute(".wp-home-end .wp-talk-moment", "href")) === "/watch?v=rom1&t=45s" &&
+  (await yt.textContent(".wp-home-end .wp-talk-q")).includes("on the army 0:45."));
 if (process.env.SHOTS) { await yt.setViewportSize({ width: 1100, height: 760 }); await yt.screenshot({ path: `${process.env.SHOTS}/talk-after-done.png` }); }
 await yt.click(".wp-home-end button:text-is('Reply')");
 await yt.waitForSelector(".wp-talk .wp-talk-input");
@@ -635,6 +648,8 @@ step("Settings lists what the librarian remembers, each with Forget", (await opt
 await opt.click("#memoryList button:text-is('Forget')");
 await opt.waitForTimeout(400);
 step("Forget removes it", ((await sw.evaluate(() => chrome.storage.local.get("memory"))).memory || []).length === 0);
+await sw.evaluate(() => serial(() => setSetting("captions", false)));
+const fetchesBefore = srv.captionFetches;
 // ---------- Your understanding: a learning aim's map, and its finish line ----------
 srv.ask.push({ target: "Why the Western Roman Empire fell", kind: "learn", note: "Several causes worked together.", searches: ["fall of rome"], question: "", options: [], same_target: false,
   parts: [{ title: "Political instability", brief: "Civil wars and short reigns.", search: "roman political instability" },
@@ -681,6 +696,7 @@ const finished = (await sw.evaluate(() => chrome.storage.local.get("history"))).
 step("Call it done ends the aim, with its map put together", finished.text === "Why the Western Roman Empire fell" && finished.map?.synthesis?.verdict === "solid" &&
   finished.map.parts.every(x => x.status === "explained"), JSON.stringify(finished.map?.parts));
 
+step("with captions off, the librarian reads none", srv.captionFetches === fetchesBefore && !srv.talkPrompts.at(-1).includes("WHAT WAS SAID"));
 // Exploring: back on the homepage after a real stretch, one invitation; Maybe later backs off.
 srv.talk.push({ message: "You went from Roman roads to aqueducts. If you had to get water into a hill town with no pumps, how would you do it?", done: false, memory: [], marks: [] });
 await sw.evaluate(() => serial(async () => {

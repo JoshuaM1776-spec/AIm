@@ -28,7 +28,10 @@ const DEFAULT_SETTINGS = {
   // Your own topics for channels you learn from (the Your channels page).
   myTopics: [],
   // The librarian remembers what you explained to it (Aim Plus; kept in this browser).
-  librarianMemory: true
+  librarianMemory: true,
+  // The librarian may read captions when it talks a session through (Aim Plus). A preview, off by
+  // default until the legal review (docs/ROADMAP.md → Decisions).
+  captions: false
 };
 const GRACE_CHOICES = [0, 5, 10, 15, 30];
 const minutesSetting = max => v => Number.isInteger(v) && v >= 0 && v <= max;
@@ -48,7 +51,8 @@ const SETTING_RULES = {
   learnShorts: v => typeof v === "boolean",
   learnRow: v => typeof v === "boolean",
   myTopics: v => Array.isArray(v) && v.length <= 30 && v.every(x => typeof x === "string" && x.trim().length >= 1 && x.length <= 40),
-  librarianMemory: v => typeof v === "boolean"
+  librarianMemory: v => typeof v === "boolean",
+  captions: v => typeof v === "boolean"
 };
 
 // ---------- write queue ----------
@@ -1408,7 +1412,7 @@ async function findAim(id) {
 async function talkSession(id) {
   const p = await findAim(id);
   if (!p) return { result: "error", message: "Nothing to talk about yet." };
-  const videos = (p.videos || []).filter(v => v.title && (v.sec || 0) >= 20).slice(-12).map(v => ({ title: v.title, channel: v.channel || "",
+  const videos = (p.videos || []).filter(v => v.title && (v.sec || 0) >= 20).slice(-12).map(v => ({ id: v.id, title: v.title, channel: v.channel || "",
     minutes: Math.max(1, Math.round((v.sec || 0) / 60)), finished: v.d > 0 && v.t >= v.d * 0.9 }));
   const topics = (p.study?.topics || []).map(t => ({ title: t.title }));
   const map = p.map?.parts?.length ? { parts: p.map.parts.map(x => ({ title: x.title, status: x.status })) } : null;
@@ -1577,4 +1581,15 @@ async function talkVerdict(aimId, verdict) {
   if (verdict === "solid") rec.map.links = "explained";
   await chrome.storage.local.set({ purpose: d.purpose || null, paused: d.paused || [], history: d.history || [] });
   return { result: "applied" };
+}
+
+// How often captions were there when the librarian looked: the last 50 tries, for Settings.
+async function captionsStat(found) {
+  const { captionStats = [] } = await chrome.storage.local.get("captionStats");
+  await chrome.storage.local.set({ captionStats: [...captionStats, found ? 1 : 0].slice(-50) });
+  return { result: "applied" };
+}
+async function captionsStats() {
+  const { captionStats = [] } = await chrome.storage.local.get("captionStats");
+  return { tried: captionStats.length, found: captionStats.filter(Boolean).length };
 }

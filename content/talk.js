@@ -26,10 +26,31 @@ async function prepareTalk({ aimId = null, connect = null, source = "menu", mode
   const synthesis = mode === "synthesis" || (source === "done" && ctx.ready);
   const state = { aimId: ctx.id, mode: synthesis ? "synthesis" : ctx.mode, session: ctx.session, thread: [], connect, plus, remember, source, done: false, busy: false,
     memory: remember ? (await send({ type: "memory-for", id: ctx.id })) || [] : [] };
+  // Aim Plus, with captions on: what was actually said in the videos watched longest.
+  if (plus && settings.captions) {
+    const caps = await sessionCaptions(state.session.videos, state.session.aim);
+    state.session = { ...state.session, videos: state.session.videos.map(v => (caps[v.id] ? { ...v, ...caps[v.id] } : v)) };
+  }
   const r = await talkCall(state, { opening: true });
   if (!r || r.error) return { error: r?.error || "The librarian couldn't start just now. Try again in a minute." };
   state.thread.push({ role: "aim", text: r.message });
   return state;
+}
+
+// "[V2 6:40]" in what the librarian says: a link to that moment in that video (a seek, when it's the
+// one playing). Only for videos it had captions for; anything else stays plain text.
+function withMoments(text, videos) {
+  const out = [];
+  let at = 0;
+  for (const m of text.matchAll(/\[V(\d{1,2}) (\d{1,2}):(\d{2})\]/g)) {
+    const v = videos[Number(m[1]) - 1], sec = Number(m[2]) * 60 + Number(m[3]);
+    out.push(text.slice(at, m.index));
+    out.push(v?.id && v.transcript ? el("a", { class: "wp-talk-moment", href: `/watch?v=${encodeURIComponent(v.id)}&t=${sec}s`, title: v.title,
+      onclick: e => { if (v.id === currentId) { e.preventDefault(); seekTo(sec); } } }, `${m[2]}:${m[3]}`) : `${m[2]}:${m[3]}`);
+    at = m.index + m[0].length;
+  }
+  out.push(text.slice(at));
+  return out.filter(x => x !== "");
 }
 
 // The panel, continuing a prepared conversation.
@@ -54,7 +75,8 @@ function showTalk(state) {
     closeTalk();
   };
   const draw = (note = null) => {
-    log.replaceChildren(...state.thread.map(m => el("div", { class: `wp-talk-msg ${m.role === "person" ? "wp-talk-you" : "wp-talk-aim"}` }, m.text)),
+    log.replaceChildren(...state.thread.map(m => el("div", { class: `wp-talk-msg ${m.role === "person" ? "wp-talk-you" : "wp-talk-aim"}` },
+      ...(m.role === "person" ? [m.text] : withMoments(m.text, state.session.videos)))),
       ...(state.busy ? [el("div", { class: "wp-talk-msg wp-talk-aim wp-talk-typing", "aria-label": "The librarian is thinking" }, el("i"), el("i"), el("i"))] : []),
       ...(note ? [el("div", { class: "wp-muted wp-talk-note" }, note)] : []));
     log.scrollTop = log.scrollHeight;
@@ -163,7 +185,7 @@ async function openTalk(opts = {}) {
 function talkInvite(state, { onEnd = () => {}, lead = null } = {}) {
   const box = el("div", { class: "wp-talk-invite" },
     lead ? el("div", { class: "wp-label" }, lead) : null,
-    el("div", { class: "wp-talk-q" }, state.thread[0].text),
+    el("div", { class: "wp-talk-q" }, ...withMoments(state.thread[0].text, state.session.videos)),
     el("div", { class: "wp-row" },
       el("button", { class: "wp-btn wp-btn-tonal", onclick: () => { onEnd(); showTalk(state); } }, "Reply"),
       el("button", { class: "wp-btn wp-btn-text", onclick: () => {

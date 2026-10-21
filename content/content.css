@@ -813,3 +813,5 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 .wp-ontrack b { font-weight: 700; }
 .wp-ontrack .wp-icon { display: flex; }
 .wp-ontrack-out { opacity: 0; }
+.wp .wp-talk-moment { color: var(--wp-link); font-weight: 500; text-decoration: none; }
+.wp .wp-talk-moment:hover { text-decoration: underline; }

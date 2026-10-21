@@ -1,7 +1,8 @@
 // Aim Plus — "In this video": beside a video watched for a learning aim, the concepts it covers,
 // each with a jump to its chapter and a couple of places to see the same idea in another context;
 // and "Test me on this video", offered when it ends. Aim works the concepts out from what the page
-// shows (title, description, chapters), never the transcript, and says so. One AI call per video,
+// shows (title, description, chapters) and, with captions on (content/captions.js), what was said;
+// the panel says which. Never the audio. One AI call per video,
 // kept in this browser (see saveVideoConcepts in store.js).
 
 let concepts = null; // { id, state: "loading" | "ready" | "error", data, info, message }
@@ -52,8 +53,12 @@ async function loadConcepts(id, p) {
   if (currentId !== id) return;
   if (cached?.data) { concepts = { id, state: "ready", data: cached.data, info }; return renderConcepts(); }
   renderConcepts();
+  // With captions on (Aim Plus): what was said, too, so concepts can point at the moment they're explained.
+  const cap = settings.captions ? await captionsFor(id) : null;
+  if (currentId !== id) return;
   const r = await send({ type: "librarian", task: "video-concepts", input: {
-    id, title: info.title, channel: info.channel, description: (info.description || "").slice(0, 5000), chapters: readChapters(info.description), target: p.text } });
+    id, title: info.title, channel: info.channel, description: (info.description || "").slice(0, 5000), chapters: readChapters(info.description), target: p.text,
+    ...(cap ? { captions: captionExcerpt(cap, `${p.text} ${info.title}`, 9000), auto: cap.auto } : {}) } });
   if (currentId !== id) return;
   if (!r || r.error) { concepts = { id, state: "error", info, message: r?.code === "limit" ? "That's today's AI limit." : "Couldn't look at this video right now." }; return renderConcepts(); }
   const { ok, ...data } = r;
@@ -139,7 +144,7 @@ function renderConcepts() {
     ...(concepts.state === "loading" ? [el("div", { class: "wp-muted" }, `${BRAND} is looking at what this video covers…`)]
       : concepts.state === "error" ? [el("div", { class: "wp-muted" }, concepts.message, " ",
           el("button", { class: "wp-link", onclick: () => { concepts = null; renderConcepts(); } }, "Try again"))]
-      : [el("div", { class: "wp-muted wp-concepts-basis" }, `From the video's ${d.basis}, not its audio.`),
+      : [el("div", { class: "wp-muted wp-concepts-basis" }, /captions/.test(d.basis) ? `From the video's ${d.basis}.` : `From the video's ${d.basis}, not what was said.`),
         el("div", { class: "wp-concepts-list" }, ...d.concepts.map(conceptRow)),
         d.regulated ? el("div", { class: "wp-concepts-note" },
           d.references.length ? el("b", {}, "Study with: ") : null,

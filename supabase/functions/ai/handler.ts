@@ -105,7 +105,8 @@ export const TASKS: Record<string, Task> = {
 };
 
 // Requests that may carry more than a few pages: up to maxSyncBytes.
-const BIG_TASKS = new Set(["sync", "hs-upload-add", "hs-curriculum-build", "hs-curriculum-save", "hs-week-save"]);
+const BIG_TASKS = new Set(["sync", "hs-upload-add", "hs-curriculum-build", "hs-curriculum-save", "hs-week-save",
+  "librarian-talk", "video-concepts"]); // these two carry caption excerpts (Plus); each task trims them to its own limits
 
 // Handled directly in handle(), without AI.
 const ACCOUNT_TASKS = new Set(["status", "account-export", "account-delete", "billing-checkout", "billing-portal", "sync", "sync-erase"]);

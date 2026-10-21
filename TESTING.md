@@ -412,3 +412,12 @@ Needs a signed-in account and the server redeployed (the librarian's map and tal
 - [ ] Welcome: "Make YouTube work for you." then "What would you like to change?" with four switches on and **Set a daily time limit** off (checking it shows how long).
 - [ ] The librarian's panel: a microphone next to Send (Chrome asks for the microphone once); what you say appears in the reply box.
 - [ ] A video playing for your aim shows a small **Staying on track** pill on the player for a few seconds; tapping it opens Aim's menu.
+
+### 43. Captions for the librarian (0.54, Aim Plus, preview)
+Needs Aim Plus and the server redeployed.
+- [ ] Settings → The librarian → **Video understanding (Preview)**: "Let the librarian read captions" is off. Turn it on.
+- [ ] Watch two or three videos with captions for a learning aim, then Done: the librarian's question can mention what a video said, with a time that's a link ("… 0:45"). Clicking it opens that video at that moment (or jumps there, if it's the one playing).
+- [ ] A video without captions: the conversation still works, from titles.
+- [ ] Settings now says "Captions were there for N of the last M videos it looked at." Note what it says after a week of normal use: that's how often this can help.
+- [ ] "In this video" on a captioned video: it says "From the video's captions, title, description…", and concepts have times even without chapters.
+- [ ] Turn it off: no caption requests at all (DevTools → Network on YouTube: no `timedtext`).
