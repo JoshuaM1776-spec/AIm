@@ -116,7 +116,7 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 ### 8. Done with this aim
 
 - [ ] Menu → **Done with this aim** (or the results bar, homepage, time-up card or popup) ends it in one tap and lands on the homepage.
-- [ ] A light card follows: "N min on …", the videos, a quiet **Found what you needed? Yes · Partly · No** (answering says thanks in place), **Test my understanding** (Plus, learning aims) and **Not done? Pick it back up**.
+- [ ] A light card follows at the top of the homepage card (a notice elsewhere, so it never covers anything): "Done · N min on …", the videos, a quiet **Found what you needed? Yes · Partly · No** (answering says thanks in place), **Test my understanding** (Plus, learning aims) and **Not done? Pick it back up**.
 - [ ] Homepage with no aims: "What brings you here?", one rounded field ("Tell me what you're looking for…") with a small arrow inside, three example requests, and no big Search YouTube button. Enter and the arrow both work.
 - [ ] Popup with an aim: Resume (red), Take a Break, Done, then small Change my aim · Set aside · All aims links. It shows "N min so far" (time left only with a limit). **Resume** on a YouTube tab goes to the last video at the moment you left; on another site it opens a new tab instead. "Your activity" is folded.
 - [ ] Results after a plain search, signed in: the librarian is folded behind the speech-bubble icon; clicking it opens the ask box. After a request it opens by itself.
@@ -297,7 +297,7 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] **Study sessions** and **Completed** filter the list; **Print or save as PDF** prints just the record (no buttons).
 
 ### 30. Learn something (0.42)
-- [ ] With no topics chosen and no aim, YouTube's home page has one quiet line, **Learn something new? Choose topics** (Settings → Learn something); its × hides it for good.
+- [ ] With no topics chosen and no aim, YouTube's home page has one quiet line, **Learn something new? Choose topics** (opens Design your YouTube → Home); its × hides it for good.
 - [ ] Pick Math and Engineering: the home page shows **Learn something**, six new videos (three by two) from those channels, newest first, at most two per channel, no Shorts, each labeled with its channel and topic. The first visit takes a few seconds while feeds load; after that it's instant for a day.
 - [ ] **Check every curated channel loads** (Settings lists them, each linked): a channel that never shows up has a wrong handle in content/topics.js.
 - [ ] Clicking one starts the aim "Exploring: <title>"; the watch page's sidebar says **More from your topics** with the rest of the row.
@@ -364,3 +364,8 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 ### 37. Aims, and fewer interruptions (0.49)
 - [ ] Nowhere in the extension says "Target": it's **your aim** (Set aim, Back to my aim, Change my aim, Your aims, Done with this aim).
 - [ ] Each moment in docs/INTERRUPTIONS.md behaves as its "Now" column says: one-tap Done with the light card after, "Part of your aim?" asked less often and with a Yes, quiet lines for Still looking? and Learn something new?, two first-time tips, a three-screen welcome.
+
+### 38. Polish (0.49.1)
+- [ ] The homepage card is short: the question, the box, one hint, and on a first visit one line of two examples ("Try …"). No paragraph under the title.
+- [ ] Settings → **Your YouTube** describes the current design in three lines (Home, Shorts, Watching), each with **Change** opening that stage. There are no separate switches for Shorts, recommendations, feeds, autoplay, strict mode or topics anywhere else in Settings.
+- [ ] Settings → **Learn something channels** lists the channels behind your topics, with Take out / Put back; with no topics, it links to Choose topics.

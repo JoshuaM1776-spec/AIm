@@ -303,9 +303,9 @@ html.wp-boot ytd-browse[page-subtype="home"] ytd-feed-filter-chip-bar-renderer {
 .wp .wp-home-go, .wp-home-search:focus-within .wp-home-go { background: var(--wp-primary); color: var(--wp-on-primary); }
 .wp .wp-home-go:hover { background: var(--wp-primary-hover); }
 .wp-home-go:disabled { opacity: .6; cursor: progress; }
-.wp-home-examples { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: -8px; }
-.wp .wp-home-example { border: 0; background: none; color: var(--wp-muted); font: 400 14px/20px "Roboto", Arial, sans-serif;
-  padding: 6px 12px; border-radius: 16px; }
+.wp-home-examples { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2px 4px; margin-top: -8px; font-size: 13px; }
+.wp .wp-home-example { border: 0; background: none; color: var(--wp-muted); font: 400 13px/18px "Roboto", Arial, sans-serif;
+  padding: 4px 8px; border-radius: 14px; }
 .wp .wp-home-example:hover { background: var(--wp-tonal); color: var(--wp-text); }
 .wp-home-hint { margin: -8px 0 0 16px; font-size: 13px; }
 .wp-home-lede { margin: -8px 0 0; font-size: 14px; line-height: 20px; max-width: 560px; }
@@ -725,3 +725,8 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 .wp-more[open] > summary { margin-bottom: 10px; }
 .wp-more > :not(summary) + :not(summary) { margin-top: 10px; }
 .wp-end-rate { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+
+/* The card after Done, at the top of the homepage card. */
+.wp-home-end { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-radius: 12px; background: var(--wp-tonal); text-align: left; }
+.wp-home-end .wp-notice-text { flex: 1; }
+.wp-home-end .wp-notice-actions.wp-col { align-items: flex-end; }

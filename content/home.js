@@ -2,7 +2,10 @@
 
 // ---------------- homepage: "What brings you here?" ----------------
 // Example requests on the card, said the way you'd ask a librarian: one tap fills the box.
-const EXAMPLES = ["I want to understand how jet engines work.", "Find a good tutorial for building a timber frame porch.", "Help me study for my biology exam."];
+const EXAMPLES = ["How do jet engines work?", "Help me study for my biology exam."];
+
+// The card after Done, shown inside the homepage card (so it never covers it) until dismissed.
+let homeEnd = null;
 
 function removeHome() {
   early.showFeed();
@@ -75,15 +78,15 @@ async function renderHome() {
 
   card.append(...[
     brandLine(),
+    homeEnd,
     el("h1", { class: "wp-home-title" }, "What brings you here?"),
-    p ? null : el("div", { class: "wp-muted wp-home-lede" }, `Whether you're preparing for an exam, learning a new skill, or finding a quick answer, ${BRAND} helps you stay focused on what you came to YouTube to accomplish.`),
     el("div", { class: "wp-home-search" }, input, findBtn),
     hint,
     themeOfferBlock(),
     // Examples help a first visit; once there's something to pick up, they'd only add clutter.
-    !p && !others.length && !(settings.learnTopics || []).length ? el("div", { class: "wp-label" }, "Try asking") : null,
-    !p && !others.length && !(settings.learnTopics || []).length ? el("div", { class: "wp-home-examples" }, ...EXAMPLES.map(t =>
-      el("button", { class: "wp-home-example", onclick: () => { input.value = t; input.focus(); } }, `“${t}”`))) : null,
+    !p && !others.length && !(settings.learnTopics || []).length ? el("div", { class: "wp-home-examples" },
+      el("span", { class: "wp-muted" }, "Try"), ...EXAMPLES.map(t =>
+        el("button", { class: "wp-home-example", onclick: () => { input.value = t; input.focus(); } }, `“${t}”`))) : null,
     resumeBlock,
     savedBlock(),
     learnBlock(),

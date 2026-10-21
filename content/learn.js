@@ -159,14 +159,14 @@ function learnBlock() {
     // One quiet line, not a block: the offer is there for whoever wants it.
     return el("div", { class: "wp-learn wp-learn-invite" },
       el("span", { class: "wp-muted" }, "Learn something new?"),
-      el("button", { class: "wp-link", onclick: () => send({ type: "open-options", section: "learn" }) }, "Choose topics"),
+      el("button", { class: "wp-link", onclick: () => send({ type: "open-design", stage: "home" }) }, "Choose topics"),
       el("button", { class: "wp-icon-btn wp-learn-invite-x", "aria-label": "No thanks", title: "No thanks",
         onclick: e => { send({ type: "onboarding", tip: "learn" }); e.currentTarget.closest(".wp-learn").remove(); } }, svgIcon("close")));
   }
   const box = el("div", { class: "wp-learn" },
     el("div", { class: "wp-row-between" },
       el("div", { class: "wp-label" }, "Learn something"),
-      el("button", { class: "wp-link wp-learn-edit", onclick: () => send({ type: "open-options", section: "learn" }) }, "Your topics")),
+      el("button", { class: "wp-link wp-learn-edit", onclick: () => send({ type: "open-design", stage: "home" }) }, "Your topics")),
     el("div", { class: "wp-muted wp-learn-loading" }, "Finding new videos from your topics…"));
   loadLearn().then(({ videos, shorts }) => {
     if (!box.isConnected) return;

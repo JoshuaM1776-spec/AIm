@@ -1,5 +1,5 @@
 {
-  "at": "2026-10-20T19:10:16.360Z",
+  "at": "2026-10-21T02:54:47.768Z",
   "checks": [
     {
       "name": "home: Aim's card replaces the feed",
@@ -49,37 +49,37 @@
     {
       "name": "results: selector resultVideos",
       "ok": true,
-      "detail": "17"
+      "detail": "20"
     },
     {
       "name": "results: selector resultTitleLabel",
       "ok": true,
-      "detail": "17"
+      "detail": "20"
     },
     {
       "name": "results: selector resultMeta",
       "ok": true,
-      "detail": "17 / 0 / 0"
+      "detail": "20 / 0 / 0"
     },
     {
       "name": "results: selector resultChannel",
       "ok": true,
-      "detail": "34 / 34 / 51"
+      "detail": "40 / 40 / 60"
     },
     {
       "name": "results: selector itemWatchLink",
       "ok": true,
-      "detail": "134"
+      "detail": "169"
     },
     {
       "name": "results: selector itemTitle",
       "ok": true,
-      "detail": "17 / 184"
+      "detail": "20 / 229"
     },
     {
       "name": "results: at least 5 videos found",
       "ok": true,
-      "detail": "18"
+      "detail": "20"
     },
     {
       "name": "results: each has a watch link",
@@ -109,7 +109,7 @@
     {
       "name": "results: Aim keeps them for the aim, most with a length",
       "ok": true,
-      "detail": "17 of 17: 5:01 3:13 5:21 39:00"
+      "detail": "19 of 19: 5:01 3:13 4:56 39:00"
     },
     {
       "name": "results: a video to open",
@@ -194,12 +194,12 @@
     {
       "name": "channel rows: each has an @handle and a name",
       "ok": true,
-      "detail": "/@ScienceMax Science Max - Scholastic, /@Scienceabc Science ABC, /@becausescience Because Science, /@NGScience Next Generation Science, /@ScienceMagazine Science Magazine"
+      "detail": "/@ScienceMax Science Max - Scholastic, /@Scienceabc Science ABC, /@becausescience Because Science, /@ScienceMagazine Science Magazine, /@NGScience Next Generation Science"
     },
     {
       "name": "channel: Veritasium (@veritasium)",
       "ok": true,
-      "detail": "4 videos, 8 Shorts, id UCHnyfMqiRRG1u-2MsSQLbXA"
+      "detail": "8 videos, 8 Shorts, id UCHnyfMqiRRG1u-2MsSQLbXA"
     },
     {
       "name": "channel: Kurzgesagt (@kurzgesagt)",
@@ -224,7 +224,7 @@
     {
       "name": "channel: 3Blue1Brown (@3blue1brown)",
       "ok": true,
-      "detail": "4 videos, 8 Shorts, id UCYO_jab_esuFRV4b17AJtAw"
+      "detail": "8 videos, 8 Shorts, id UCYO_jab_esuFRV4b17AJtAw"
     },
     {
       "name": "channel: Numberphile (@numberphile)",
@@ -259,7 +259,7 @@
     {
       "name": "channel: Scott Manley (@scottmanley)",
       "ok": true,
-      "detail": "6 videos, 8 Shorts, id UCxzC4EngIsMrPmbm6Nxvb-A"
+      "detail": "8 videos, 8 Shorts, id UCxzC4EngIsMrPmbm6Nxvb-A"
     },
     {
       "name": "channel: Everyday Astronaut (@EverydayAstronaut)",
@@ -279,7 +279,7 @@
     {
       "name": "channel: Mark Rober (@MarkRober)",
       "ok": true,
-      "detail": "2 videos, 8 Shorts, id UCY1kMZp36IQSyNx_9h4mpCg"
+      "detail": "8 videos, 8 Shorts, id UCY1kMZp36IQSyNx_9h4mpCg"
     },
     {
       "name": "channel: Engineering Explained (@EngineeringExplained)",
@@ -299,7 +299,7 @@
     {
       "name": "channel: Kings and Generals (@KingsandGenerals)",
       "ok": true,
-      "detail": "7 videos, 8 Shorts, id UCMmaBzfCCwZ2KqaBJjkj0fw"
+      "detail": "8 videos, 8 Shorts, id UCMmaBzfCCwZ2KqaBJjkj0fw"
     },
     {
       "name": "channel: Historia Civilis (@HistoriaCivilis)",
@@ -359,12 +359,12 @@
     {
       "name": "channel: Two Cents (@TwoCentsPBS)",
       "ok": true,
-      "detail": "7 videos, 8 Shorts, id UCL8w_A8p8P1HWI3k6PR5Z6w"
+      "detail": "8 videos, 8 Shorts, id UCL8w_A8p8P1HWI3k6PR5Z6w"
     },
     {
       "name": "channel: Mentour Pilot (@MentourPilot)",
       "ok": true,
-      "detail": "5 videos, 8 Shorts, id UCwpHKudUkP5tNgmMdexB3ow"
+      "detail": "8 videos, 8 Shorts, id UCwpHKudUkP5tNgmMdexB3ow"
     },
     {
       "name": "channel: Green Dot Aviation (@GreenDotAviation)",
@@ -428,27 +428,27 @@
         1
       ],
       "resultVideos": [
-        17
+        20
       ],
       "resultTitleLabel": [
-        17
+        20
       ],
       "resultMeta": [
-        17,
+        20,
         0,
         0
       ],
       "resultChannel": [
-        34,
-        34,
-        51
+        40,
+        40,
+        60
       ],
       "itemWatchLink": [
-        134
+        169
       ],
       "itemTitle": [
-        17,
-        184
+        20,
+        229
       ],
       "ads": 0
     },
@@ -505,9 +505,9 @@
       "handle": "@veritasium",
       "hintId": "UCHnyfMqiRRG1u-2MsSQLbXA",
       "id": "UCHnyfMqiRRG1u-2MsSQLbXA",
-      "videos": 4,
+      "videos": 8,
       "shorts": 8,
-      "newest": "The Absurd Engineering Behind The Internet"
+      "newest": "The Insane Engineering of Fiber Optics"
     },
     {
       "topic": "Science",
@@ -555,7 +555,7 @@
       "handle": "@3blue1brown",
       "hintId": "UCYO_jab_esuFRV4b17AJtAw",
       "id": "UCYO_jab_esuFRV4b17AJtAw",
-      "videos": 4,
+      "videos": 8,
       "shorts": 8,
       "newest": "There's never been a better time to go into math"
     },
@@ -625,7 +625,7 @@
       "handle": "@scottmanley",
       "hintId": "UCxzC4EngIsMrPmbm6Nxvb-A",
       "id": "UCxzC4EngIsMrPmbm6Nxvb-A",
-      "videos": 6,
+      "videos": 8,
       "shorts": 8,
       "newest": "Let's Talk About Tesla's Rocket Car.... Even Though I'm Supposed to be On Vacation"
     },
@@ -665,7 +665,7 @@
       "handle": "@MarkRober",
       "hintId": "UCY1kMZp36IQSyNx_9h4mpCg",
       "id": "UCY1kMZp36IQSyNx_9h4mpCg",
-      "videos": 2,
+      "videos": 8,
       "shorts": 8,
       "newest": "Last Cheater Standing Wins $10,000"
     },
@@ -705,7 +705,7 @@
       "handle": "@KingsandGenerals",
       "hintId": "UCMmaBzfCCwZ2KqaBJjkj0fw",
       "id": "UCMmaBzfCCwZ2KqaBJjkj0fw",
-      "videos": 7,
+      "videos": 8,
       "shorts": 8,
       "newest": "The Biggest Rebellion Against the British Empire in History"
     },
@@ -727,7 +727,7 @@
       "id": "UC_T3Zsw2257Ke-g3F20ZCRA",
       "videos": 8,
       "shorts": 8,
-      "newest": "The Most Gangster Washington - William \"Billy\" Washington"
+      "newest": "George Washington's Crazy Cousin - Billy Washington"
     },
     {
       "topic": "History",
@@ -737,7 +737,7 @@
       "id": "UCLCckD5PjOk2M3iS_nPcjNQ",
       "videos": 8,
       "shorts": 8,
-      "newest": "Q&A while Joe paints an Undead Viking"
+      "newest": "The Bronze Age Collapse (1177 BC) | When Civilization Ended"
     },
     {
       "topic": "History",
@@ -825,7 +825,7 @@
       "handle": "@TwoCentsPBS",
       "hintId": "UCL8w_A8p8P1HWI3k6PR5Z6w",
       "id": "UCL8w_A8p8P1HWI3k6PR5Z6w",
-      "videos": 7,
+      "videos": 8,
       "shorts": 8,
       "newest": "How Being Single Makes You Poor!"
     },
@@ -835,7 +835,7 @@
       "handle": "@MentourPilot",
       "hintId": "UCwpHKudUkP5tNgmMdexB3ow",
       "id": "UCwpHKudUkP5tNgmMdexB3ow",
-      "videos": 5,
+      "videos": 8,
       "shorts": 8,
       "newest": "This Should NEVER Have Happened!! | The Insane Story Of Air Niugini Flight 73"
     },

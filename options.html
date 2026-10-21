@@ -23,18 +23,14 @@
   <p class="lede">Set an aim. Stay on it. Take a break when you want one. <a href="#" id="welcomeTour">Show the welcome tour again</a></p>
 
   <section class="card" id="designCard">
-    <div class="setting" style="padding:0">
-      <div class="what"><b>Design your YouTube</b><span>Your homepage, Shorts, and what steps aside while you watch, with a live preview. Time limits are below.</span></div>
-      <a class="btn" href="design.html" id="openDesign">Design</a>
+    <div class="setting" style="padding:0 0 8px">
+      <div class="what"><b>Your YouTube</b><span>What greets you, what happens to Shorts, and what steps aside while you watch. Change any part with a live preview.</span></div>
+      <a class="btn tonal" href="design.html" id="openDesign">Design</a>
     </div>
-    <div class="row small" style="margin-top:8px">Jump to: <a href="design.html#home">Home</a> · <a href="design.html#shorts">Shorts</a> · <a href="design.html#watching">Watching</a></div>
+    <div id="designSummary"></div>
   </section>
 
   <section class="card">
-    <div class="setting">
-      <div class="what"><b>Replace the homepage feed</b><span>Show "What brings you here?" instead. The feed comes back during breaks.</span></div>
-      <label class="switch"><input type="checkbox" id="homeCard" aria-label="Replace the homepage feed"><i></i></label>
-    </div>
     <div class="setting">
       <div class="what"><b>Daily leisure time</b><span id="leisureNote">Breaks share this allowance. When it's used up, breaks are done for the day.</span></div>
       <select id="leisureMin" aria-label="Daily leisure time">
@@ -46,13 +42,8 @@
   </section>
 
   <section class="card" id="learn">
-    <h2>Learn something</h2>
-    <p class="muted">Pick topics you'd like to learn about. When you're not working on an aim, YouTube's home page shows six new videos from channels that teach them well, plus channels you marked Prefer. No feed and no autoplay; picking one starts an aim. The channels are hand-picked by Aim; take out any you don't want.</p>
-    <div class="seg" id="learnTopics" role="group" aria-label="Topics"></div>
-    <div class="setting">
-      <div class="what"><b>Shorts from your topics</b><span>Instead of hiding Shorts completely, show a few from these channels (and channels you prefer) as a Quick review of things you've already learned. Shorts from anywhere else stay hidden, including the ones YouTube swipes to next.</span></div>
-      <label class="switch"><input type="checkbox" id="learnShorts" aria-label="Shorts from your topics"><i></i></label>
-    </div>
+    <h2>Learn something channels</h2>
+    <p class="muted" id="learnNote"></p>
     <div id="learnChannels"></div>
   </section>
 
@@ -92,30 +83,6 @@
       <div class="setting"><div class="what"><span id="today"></span></div></div>
     </section>
 
-    <section class="sub">
-      <h2>Distractions</h2>
-      <p class="note">Hidden whenever you're not on a break. A break shows YouTube as usual.</p>
-      <div class="setting">
-        <div class="what"><b>Hide Shorts</b><span>Shelves, results and the Shorts link. Opening a Short while you have an aim asks first.</span></div>
-        <label class="switch"><input type="checkbox" id="hideShorts" aria-label="Hide Shorts"><i></i></label>
-      </div>
-      <div class="setting">
-        <div class="what"><b>Hide recommendations</b><span>The sidebar next to a video and the suggestions at its end.</span></div>
-        <label class="switch"><input type="checkbox" id="hideRecs" aria-label="Hide recommendations"><i></i></label>
-      </div>
-      <div class="setting">
-        <div class="what"><b>Hide subscriptions and trending feeds</b><span>Replaced by a short note, like the homepage.</span></div>
-        <label class="switch"><input type="checkbox" id="hideFeeds" aria-label="Hide feeds"><i></i></label>
-      </div>
-      <div class="setting">
-        <div class="what"><b>Turn autoplay off</b><span>Aim switches YouTube's autoplay off, and back on during breaks if it was on.</span></div>
-        <label class="switch"><input type="checkbox" id="noAutoplay" aria-label="Turn autoplay off"><i></i></label>
-      </div>
-      <div class="setting">
-        <div class="what"><b>Strict mode</b><span>Before you add time, watch a channel you asked to be warned about, or call an unrelated search part of your aim, Aim asks why. Your reasons stay in this browser; read them in the popup.</span></div>
-        <label class="switch"><input type="checkbox" id="strict" aria-label="Strict mode"><i></i></label>
-      </div>
-    </section>
 
     <section class="sub">
       <h2>Aim Homeschool preview</h2>

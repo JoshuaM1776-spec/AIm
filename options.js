@@ -20,18 +20,33 @@ async function setSetting(key, value) {
   render();
 }
 
-const TOGGLES = ["hideShorts", "hideRecs", "hideFeeds", "noAutoplay"];
+// The design, in words, one line per stage, each with a link straight to that stage. The switches
+// themselves live in Design your YouTube only, so there's one place to change them.
+function designSummary(S) {
+  const topics = (S.learnTopics || []).length;
+  const home = S.homeCard === false ? "YouTube's own feed"
+    : S.learnRow !== false && topics ? `A clean page, plus new videos from ${topics} topic${topics > 1 ? "s" : ""}` : "A clean page with your aim";
+  const shorts = S.hideShorts === false ? "Shown" : S.learnShorts ? "Only from selected channels" : "Hidden";
+  const watching = [S.hideRecs !== false ? "recommendations hidden" : "recommendations shown",
+    S.noAutoplay !== false ? "autoplay off" : "autoplay on", S.hideFeeds !== false ? "feeds hidden" : "feeds shown",
+    S.strict ? "strict" : "asks once"].join(" · ");
+  $("designSummary").replaceChildren(...[["Home", home, "home"], ["Shorts", shorts, "shorts"], ["Watching", watching[0].toUpperCase() + watching.slice(1), "watching"]].map(([label, value, stage]) => {
+    const row = document.createElement("div"), what = document.createElement("div"), b = document.createElement("b"), v = document.createElement("span"), a = document.createElement("a");
+    row.className = "setting"; what.className = "what";
+    b.textContent = label; v.textContent = value; what.append(b, v);
+    a.href = `design.html#${stage}`; a.textContent = "Change"; a.className = "small";
+    row.append(what, a);
+    return row;
+  }));
+}
 
 async function render() {
   const st = await send({ type: "state" });
   if (!st) return;
   const S = st.settings, t = st.today || { purpose: 0, leisure: 0, other: 0 };
-  $("homeCard").checked = S.homeCard;
+  designSummary(S);
   $("homeschoolPreview").checked = !!st.homeschool;
   $("homeschoolResetRow").hidden = !st.homeschool;
-  for (const k of TOGGLES) $(k).checked = S[k] !== false;
-  $("strict").checked = S.strict === true;
-  $("learnShorts").checked = S.learnShorts === true;
   renderLearn(S);
   for (const k of ["leisureMin", "graceMin", "totalMin", "purposeLimitMin"]) {
     const sel = $(k);
@@ -69,7 +84,6 @@ async function render() {
   }
 }
 
-$("homeCard").onchange = () => setSetting("homeCard", $("homeCard").checked);
 $("openChannels").onclick = () => chrome.tabs.create({ url: chrome.runtime.getURL("channels.html") });
 $("homeschoolPreview").onchange = async () => {
   const r = await send({ type: "homeschool-preview", on: $("homeschoolPreview").checked });
@@ -80,19 +94,14 @@ $("homeschoolReset").onclick = async () => {
   const r = await send({ type: "homeschool-preview", on: true });
   toast(r?.result === "applied" ? "Sample plan reset." : "Couldn't reset it.");
 };
-for (const k of TOGGLES) $(k).onchange = () => setSetting(k, $(k).checked);
-$("strict").onchange = () => setSetting("strict", $("strict").checked);
-$("learnShorts").onchange = () => setSetting("learnShorts", $("learnShorts").checked);
-// "Learn something": topics as toggles; under each chosen topic, its channels, which you can take out.
+// "Learn something": under each topic you chose (in Design your YouTube → Home), its channels,
+// which you can take out.
 function renderLearn(S) {
   const on = new Set(S.learnTopics || []), off = new Set(S.learnOff || []);
   const save = (key, value) => setSetting(key, value);
-  $("learnTopics").replaceChildren(...LEARN_TOPICS.map(t => {
-    const b = document.createElement("button");
-    b.type = "button"; b.textContent = t.name; b.setAttribute("aria-pressed", String(on.has(t.id)));
-    b.onclick = () => save("learnTopics", on.has(t.id) ? [...on].filter(x => x !== t.id) : [...on, t.id]);
-    return b;
-  }));
+  const pick = document.createElement("a");
+  pick.href = "design.html#home"; pick.textContent = on.size ? "Change your topics" : "Choose topics";
+  $("learnNote").replaceChildren(on.size ? "The channels behind your topics. Take out any you'd rather not see. " : "Pick topics, and Aim's homepage shows new videos from channels that teach them well. ", pick);
   const box = $("learnChannels");
   box.replaceChildren();
   for (const t of LEARN_TOPICS.filter(t => on.has(t.id))) {

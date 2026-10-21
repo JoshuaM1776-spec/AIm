@@ -296,16 +296,23 @@ async function showReflection() {
   };
   rated.append(el("span", { class: "wp-muted" }, "Found what you needed?"),
     ...[["yes", "Yes"], ["partly", "Partly"], ["no", "No"]].map(([v, label]) => el("button", { class: "wp-link", onclick: rate(v) }, label)));
-  showNotice([
+  const close = () => { homeEnd?.remove(); homeEnd = null; closeNotice(); };
+  const parts = [
     el("span", { class: "wp-notice-icon wp-accent" }, icon("check")),
     el("div", { class: "wp-notice-text" },
-      el("div", { class: "wp-strong" }, `${mins} min on ${s.text}`),
-      el("div", { class: "wp-muted" }, s.videos?.length ? `${s.videos.length} video${s.videos.length > 1 ? "s" : ""} · Done` : "Done"),
+      el("div", { class: "wp-strong" }, `Done · ${mins} min on ${s.text}`),
+      s.videos?.length ? el("div", { class: "wp-muted" }, `${s.videos.length} video${s.videos.length > 1 ? "s" : ""}`) : null,
       rated,
       // With Pathways on, a learning aim asks once whether you'd like more of it.
       status.pathways && learning ? interestChips({ topic: s.study?.title || s.text, source: "target" }) : null),
     el("div", { class: "wp-notice-actions wp-col" },
-      plus ? el("button", { class: "wp-btn wp-btn-tonal", onclick: () => { closeNotice(); send({ type: "open-teachback", topic: s.text }); } }, "Test my understanding") : null,
-      el("button", { class: "wp-btn wp-btn-text", onclick: () => { closeNotice(); resumeTarget(s.id); } }, "Not done? Pick it back up"))
-  ]);
+      plus ? el("button", { class: "wp-btn wp-btn-tonal", onclick: () => { close(); send({ type: "open-teachback", topic: s.text }); } }, "Test my understanding") : null,
+      el("button", { class: "wp-link", onclick: () => { close(); resumeTarget(s.id); } }, "Not done? Pick it back up"))];
+  // On Aim's homepage it sits at the top of the card, so it never covers anything; elsewhere it's a notice.
+  if (location.pathname !== "/" || !settings.homeCard || brk || planOn()) return showNotice(parts);
+  homeEnd = el("div", { class: "wp-home-end", role: "status" }, ...parts,
+    el("button", { class: "wp-icon-btn", "aria-label": "Dismiss", onclick: close }, svgIcon("close")));
+  const card = $("#wp-home");
+  if (card) delete card.dataset.key;
+  renderHome();
 }

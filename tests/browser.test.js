@@ -264,7 +264,8 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     !document.documentElement.classList.contains("wp-boot") && document.documentElement.classList.contains("wp-home")));
   step("homepage card offers a search, examples and a break", (await text("#wp-home")).includes("What brings you here?") &&
     (await p.getAttribute("#wp-home .wp-home-input", "placeholder")) === "Tell me what you're looking for…" && !card0.includes("Search YouTube") &&
-    ["jet engines", "timber frame porch", "15m", "Custom"].every(t => card0.includes(t)), card0.slice(0, 160));
+    ["jet engines", "biology exam", "15m", "Custom"].every(t => card0.includes(t)), card0.slice(0, 160));
+  if (process.env.SHOTS) await p.screenshot({ path: `${process.env.SHOTS}/home-first.png` });
   step("tapping an example fills the search box", await (async () => {
     await p.click('#wp-home .wp-home-example:has-text("biology exam")');
     return (await p.inputValue("#wp-home .wp-home-input")) === "Help me study for my biology exam.";
@@ -386,15 +387,20 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.click("#wp-chip .wp-pill");
   await p.click('.wp-dropdown button:has-text("Done with this aim")');
   await p.waitForURL("https://www.youtube.com/", { timeout: 5000 });
-  await p.waitForSelector(".wp-notice .wp-end-rate", { timeout: 5000 });
-  const endText = await text(".wp-notice");
-  step("Done is one tap; a light card follows: time, found it?, and a way back in", !(await p.$(".wp-done-dialog")) &&
+  await p.waitForSelector("#wp-home .wp-home-end .wp-end-rate", { timeout: 5000 });
+  const endText = await text(".wp-home-end");
+  step("Done is one tap; a light card follows at the top of the homepage card: time, found it?, and a way back in", !(await p.$(".wp-done-dialog")) &&
     ["min on Learn how sourdough", "Found what you needed?", "Yes", "Partly", "Not done? Pick it back up"].every(t => endText.includes(t)), endText.slice(0, 160));
   if (process.env.SHOTS) { await p.waitForTimeout(600); await p.screenshot({ path: `${process.env.SHOTS}/after-done.png` }); }
-  await p.click('.wp-notice .wp-end-rate button:text-is("Yes")');
+  step("the card sits inside the homepage card, above the question, covering nothing", await p.evaluate(() => {
+    const end = document.querySelector(".wp-home-end").getBoundingClientRect(), h = document.querySelector(".wp-home-title").getBoundingClientRect();
+    return end.bottom <= h.top && !document.querySelector(".wp-notice");
+  }));
+  await p.click('.wp-home-end .wp-end-rate button:text-is("Yes")');
   await p.waitForTimeout(400);
-  step("answering is quiet: the card says thanks in place", (await text(".wp-notice")).includes("Nice work"));
-  await p.click('.wp-notice [aria-label="Dismiss"]');
+  step("answering is quiet: the card says thanks in place", (await text(".wp-home-end")).includes("Nice work"));
+  await p.click('.wp-home-end [aria-label="Dismiss"]');
+  step("dismissing it leaves the homepage card as usual", !(await p.$(".wp-home-end")) && !!(await p.$("#wp-home .wp-home-title")));
   await p.click("#wp-chip .wp-pill");
   await p.click('.wp-dropdown button:has-text("Set aim")');
   await p.waitForSelector(".wp-dialog .wp-recent", { timeout: 3000 });
@@ -552,7 +558,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("home: an aim with no videos yet keeps the text-only card; a recent aim shows its last video small",
     !(await p.$(".wp-home-current .wp-home-video")) && !!(await p.$(".wp-home-row .wp-home-row-thumb .wp-thumb-xs")) &&
     (await p.$eval(".wp-home-row .wp-thumb-xs", n => n.style.backgroundImage)).includes("i.ytimg.com/vi/bio1/"));
-  step("home: no example chips once there's something to pick up", !home.includes("Try asking") && home.includes("View all aims") && !/\bnull\b/.test(home));
+  step("home: no example chips once there's something to pick up", !(await p.$(".wp-home-examples")) && home.includes("View all aims") && !/\bnull\b/.test(home));
   await p.click(".wp-home-row button:text-is('Resume')");
   await p.waitForURL(/watch\?v=bio1/);
   step("Resume returns to the last video at the moment you left it", p.url().includes("watch?v=bio1&t=300s"), p.url());
@@ -857,13 +863,17 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await opt.selectOption("#graceMin", "5");
   await opt.selectOption("#totalMin", "240");
   await opt.selectOption("#avoid select", "warn");
-  await opt.uncheck("#hideShorts");
-  await opt.check("#homeCard");
   await opt.waitForTimeout(600);
   st = await store();
   step("settings save through the background", st.settings.leisureMin === 90 && st.settings.graceMin === 5 && st.settings.totalMin === 240 &&
-    st.settings.homeCard === true && st.settings.hideShorts === false && st.avoid["/@hideme"].action === "warn", JSON.stringify(st.settings));
-  await p.waitForTimeout(300);
+    st.avoid["/@hideme"].action === "warn", JSON.stringify(st.settings));
+  const sum = (await opt.textContent("#designSummary")).replace(/\s+/g, " ");
+  step("settings show the design in words, each part linking to its stage, with no duplicate switches",
+    ["Home", "Shorts", "Watching", "Change"].every(t => sum.includes(t)) && (await opt.$$("#designSummary a[href^='design.html#']")).length === 3 &&
+    !(await opt.$("#hideShorts, #homeCard, #strict, #learnShorts")), sum.slice(0, 160));
+  if (process.env.SHOTS) await opt.screenshot({ path: `${process.env.SHOTS}/settings.png`, fullPage: true });
+  await sw.evaluate(() => serial(() => setSetting("hideShorts", false)));
+  await p.waitForTimeout(500);
   step("turning a distraction switch off applies to open tabs", !(await p.evaluate(() => document.documentElement.classList.contains("wp-hide-shorts"))));
 
   // Extension reload: the orphaned tab must go quiet instead of throwing.
