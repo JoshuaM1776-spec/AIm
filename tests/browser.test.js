@@ -562,7 +562,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("home: an aim with no videos yet keeps the text-only card; a recent aim shows its last video small",
     !(await p.$(".wp-home-current .wp-home-video")) && !!(await p.$(".wp-home-row .wp-home-row-thumb .wp-thumb-xs")) &&
     (await p.$eval(".wp-home-row .wp-thumb-xs", n => n.style.backgroundImage)).includes("i.ytimg.com/vi/bio1/"));
-  step("home: no example chips once there's something to pick up", !(await p.$(".wp-home-examples")) && home.includes("View all aims") && !/\bnull\b/.test(home));
+  step("home: no example chips once there's something to pick up", !(await p.$(".wp-home-examples")) && home.includes("Your library") && !/\bnull\b/.test(home));
   await p.click(".wp-home-row button:text-is('Resume')");
   await p.waitForURL(/watch\?v=bio1/);
   step("Resume returns to the last video at the moment you left it", p.url().includes("watch?v=bio1&t=300s"), p.url());
@@ -593,21 +593,35 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   home = await text("#wp-home");
   step("Set aside for later: no current aim, both waiting on the homepage", !st.purpose && st.paused.length === 2 &&
     !home.includes("Your aim") && home.includes("Study for my biology exam") && home.includes("Fix my truck's AC"));
-  const [all] = await Promise.all([ctx.waitForEvent("page"), p.click("button:text-is('View all aims')")]);
-  await all.waitForSelector("#tab-active h2:text-is('Set aside')");
+  const [all] = await Promise.all([ctx.waitForEvent("page"), p.click("button:text-is('Your library')")]);
+  await all.waitForSelector("#list .book");
   const allText = await all.textContent("main");
-  step("Your aims: Active, Exploring and Completed tabs, Active first", (await all.textContent("#tabs")).replace(/\s+/g, "").startsWith("Active2Exploring0Completed") &&
-    !(await all.isVisible("#tab-completed")));
+  step("Your library: every aim as a book, set-aside and finished ones too, and a New aim at the end",
+    allText.includes("Study for my biology exam") && allText.includes("learn to sharpen a chisel") && allText.includes("+ New aim") &&
+    (await all.textContent("#tabs")).replace(/\s+/g, "").startsWith("All") && (await all.$$("#list .book")).length >= 4, allText.slice(0, 200));
+  step("a book's cover: its subject, its name in a serif, and where it stands",
+    (await all.textContent(".slot:has-text('Study for my biology exam') .book-subject")) === "Science" &&
+    (await all.textContent(".slot:has-text('Study for my biology exam') .where")).startsWith("Set aside"));
+  await all.fill("#search", "truck");
+  step("search the library", (await all.$$("#list .book")).length === 1);
+  await all.fill("#search", "");
   await all.click("#tabs button:has-text('Completed')");
-  step("Completed shows finished aims to start again", await all.isVisible("#tab-completed button:text-is('Start again')"));
-  if (process.env.SHOTS) await all.screenshot({ path: `${process.env.SHOTS}/aims.png`, fullPage: true });
-  await all.click("#tabs button:has-text('Active')");
-  step("View all aims lists set-aside and completed aims", allText.includes("Study for my biology exam") && allText.includes("Start again") &&
-    allText.includes("learn to sharpen a chisel"), allText.slice(0, 200));
-  step("Aims page: an aim's last video as a thumbnail, and See more videos for the rest",
-    !!(await all.$(".item:has-text('Study for my biology exam') .lead-thumb .thumb")) &&
-    (await all.textContent(".item:has-text('Study for my biology exam') details.videos summary")) === "See more videos (2)" &&
-    !(await all.$(".item:has-text(\"Fix my truck's AC\") .lead-thumb")));
+  step("Completed shows only finished aims", !(await all.textContent("#list")).includes("Study for my biology exam") && (await all.textContent("#list")).includes("learn to sharpen a chisel"));
+  if (process.env.SHOTS) { await all.click("#tabs button:has-text('All')"); await all.setViewportSize({ width: 1200, height: 860 }); await all.screenshot({ path: `${process.env.SHOTS}/library.png` }); }
+  await all.click("#tabs button:has-text('All')");
+  await all.click(".slot:has-text('Study for my biology exam') button");
+  await all.waitForSelector(".aim-head h1");
+  const aimText = (await all.textContent("main")).replace(/\s+/g, " ");
+  step("an aim's page: its book, where it stands, its key videos (where you stopped), notes and related aims",
+    aimText.includes("Study for my biology exam") && aimText.includes("Set aside") && aimText.includes("Key videos") && aimText.includes("Video bio1") &&
+    aimText.includes("Notes & ideas") && aimText.includes("Related aims") && !!(await all.$(".aim-side .book-large")) && !/undefined|null|NaN/.test(aimText), aimText.slice(0, 240));
+  if (process.env.SHOTS) await all.screenshot({ path: `${process.env.SHOTS}/aim-page.png`, fullPage: true });
+  await all.fill("#notes textarea", "Exam is Friday.");
+  await all.click("#notes button:text-is('Save notes')");
+  await all.waitForTimeout(300);
+  step("notes save from the aim's page, for an aim that's set aside", (await store()).paused.find(x => x.text === "Study for my biology exam")?.notes === "Exam is Friday.");
+  await all.goto(`chrome-extension://${extId}/targets.html`);
+  await all.waitForSelector("#list .book");
   const rec = await ctx.newPage();
   await rec.goto(`chrome-extension://${extId}/record.html`);
   await rec.waitForSelector("#record .totals");
@@ -615,7 +629,9 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("Learning record: totals and the aims you worked on, with their videos", recText.includes("Aims completed") && recText.includes("Study for my biology exam") &&
     recText.includes("Video bio1") && (await rec.$$("#record .entry")).length >= 2 && !/undefined|null|NaN/.test(recText), recText.slice(0, 200));
   await rec.close();
-  await all.click(".item:has-text(\"Fix my truck's AC\") button:text-is('Resume')");
+  await all.click(".slot:has-text(\"Fix my truck's AC\") button");
+  await all.waitForSelector(".aim-head h1");
+  await all.click(".aim-head button:text-is('Pick it up')");
   await all.waitForURL(/results\?search_query=truck/);
   step("resuming an aim without a video goes back to its last search", (await store()).purpose?.text === "Fix my truck's AC");
   await all.close();

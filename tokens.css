@@ -10,6 +10,8 @@
 :root {
   --font: "Aim Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   --font-display: "Aim Inter Display", "Aim Inter", system-ui, sans-serif;
+  /* Book titles and the library's headings: a classic serif from the system, nothing to download. */
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
   --bg: #f7f3ec; --surface: #fffdf9; --text: #16231e; --muted: #5d6a63;
   --divider: rgba(25, 61, 49, .12); --card-border: rgba(25, 61, 49, .1);
   --tonal: rgba(25, 61, 49, .06); --tonal-hover: rgba(25, 61, 49, .11);

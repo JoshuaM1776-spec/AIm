@@ -88,6 +88,9 @@
   .aimrow { display: flex; align-items: center; gap: 12px; }
   .thumb { width: 64px; height: 48px; border-radius: 8px; background: var(--tonal) center / cover no-repeat; flex: none; }
   .aimrow .grow { flex: 1; min-width: 0; }
+  .aimlink { background: none; border: 0; padding: 0; text-align: left; color: inherit; font: inherit; cursor: pointer; }
+  .aimlink:hover .title { text-decoration: underline; }
+  .title { font-family: var(--font-serif) !important; font-weight: 500 !important; }
   .aimrow .title { font: 600 16px/21px var(--font-display); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
   .change { display: inline-flex; align-items: center; gap: 2px; height: 32px; padding: 0 10px 0 12px; border-radius: 16px; border: 1px solid var(--card-border);
     background: var(--surface); color: var(--text); font: 500 13px var(--font); cursor: pointer; flex: none; }

@@ -23,6 +23,12 @@ async function renderHome() {
   if (location.pathname !== "/") return;
   // Explore, asked for from the popup (youtube.com/#aim-explore).
   if (location.hash === "#aim-explore") { exploreOpen = true; history.replaceState(null, "", "/"); }
+  // From an aim's page: talk it through, or put it together (the aim was picked up first).
+  if (location.hash === "#aim-talk" || location.hash === "#aim-put-together") {
+    const mode = location.hash === "#aim-put-together" ? "synthesis" : null;
+    history.replaceState(null, "", "/");
+    setTimeout(() => openTalk(mode ? { mode } : {}), 300);
+  }
   if (!settings.homeCard || brk) return removeHome();
   let host = null;
   for (let i = 0; i < 20 && !(host = homeHost()); i++) await sleep(200);
@@ -84,7 +90,7 @@ async function renderHome() {
     others.length ? el("div", { class: "wp-home-recent" },
       el("div", { class: "wp-label wp-home-sub" }, "Recent aims"),
       ...others.map(pausedTargetRow)) : null,
-    el("button", { class: "wp-btn wp-btn-text wp-home-all", onclick: () => send({ type: "open-targets" }) }, "View all aims")) : null;
+    el("button", { class: "wp-btn wp-btn-text wp-home-all", onclick: () => send({ type: "open-targets" }) }, "Your library")) : null;
 
   card.append(...[
     brandLine(),
@@ -201,7 +207,7 @@ function currentTargetRow(p) {
   const vids = status.currentVideos || [];
   return el("div", { class: "wp-home-current" },
     el("div", { class: "wp-label" }, "Your aim"),
-    el("div", { class: "wp-home-purpose" }, p.text),
+    el("button", { class: "wp-home-purpose wp-home-open", title: "Open this aim's page", onclick: () => send({ type: "open-aim", id: p.id }) }, p.text),
     el("div", { class: "wp-muted wp-home-meta" }, targetMeta({ ...p, videos: (p.videos || []).length })),
     studyTodayBlock(p),
     activeStudy(p) ? null : understandingBlock(p),

@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="light dark">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aim</title>
+<link rel="stylesheet" href="aim.css">
+<style>
+  /* One aim, whole: the book on the left with its sections, everything about it on the right. */
+  .aim-layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 36px; align-items: start; }
+  .aim-side { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 14px; }
+  .aim-side .back { font-size: 13px; color: var(--muted); }
+  .aim-nav { display: flex; flex-direction: column; gap: 2px; }
+  .aim-nav a { padding: 8px 12px; border-radius: 10px; color: var(--text); font-weight: 500; }
+  .aim-nav a:hover { background: var(--tonal); text-decoration: none; }
+  .aim-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+  .aim-head h1 { font: 500 34px/40px var(--font-serif); letter-spacing: -.4px; margin: 6px 0 6px; }
+  .aim-head .lede { margin: 0 0 14px; }
+  .state { display: inline-block; font-size: 12px; line-height: 22px; padding: 0 10px; border-radius: 11px; background: var(--primary); color: var(--on-primary); }
+  .state.done { background: var(--ok-soft); color: var(--ok); }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .overview { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; margin-top: 8px; }
+  .overview > div { display: flex; flex-direction: column; gap: 16px; }
+  section.card h2 { font: 500 19px/26px var(--font-serif); margin-bottom: 10px; }
+  .part { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--divider); }
+  .part:first-of-type { border-top: 0; }
+  .part b { font-weight: 500; display: block; }
+  .part small { color: var(--muted); font-size: 12px; }
+  .dot { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--muted); }
+  .dot.explored { border-color: var(--primary); background: linear-gradient(90deg, var(--primary) 30%, transparent 30%); }
+  .dot.partial { border-color: var(--primary); background: linear-gradient(90deg, var(--primary) 60%, transparent 60%); }
+  .dot.explained { border-color: var(--primary); background: var(--primary) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12.5l4 4 8-9' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 12px no-repeat; }
+  .linkish { background: none; border: 0; padding: 0; color: var(--link); font: inherit; font-weight: 500; cursor: pointer; }
+  .linkish:hover { text-decoration: underline; }
+  .tile { background: var(--tonal); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+  .tile .label { font: 600 13px var(--font); }
+  .learned li { margin: 8px 0; }
+  .vids { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; }
+  .vid { padding: 0; border: 0; background: none; text-align: left; cursor: pointer; color: var(--text); font: inherit; }
+  .vid .thumb { display: block; aspect-ratio: 16 / 9; border-radius: 10px; background: var(--tonal) center / cover no-repeat; position: relative; overflow: hidden; }
+  .vid .thumb i { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--accent); }
+  .vid span.t { display: block; margin-top: 6px; font-size: 13px; line-height: 18px; }
+  .vid span.c { display: block; font-size: 12px; color: var(--muted); }
+  .notes textarea { width: 100%; min-height: 120px; font: inherit; color: var(--text); background: var(--field); border: 1px solid var(--field-border); border-radius: 10px; padding: 10px 12px; resize: vertical; }
+  .related { display: flex; gap: 18px; flex-wrap: wrap; }
+  .related a { width: 120px; text-decoration: none; color: var(--text); }
+  .related .book { width: 120px; }
+  .related .book-title { font-size: 13px; line-height: 16px; }
+  .related .book-icon { width: 24px; height: 24px; }
+  main section { scroll-margin-top: 16px; }
+  textarea.field { width: 100%; font: inherit; color: var(--text); background: var(--field); border: 1px solid var(--field-border); border-radius: 10px; padding: 10px 12px; resize: vertical; }
+  @media (max-width: 860px) { .aim-layout, .overview { grid-template-columns: 1fr; } .aim-side { position: static; flex-direction: row; flex-wrap: wrap; align-items: flex-start; } .aim-nav { flex-direction: row; flex-wrap: wrap; } }
+</style>
+</head>
+<body>
+<main class="page wide">
+  <header class="page-head">
+    <img class="for-light" src="icons/48.png" alt=""><img class="for-dark" src="icons/light/48.png" alt="">
+    <span class="brand" data-brand>Aim</span><span class="crumb"><a href="targets.html">Library</a></span>
+  </header>
+  <div id="page" aria-live="polite"></div>
+</main>
+<div id="toast" role="status"></div>
+<script src="covers.js"></script>
+<script src="aim.js"></script>
+</body>
+</html>

@@ -71,6 +71,7 @@ const writes = {
   "talk-marks": m => talkMarks(m.aimId, m.marks),
   "talk-verdict": m => talkVerdict(m.aimId, m.verdict),
   "captions-stat": m => captionsStat(!!m.found),
+  "aim-notes": m => setAimNotes(String(m.id || ""), m.text),
   "practice-set": m => practiceSet(m.aimId, { practice: m.practice, tried: !!m.tried, note: m.note }),
   "map-remove": m => mapRemove(m.partId),
   "purpose-done": m => finishPurpose(m.outcome),
@@ -131,6 +132,7 @@ const reads = {
   "memory-match": m => memoryMatch(m.title),
   "memory-list": () => memoryList(),
   "captions-stats": () => captionsStats(),
+  "aim-get": m => aimGet(String(m.id || "")),
   "targets": () => readAll().then(resumable),
   "record": () => readAll().then(learningRecord),
   "channels-page": () => channelsPage(),
@@ -148,6 +150,7 @@ const reads = {
     return chrome.tabs.create({ url: chrome.runtime.getURL("pathways.html" + (q.size ? "?" + q : "")) }).then(() => ({ result: "applied" }));
   },
   "open-targets": () => chrome.tabs.create({ url: chrome.runtime.getURL("targets.html") }).then(() => ({ result: "applied" })),
+  "open-aim": m => chrome.tabs.create({ url: chrome.runtime.getURL(`aim.html?id=${encodeURIComponent(String(m.id || ""))}`) }).then(() => ({ result: "applied" })),
   "open-record": () => chrome.tabs.create({ url: chrome.runtime.getURL("record.html") }).then(() => ({ result: "applied" })),
   // YouTube tabs may only learn whether to offer Plus features, and open TeachBack for a topic.
   "plus-brief": () => plusBrief(),

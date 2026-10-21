@@ -262,7 +262,7 @@ function summary(p, state) {
   return { id: p.id, text: p.text, state, lastActiveAt: p.lastActiveAt || p.pausedAt || p.endedAt || p.startedAt,
     usedSec: Math.round(p.usedSec || 0), videos: (p.videos || []).length, searches: (p.searches || []).length,
     outcome: p.outcome || null, last: p.last || null, study: studyProgress(p), notes: p.notes || "", elsewhere: !!p.elsewhere, recent: recentVideos(p), trail: searchTrail(p),
-    exploring: !!p.learn,
+    exploring: !!p.learn, subject: aimSubject(p),
     practice: p.practice ? { title: p.practice.title, tried: !!p.practice.triedAt } : null,
     understanding: p.map?.parts?.length ? { parts: p.map.parts.map(x => ({ title: x.title, status: x.status })), ready: mapReady(p.map), solid: p.map.synthesis?.verdict === "solid" } : null };
 }
@@ -1614,4 +1614,63 @@ async function practiceSet(aimId, { practice, tried, note } = {}) {
   if (tried && rec.practice) { rec.practice.triedAt = Date.now(); rec.practice.note = clip(note, 500); }
   await chrome.storage.local.set({ purpose: d.purpose || null, paused: d.paused || [], history: d.history || [] });
   return { result: "applied", practice: rec.practice || null };
+}
+
+// ---------- the library: one aim, whole ----------
+// Each aim is a book on the shelf. Its subject (for the cover) is a guess from its words, no AI: a
+// learning topic's channels it was watched from, else words in its name, searches and video titles.
+const SUBJECTS = [
+  ["history", "History", /\b(history|historical|rome|roman|empire|war\b|ancient|medieval|revolution|dynasty|civili[sz]ation|republic|pharaoh|viking)/],
+  ["science", "Science", /\b(science|physics|chemistry|biology|cells?\b|cellular|photosynthesis|atom|molecule|evolution|respiration|genetics|quantum|climate|weather)/],
+  ["math", "Math", /\b(math|algebra|calculus|geometry|statistics|equation|derivative|integral|probability|trigonometry|fraction)/],
+  ["space", "Space", /\b(space|planet|nasa|rocket|astronomy|galaxy|orbit|stars?\b|moon\b|mars|telescope)/],
+  ["engineering", "Engineering", /\b(engineer|engine|bridge|mechanical|electrical|circuit|battery|batteries|motor|robot|electronics)/],
+  ["craft", "Craft", /\b(wood|joinery|joints?\b|cabinet|carpentry|chisel|sharpen|weld|sew\b|sewing|knit|pottery|furniture|faucet|plumbing|repair|fix\b|fixing|alternator|truck|car\b|cars\b)/],
+  ["coding", "Technology", /\b(code|coding|program|python|javascript|software|computer|web\b|apps?\b|ai\b|data\b)/],
+  ["money", "Personal finance", /\b(money|budget|invest|finance|tax\b|taxes|stock|saving|retire|debt)/],
+  ["aviation", "Aviation", /\b(aviation|pilot|plane|aircraft|flight|airline|checkride|faa\b)/],
+  ["health", "Health", /\b(health|fitness|exercise|nutrition|sleep|habit|workout|diet|medical|anatomy)/],
+  ["language", "Language", /\b(spanish|french|german|japanese|chinese|language|grammar|vocabulary|english)/],
+  ["arts", "Arts", /\b(music|guitar|piano|drawing|painting|photography|photo|design|art\b|artist|writing|poetry)/],
+  ["cooking", "Cooking", /\b(cook|cooking|bake|baking|bread|sourdough|recipe|kitchen|food)/],
+  ["people", "Leadership", /\b(leader|leadership|negotiat|communication|manage|team|career|interview|speaking)/],
+  ["faith", "Personal", /\b(bible|faith|religion|philosophy|meditation|ethic|psychology|mind\b)/]
+];
+function aimSubject(p) {
+  if (p.learn) { const t = SUBJECTS.find(([, name]) => name.toLowerCase() === String(p.learn).toLowerCase()); if (t) return { id: t[0], name: t[1] }; }
+  const text = [p.text, ...(p.searches || []).map(x => x.q), ...(p.videos || []).slice(-10).map(v => v.title)].join(" ").toLowerCase();
+  const hit = SUBJECTS.find(([, , re]) => re.test(String(p.text || "").toLowerCase())) || SUBJECTS.find(([, , re]) => re.test(text));
+  return hit ? { id: hit[0], name: hit[1] } : { id: "general", name: p.librarian?.kind === "project" ? "Project" : "Learning" };
+}
+
+// One aim with everything the aim page shows: its map, practice, notes, videos, path, study session,
+// what you explained to the librarian about it, and the aims most like it.
+async function aimGet(id) {
+  const d = await chrome.storage.local.get(["purpose", "paused", "history", "memory"]);
+  const all = [...(d.purpose ? [[d.purpose, "active"]] : []), ...(d.paused || []).map(p => [p, "paused"]),
+    ...(d.history || []).filter(h => h.type === "purpose" && h.text).map(h => [h, "completed"])];
+  const found = all.find(([p]) => p.id === id);
+  if (!found) return { result: "error", message: "That aim isn't here any more." };
+  const [p, state] = found;
+  const words = new Set(meaningfulWords(`${p.text} ${(p.searches || []).map(x => x.q).join(" ")}`));
+  const subject = aimSubject(p);
+  const related = all.filter(([o]) => o.id !== id).map(([o, st]) => {
+    const shared = meaningfulWords(`${o.text} ${(o.searches || []).map(x => x.q).join(" ")}`).filter(w => words.has(w)).length;
+    return [o, st, shared + (aimSubject(o).id === subject.id && subject.id !== "general" ? 1 : 0)];
+  }).filter(([, , n]) => n > 0).sort((a, b) => b[2] - a[2]).slice(0, 4)
+    .map(([o, st]) => ({ id: o.id, text: o.text, state: st, subject: aimSubject(o) }));
+  return { result: "applied", aim: { ...summary(p, state), subject, kind: p.librarian?.kind || (p.learn ? "explore" : null),
+    map: p.map || null, practice: p.practice || null, study: p.study ? studySnapshot(p.study) : null, librarianNote: p.librarian?.note || "",
+    learned: (d.memory || []).filter(m => m.aim === id).map(m => ({ subject: m.subject, idea: m.idea, understood: m.understood, at: m.at })),
+    startedAt: p.startedAt || null, endedAt: p.endedAt || null }, related };
+}
+
+// Notes for any aim, from its page (the menu's Notes covers the one you're on).
+async function setAimNotes(id, text) {
+  const d = await chrome.storage.local.get(["purpose", "paused", "history"]);
+  const rec = [d.purpose, ...(d.paused || []), ...(d.history || [])].find(r => r?.id === id);
+  if (!rec) return { result: "error", message: "That aim isn't here any more." };
+  rec.notes = String(text || "").slice(0, 4000);
+  await chrome.storage.local.set({ purpose: d.purpose || null, paused: d.paused || [], history: d.history || [] });
+  return { result: "applied", notes: rec.notes };
 }

@@ -431,3 +431,10 @@ Needs a signed-in account and the server redeployed.
 - [ ] **Save for later**: it's on the homepage under the aim. **I tried it** takes an optional note. Set-aside aims say "Next: try it · …".
 - [ ] The next conversation on that aim starts by asking how it went, using your note.
 - [ ] Study sessions' project step is now called **Put it into practice** too.
+
+### 45. The library and aim pages (0.56)
+- [ ] Popup → **My library** (or the homepage's **Your library**): every aim is a book: the subject's color and icon (History, Science, Craft, …), its name in a serif, and a progress line when there's something to measure. Under each: where it stands. All / In progress / Completed, a search box, and a **+ New aim** book.
+- [ ] Open a book: the aim's page. The book on the left with its sections; the aim's state and name; **Continue on YouTube** / **Pick it up** / **Start again**.
+- [ ] A learning aim with a map: Your understanding (each part, Search for it), **A question to explore** (or **Ready to put it together** → opens the librarian on YouTube), **Put it into practice** (Find a project video, I tried it).
+- [ ] What you've learned (what you explained to the librarian about it), Key videos (thumbnails with where you stopped; click plays from there), Notes & ideas (save works for set-aside and finished aims too), your path, Related aims.
+- [ ] The homepage's aim name and the popup's aim open its page. Light and dark both look right.

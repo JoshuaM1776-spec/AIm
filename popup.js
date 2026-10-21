@@ -170,7 +170,8 @@ function renderCurrent() {
       open === "pivot" ? el("div", {}, el("div", { class: "strong big cur-text" }, p.text), pivotControls()) : el("div", {},
         el("div", { class: "aimrow" },
           thumb ? el("div", { class: "thumb", style: `background-image:${thumb}` }) : null,
-          el("div", { class: "grow" }, el("div", { class: "title cur-text" }, p.text), el("div", { class: "muted" }, sub)),
+          el("button", { class: "grow aimlink", title: "Open this aim's page", onclick: () => send({ type: "open-aim", id: p.id }) },
+            el("div", { class: "title cur-text" }, p.text), el("div", { class: "muted" }, sub)),
           el("button", { class: "change", title: "Change my aim", onclick: () => { open = "pivot"; renderCurrent(); } }, "Change", ico(ICONS.chevron))),
         el("div", { class: "actions" },
           el("button", { class: "btn primary", id: "resume", onclick: () => resume(p.id) }, ico(ICONS.play), "Resume"),
@@ -184,7 +185,7 @@ function renderCurrent() {
         el("div", { class: "more" },
           el("button", { class: "link", onclick: () => { open = "pivot"; renderCurrent(); } }, "Change my aim"),
           el("button", { class: "link", id: "setAside", onclick: () => act({ type: "purpose-pause" }) }, "Set aside"),
-          el("button", { class: "link", onclick: () => send({ type: "open-targets" }) }, "All aims")))));
+          el("button", { class: "link", onclick: () => send({ type: "open-targets" }) }, "My library")))));
     send({ type: "plus-brief" }).then(r => { const b = document.getElementById("askLibrarian"); if (b) b.hidden = !r?.account; });
     return;
   }

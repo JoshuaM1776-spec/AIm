@@ -823,3 +823,5 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 .wp-practice .wp-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
 .wp-practice textarea { width: 100%; margin-top: 6px; font: inherit; resize: vertical; }
 .wp-practice-home { margin-top: 12px; }
+.wp .wp-home-open { background: none; border: 0; padding: 0; text-align: left; cursor: pointer; color: inherit; font: inherit; }
+.wp .wp-home-open:hover { text-decoration: underline; }
