@@ -281,7 +281,9 @@ const ytResults = q => ytPage(`<ytd-search><div><ytd-section-list-renderer>${[["
   ["alt2bbb", "Alternator tools you need", "DIY Garage"], ["alt3ccc", "Funny truck fails", "Clips"]].map(([id, t, c]) =>
   `<ytd-video-renderer><a id="video-title" href="/watch?v=${id}">${t}</a><ytd-channel-name><a href="/@${c.replace(/ /g, "")}">${c}</a></ytd-channel-name>
    <div id="metadata-line">120K views · 2 years ago</div><div class="metadata-snippet-text">How to replace it step by step</div></ytd-video-renderer>`).join("")}
-</ytd-section-list-renderer></div></ytd-search>`);
+</ytd-section-list-renderer></div></ytd-search>
+<script>var ytInitialData = ${JSON.stringify({ contents: { sectionListRenderer: { contents: [{ itemSectionRenderer: { contents: [
+  { videoRenderer: { videoId: "alt1aaa", title: { runs: [{ text: `Tacoma alternator replacement (${q})` }] }, ownerText: { runs: [{ text: "Truck Shop" }] }, lengthText: { simpleText: "12:04" } } }] } }] } } })};</script>`);
 const ytWatch = id => ytPage(`<ytd-watch-flexy video-id="${id}"><ytd-watch-metadata><h1 class="ytd-watch-metadata"><yt-formatted-string>Video ${id}</yt-formatted-string></h1>
   <div id="owner"><div id="channel-name"><a href="/@chan">Chan</a></div></div>
   <div id="description-inline-expander" style="white-space:pre-line">How cells break down glucose.
@@ -596,7 +598,8 @@ step("back on your aim: the themed break is over and recorded with its theme", !
 await sw.evaluate(() => serial(() => setSetting("captions", true)));
 srv.talk.push(
   { message: "You watched two different takes on why the Republic fell. OverSimplified puts it on the army [V1 0:45]. If you had to bet on one cause, which would it be?", done: false, memory: [], marks: [] },
-  { message: "The generals, then. Why would a soldier back his general over the Senate?", done: false, memory: [], marks: [] },
+  { message: "The generals, then. Why would a soldier back his general over the Senate?", done: false, memory: [], marks: [],
+    videos: [{ kind: "visual", search: "marian reforms explained animated", why: "To see how the army changed." }] },
   { message: "That's the Marian reforms in a nutshell, as I understand it: the army became a career, and the general was the one paying.", done: true,
     memory: [{ subject: "Marian reforms", idea: "Soldiers backed the generals who paid and settled them, not the Senate", understood: "solid" }], marks: [] });
 await sw.evaluate(() => serial(async () => {
@@ -627,6 +630,11 @@ await yt.waitForSelector(".wp-talk .wp-talk-input");
 await yt.fill(".wp-talk-input", "Probably the generals. The armies ended up loyal to them, not to Rome.");
 await yt.press(".wp-talk-input", "Enter");
 await yt.waitForFunction(() => document.querySelectorAll(".wp-talk .wp-talk-aim").length === 2);
+await yt.waitForSelector(".wp-talk .wp-talk-video:not(.wp-talk-video-loading)");
+const vidCard = (await yt.textContent(".wp-talk .wp-talk-video")).replace(/\s+/g, " ");
+step("a suggested video is a real one: YouTube's top result for the librarian's search, with what kind it is and why",
+  vidCard.includes("A visual explanation") && vidCard.includes("Tacoma alternator replacement (marian reforms explained animated)") && vidCard.includes("To see how the army changed") &&
+  (await yt.getAttribute(".wp-talk .wp-talk-video-thumb", "style")).includes("vi/alt1aaa/"), vidCard);
 await yt.fill(".wp-talk-input", "Because after Marius the general paid them and got them land when they retired.");
 await yt.press(".wp-talk-input", "Enter");
 await yt.waitForSelector(".wp-talk .wp-talk-kept");

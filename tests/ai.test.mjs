@@ -582,6 +582,18 @@ test("talk: put it into practice: one small suggestion, only when it closes, nev
   assert.strictEqual((await call(none, { task: "librarian-talk", input: { mode: "focus", session, thread } })).body.practice, null, "most conversations end without one");
 });
 
+test("talk: up to two videos to help (a visual, a simpler, another side, more depth), never on the opening", async () => {
+  const videos = [{ kind: "visual", search: "roman republic collapse animated map", why: "You weren't sure how the pieces fit." },
+    { kind: "perspective", search: "historian argues rome fell gradually", why: "Some historians say it didn't fall at all." },
+    { kind: "deeper", search: "x", why: "y" }, { kind: "diagram", search: "z", why: "w" }];
+  const d = talkDeps("plus", () => talkReply({ videos }));
+  const thread = [{ role: "aim", text: "q" }, { role: "person", text: "a" }];
+  const r = await call(d, { task: "librarian-talk", input: { mode: "focus", session: SESSION, thread } });
+  assert.deepStrictEqual(r.body.videos.map(v => v.kind), ["visual", "perspective"], "at most two, of known kinds");
+  assert.match(d.calls[0].system, /never say you'll draw, show or make anything yourself/);
+  assert.deepStrictEqual((await call(d, { task: "librarian-talk", input: { mode: "focus", opening: true, session: SESSION } })).body.videos, []);
+});
+
 // ---------- billing (Stripe) ----------
 const WHSEC = "whsec_test_secret";
 async function signed(payload, secret = WHSEC, t = Math.floor(Date.now() / 1000)) {

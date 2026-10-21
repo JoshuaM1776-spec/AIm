@@ -42,7 +42,8 @@ const ICONS = {
   compass: ["M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z", "M15.5 8.5l-2 5-5 2 2-5z"],
   hourglass: ["M7 3.5h10M7 20.5h10", "M8 3.5c0 5 8 5 8 8.5s-8 3.5-8 8.5", "M16 3.5c0 5-8 5-8 8.5s8 3.5 8 8.5"],
   talk: ["M5 18.5l1.2-3.4A7.5 7.5 0 1 1 9 18.1z"],
-  bookmark: ["M7 3.5h10v17l-5-3.5-5 3.5z"]
+  bookmark: ["M7 3.5h10v17l-5-3.5-5 3.5z"],
+  library: ["M4 5.5C6.5 4 9.5 4 12 6c2.5-2 5.5-2 8-.5V19c-2.5-1.5-5.5-1.5-8 .5-2.5-2-5.5-2-8-.5z", "M12 6v13.5"]
 };
 
 // Open YouTube at this address: in the YouTube tab you're on, otherwise in a new tab.
@@ -149,7 +150,6 @@ function renderCurrent() {
     return;
   }
   if (p) {
-    const thumb = p.last?.id ? `url("https://i.ytimg.com/vi/${encodeURIComponent(p.last.id)}/mqdefault.jpg")` : null;
     const parts = p.map?.parts || [];
     const sub = parts.length ? `${parts.filter(x => x.status === "explained").length} of ${parts.length} explained`
       : `${dur(Math.max(1, mins(p.usedSec)))} so far`;
@@ -159,17 +159,17 @@ function renderCurrent() {
         el("small", {}, st.leisureLeftMin !== null && st.leisureLeftMin < 1 ? "None today" : "5–60 min")),
       el("button", { class: "tool", id: "askLibrarian", hidden: true, onclick: async () => {
         const r = await askTab("tab-talk");
-        if (r?.ok) window.close(); else goYouTube("https://www.youtube.com/");
-      } }, ico(ICONS.talk), "Ask the Librarian", el("small", {}, "Talk it through")),
-      el("button", { class: "tool", id: "saveVideo", onclick: async () => {
-        const r = await askTab("tab-save");
-        if (r?.ok) { render(); window.close(); } else alert("Open a video on YouTube to save it.");
-      } }, ico(ICONS.bookmark), "Save for later", el("small", {}, "This video")));
+        if (r?.ok) window.close(); else goYouTube("https://www.youtube.com/#aim-talk");
+      } }, ico(ICONS.talk), "Librarian", el("small", {}, "Talk it through")),
+      el("button", { class: "tool", onclick: () => send({ type: "open-targets" }) }, ico(ICONS.library), "My Library", el("small", {}, "Every aim")));
+    const book = el("span", { class: "minibook" });
+    // The aim's book, as on the library's shelf (its subject comes with the aim's summary).
+    send({ type: "aim-get", id: p.id }).then(d => { if (d?.aim) book.replaceChildren(cover(d.aim, "small")); });
     box.append(el("div", { class: "card" },
       el("div", { class: "label" }, p.learn ? "Exploring" : "Your aim"),
       open === "pivot" ? el("div", {}, el("div", { class: "strong big cur-text" }, p.text), pivotControls()) : el("div", {},
         el("div", { class: "aimrow" },
-          thumb ? el("div", { class: "thumb", style: `background-image:${thumb}` }) : null,
+          book,
           el("button", { class: "grow aimlink", title: "Open this aim's page", onclick: () => send({ type: "open-aim", id: p.id }) },
             el("div", { class: "title cur-text" }, p.text), el("div", { class: "muted" }, sub)),
           el("button", { class: "change", title: "Change my aim", onclick: () => { open = "pivot"; renderCurrent(); } }, "Change", ico(ICONS.chevron))),
@@ -179,13 +179,11 @@ function renderCurrent() {
         el("div", { class: "label", style: "margin:14px 0 0" }, "Session tools"),
         tools,
         open === "break" ? el("div", { style: "margin-top:10px" }, breakControls()) : null,
-        left !== null ? el("div", { class: "limit" }, el("span", {}, "Session limit"),
-          el("div", { class: "bar" }, el("i", { style: `width:${Math.min(100, (mins(p.usedSec) / p.limitMin) * 100)}%` })),
-          el("span", { class: "muted" }, `${Math.min(p.limitMin, mins(p.usedSec))} / ${p.limitMin} min`)) : null,
+        left !== null ? el("div", { class: "limit" }, el("span", {}, `Session · ${Math.min(p.limitMin, mins(p.usedSec))} of ${p.limitMin} minutes`),
+          el("div", { class: "bar" }, el("i", { style: `width:${Math.min(100, (mins(p.usedSec) / p.limitMin) * 100)}%` }))) : null,
         el("div", { class: "more" },
           el("button", { class: "link", onclick: () => { open = "pivot"; renderCurrent(); } }, "Change my aim"),
-          el("button", { class: "link", id: "setAside", onclick: () => act({ type: "purpose-pause" }) }, "Set aside"),
-          el("button", { class: "link", onclick: () => send({ type: "open-targets" }) }, "My library")))));
+          el("button", { class: "link", id: "setAside", onclick: () => act({ type: "purpose-pause" }) }, "Set aside")))));
     send({ type: "plus-brief" }).then(r => { const b = document.getElementById("askLibrarian"); if (b) b.hidden = !r?.account; });
     return;
   }

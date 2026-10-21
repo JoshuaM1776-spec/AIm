@@ -10,7 +10,7 @@ let talkPanel = null;
 function closeTalk() { talkPanel?.el.remove(); talkPanel = null; }
 
 const talkCall = (state, extra = {}) => send({ type: "librarian", task: "librarian-talk",
-  input: { mode: state.mode, session: state.session, thread: state.thread, memory: state.memory, connect: state.connect, ...extra } });
+  input: { mode: state.mode, session: state.session, thread: state.thread.map(({ role, text }) => ({ role, text })), memory: state.memory, connect: state.connect, ...extra } });
 
 // Everything a conversation needs, with its opening question already asked. Null when there's
 // nothing to talk about, no account, or the AI couldn't open (the error is in .error).
@@ -35,6 +35,58 @@ async function prepareTalk({ aimId = null, connect = null, source = "menu", mode
   if (!r || r.error) return { error: r?.error || "The librarian couldn't start just now. Try again in a minute." };
   state.thread.push({ role: "aim", text: r.message });
   return state;
+}
+
+// Another video the librarian suggests comes as a search; Aim shows the first video YouTube's own
+// search finds for it (read from the results page's data), so the card is a real video, not a promise.
+const topCache = new Map();
+async function topResult(query) {
+  if (topCache.has(query)) return topCache.get(query);
+  let out = null;
+  try {
+    const r = await fetch(`/results?search_query=${encodeURIComponent(query)}`, { credentials: "include" });
+    const html = r.ok ? await r.text() : "", at = html.indexOf("var ytInitialData = ");
+    if (at >= 0) {
+      const from = at + "var ytInitialData = ".length;
+      const data = JSON.parse(html.slice(from, html.indexOf(";</script>", from)));
+      const vr = findAll(data, "videoRenderer").find(v => /^[\w-]{6,20}$/.test(v.videoId || ""));
+      const lk = vr ? null : findAll(data, "lockupViewModel").find(l => l.contentType === "LOCKUP_CONTENT_TYPE_VIDEO");
+      if (vr) out = { id: vr.videoId, title: vr.title?.runs?.map(x => x.text).join("") || "", channel: vr.ownerText?.runs?.[0]?.text || "", length: vr.lengthText?.simpleText || "" };
+      else if (lk?.contentId) out = { id: lk.contentId, title: lk.metadata?.lockupMetadataViewModel?.title?.content || "", channel: "", length: "" };
+    }
+  } catch { out = null; }
+  topCache.set(query, out);
+  return out;
+}
+const VIDEO_KIND = { visual: "A visual explanation", simpler: "A simpler explanation", perspective: "A different perspective", deeper: "Going deeper" };
+
+// Cards under the librarian's message: the video, what kind it is, and why. Watching it keeps it with
+// the aim (picking the aim up again first if it was finished).
+function suggestedVideos(state, m) {
+  const row = el("div", { class: "wp-talk-videos" });
+  const card = (s, v) => el("button", { class: "wp-talk-video", title: v ? v.title : `Search: ${s.search}`, onclick: async () => {
+    if (activePurpose()?.id !== state.aimId) {
+      const r = await send({ type: "purpose-resume", id: state.aimId });
+      if (!r || r.result !== "applied") return toast(r?.message || "Couldn't do that. Try again.");
+    }
+    if (!v) { location.href = `/results?search_query=${encodeURIComponent(s.search)}`; return; }
+    await send({ type: "purpose-allow", query: s.search, videos: [{ id: v.id, title: v.title, channel: v.channel }], lists: [] });
+    location.href = `/watch?v=${encodeURIComponent(v.id)}`;
+  } },
+    v ? el("span", { class: "wp-talk-video-thumb", style: `background-image:url("https://i.ytimg.com/vi/${encodeURIComponent(v.id)}/mqdefault.jpg")` },
+      v.length ? el("span", { class: "wp-upnext-len" }, v.length) : null) : el("span", { class: "wp-talk-video-thumb wp-talk-video-search" }, icon("search")),
+    el("span", { class: "wp-talk-video-text" },
+      el("b", {}, VIDEO_KIND[s.kind] || "Another video"),
+      el("span", {}, v ? v.title : `Search: ${s.search}`),
+      s.why ? el("span", { class: "wp-muted" }, s.why) : null));
+  const fill = () => row.replaceChildren(...m.videos.map((s, i) => (m.found?.[i] === undefined
+    ? el("div", { class: "wp-talk-video wp-talk-video-loading" }, el("span", { class: "wp-muted" }, "Finding a video…")) : card(s, m.found[i]))));
+  if (!m.found) {
+    m.found = m.videos.map(() => undefined);
+    m.videos.forEach((s, i) => topResult(s.search).then(v => { m.found[i] = v; fill(); }));
+  }
+  fill();
+  return row;
 }
 
 // "[V2 6:40]" in what the librarian says: a link to that moment in that video (a seek, when it's the
@@ -75,8 +127,9 @@ function showTalk(state) {
     closeTalk();
   };
   const draw = (note = null) => {
-    log.replaceChildren(...state.thread.map(m => el("div", { class: `wp-talk-msg ${m.role === "person" ? "wp-talk-you" : "wp-talk-aim"}` },
-      ...(m.role === "person" ? [m.text] : withMoments(m.text, state.session.videos)))),
+    log.replaceChildren(...state.thread.flatMap(m => [el("div", { class: `wp-talk-msg ${m.role === "person" ? "wp-talk-you" : "wp-talk-aim"}` },
+      ...(m.role === "person" ? [m.text] : withMoments(m.text, state.session.videos))),
+      m.videos?.length ? (m.row ||= suggestedVideos(state, m)) : null].filter(Boolean)),
       ...(state.busy ? [el("div", { class: "wp-talk-msg wp-talk-aim wp-talk-typing", "aria-label": "The librarian is thinking" }, el("i"), el("i"), el("i"))] : []),
       ...(note ? [el("div", { class: "wp-muted wp-talk-note" }, note)] : []));
     log.scrollTop = log.scrollHeight;
@@ -114,7 +167,7 @@ function showTalk(state) {
       state.thread.pop(); input.value = text;
       return draw(r?.error || "Couldn't reach the librarian. Try again.");
     }
-    state.thread.push({ role: "aim", text: r.message });
+    state.thread.push({ role: "aim", text: r.message, ...(r.videos?.length ? { videos: r.videos } : {}) });
     if (r.done) {
       state.done = true;
       if (state.remember && r.memory?.length) { await send({ type: "memory-add", items: r.memory, aimId: state.aimId }); state.kept = r.memory.map(m => m.subject); }

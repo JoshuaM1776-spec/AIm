@@ -807,8 +807,8 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 .wp-talk-actions .wp-row { display: flex; align-items: center; gap: 6px; }
 
 /* "Staying on track": a brief pill on the player when a video plays for your aim. */
-.wp-ontrack { position: absolute; z-index: 60; top: 14px; right: 14px; display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 10px 0 12px;
-  border: 0; border-radius: 18px; background: rgba(255, 253, 249, .95); color: #16231e; font: 400 13px/18px "Roboto", Arial, sans-serif;
+.wp-ontrack { position: absolute; z-index: 60; top: 14px; right: 14px; display: flex; align-items: center; gap: 10px; min-height: 44px; max-width: min(420px, 70%); padding: 6px 10px 6px 12px;
+  border: 0; border-radius: 22px; background: rgba(255, 253, 249, .95); color: #16231e; font: 400 13px/18px "Roboto", Arial, sans-serif;
   box-shadow: 0 2px 10px rgba(0, 0, 0, .25); cursor: pointer; transition: opacity .4s; }
 .wp-ontrack b { font-weight: 700; }
 .wp-ontrack .wp-icon { display: flex; }
@@ -825,3 +825,17 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 .wp-practice-home { margin-top: 12px; }
 .wp .wp-home-open { background: none; border: 0; padding: 0; text-align: left; cursor: pointer; color: inherit; font: inherit; }
 .wp .wp-home-open:hover { text-decoration: underline; }
+
+/* Videos the librarian suggests, under its message: the real video YouTube's search found. */
+.wp-talk-videos { display: flex; flex-direction: column; gap: 8px; align-self: stretch; }
+.wp .wp-talk-video { display: grid; grid-template-columns: 112px 1fr; gap: 10px; align-items: start; padding: 8px; border: 1px solid var(--wp-card-border); border-radius: 12px;
+  background: var(--wp-raised); color: var(--wp-text); text-align: left; cursor: pointer; font: inherit; }
+.wp .wp-talk-video:hover { background: var(--wp-tonal); }
+.wp-talk-video-loading { display: block; font-size: 12px; }
+.wp-talk-video-thumb { position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 16 / 9; border-radius: 8px; background: var(--wp-tonal) center / cover no-repeat; }
+.wp-talk-video-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 12px; line-height: 16px; }
+.wp-talk-video-text b { font-size: 12px; }
+.wp-talk-video-text span:nth-child(2) { font-size: 13px; line-height: 17px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.wp-ontrack-text { display: flex; flex-direction: column; text-align: left; min-width: 0; padding-left: 10px; border-left: 1px solid rgba(25, 61, 49, .15); }
+.wp-ontrack-aim { font-size: 12px; line-height: 16px; color: #5d6a63; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wp-ontrack b { font-size: 16px; }

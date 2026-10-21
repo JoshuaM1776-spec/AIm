@@ -38,8 +38,11 @@ function release(id) {
 function onTrackPill() {
   const host = playerHost();
   if (!host || $(".wp-ontrack", host)) return;
+  const p = activePurpose();
   const pill = el("button", { class: "wp wp-ontrack", title: "Aim's menu", onclick: e => { e.stopPropagation(); pill.remove(); openDropdown(); } },
-    el("span", { class: "wp-icon" }, svgIcon("logo")), el("b", {}, BRAND), el("span", {}, "Staying on track"), icon("right"));
+    el("span", { class: "wp-icon" }, svgIcon("logo")), el("b", {}, BRAND),
+    el("span", { class: "wp-ontrack-text" }, el("span", {}, "Staying on track"),
+      el("span", { class: "wp-ontrack-aim" }, p.learn ? `Exploring: ${p.learn}` : `Learning: ${p.text}`)), icon("right"));
   host.append(pill);
   setTimeout(() => pill.classList.add("wp-ontrack-out"), 3500);
   setTimeout(() => pill.remove(), 4000);

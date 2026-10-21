@@ -306,7 +306,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.waitForTimeout(800);
   st = await store();
   step("setting a purpose from the card plays the video", st.purpose?.text === "Learn how sourdough starters work" && st.purpose.limitMin === null && !(await p.$(".wp-player-card")));
-  step("a brief Staying on track pill on the player, then it goes", (await text(".wp-ontrack")).includes("Staying on track"));
+  step("a brief Staying on track pill on the player, with the aim", (await text(".wp-ontrack")).includes("Staying on track") && (await text(".wp-ontrack")).includes("Learning: Learn how sourdough starters work"));
   step("indicator shows the purpose", (await text("#wp-chip")).includes("Learn how sourdough") && !(await text("#wp-chip")).includes("null"));
   step("with a purpose: sidebar recommendations and end screens hidden", (await p.isHidden("#related")) && (await p.isHidden(".ytp-ce-element")));
   step("with a purpose: autoplay switched off", (await p.getAttribute(".ytp-autonav-toggle-button", "aria-checked")) === "false" &&
@@ -529,7 +529,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await pop.goto(`chrome-extension://${extId}/popup.html`);
   await pop.waitForTimeout(500);
   const popText = (await pop.textContent("body")).replace(/\s+/g, " ");
-  step("popup: Focus and Explore, the aim with Change, and session tools", ["Focus", "Learn something specific", "Explore", "Follow your curiosity", "Session tools", "Save for later"].every(t => popText.includes(t)) &&
+  step("popup: Focus and Explore, the aim with Change, and session tools", ["Focus", "Learn something specific", "Explore", "Follow your curiosity", "Session tools", "Take a Break", "My Library"].every(t => popText.includes(t)) &&
     (await pop.getAttribute(".mode:has-text('Focus')", "aria-pressed")) === "true");
   if (process.env.SHOTS) { await pop.setViewportSize({ width: 340, height: 640 }); await pop.screenshot({ path: `${process.env.SHOTS}/popup.png`, fullPage: true }); }
   const [optText, plusHidden] = await (async () => { const o = await ctx.newPage(); await o.goto(`chrome-extension://${extId}/options.html`); await o.waitForTimeout(400);

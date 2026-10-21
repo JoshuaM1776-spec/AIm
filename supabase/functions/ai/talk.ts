@@ -93,6 +93,8 @@ Put it into practice (only in your closing message, never in Explore): sometimes
 - title: the activity in a few words, as an imperative (under 70 characters); why: one sentence on what doing it will show them (under 140); search: a YouTube search for a good project video to follow (beginner-friendly).
 - If THEY TRIED a practice before, ask about it first, specifically ("How did the joint come out? Where did it go wrong?"), and use what they say.
 
+Another video (any message after they've replied, at most 2, often none): suggest one only when another explanation would genuinely help: they're unsure or partly wrong about something (a "visual" or "simpler" explanation of exactly that), or reasonable people disagree (a "perspective" from the other side), or they're ready for more depth ("deeper"). Each: kind, a YouTube search that finds exactly that kind of video, and why in one short sentence (under 100 characters) tied to what they said. Aim finds the video; never say you'll draw, show or make anything yourself.
+
 Marks (only when study topics or understanding parts are listed): for each listed topic this conversation actually covered, "demonstrated", "partial" or "needs_review" from their replies. Leave out topics you didn't discuss.`;
 
 const TALK_SCHEMA = {
@@ -109,6 +111,14 @@ const TALK_SCHEMA = {
       }
     },
     verdict: { type: "string", enum: ["solid", "getting_there", "none"] },
+    videos: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { kind: { type: "string", enum: ["visual", "simpler", "perspective", "deeper"] }, search: { type: "string" }, why: { type: "string" } },
+        required: ["kind", "search", "why"], additionalProperties: false
+      }
+    },
     practice: {
       type: "object",
       properties: { title: { type: "string" }, why: { type: "string" }, search: { type: "string" } },
@@ -123,7 +133,7 @@ const TALK_SCHEMA = {
       }
     }
   },
-  required: ["message", "done", "memory", "marks", "verdict", "practice"],
+  required: ["message", "done", "memory", "marks", "verdict", "practice", "videos"],
   additionalProperties: false
 };
 
@@ -215,6 +225,11 @@ ${free ? "Return memory as an empty list." : "Return memory from their replies s
       const o = asObject(m);
       return { subject: clean(o.subject, 60), idea: clean(o.idea, 160), understood: o.understood === "shaky" ? "shaky" : "solid" };
     }).filter(m => m.subject && m.idea).slice(0, 3),
+    // Another explanation or another side, as a search Aim turns into a real video: never on the opening.
+    videos: opening ? [] : list(r.videos).map(v => {
+      const o = asObject(v), search = clean(o.search, 150);
+      return search && ["visual", "simpler", "perspective", "deeper"].includes(o.kind as string) ? { kind: o.kind, search, why: clean(o.why, 120) } : null;
+    }).filter(Boolean).slice(0, 2),
     // One practice suggestion at most, only when it closes, and never while exploring.
     practice: (() => {
       const pr = asObject(r.practice), title = clean(pr.title, 80), search = clean(pr.search, 150);

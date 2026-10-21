@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="covers.css">
 <style>
   /* Fonts and colors: tokens.css (shared with Aim's pages). Aim coral is an accent only: Resume,
      Back to my aim and the time ring. The popup's compact layout has its own small rules here. */
@@ -86,6 +87,8 @@
   .mode.on small { color: inherit; opacity: .8; }
   .label { font: 600 13px/18px var(--font); margin: 0 0 8px; }
   .aimrow { display: flex; align-items: center; gap: 12px; }
+  .minibook { flex: none; width: 64px; min-height: 88px; }
+  .minibook .book { box-shadow: 0 1px 2px rgba(0,0,0,.15), 0 4px 10px rgba(25, 30, 20, .15); }
   .thumb { width: 64px; height: 48px; border-radius: 8px; background: var(--tonal) center / cover no-repeat; flex: none; }
   .aimrow .grow { flex: 1; min-width: 0; }
   .aimlink { background: none; border: 0; padding: 0; text-align: left; color: inherit; font: inherit; cursor: pointer; }
@@ -132,6 +135,7 @@
     <div class="foot" style="border:0"><a id="clear">Clear history</a></div>
   </details>
   <div class="foot" style="gap:16px"><a id="limits">Daily limits</a><a id="record">Learning record</a><a id="plusPage" hidden>Aim Plus</a></div>
+  <script src="covers.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

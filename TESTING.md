@@ -438,3 +438,8 @@ Needs a signed-in account and the server redeployed.
 - [ ] A learning aim with a map: Your understanding (each part, Search for it), **A question to explore** (or **Ready to put it together** → opens the librarian on YouTube), **Put it into practice** (Find a project video, I tried it).
 - [ ] What you've learned (what you explained to the librarian about it), Key videos (thumbnails with where you stopped; click plays from there), Notes & ideas (save works for set-aside and finished aims too), your path, Related aims.
 - [ ] The homepage's aim name and the popup's aim open its page. Light and dark both look right.
+
+### 46. Popup, pill and suggested videos (0.57)
+- [ ] Popup: your aim with its book (as on the library shelf), Resume / Done, and tiles for **Take a Break**, **Librarian** (signed in; opens the conversation on your YouTube tab) and **My Library**. With a time limit: "Session · 32 of 90 minutes" and a bar.
+- [ ] The Staying on track pill on the player also names the aim ("Learning: …", or "Exploring: History").
+- [ ] Talking it through: sometimes, after you reply, the librarian suggests a video ("A visual explanation", "A simpler explanation", "A different perspective", "Going deeper") with why. The card is a real video (YouTube's top result for its search). Clicking it plays it as part of your aim. It never says it will draw or show something itself.
