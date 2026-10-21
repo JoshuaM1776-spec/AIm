@@ -1,4 +1,5 @@
-// Aim — toolbar popup: the current aim (Resume, Take a Break, Done), and your activity folded below.
+// Aim — toolbar popup: Focus or Explore, the current aim (Resume, Done, session tools, its limit),
+// and your activity folded below.
 // Reads and changes data through the background worker.
 
 function el(tag, attrs = {}, ...kids) {
@@ -36,8 +37,36 @@ const ICONS = {
   change: ["M4 12a8 8 0 0 1 14-5.3L20 9", "M20 4v5h-5", "M20 12a8 8 0 0 1-14 5.3L4 15", "M4 20v-5h5"],
   check: ["M5 12.5l4.5 4.5L19 7.5"],
   chevron: ["M9 6l6 6-6 6"],
-  play: ["M8 5.5v13l10.5-6.5z"]
+  play: ["M8 5.5v13l10.5-6.5z"],
+  target: ["M12 21a9 9 0 1 1 9-9", "M12 17a5 5 0 1 1 5-5", "M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z", "M14 10l6.5-6.5M17 3.5h3.5V7"],
+  compass: ["M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z", "M15.5 8.5l-2 5-5 2 2-5z"],
+  hourglass: ["M7 3.5h10M7 20.5h10", "M8 3.5c0 5 8 5 8 8.5s-8 3.5-8 8.5", "M16 3.5c0 5-8 5-8 8.5s8 3.5 8 8.5"],
+  talk: ["M5 18.5l1.2-3.4A7.5 7.5 0 1 1 9 18.1z"],
+  bookmark: ["M7 3.5h10v17l-5-3.5-5 3.5z"]
 };
+
+// Open YouTube at this address: in the YouTube tab you're on, otherwise in a new tab.
+async function goYouTube(url) {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true }).catch(() => []);
+  const here = tab ? await chrome.tabs.sendMessage(tab.id, { type: "go", url }).catch(() => null) : null;
+  if (!here?.ok) await chrome.tabs.create({ url });
+  window.close();
+}
+// Ask the YouTube tab you're on to do something (talk it through, save the video). Null when it isn't one.
+async function askTab(type) {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true }).catch(() => []);
+  return tab ? chrome.tabs.sendMessage(tab.id, { type }).catch(() => null) : null;
+}
+
+// Focus or Explore: which way you're in, and the way into the other.
+function renderModes() {
+  const p = st.purpose, exploring = !!p?.learn && !st.brk, focused = !!p && !p.learn && !st.brk;
+  const mode = (on, icon, name, sub, go) => el("button", { class: `mode${on ? " on" : ""}`, "aria-pressed": String(on), onclick: go },
+    ico(icon), el("span", {}, el("b", {}, name), el("small", {}, sub)));
+  document.getElementById("modes").replaceChildren(
+    mode(focused, ICONS.target, "Focus", "Learn something specific", () => goYouTube("https://www.youtube.com/")),
+    mode(exploring, ICONS.compass, "Explore", "Follow your curiosity", () => goYouTube("https://www.youtube.com/#aim-explore")));
+}
 
 let st = null;
 let open = null; // which inline control is open: "break" | "pivot"
@@ -120,23 +149,43 @@ function renderCurrent() {
     return;
   }
   if (p) {
-    // Time left only when you set a limit; otherwise just how long you've been at it.
+    const thumb = p.last?.id ? `url("https://i.ytimg.com/vi/${encodeURIComponent(p.last.id)}/mqdefault.jpg")` : null;
+    const parts = p.map?.parts || [];
+    const sub = parts.length ? `${parts.filter(x => x.status === "explained").length} of ${parts.length} explained`
+      : `${dur(Math.max(1, mins(p.usedSec)))} so far`;
     const left = p.limitMin ? mins(p.limitMin * 60 - p.usedSec) : null;
+    const tools = el("div", { class: "tools" },
+      el("button", { class: "tool", onclick: () => { open = open === "break" ? null : "break"; renderCurrent(); } }, ico(ICONS.hourglass), "Take a Break",
+        el("small", {}, st.leisureLeftMin !== null && st.leisureLeftMin < 1 ? "None today" : "5–60 min")),
+      el("button", { class: "tool", id: "askLibrarian", hidden: true, onclick: async () => {
+        const r = await askTab("tab-talk");
+        if (r?.ok) window.close(); else goYouTube("https://www.youtube.com/");
+      } }, ico(ICONS.talk), "Ask the Librarian", el("small", {}, "Talk it through")),
+      el("button", { class: "tool", id: "saveVideo", onclick: async () => {
+        const r = await askTab("tab-save");
+        if (r?.ok) { render(); window.close(); } else alert("Open a video on YouTube to save it.");
+      } }, ico(ICONS.bookmark), "Save for later", el("small", {}, "This video")));
     box.append(el("div", { class: "card" },
-      el("div", { class: "tag" }, "Your aim"),
-      el("div", { class: "strong big cur-text" }, p.text),
-      left !== null ? el("div", { class: "ring-row" }, ring(left, p.limitMin),
-        el("div", {}, el("div", { class: "big" }, `${dur(left)} left`), el("div", { class: "muted" }, `of ${dur(p.limitMin)}`)))
-        : el("div", { class: "muted elapsed" }, `${dur(Math.max(1, mins(p.usedSec)))} so far`),
-      open === "pivot" ? pivotControls() : el("div", {},
-        open === "break" ? null : el("button", { class: "btn wide primary", id: "resume", onclick: () => resume(p.id) }, ico(ICONS.play), "Resume"),
-        open === "break" ? breakControls() : el("div", { class: "pair" },
-          el("button", { class: "btn", onclick: () => { open = "break"; renderCurrent(); } }, ico(ICONS.coffee), "Take a Break"),
+      el("div", { class: "label" }, p.learn ? "Exploring" : "Your aim"),
+      open === "pivot" ? el("div", {}, el("div", { class: "strong big cur-text" }, p.text), pivotControls()) : el("div", {},
+        el("div", { class: "aimrow" },
+          thumb ? el("div", { class: "thumb", style: `background-image:${thumb}` }) : null,
+          el("div", { class: "grow" }, el("div", { class: "title cur-text" }, p.text), el("div", { class: "muted" }, sub)),
+          el("button", { class: "change", title: "Change my aim", onclick: () => { open = "pivot"; renderCurrent(); } }, "Change", ico(ICONS.chevron))),
+        el("div", { class: "actions" },
+          el("button", { class: "btn primary", id: "resume", onclick: () => resume(p.id) }, ico(ICONS.play), "Resume"),
           el("button", { class: "btn", title: "Done with this aim", onclick: () => act({ type: "purpose-done" }) }, ico(ICONS.check), "Done")),
-        open === "break" ? null : el("div", { class: "more" },
+        el("div", { class: "label", style: "margin:14px 0 0" }, "Session tools"),
+        tools,
+        open === "break" ? el("div", { style: "margin-top:10px" }, breakControls()) : null,
+        left !== null ? el("div", { class: "limit" }, el("span", {}, "Session limit"),
+          el("div", { class: "bar" }, el("i", { style: `width:${Math.min(100, (mins(p.usedSec) / p.limitMin) * 100)}%` })),
+          el("span", { class: "muted" }, `${Math.min(p.limitMin, mins(p.usedSec))} / ${p.limitMin} min`)) : null,
+        el("div", { class: "more" },
           el("button", { class: "link", onclick: () => { open = "pivot"; renderCurrent(); } }, "Change my aim"),
           el("button", { class: "link", id: "setAside", onclick: () => act({ type: "purpose-pause" }) }, "Set aside"),
           el("button", { class: "link", onclick: () => send({ type: "open-targets" }) }, "All aims")))));
+    send({ type: "plus-brief" }).then(r => { const b = document.getElementById("askLibrarian"); if (b) b.hidden = !r?.account; });
     return;
   }
   box.append(el("div", { class: "card" },
@@ -216,6 +265,7 @@ function renderHistory() {
 async function render() {
   st = await send({ type: "state" });
   if (!st) return;
+  renderModes();
   renderCurrent();
   renderWeek();
   renderToday();

@@ -181,6 +181,7 @@ function interestPicker(onChange) {
       } }, t.name)));
 }
 
+
 // The Explore view, in place of the homepage card's usual contents.
 function exploreView(card) {
   const body = el("div", { class: "wp-explore-body" }, el("div", { class: "wp-muted wp-learn-loading" }, "Finding picks worth learning from…"));
@@ -193,17 +194,25 @@ function exploreView(card) {
     editing ? interestPicker(() => { drawHead(); exploreSkip.clear(); fill(); }) : null].filter(Boolean));
   drawHead();
 
-  let picks = { mine: [], different: [] };
+  let picks = { mine: [], different: [] }, only = null; // only: a subject chip, or null for All
   const draw = (seenAll = false) => {
     const all = [...picks.mine, ...picks.different];
+    const subjects = [...new Set(all.map(v => v.topic))];
+    if (only && !subjects.includes(only)) only = null;
+    const keep = v => !only || v.topic === only;
+    const chips = subjects.length > 1 ? el("div", { class: "wp-explore-chips", role: "group", "aria-label": "Subjects" },
+      ...[null, ...subjects].map(t => el("button", { class: `wp-chip${only === t ? " wp-chip-on" : ""}`, "aria-pressed": String(only === t),
+        onclick: () => { only = t; draw(seenAll); } }, t || "All"))) : null;
     if (!all.length) return body.replaceChildren(el("div", { class: "wp-muted wp-explore-end" },
       seenAll ? "That's everything new for today. Come back tomorrow for more." : "Nothing new from these channels right now. Come back tomorrow."));
     const mixed = !(settings.learnTopics || []).length && !channelsBy("prefer").length;
+    const mine = picks.mine.filter(keep), different = picks.different.filter(keep);
     body.replaceChildren(...[
-      el("div", { class: "wp-label" }, mixed ? "Worth a look" : "From your interests"),
-      el("div", { class: "wp-home-minis wp-explore-grid" }, ...picks.mine.map(v => exploreCard(v, all))),
-      picks.different.length ? el("div", { class: "wp-label" }, "Something different") : null,
-      picks.different.length ? el("div", { class: "wp-home-minis wp-explore-grid" }, ...picks.different.map(v => exploreCard(v, all))) : null,
+      chips,
+      mine.length ? el("div", { class: "wp-label" }, mixed ? "Worth a look" : "From your interests") : null,
+      mine.length ? el("div", { class: "wp-home-minis wp-explore-grid" }, ...mine.map(v => exploreCard(v, all))) : null,
+      different.length ? el("div", { class: "wp-label" }, "Something different") : null,
+      different.length ? el("div", { class: "wp-home-minis wp-explore-grid" }, ...different.map(v => exploreCard(v, all))) : null,
       el("div", { class: "wp-explore-end" },
         el("span", { class: "wp-muted" }, "That's today's picks."),
         el("button", { class: "wp-link", onclick: () => { for (const v of all) exploreSkip.add(v.id); fill(true); } }, "Show others"))].filter(Boolean));
@@ -224,8 +233,9 @@ function exploreView(card) {
     brandLine(),
     el("div", { class: "wp-explore-top" },
       el("button", { class: "wp-link wp-explore-back", onclick: () => { exploreOpen = false; renderHome(); } }, icon("back"), "What brings you here?")),
-    el("h1", { class: "wp-home-title" }, "Explore"),
-    el("div", { class: "wp-muted wp-explore-lede" }, `A few videos worth learning from, from channels that teach well. When you find something, ${BRAND} can turn it into an aim.`),
+    el("div", { class: "wp-label wp-explore-kicker" }, "Explore"),
+    el("h1", { class: "wp-home-title" }, `${greeting()}.`), // greeting(): plan.js
+    el("div", { class: "wp-muted wp-explore-lede" }, "What would you like to explore today? A few videos worth learning from, from channels that teach well."),
     head, body);
   fill();
 }

@@ -38,6 +38,7 @@ function showTalk(state) {
   const log = el("div", { class: "wp-talk-log", "aria-live": "polite" });
   const input = el("textarea", { class: "wp-input wp-talk-input", rows: "2", maxlength: "1200", placeholder: "Say what you think…", "aria-label": "Your reply" });
   const sendBtn = el("button", { class: "wp-btn wp-btn-primary" }, "Send");
+  const mic = micButton(input);
   const foot = el("div", { class: "wp-talk-foot" });
   const panel = el("div", { class: "wp wp-talk", role: "dialog", "aria-label": "Talk it through with the librarian" },
     el("div", { class: "wp-talk-head" },
@@ -70,7 +71,8 @@ function showTalk(state) {
     } else {
       input.disabled = sendBtn.disabled = state.busy;
       foot.replaceChildren(input, el("div", { class: "wp-talk-actions" },
-        el("button", { class: "wp-btn wp-btn-text", onclick: later }, state.thread.some(m => m.role === "person") ? "That's enough for now" : "Maybe later"), sendBtn));
+        el("button", { class: "wp-btn wp-btn-text", onclick: later }, state.thread.some(m => m.role === "person") ? "That's enough for now" : "Maybe later"),
+        el("div", { class: "wp-row" }, mic, sendBtn)));
     }
   };
   const reply = async () => {
@@ -117,6 +119,29 @@ async function debatesFor(aim) {
   const r = await send({ type: "purpose-start", text, search: `${aim} debate different views` });
   if (!r || r.result !== "applied") return toast(r?.message || "Couldn't start that. Try again.");
   location.href = `/results?search_query=${encodeURIComponent(`${aim} debate different views`)}`;
+}
+
+// Say it instead of typing: Chrome's own speech recognition (which Chrome runs on Google's servers;
+// see PRIVACY.md), straight into the reply box. Only where Chrome offers it; nothing else is recorded.
+function micButton(input) {
+  const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!Rec) return null;
+  let rec = null;
+  const btn = el("button", { class: "wp-icon-btn wp-talk-mic", "aria-label": "Speak your reply", title: "Speak your reply", "aria-pressed": "false" }, icon("mic"));
+  const stop = () => { rec?.stop(); rec = null; btn.classList.remove("on"); btn.setAttribute("aria-pressed", "false"); };
+  btn.onclick = () => {
+    if (rec) return stop();
+    rec = new Rec();
+    rec.lang = navigator.language || "en-US";
+    rec.interimResults = true;
+    const before = input.value ? `${input.value.trim()} ` : "";
+    rec.onresult = e => { input.value = before + [...e.results].map(r => r[0].transcript).join(""); };
+    rec.onerror = e => { stop(); if (e.error === "not-allowed") toast("Allow the microphone for YouTube to speak your reply."); };
+    rec.onend = stop;
+    rec.start();
+    btn.classList.add("on"); btn.setAttribute("aria-pressed", "true");
+  };
+  return btn;
 }
 
 // From Aim's menu or a link: prepare, then show (with a small panel saying it's thinking meanwhile).

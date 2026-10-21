@@ -43,8 +43,8 @@ function how() {
   return node("div", {},
     node("div", { className: "hero" },
       node("div", {}, ...MARK().map(i => (i.classList.add("mark"), i))),
-      node("h1", { textContent: `Welcome to ${BRAND}` }),
-      node("p", { className: "tag" }, "YouTube helps you find something to watch. ", node("b", { textContent: `${BRAND} helps you find what you need.` }))),
+      node("h1", { textContent: "Make YouTube work for you." }),
+      node("p", { className: "tag", textContent: "Reduce distractions. Explore with intention. Turn curiosity into knowledge." })),
     node("div", { className: "steps" },
       node("div", { className: "how" },
         node("div", { className: "num", textContent: "1" }),
@@ -69,19 +69,28 @@ function how() {
 // Thirty seconds: the few switches that matter, already set the way most people like them, each
 // saved the moment it changes. The full designer, with its live preview, is one button away.
 const QUICK = [
-  ["hideShorts", "Hide Shorts", "Opening one while you're on an aim asks first."],
-  ["hideRecs", "Hide recommendations", "Beside a video and at its end."],
-  ["hideFeeds", "Hide the subscriptions and trending feeds", "They come back on a break."],
-  ["noAutoplay", "Turn autoplay off", "Back on during breaks if you had it on."]
+  ["hideShorts", "Spend less time on Shorts", "They're hidden; opening one while you're on an aim asks first."],
+  ["hideRecs", "Avoid distracting recommendations", "None beside a video or at its end."],
+  ["noAutoplay", "Stop autoplay", "You choose what's next. Back on during breaks if you had it on."],
+  ["hideFeeds", "Quiet the subscriptions and trending feeds", "They come back on a break."]
 ];
 function choices() {
+  // A daily limit is the one that starts off: checking it shows the choice of how long.
+  const limit = node("select", { className: "quick-limit", ariaLabel: "Daily YouTube limit", hidden: !settings.totalMin,
+    onchange: () => setSetting("totalMin", parseInt(limit.value, 10)) },
+    ...[60, 90, 120, 180].map(m => node("option", { value: String(m), textContent: m === 60 ? "1 hour" : `${m / 60} hours`, selected: settings.totalMin === m })));
+  const limitBox = node("input", { type: "checkbox", checked: !!settings.totalMin, onchange: () => {
+    limit.hidden = !limitBox.checked;
+    setSetting("totalMin", limitBox.checked ? parseInt(limit.value, 10) : 0);
+  } });
   return node("div", {},
-    node("h1", { textContent: "Make it yours" }),
-    node("p", { className: "lede", textContent: "These start on. Switch off anything you'd rather keep." }),
+    node("h1", { textContent: "What would you like to change?" }),
+    node("p", { className: "lede", textContent: "Most start on. Change anything you'd rather keep." }),
     node("div", { className: "quick" }, ...QUICK.map(([key, label, hint]) => {
       const box = node("input", { type: "checkbox", checked: settings[key] !== false, onchange: () => setSetting(key, box.checked) });
       return node("label", { className: "quick-row" }, box, node("span", {}, node("b", { textContent: label }), node("span", { className: "hint", textContent: hint })));
-    })),
+    }), node("label", { className: "quick-row" }, limitBox, node("span", {}, node("b", { textContent: "Set a daily time limit" }),
+      node("span", { className: "hint", textContent: "A hard stop for all of YouTube until midnight." }), limit))),
     node("div", { className: "callout quick-more" },
       node("span", { textContent: "Want to see it first, or choose your homepage and Shorts?" }),
       node("button", { className: "btn tonal", type: "button", id: "design", textContent: "Customize with a preview",

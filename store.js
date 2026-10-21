@@ -258,6 +258,7 @@ function summary(p, state) {
   return { id: p.id, text: p.text, state, lastActiveAt: p.lastActiveAt || p.pausedAt || p.endedAt || p.startedAt,
     usedSec: Math.round(p.usedSec || 0), videos: (p.videos || []).length, searches: (p.searches || []).length,
     outcome: p.outcome || null, last: p.last || null, study: studyProgress(p), notes: p.notes || "", elsewhere: !!p.elsewhere, recent: recentVideos(p), trail: searchTrail(p),
+    exploring: !!p.learn,
     understanding: p.map?.parts?.length ? { parts: p.map.parts.map(x => ({ title: x.title, status: x.status })), ready: mapReady(p.map), solid: p.map.synthesis?.verdict === "solid" } : null };
 }
 

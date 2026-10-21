@@ -403,3 +403,12 @@ Needs a signed-in account and the server redeployed (the librarian's map and tal
 - [ ] Finishing an aim that's ready (Done) asks the put-it-together question in the card after Done.
 - [ ] Set-aside aims with a map say "Next: <part> · N of M explained" or "Next: put it together".
 - [ ] Off-aim card: **Follow this instead** opens Change my aim with the video's subject filled in; the old aim waits.
+
+### 42. The visual refresh (0.53)
+- [ ] Popup: **Focus** and **Explore** at the top (the one you're in is filled in; Explore opens Explore on YouTube), your aim with its last video's thumbnail and **Change**, Resume / Done, **Session tools** (Take a Break, Ask the Librarian when signed in, Save for later on a video), and a Session limit bar when the aim has a limit.
+- [ ] Your aims: **Active**, **Exploring** and **Completed** tabs with counts, **+ New aim**, and a progress line for aims with a map ("2 of 4 explained") or a study session.
+- [ ] Settings: a menu on the left (General, YouTube experience, and The librarian / Aim Plus when they apply) that jumps to each group and marks where you are; on a narrow window it's a row of links.
+- [ ] Explore: "Good morning/afternoon/evening." with subject chips (All, then each subject in today's picks) that filter the picks.
+- [ ] Welcome: "Make YouTube work for you." then "What would you like to change?" with four switches on and **Set a daily time limit** off (checking it shows how long).
+- [ ] The librarian's panel: a microphone next to Send (Chrome asks for the microphone once); what you say appears in the reply box.
+- [ ] A video playing for your aim shows a small **Staying on track** pill on the player for a few seconds; tapping it opens Aim's menu.

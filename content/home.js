@@ -21,6 +21,8 @@ function goSearch(query) {
 
 async function renderHome() {
   if (location.pathname !== "/") return;
+  // Explore, asked for from the popup (youtube.com/#aim-explore).
+  if (location.hash === "#aim-explore") { exploreOpen = true; history.replaceState(null, "", "/"); }
   if (!settings.homeCard || brk) return removeHome();
   let host = null;
   for (let i = 0; i < 20 && !(host = homeHost()); i++) await sleep(200);

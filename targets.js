@@ -1,4 +1,4 @@
-// Aim — every aim: the current one, the ones set aside, and finished ones to start again.
+// Aim — Your aims: Active, Exploring and Completed, each with how far along it is.
 // Resuming returns to the last video at the moment you left it, or else to the last search.
 
 const BRAND = chrome.runtime.getManifest().name;
@@ -67,12 +67,23 @@ function videos(t) {
       thumb(v, "thumb-sm"), node("span", { className: "mini-title", textContent: v.title })))));
 }
 
+// How far along: understanding for a learning aim with a map, topics checked for a study session.
+function progress(t) {
+  const u = t.understanding, st = t.study;
+  const [done, of, label] = u?.parts?.length ? [u.parts.filter(x => x.status === "explained").length + (u.solid ? 1 : 0), u.parts.length + 1,
+    u.solid ? "Put together" : u.ready ? "Ready to put together" : `${u.parts.filter(x => x.status === "explained").length} of ${u.parts.length} explained`]
+    : st ? [st.checked, st.of, `${st.checked} of ${st.of} topics checked`] : [0, 0, null];
+  if (!label) return null;
+  return node("div", { className: "progress" }, node("span", { className: "track" }, node("i", { style: `width:${Math.round((done / of) * 100)}%` })), node("span", { textContent: label }));
+}
+
 function row(t, actions, lead) {
   const v = t.recent?.[0];
   return node("div", { className: "item" },
     v ? node("button", { className: "lead-thumb", type: "button", title: `Continue “${v.title}”`, onclick: () => playVideo(t, v) }, thumb(v, "thumb-md")) : null,
     node("div", { className: "grow" }, node("b", { textContent: t.text, title: t.text }),
       node("span", { className: "sub", textContent: meta(t, lead) }),
+      progress(t),
       v ? node("span", { className: "sub", textContent: `Last video: ${v.title}` }) : null,
       t.trail?.length > 1 ? node("span", { className: "sub trail", title: t.trail.join(" → "), textContent: `Your path: ${t.trail.join(" → ")}` }) : null,
       videos(t),
@@ -80,26 +91,36 @@ function row(t, actions, lead) {
     actions);
 }
 
+// Three tabs, like the rest of Aim's pages: what you're working on, what you're exploring, what you finished.
+let tab = "active";
 async function render() {
   const d = await send({ type: "targets" });
   const list = document.getElementById("list");
   if (!d) { list.replaceChildren(node("p", { className: "error", textContent: "Couldn't load your aims. Reload this page." })); return; }
-  const sections = [];
-  if (d.current) sections.push(node("section", { className: "card" }, node("h2", { textContent: "Your aim" }),
-    row(d.current, btn("Continue", "", () => resume(d.current.id)), `Last active ${when(d.current.lastActiveAt)}`)));
-  if (d.paused.length) sections.push(node("section", { className: "card" }, node("h2", { textContent: "Set aside" }),
-    d.paused.map(t => row(t, [
-      btn("Resume", "", () => resume(t.id)),
-      btn("Remove", "text", async () => {
-        if (!confirm(`Remove "${t.text}"? It stays in your history as unfinished.`)) return;
-        await send({ type: "paused-drop", id: t.id });
-        render();
-      })], `${t.elsewhere ? "In progress in another browser · " : ""}Last active ${when(t.lastActiveAt)}`))));
-  if (d.completed.length) sections.push(node("section", { className: "card" }, node("h2", { textContent: "Completed" }),
-    d.completed.map(t => row(t, btn("Start again", "tonal", () => resume(t.id)), `Finished ${when(t.lastActiveAt)}`))));
-  if (!sections.length) sections.push(node("p", { className: "muted",
-    textContent: "No aims yet. Search on YouTube and your search becomes your aim." }));
-  list.replaceChildren(...sections);
+  const live = [d.current, ...d.paused].filter(Boolean);
+  const groups = { active: live.filter(t => !t.exploring), exploring: live.filter(t => t.exploring), completed: d.completed };
+  const pausedRow = t => row(t, [
+    btn("Resume", "", () => resume(t.id)),
+    btn("Remove", "text", async () => {
+      if (!confirm(`Remove "${t.text}"? It stays in your history as unfinished.`)) return;
+      await send({ type: "paused-drop", id: t.id });
+      render();
+    })], `${t.elsewhere ? "In progress in another browser · " : ""}Last active ${when(t.lastActiveAt)}`);
+  const currentRow = t => row(t, btn("Continue", "", () => resume(t.id)), `Last active ${when(t.lastActiveAt)}`);
+  const panel = (key, ...sections) => node("div", { role: "tabpanel", id: `tab-${key}`, hidden: tab !== key },
+    ...(sections.flat().filter(Boolean).length ? sections : [node("p", { className: "empty-tab", textContent: {
+      active: "Nothing in progress. Search on YouTube and your search becomes your aim.",
+      exploring: "Nothing you're exploring right now. Try Explore on YouTube's homepage.",
+      completed: "Finished aims show up here." }[key] })]));
+  const section = (title, items, make) => items.length ? node("section", { className: "card" }, node("h2", { textContent: title }), items.map(make)) : null;
+  const cur = t => d.current && t.id === d.current.id;
+  list.replaceChildren(
+    panel("active", section("Your aim", groups.active.filter(cur), currentRow), section("Set aside", groups.active.filter(t => !cur(t)), pausedRow)),
+    panel("exploring", section("Exploring now", groups.exploring.filter(cur), currentRow), section("Set aside", groups.exploring.filter(t => !cur(t)), pausedRow)),
+    panel("completed", section("Completed", groups.completed, t => row(t, btn("Start again", "tonal", () => resume(t.id)), `Finished ${when(t.lastActiveAt)}`))));
+  document.getElementById("tabs").replaceChildren(...[["active", "Active"], ["exploring", "Exploring"], ["completed", "Completed"]].map(([key, label]) =>
+    node("button", { type: "button", role: "tab", ariaSelected: String(tab === key), onclick: () => { tab = key; render(); } },
+      label, node("span", { className: "n", textContent: String(groups[key].length) }))));
 }
 
 render();

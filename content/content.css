@@ -799,3 +799,17 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 .wp-map-next { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 8px; padding-top: 10px;
   border-top: 1px solid var(--wp-divider); font-size: 13px; line-height: 18px; }
 .wp-map-next .wp-btn { flex: none; }
+.wp-explore-kicker { text-align: center; margin-bottom: -10px; }
+.wp-explore-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 2px; }
+.wp-explore-chips .wp-chip { border-radius: 16px; }
+.wp .wp-explore-chips .wp-chip-on { background: var(--wp-primary); color: var(--wp-on-primary); box-shadow: none; }
+.wp-talk-mic.on { background: var(--wp-accent, #d93b2b); color: #fff; }
+.wp-talk-actions .wp-row { display: flex; align-items: center; gap: 6px; }
+
+/* "Staying on track": a brief pill on the player when a video plays for your aim. */
+.wp-ontrack { position: absolute; z-index: 60; top: 14px; right: 14px; display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 10px 0 12px;
+  border: 0; border-radius: 18px; background: rgba(255, 253, 249, .95); color: #16231e; font: 400 13px/18px "Roboto", Arial, sans-serif;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .25); cursor: pointer; transition: opacity .4s; }
+.wp-ontrack b { font-weight: 700; }
+.wp-ontrack .wp-icon { display: flex; }
+.wp-ontrack-out { opacity: 0; }

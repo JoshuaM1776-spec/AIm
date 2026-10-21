@@ -99,8 +99,8 @@ function renderLearn(S) {
   const on = new Set(S.learnTopics || []), off = new Set(S.learnOff || []);
   const save = (key, value) => setSetting(key, value);
   const pick = document.createElement("a");
-  pick.href = "design.html#home"; pick.textContent = on.size ? "Change your topics" : "Choose topics";
-  $("learnNote").replaceChildren(on.size ? "The channels behind your topics. Take out any you'd rather not see. " : "Pick topics, and Aim's homepage shows new videos from channels that teach them well. ", pick);
+  pick.href = "design.html#home"; pick.textContent = on.size ? "Change your interests" : "Choose interests";
+  $("learnNote").replaceChildren(on.size ? "The channels behind your topics. Take out any you'd rather not see. " : "Pick interests, and Explore shows new videos from channels that teach them well. ", pick);
   const box = $("learnChannels");
   box.replaceChildren();
   for (const t of LEARN_TOPICS.filter(t => on.has(t.id))) {
@@ -150,7 +150,26 @@ $("forgetAll").onclick = async () => {
 };
 
 if (location.hash === "#learn") setTimeout(() => $("learn").scrollIntoView({ block: "start" }), 200);
-if (location.hash === "#advanced") { $("advanced").open = true; $("advanced").scrollIntoView(); }
+if (location.hash === "#advanced") setTimeout(() => $("time").scrollIntoView({ block: "start" }), 200);
+
+// The menu on the left: groups with nothing in them stay out of it, and the one you're reading is marked.
+function syncGroups() {
+  $("librarian").hidden = $("navLibrarian").hidden = $("memoryCard").hidden;
+  $("plusGroup").hidden = $("navPlus").hidden = $("plus").hidden;
+}
+for (const id of ["memoryCard", "plus"]) new MutationObserver(syncGroups).observe($(id), { attributes: true, attributeFilter: ["hidden"] });
+syncGroups();
+const navLinks = [...document.querySelectorAll(".settings-nav a")];
+const groupOf = { general: "general", youtube: "youtube", librarian: "librarian", plus: "plusGroup" };
+for (const a of navLinks) a.onclick = e => { e.preventDefault(); $(groupOf[a.dataset.nav]).scrollIntoView({ behavior: "smooth", block: "start" }); history.replaceState(null, "", `#${a.dataset.nav}`); };
+const spy = () => {
+  const visible = navLinks.filter(a => !a.hidden);
+  let current = visible[0];
+  for (const a of visible) if ($(groupOf[a.dataset.nav]).getBoundingClientRect().top < 140) current = a;
+  for (const a of navLinks) a.classList.toggle("on", a === current);
+};
+addEventListener("scroll", spy, { passive: true });
+spy();
 if (location.hash === "#plus") setTimeout(() => $("plus").scrollIntoView({ block: "start" }), 300); // shown once the account check is done
 $("welcomeTour").onclick = async e => { e.preventDefault(); await send({ type: "onboarding", reset: true }); send({ type: "open-welcome" }); };
 for (const k of ["leisureMin", "graceMin", "totalMin", "purposeLimitMin"]) $(k).onchange = () => setSetting(k, parseInt($(k).value, 10));

@@ -171,15 +171,15 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     welcome.on("pageerror", e => errors.push("welcome: " + e.message));
     await welcome.waitForSelector("h1");
     const howText = await welcome.textContent("main");
-    step("welcome: Aim's line and how it works on one screen", howText.includes("Aim helps you find what you need") && (await welcome.textContent("#next")) === "Let's go" &&
+    step("welcome: Aim's line and how it works on one screen", howText.includes("Make YouTube work for you.") && (await welcome.textContent("#next")) === "Let's go" &&
       ["Say what you're here for", "keeps YouTube on your aim", "Take a break whenever you like"].every(t => howText.includes(t)));
     await welcome.click("#next");
-    step("make it yours: four switches, already on", (await welcome.$$eval(".quick-row input", b => b.length === 4 && b.every(x => x.checked))));
+    step("what would you like to change: four already on, a daily limit off", (await welcome.$$eval(".quick-row input", b => b.length === 5 && b.slice(0, 4).every(x => x.checked) && !b[4].checked)));
     if (process.env.SHOTS) { await welcome.waitForTimeout(500); await welcome.screenshot({ path: `${process.env.SHOTS}/welcome-setup.png`, fullPage: true }); }
-    await welcome.click(".quick-row:has-text('Turn autoplay off')");
+    await welcome.click(".quick-row:has-text('Stop autoplay')");
     await welcome.waitForTimeout(300);
     step("a switch saves the moment it changes", (await store()).settings.noAutoplay === false);
-    await welcome.click(".quick-row:has-text('Turn autoplay off')");
+    await welcome.click(".quick-row:has-text('Stop autoplay')");
     await welcome.waitForTimeout(300);
     // ---------- Design your YouTube ----------
     const [design] = await Promise.all([ctx.waitForEvent("page"), welcome.click("#design")]);
@@ -306,6 +306,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.waitForTimeout(800);
   st = await store();
   step("setting a purpose from the card plays the video", st.purpose?.text === "Learn how sourdough starters work" && st.purpose.limitMin === null && !(await p.$(".wp-player-card")));
+  step("a brief Staying on track pill on the player, then it goes", (await text(".wp-ontrack")).includes("Staying on track"));
   step("indicator shows the purpose", (await text("#wp-chip")).includes("Learn how sourdough") && !(await text("#wp-chip")).includes("null"));
   step("with a purpose: sidebar recommendations and end screens hidden", (await p.isHidden("#related")) && (await p.isHidden(".ytp-ce-element")));
   step("with a purpose: autoplay switched off", (await p.getAttribute(".ytp-autonav-toggle-button", "aria-checked")) === "false" &&
@@ -528,6 +529,9 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await pop.goto(`chrome-extension://${extId}/popup.html`);
   await pop.waitForTimeout(500);
   const popText = (await pop.textContent("body")).replace(/\s+/g, " ");
+  step("popup: Focus and Explore, the aim with Change, and session tools", ["Focus", "Learn something specific", "Explore", "Follow your curiosity", "Session tools", "Save for later"].every(t => popText.includes(t)) &&
+    (await pop.getAttribute(".mode:has-text('Focus')", "aria-pressed")) === "true");
+  if (process.env.SHOTS) { await pop.setViewportSize({ width: 340, height: 640 }); await pop.screenshot({ path: `${process.env.SHOTS}/popup.png`, fullPage: true }); }
   const [optText, plusHidden] = await (async () => { const o = await ctx.newPage(); await o.goto(`chrome-extension://${extId}/options.html`); await o.waitForTimeout(400);
     const t = await o.textContent("body"), h = await o.$eval("#plus", n => n.hidden && !n.querySelector("input")); await o.close(); return [t, h]; })();
   step("no AI, no API key anywhere in settings", !/API key|Claude|AI check/i.test(optText));
@@ -590,8 +594,14 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("Set aside for later: no current aim, both waiting on the homepage", !st.purpose && st.paused.length === 2 &&
     !home.includes("Your aim") && home.includes("Study for my biology exam") && home.includes("Fix my truck's AC"));
   const [all] = await Promise.all([ctx.waitForEvent("page"), p.click("button:text-is('View all aims')")]);
-  await all.waitForSelector("h2:text-is('Set aside')");
+  await all.waitForSelector("#tab-active h2:text-is('Set aside')");
   const allText = await all.textContent("main");
+  step("Your aims: Active, Exploring and Completed tabs, Active first", (await all.textContent("#tabs")).replace(/\s+/g, "").startsWith("Active2Exploring0Completed") &&
+    !(await all.isVisible("#tab-completed")));
+  await all.click("#tabs button:has-text('Completed')");
+  step("Completed shows finished aims to start again", await all.isVisible("#tab-completed button:text-is('Start again')"));
+  if (process.env.SHOTS) await all.screenshot({ path: `${process.env.SHOTS}/aims.png`, fullPage: true });
+  await all.click("#tabs button:has-text('Active')");
   step("View all aims lists set-aside and completed aims", allText.includes("Study for my biology exam") && allText.includes("Start again") &&
     allText.includes("learn to sharpen a chisel"), allText.slice(0, 200));
   step("Aims page: an aim's last video as a thumbnail, and See more videos for the rest",
@@ -887,7 +897,8 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await opt.goto(`chrome-extension://${extId}/options.html`);
   await opt.waitForTimeout(500);
   await opt.selectOption("#leisureMin", "90");
-  await opt.click("summary");
+  step("Settings: a menu on the left, groups on the right", (await opt.textContent(".settings-nav")).includes("YouTube experience") && await opt.isVisible("#graceMin"));
+  if (process.env.SHOTS) { await opt.setViewportSize({ width: 1200, height: 900 }); await opt.screenshot({ path: `${process.env.SHOTS}/settings.png` }); }
   await opt.selectOption("#graceMin", "5");
   await opt.selectOption("#totalMin", "240");
   await opt.selectOption("#avoid select", "warn");

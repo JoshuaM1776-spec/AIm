@@ -6,30 +6,41 @@
 <title>Aim — Settings</title>
 <link rel="stylesheet" href="aim.css">
 <style>
-  /* Settings: Advanced holds several groups, each under a small heading. */
-  details .sub { padding-top: 16px; margin-top: 8px; border-top: 1px solid var(--divider); }
-  details .sub:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
-  details .sub h2 { font-size: 15px; font-weight: 500; }
+  /* Settings: a menu on the left (sticky on wide screens, a row on narrow ones), groups of cards on the right. */
   .card > h2 { margin-bottom: 8px; }
+  .settings-layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 32px; align-items: start; }
+  .settings-nav { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 2px; }
+  .settings-nav a { display: block; padding: 9px 14px; border-radius: 10px; color: var(--text); font-weight: 500; }
+  .settings-nav a:hover { background: var(--tonal); text-decoration: none; }
+  .settings-nav a.on { background: var(--tonal-hover); }
+  .settings-main { max-width: 760px; min-width: 0; }
+  .settings-group + .settings-group { margin-top: 36px; }
+  .group-title { font: 600 15px/22px var(--font); color: var(--muted); margin: 0 0 10px; }
+  @media (max-width: 860px) {
+    .settings-layout { grid-template-columns: 1fr; gap: 16px; }
+    .settings-nav { position: static; flex-direction: row; flex-wrap: wrap; gap: 6px; }
+    .settings-nav a { padding: 6px 12px; border: 1px solid var(--card-border); border-radius: 16px; }
+  }
 </style>
 </head>
 <body>
-<main class="page">
+<main class="page wide">
   <header class="page-head">
     <img class="for-light" src="icons/48.png" alt=""><img class="for-dark" src="icons/light/48.png" alt="">
     <span class="brand" data-brand>Aim</span><span class="crumb">Settings</span>
   </header>
   <h1>Settings</h1>
   <p class="lede">Set an aim. Stay on it. Take a break when you want one. <a href="#" id="welcomeTour">Show the welcome tour again</a></p>
-
-  <section class="card" id="designCard">
-    <div class="setting" style="padding:0 0 8px">
-      <div class="what"><b>Your YouTube</b><span>What greets you, what happens to Shorts, and what steps aside while you watch. Change any part with a live preview.</span></div>
-      <a class="btn tonal" href="design.html" id="openDesign">Design</a>
-    </div>
-    <div id="designSummary"></div>
-  </section>
-
+  <div class="settings-layout">
+    <nav class="settings-nav" aria-label="Settings sections">
+      <a href="#general" data-nav="general">General</a>
+      <a href="#youtube" data-nav="youtube">YouTube experience</a>
+      <a href="#librarian" data-nav="librarian" id="navLibrarian" hidden>The librarian</a>
+      <a href="#plus" data-nav="plus" id="navPlus" hidden>Aim Plus</a>
+    </nav>
+    <div class="settings-main">
+      <div class="settings-group" id="general">
+        <h2 class="group-title">General</h2>
   <section class="card">
     <div class="setting">
       <div class="what"><b>Daily leisure time</b><span id="leisureNote">Breaks share this allowance. When it's used up, breaks are done for the day.</span></div>
@@ -40,36 +51,7 @@
       </select>
     </div>
   </section>
-
-  <section class="card" id="learn">
-    <h2>Learn something channels</h2>
-    <p class="muted" id="learnNote"></p>
-    <div id="learnChannels"></div>
-  </section>
-
-  <!-- Aim Plus, or anything already remembered. -->
-  <section class="card" id="memoryCard" hidden>
-    <h2>What the librarian remembers</h2>
-    <p class="muted">When you talk a session through, the librarian keeps the ideas you explained in your own words, so a later conversation can connect to them. Only that, never what you watched. Kept in this browser; it's sent to Aim's server only as part of a conversation, and not stored there.</p>
-    <div class="setting">
-      <div class="what"><b>Remember what I explain</b><span>Off: nothing new is kept. What's below stays until you forget it.</span></div>
-      <label class="switch"><input type="checkbox" id="librarianMemory" aria-label="Remember what I explain"><i></i></label>
-    </div>
-    <div id="memoryList"></div>
-    <div class="form" id="forgetRow" hidden><button class="btn tonal" id="forgetAll" type="button">Forget everything</button></div>
-  </section>
-
-  <!-- Shown only when config.js names Aim's server (see plus.js). -->
-  <section class="card" id="plus" hidden>
-    <h2>Aim Plus</h2>
-    <div id="plusBody"></div>
-    <p class="msg" id="plusMsg" role="status"></p>
-  </section>
-
-  <details class="card" id="advanced">
-    <summary>Advanced</summary>
-
-    <section class="sub">
+  <section class="card" id="time">
       <h2>Time</h2>
       <div class="setting">
         <div class="what"><b>Finish the current video</b><span>When time runs out mid-video, let it finish for up to this long before Aim pauses it.</span></div>
@@ -93,10 +75,8 @@
         </select>
       </div>
       <div class="setting"><div class="what"><span id="today"></span></div></div>
-    </section>
-
-
-    <section class="sub">
+  </section>
+  <section class="card" id="homeschoolCard">
       <h2>Aim Homeschool preview</h2>
       <div class="setting">
         <div class="what"><b>Preview a student's Today screen</b><span>Shows a sample day's plan on YouTube's homepage, as a Homeschool student would see it. Nothing is sent anywhere.</span></div>
@@ -106,16 +86,54 @@
         <div class="what"><span>Start the sample day over: every item back to not done.</span></div>
         <button class="btn tonal" id="homeschoolReset" type="button">Reset sample plan</button>
       </div>
-    </section>
-
-    <section class="sub">
+  </section>
+      </div>
+      <div class="settings-group" id="youtube">
+        <h2 class="group-title">YouTube experience</h2>
+  <section class="card" id="designCard">
+    <div class="setting" style="padding:0 0 8px">
+      <div class="what"><b>Your YouTube</b><span>What greets you, what happens to Shorts, and what steps aside while you watch. Change any part with a live preview.</span></div>
+      <a class="btn tonal" href="design.html" id="openDesign">Design</a>
+    </div>
+    <div id="designSummary"></div>
+  </section>
+  <section class="card" id="learn">
+    <h2>Explore's channels</h2>
+    <p class="muted" id="learnNote"></p>
+    <div id="learnChannels"></div>
+  </section>
+  <section class="card" id="channelsCard">
       <h2>Your channels</h2>
       <p class="note">Sort the channels you subscribe to: Learn from (new videos in Learn something, a “Your channel” badge, first in the librarian's picks), For breaks (on an aim, Aim asks first), or Keep out (hidden, or Aim asks). You can also sort one from Aim's menu while watching it.</p>
       <div class="form" style="margin-bottom:8px"><button class="btn" type="button" id="openChannels">Sort your channels</button></div>
       <div id="avoid"></div>
-    </section>
-
-  </details>
+  </section>
+      </div>
+      <div class="settings-group" id="librarian">
+        <h2 class="group-title">The librarian</h2>
+  <!-- Aim Plus, or anything already remembered. -->
+  <section class="card" id="memoryCard" hidden>
+    <h2>What the librarian remembers</h2>
+    <p class="muted">When you talk a session through, the librarian keeps the ideas you explained in your own words, so a later conversation can connect to them. Only that, never what you watched. Kept in this browser; it's sent to Aim's server only as part of a conversation, and not stored there.</p>
+    <div class="setting">
+      <div class="what"><b>Remember what I explain</b><span>Off: nothing new is kept. What's below stays until you forget it.</span></div>
+      <label class="switch"><input type="checkbox" id="librarianMemory" aria-label="Remember what I explain"><i></i></label>
+    </div>
+    <div id="memoryList"></div>
+    <div class="form" id="forgetRow" hidden><button class="btn tonal" id="forgetAll" type="button">Forget everything</button></div>
+  </section>
+      </div>
+      <div class="settings-group" id="plusGroup">
+        <h2 class="group-title">Aim Plus</h2>
+  <!-- Shown only when config.js names Aim's server (see plus.js). -->
+  <section class="card" id="plus" hidden>
+    <h2>Aim Plus</h2>
+    <div id="plusBody"></div>
+    <p class="msg" id="plusMsg" role="status"></p>
+  </section>
+      </div>
+    </div>
+  </div>
 </main>
 <div id="toast" role="status"></div>
 <script src="content/topics.js"></script>

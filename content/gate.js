@@ -30,6 +30,19 @@ function release(id) {
   holding = false;
   closePlayerCard();
   getVideoEl()?.play().catch(() => {});
+  if (activePurpose() && !brk) onTrackPill();
+}
+
+// "Staying on track": a small pill on the player for a few seconds when a video plays for your aim.
+// Quiet confirmation, never in the way; tap it for Aim's menu.
+function onTrackPill() {
+  const host = playerHost();
+  if (!host || $(".wp-ontrack", host)) return;
+  const pill = el("button", { class: "wp wp-ontrack", title: "Aim's menu", onclick: e => { e.stopPropagation(); pill.remove(); openDropdown(); } },
+    el("span", { class: "wp-icon" }, svgIcon("logo")), el("b", {}, BRAND), el("span", {}, "Staying on track"), icon("right"));
+  host.append(pill);
+  setTimeout(() => pill.classList.add("wp-ontrack-out"), 3500);
+  setTimeout(() => pill.remove(), 4000);
 }
 function goBack() {
   holding = false;
