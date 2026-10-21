@@ -379,6 +379,21 @@ test("librarian: any signed-in account can ask, within its plan's allowance", as
   assert.strictEqual((await call(deps, { task: "librarian-ask", input: {} }, { token: null })).status, 401, "needs an account");
 });
 
+test("librarian: a learning goal comes with the parts of what understanding it takes; other kinds don't", async () => {
+  const parts = [{ title: "Political instability", brief: "Emperors came and went; civil wars drained the state.", search: "roman empire political instability third century" },
+    { title: "Economic pressures", brief: "Debased coins, taxes and trade.", search: "roman economy decline explained" },
+    { title: "Political instability", brief: "dup", search: "x" },
+    { title: "How these fit together", brief: "", search: "y" },
+    { title: "Migration and outside pressure", brief: "Goths, Huns and the frontier.", search: "migration period goths huns rome" }];
+  let kind = "learn";
+  const deps = libDeps({ plan: "plus", ask: () => ({ target: "Why the Western Roman Empire fell", kind, note: "", searches: ["fall of rome"], question: "", options: [], same_target: true, parts }) });
+  const r = await call(deps, { task: "librarian-ask", input: { request: "why did rome fall" } });
+  assert.deepStrictEqual(r.body.parts.map(p => p.title), ["Political instability", "Economic pressures", "Migration and outside pressure"], "deduplicated; Aim adds the 'fit together' part itself");
+  assert.match(deps.calls[0].system, /no order, no "Introduction"/);
+  kind = "project";
+  assert.deepStrictEqual((await call(deps, { task: "librarian-ask", input: { request: "fix my faucet" } })).body.parts, []);
+});
+
 test("librarian: context goes in, one question at most, and an empty question means no choices", async () => {
   let prompt = "";
   const deps = libDeps({ plan: "plus", ask: req => { prompt = req.prompt; return { target: "", kind: "learn", note: "x".repeat(400),
@@ -512,6 +527,22 @@ test("talk: a free account gets one conversation a day, and no memory", async ()
   await call(d, { task: "librarian-talk", input: { mode: "focus", opening: true, session: SESSION } });
   assert.strictEqual((await call(d, { task: "librarian-talk", input: { mode: "focus", opening: true, session: SESSION } })).status, 403, "openings are capped too");
   assert.strictEqual((await call(talkDeps("plus"), { task: "librarian-talk", input: { mode: "focus", session: SESSION, thread: t1 } })).status, 200, "Plus isn't capped");
+});
+
+test("talk: it sees what the aim takes and aims at the gaps; putting it together ends with a verdict", async () => {
+  const d = talkDeps("plus", () => talkReply({ message: "Your account covers the army and the money well. What it leaves out is why the East survived when the West didn't.", done: true, verdict: "solid",
+    marks: [{ topic: "Military challenges", status: "demonstrated" }] }));
+  const session = { ...SESSION, map: { parts: [{ title: "Political instability", status: "explained" }, { title: "Military challenges", status: "explored" }, { title: "Migration and outside pressure", status: "new" }] } };
+  const thread = [{ role: "aim", text: "So, in a few sentences: why did the Western Roman Empire fall?" }, { role: "person", text: "The army got loyal to generals, money got worse, and then the Goths came." }];
+  const r = await call(d, { task: "librarian-talk", input: { mode: "synthesis", session, thread } });
+  assert.strictEqual(r.body.done, true);
+  assert.strictEqual(r.body.verdict, "solid");
+  assert.deepStrictEqual(r.body.marks, [{ topic: "Military challenges", status: "demonstrated" }], "marks go to the map's parts");
+  assert.match(d.calls[0].prompt, /YOUR UNDERSTANDING[^\n]*\n- Political instability: explained it\n- Military challenges: watched something on it\n- Migration and outside pressure: not yet explored/);
+  assert.match(d.calls[0].prompt, /MODE: Synthesis/);
+  assert.match(d.calls[0].system, /evidence of understanding, not a certificate/);
+  const focus = await call(d, { task: "librarian-talk", input: { mode: "focus", session, thread } });
+  assert.strictEqual(focus.body.verdict, null, "only putting it together gives a verdict");
 });
 
 // ---------- billing (Stripe) ----------

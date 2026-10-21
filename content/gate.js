@@ -179,7 +179,8 @@ function showDriftCard(info) {
     el("div", { class: "wp-actions wp-actions-start" },
       el("button", { class: "wp-btn wp-btn-primary", onclick: () => (history.length > 1 ? goBack() : input.focus()) }, "Back to my aim"),
       el("button", { class: "wp-btn wp-btn-tonal", onclick: partOfIt }, "Yes, it's part of it"),
-      el("button", { class: "wp-btn wp-btn-text", onclick: () => openPivotDialog("", { video: info }) }, "Change my aim")),
+      // Curiosity pulled you somewhere: make that the aim (the old one waits), or not.
+      el("button", { class: "wp-btn wp-btn-text", onclick: () => openPivotDialog(deeperText(info.title), { video: info }) }, "Follow this instead")),
     el("details", { class: "wp-more" },
       el("summary", {}, "More options"),
       el("div", { class: "wp-row" }, input, el("button", { class: "wp-btn wp-btn-tonal", onclick: search }, "Search")),

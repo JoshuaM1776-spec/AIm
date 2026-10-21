@@ -61,6 +61,7 @@ On the server, `supabase/functions/ai/homeschool.ts` holds every rule (approval,
 | `content/notes.js` | Notes on an aim (Aim menu, or the notes icon in the results bar), saved as you type, with "Suggest questions" when signed in |
 | `content/study.js` | Study sessions on YouTube: the offer, the planning dialog, the topic header on results, the plan in the watch page's sidebar |
 | `study.html/js` | A study session's overview and summary |
+| `content/understanding.js` | Your understanding: a learning aim's map (parts and how far you've got), what's worth exploring next, and Put it together, the finish line |
 | `content/talk.js` | Talking a session through with the librarian: the question in the card after Done, the Explore invitation, "This connects to…" while watching, Talk it through in the menu, and the small conversation panel |
 | `content/main.js` | Timer ticks, sync with other tabs, navigation, startup. Loads last. |
 | `content/content.css` | Styles for all of the above |

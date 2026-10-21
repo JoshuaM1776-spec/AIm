@@ -8,6 +8,10 @@
 // the user's browser and comes back each turn; the server stores nothing here but usage.
 //   explore: one question, then a closing remark.
 //   focus:   up to three questions, pushing gently where an answer is thin, then a closing remark.
+//            With a map of what the aim takes ("Your understanding"), it aims at the parts not yet
+//            explained, and marks each part from what the person said.
+//   synthesis: the finish line. It asks them to put the whole answer together, then says plainly
+//            what the explanation does well and the most important gap or debate, with a verdict.
 // With Plus, what the person explained comes back as memory (kept in their browser), and in a study
 // session as marks for its topics. Free accounts get one conversation a day and no memory.
 
@@ -24,7 +28,7 @@ export const TALK_LIMITS = {
   thread: 8,
   reply: 1200,
   message: 420,
-  questions: { explore: 1, focus: 3 } as Record<string, number>,
+  questions: { explore: 1, focus: 3, synthesis: 1 } as Record<string, number>,
   // Free accounts, per rolling 24 hours: a few openings (each is an AI call even if nobody answers),
   // one conversation (counted at the first reply) and its replies.
   free: { openings: 3, conversations: 1, replies: 3 }
@@ -66,7 +70,11 @@ Connections: if the request lists things they told you before and one genuinely 
 
 Memory (only when asked for in the request): up to 3 ideas the person explained in their own words in this conversation, each as a subject (2 to 5 words), the idea in plain words (under 120 characters), and understood: "solid" if they explained it well, "shaky" if it was partly wrong or vague. Only from their replies; never from video titles alone. Empty when they haven't explained anything yet.
 
-Marks (only when study topics are listed): for each listed topic this conversation actually covered, "demonstrated", "partial" or "needs_review" from their replies. Leave out topics you didn't discuss.`;
+Your understanding (when listed): the parts this aim takes, with how far they've got on each. Aim questions at parts not yet explained, or at how two parts connect. Never ask again about a part already explained, unless it's to connect it to another.
+
+Putting it together (MODE: Synthesis): open with one specific invitation to explain the whole answer in a few sentences, in the aim's own terms ("So, in a few sentences: why did the Western Roman Empire fall?"). After their reply, close in 2 to 4 sentences: what their explanation does well, then the most important thing it leaves out or the main place experts disagree. Then set verdict: "solid" if it covers the main parts and how they connect reasonably, otherwise "getting_there". It's evidence of understanding, not a certificate: never call them an expert, never grade with numbers.
+
+Marks (only when study topics or understanding parts are listed): for each listed topic this conversation actually covered, "demonstrated", "partial" or "needs_review" from their replies. Leave out topics you didn't discuss.`;
 
 const TALK_SCHEMA = {
   type: "object",
@@ -81,6 +89,7 @@ const TALK_SCHEMA = {
         required: ["subject", "idea", "understood"], additionalProperties: false
       }
     },
+    verdict: { type: "string", enum: ["solid", "getting_there", "none"] },
     marks: {
       type: "array",
       items: {
@@ -90,7 +99,7 @@ const TALK_SCHEMA = {
       }
     }
   },
-  required: ["message", "done", "memory", "marks"],
+  required: ["message", "done", "memory", "marks", "verdict"],
   additionalProperties: false
 };
 
@@ -101,7 +110,7 @@ export interface TalkUsage { countSince(task: string, since: Date): Promise<numb
 
 export async function talk(ctx: TaskCtx & { plan?: string; usage?: TalkUsage }) {
   const input = asObject(ctx.input);
-  const mode = input.mode === "explore" ? "explore" : "focus";
+  const mode = input.mode === "explore" ? "explore" : input.mode === "synthesis" ? "synthesis" : "focus";
   const opening = input.opening === true;
   const free = ctx.plan === "free";
   const s = asObject(input.session);
@@ -131,7 +140,12 @@ export async function talk(ctx: TaskCtx & { plan?: string; usage?: TalkUsage }) 
   }).filter(Boolean).slice(-TALK_LIMITS.videos);
   const notes = clean(s.notes, TALK_LIMITS.notes);
   const study = asObject(s.study);
-  const topics = list(study.topics).map(t => clean(asObject(t).title, 120)).filter(Boolean).slice(0, TALK_LIMITS.topics);
+  const STATUS: Record<string, string> = { new: "not yet explored", explored: "watched something on it", partial: "partly explained", explained: "explained it" };
+  const parts = list(asObject(s.map).parts).map(x => { const o = asObject(x); return { title: clean(o.title, 60), status: STATUS[o.status as string] || STATUS.new }; })
+    .filter(x => x.title).slice(0, 8);
+  // Marks go to the study session's topics when there is one, otherwise to the map's parts.
+  const studyTopics = list(study.topics).map(t => clean(asObject(t).title, 120)).filter(Boolean).slice(0, TALK_LIMITS.topics);
+  const topics = studyTopics.length ? studyTopics : parts.map(x => x.title);
   const memory = free ? [] : list(input.memory).map(m => {
     const o = asObject(m);
     return o.idea ? `- ${clean(o.subject, 60)}: ${clean(o.idea, 160)} (${num(o.daysAgo, 3650)} days ago${o.understood === "shaky" ? ", they were unsure" : ""})` : "";
@@ -143,13 +157,13 @@ export async function talk(ctx: TaskCtx & { plan?: string; usage?: TalkUsage }) 
   const max = TALK_LIMITS.questions[mode];
   const mustEnd = !opening && asked >= max;
 
-  const prompt = `MODE: ${mode === "explore" ? "Explore. They were following their curiosity, not studying for anything. Light touch." : "Focus. They're working toward a specific aim. A bit more intentional."}
+  const prompt = `MODE: ${mode === "explore" ? "Explore. They were following their curiosity, not studying for anything. Light touch." : mode === "synthesis" ? "Synthesis. They've explored most of what this aim takes; now they put the whole answer together." : "Focus. They're working toward a specific aim. A bit more intentional."}
 THEIR AIM: ${aim}
 TIME: about ${num(s.minutes, 1440)} minutes
-${searches.length ? `SEARCHES, IN ORDER: ${searches.join(" → ")}\n` : ""}${videos.length ? `VIDEOS (titles only; you haven't seen them):\n${videos.join("\n")}\n` : ""}${notes ? `THEIR NOTES: ${notes}\n` : ""}${topics.length ? `STUDY TOPICS: ${topics.join(" | ")}\n` : ""}${memory.length ? `THINGS THEY TOLD YOU BEFORE:\n${memory.join("\n")}\n` : ""}${connectLine ? `OPEN WITH THIS CONNECTION if it genuinely fits the session: ${connectLine}\n` : ""}
+${searches.length ? `SEARCHES, IN ORDER: ${searches.join(" → ")}\n` : ""}${videos.length ? `VIDEOS (titles only; you haven't seen them):\n${videos.join("\n")}\n` : ""}${notes ? `THEIR NOTES: ${notes}\n` : ""}${studyTopics.length ? `STUDY TOPICS: ${studyTopics.join(" | ")}\n` : ""}${parts.length ? `YOUR UNDERSTANDING (what this aim takes, and how far they've got):\n${parts.map(x => `- ${x.title}: ${x.status}`).join("\n")}\n` : ""}${memory.length ? `THINGS THEY TOLD YOU BEFORE:\n${memory.join("\n")}\n` : ""}${connectLine ? `OPEN WITH THIS CONNECTION if it genuinely fits the session: ${connectLine}\n` : ""}
 LIMITS: at most ${max} question${max > 1 ? "s" : ""} in this conversation. You've asked ${asked}. ${mustEnd ? "This message must be a closing remark, not a question. Set done to true." : opening ? "Open with one specific question. Set done to false." : "Ask another question only if it would really help; otherwise close with a remark and set done to true."}
 ${thread.length ? `\nCONVERSATION SO FAR:\n${thread.map(m => `${m.role === "person" ? "THEM" : "YOU"}: ${m.text}`).join("\n")}\n` : ""}
-${free ? "Return memory as an empty list." : "Return memory from their replies so far."} ${topics.length ? "Return marks for study topics you've covered." : "Return marks as an empty list."}`;
+${free ? "Return memory as an empty list." : "Return memory from their replies so far."} ${topics.length ? "Return marks for the study topics or understanding parts you've covered." : "Return marks as an empty list."} ${mode === "synthesis" ? "Return a verdict once they've answered; until then, none." : "Return verdict none."}`;
 
   const label = opening ? "talk-open" : thread.filter(m => m.role === "person").length === 1 ? "talk-first-reply" : "talk-reply";
   const r = parse(await ctx.ai(label, { tier: "fast", maxTokens: 2000, schema: TALK_SCHEMA, system: TALK_SYSTEM, prompt }));
@@ -164,6 +178,7 @@ ${free ? "Return memory as an empty list." : "Return memory from their replies s
       const o = asObject(m);
       return { subject: clean(o.subject, 60), idea: clean(o.idea, 160), understood: o.understood === "shaky" ? "shaky" : "solid" };
     }).filter(m => m.subject && m.idea).slice(0, 3),
+    verdict: mode === "synthesis" && done && ["solid", "getting_there"].includes(r.verdict as string) ? r.verdict : null,
     marks: list(r.marks).map(m => {
       const o = asObject(m), topic = clean(o.topic, 120);
       const match = topics.find(t => t.toLowerCase() === topic.toLowerCase());

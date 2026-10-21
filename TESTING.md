@@ -392,3 +392,14 @@ Needs a signed-in account and the server redeployed with `supabase/functions/ai/
 - [ ] Plus: watch a video whose title shares a subject with something remembered from a few days ago: the sidebar shows "This connects to something you were into: …" with **Talk about it**.
 - [ ] Plus, in a study session: Aim's menu → **Talk it through**; afterwards, the topics it covered show their result (Review today / the homepage's next step).
 - [ ] Signed out: none of this appears.
+
+### 41. Your understanding and the finish line (0.52)
+Needs a signed-in account and the server redeployed (the librarian's map and talk.ts's Synthesis mode).
+- [ ] Ask the librarian a learning goal ("I want to understand why the Western Roman Empire fell"): the homepage's current aim shows **Your understanding**: 3 to 6 parts in no particular order, each "Not yet explored", plus *How these fit together*, and "Worth exploring next: … · Search". A repair or a quick question shows no map.
+- [ ] Watch a minute or more of a video on one part (found by its search, or plainly about it): that part becomes **Explored**. Nothing else moves it further.
+- [ ] Talk a session through and explain a part: it becomes **Explained** (or **Getting there**). Explaining it badly later moves it back to Getting there.
+- [ ] Hover a part: × removes it ("Not part of it for me").
+- [ ] With two or more explained and most at least partly: **Put it together**. The librarian asks for the whole answer in a few sentences, then says what it does well and what it leaves out (or where experts disagree). If it's solid: **Call it done** ends the aim; **Explore the debates** starts a new aim on where people disagree.
+- [ ] Finishing an aim that's ready (Done) asks the put-it-together question in the card after Done.
+- [ ] Set-aside aims with a map say "Next: <part> · N of M explained" or "Next: put it together".
+- [ ] Off-aim card: **Follow this instead** opens Change my aim with the video's subject filled in; the old aim waits.

@@ -635,6 +635,52 @@ step("Settings lists what the librarian remembers, each with Forget", (await opt
 await opt.click("#memoryList button:text-is('Forget')");
 await opt.waitForTimeout(400);
 step("Forget removes it", ((await sw.evaluate(() => chrome.storage.local.get("memory"))).memory || []).length === 0);
+// ---------- Your understanding: a learning aim's map, and its finish line ----------
+srv.ask.push({ target: "Why the Western Roman Empire fell", kind: "learn", note: "Several causes worked together.", searches: ["fall of rome"], question: "", options: [], same_target: false,
+  parts: [{ title: "Political instability", brief: "Civil wars and short reigns.", search: "roman political instability" },
+    { title: "Economic pressures", brief: "Coins, taxes and trade.", search: "roman economy decline" },
+    { title: "Military challenges", brief: "Armies loyal to their generals.", search: "late roman army" }] });
+await yt.goto("https://www.youtube.com/");
+await yt.bringToFront();
+await yt.waitForSelector("#wp-home .wp-home-input");
+await yt.fill(".wp-home-input", "I want to understand why the Western Roman Empire fell");
+await yt.press(".wp-home-input", "Enter");
+await yt.waitForURL(/search_query=fall%20of%20rome/);
+let mapAim = (await sw.evaluate(() => chrome.storage.local.get("purpose"))).purpose;
+step("a learning goal comes with a map of what understanding it takes", mapAim.map?.parts.map(x => x.title).join() === "Political instability,Economic pressures,Military challenges" &&
+  mapAim.map.parts.every(x => x.status === "new"));
+await yt.goto("https://www.youtube.com/");
+await yt.waitForSelector("#wp-home .wp-map");
+let mapText = (await yt.textContent(".wp-map")).replace(/\s+/g, " ");
+step("Your understanding on the homepage: each part, not yet explored, how they fit together, and what's worth exploring next",
+  mapText.includes("0 of 3 explained") && mapText.includes("Political instability") && mapText.includes("Not yet explored") && mapText.includes("How these fit together") &&
+  mapText.includes("Worth exploring next: Political instability"), mapText);
+await sw.evaluate(id => serial(() => talkMarks(id, [{ topic: "Political instability", status: "demonstrated" }, { topic: "Military challenges", status: "demonstrated" }])), mapAim.id);
+await yt.reload();
+await yt.waitForSelector("#wp-home .wp-map button:text-is('Put it together')");
+mapText = (await yt.textContent(".wp-map")).replace(/\s+/g, " ");
+step("explained by what you said: most of it there, Aim offers to put it together", mapText.includes("2 of 3 explained") && mapText.includes("Explained"), mapText);
+if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/understanding.png`, fullPage: true });
+srv.talk.push({ message: "So, in a few sentences: why did the Western Roman Empire fall?", done: false, memory: [], marks: [], verdict: "none" },
+  { message: "You connect the army and the money well. What it leaves out is why the East held on when the West didn't, which historians still argue about.", done: true,
+    memory: [], marks: [{ topic: "Economic pressures", status: "demonstrated" }], verdict: "solid" });
+await yt.click(".wp-map button:text-is('Put it together')");
+await yt.waitForSelector(".wp-talk .wp-talk-input");
+step("putting it together: the librarian asks for the whole answer, knowing what you've explained", (await yt.textContent(".wp-talk")).includes("in a few sentences") &&
+  srv.talkPrompts.at(-1).includes("MODE: Synthesis") && srv.talkPrompts.at(-1).includes("- Political instability: explained it"));
+await yt.fill(".wp-talk-input", "The armies backed generals over Rome, the money ran out, and the frontier couldn't hold.");
+await yt.press(".wp-talk-input", "Enter");
+await yt.waitForSelector(".wp-talk button:text-is('Call it done')");
+step("a finish line: what it does well, what it leaves out, then Call it done or Explore the debates",
+  (await yt.textContent(".wp-talk")).includes("historians still argue") && !!(await yt.$(".wp-talk button:text-is('Explore the debates')")));
+if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/finish-line.png` });
+await yt.click(".wp-talk button:text-is('Call it done')");
+await yt.waitForURL("https://www.youtube.com/");
+await yt.waitForTimeout(600);
+const finished = (await sw.evaluate(() => chrome.storage.local.get("history"))).history.filter(h => h.type === "purpose").at(-1);
+step("Call it done ends the aim, with its map put together", finished.text === "Why the Western Roman Empire fell" && finished.map?.synthesis?.verdict === "solid" &&
+  finished.map.parts.every(x => x.status === "explained"), JSON.stringify(finished.map?.parts));
+
 // Exploring: back on the homepage after a real stretch, one invitation; Maybe later backs off.
 srv.talk.push({ message: "You went from Roman roads to aqueducts. If you had to get water into a hill town with no pumps, how would you do it?", done: false, memory: [], marks: [] });
 await sw.evaluate(() => serial(async () => {

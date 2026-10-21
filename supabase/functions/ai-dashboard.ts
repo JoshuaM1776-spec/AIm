@@ -573,7 +573,8 @@ Write:
 // Aim — the librarian: understands what you're trying to accomplish and helps you find the right
 // videos for it. It works like a search engine that can hold a conversation, not a chatbot:
 //   ask:  turn a request into better YouTube searches, a one- or two-sentence note, and at most one
-//         clarifying question shown as tappable choices (never a blocking question).
+//         clarifying question shown as tappable choices (never a blocking question). For a learning
+//         goal, also the parts of what understanding it takes (a map, not a curriculum).
 //   rank: group and explain the results YouTube itself showed for those searches.
 // It doesn't answer questions or give instructions itself; it points to the videos that do.
 // The server stores nothing here but usage; an aim's conversation lives in the user's browser.
@@ -608,6 +609,7 @@ Do:
 - Write a note of one or two short sentences (under 220 characters) that orients the person, for example the order to learn things in, or what matters for finding the right repair video.
 - Ask at most one clarifying question, and only when the right videos genuinely differ by the answer (an engine variant, a software version, beginner or advanced). Give 2 to 4 short options. Otherwise leave the question empty and the options empty.
 - Name the aim: the person's objective in a few words, in their own terms (under 80 characters).
+- For "learn" only: map what understanding it takes. List 3 to 6 parts of a good answer or skill, the way a thoughtful friend would break it down (for "why did the Western Roman Empire fall": political instability, economic pressures, military challenges, migration and outside pressure). Each part: a title in plain words (under 50 characters), one sentence on what it covers (under 140 characters), and one YouTube search for it. Not a curriculum: no order, no "Introduction", no "Conclusion", no part that is just "how these fit together" (Aim adds that). Where reasonable people disagree, name the debate as a part rather than picking a side. For every other kind, parts is empty.
 - Classify the goal: "lookup" (a quick answer or one task, including researching a company, product or person), "learn" (understanding a subject, studying), "project" (a multi-step build, repair or skill), or "relax" (they want to unwind and enjoy videos, not accomplish something: "I just want to enjoy…", "something fun to watch").
 - For "relax": the aim is the theme in a few words ("Aviation engineering"); the searches find enjoyable, well-made videos on it (documentaries, builds, stories), not lessons; the note is one light sentence. If the request is vague ("engineering videos", "something interesting") and their recent aims are listed, lean the theme toward those and say so ("Picked with your flight review prep in mind.").
 
@@ -625,9 +627,17 @@ const ASK_SCHEMA = {
     searches: { type: "array", items: { type: "string" } },
     question: { type: "string" },
     options: { type: "array", items: { type: "string" } },
-    same_target: { type: "boolean" }
+    same_target: { type: "boolean" },
+    parts: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { title: { type: "string" }, brief: { type: "string" }, search: { type: "string" } },
+        required: ["title", "brief", "search"], additionalProperties: false
+      }
+    }
   },
-  required: ["target", "kind", "note", "searches", "question", "options", "same_target"],
+  required: ["target", "kind", "note", "searches", "question", "options", "same_target", "parts"],
   additionalProperties: false
 };
 
@@ -665,7 +675,12 @@ ${target ? `Set same_target to true if this continues the current aim (a follow-
     searches: unique,
     refine: options.length >= 2 ? { question, options } : null,
     // Relaxing is never the same aim: it's a break, and the aim waits.
-    sameTarget: r.kind === "relax" ? false : target ? r.same_target !== false : true
+    sameTarget: r.kind === "relax" ? false : target ? r.same_target !== false : true,
+    // What understanding a learning aim takes (Your understanding, in the extension).
+    parts: r.kind === "learn" ? [...new Map(list(r.parts).map(x => {
+      const o = asObject(x);
+      return [clean(o.title, 60).toLowerCase(), { title: clean(o.title, 60), brief: clean(o.brief, 160), search: clean(o.search, 150) }];
+    }).filter(([k, v]) => k && v.search && !/^(introduction|conclusion|overview|how (these|they) fit together)$/i.test(v.title))).values()].slice(0, 6) : []
   };
 }
 

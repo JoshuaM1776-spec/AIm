@@ -257,7 +257,8 @@ function resumable(s) {
 function summary(p, state) {
   return { id: p.id, text: p.text, state, lastActiveAt: p.lastActiveAt || p.pausedAt || p.endedAt || p.startedAt,
     usedSec: Math.round(p.usedSec || 0), videos: (p.videos || []).length, searches: (p.searches || []).length,
-    outcome: p.outcome || null, last: p.last || null, study: studyProgress(p), notes: p.notes || "", elsewhere: !!p.elsewhere, recent: recentVideos(p), trail: searchTrail(p) };
+    outcome: p.outcome || null, last: p.last || null, study: studyProgress(p), notes: p.notes || "", elsewhere: !!p.elsewhere, recent: recentVideos(p), trail: searchTrail(p),
+    understanding: p.map?.parts?.length ? { parts: p.map.parts.map(x => ({ title: x.title, status: x.status })), ready: mapReady(p.map), solid: p.map.synthesis?.verdict === "solid" } : null };
 }
 
 // The way an aim went, from its searches: "truck ac recharge → refrigerant types → ac compressor".
@@ -314,7 +315,7 @@ function archive(history, record) {
 function purposeRecord(p, outcome) {
   return { type: "purpose", id: p.id, text: p.text, startedAt: p.startedAt, endedAt: Date.now(), usedSec: Math.round(p.usedSec),
     outcome: outcome || null, path: p.path, searches: p.searches, videos: p.videos, notes: p.notes || "",
-    kind: p.librarian?.kind || null, study: studySnapshot(p.study) };
+    kind: p.librarian?.kind || null, study: studySnapshot(p.study), map: p.map || null };
 }
 
 // What a study session showed, kept when its aim ends, for the learning record.
@@ -562,6 +563,7 @@ function searchFits(purpose, query) {
   // So do the titles of videos you've watched for it: they're how the topic actually reads.
   const known = [purpose.text, ...(purpose.searches || []).map(s => s.q), ...(purpose.librarian?.searches || []),
     ...(purpose.videos || []).filter(v => (v.sec || 0) >= 30).map(v => v.title),
+    ...(purpose.map?.parts || []).flatMap(x => [x.title, x.search]),
     ...(purpose.study?.topics || []).flatMap(t => [t.title, ...t.searches])].flatMap(meaningfulWords);
   const same = (a, b) => a === b || (a.length >= 5 && b.length >= 5 && a.slice(0, 5) === b.slice(0, 5));
   return q.some(w => known.some(k => same(w, k)));
@@ -606,6 +608,8 @@ async function applyLibrarian({ request, answer, newTarget }) {
     s = await readAll();
   }
   const p = s.purpose;
+  // A learning goal's map of what understanding it takes, the first time the librarian gives one.
+  if (!p.map && Array.isArray(a.parts) && a.parts.length >= 2) p.map = newMap(a.parts);
   const prev = p.librarian || { thread: [], picks: {} };
   p.librarian = {
     kind: ["lookup", "learn", "project"].includes(a.kind) ? a.kind : "lookup",
@@ -831,6 +835,7 @@ async function recordTick(seconds, video) {
       v.t = Math.max(0, Math.floor(Number(video.t) || 0));
       if (Number(video.d) > 0) v.d = Math.floor(Number(video.d));
       v.lastAt = now;
+      if (activity === purpose && purpose.map && v.sec >= 60) mapExplored(purpose, v);
     }
   }
 
@@ -1405,9 +1410,10 @@ async function talkSession(id) {
   const videos = (p.videos || []).filter(v => v.title && (v.sec || 0) >= 20).slice(-12).map(v => ({ title: v.title, channel: v.channel || "",
     minutes: Math.max(1, Math.round((v.sec || 0) / 60)), finished: v.d > 0 && v.t >= v.d * 0.9 }));
   const topics = (p.study?.topics || []).map(t => ({ title: t.title }));
-  return { result: "applied", id: p.id, mode: p.learn ? "explore" : "focus", plan: !!p.plan,
+  const map = p.map?.parts?.length ? { parts: p.map.parts.map(x => ({ title: x.title, status: x.status })) } : null;
+  return { result: "applied", id: p.id, mode: p.learn ? "explore" : "focus", plan: !!p.plan, ready: mapReady(p.map),
     session: { aim: p.learn ? `Exploring ${p.learn}` : p.text, minutes: Math.round((p.usedSec || 0) / 60), searches: (p.searches || []).map(x => x.q).slice(-12),
-      videos, notes: p.notes || "", ...(topics.length ? { study: { topics } } : {}) } };
+      videos, notes: p.notes || "", ...(topics.length ? { study: { topics } } : {}), ...(map ? { map } : {}) } };
 }
 
 // The librarian's memory: ideas you explained in your own words, with what they were about. In this
@@ -1502,9 +1508,72 @@ async function talkMarks(aimId, marks) {
       changed = true;
     }
   };
-  if (d.purpose?.id === aimId) mark(d.purpose.study?.topics);
-  for (const p of d.paused || []) if (p.id === aimId) mark(p.study?.topics);
-  for (const h of d.history || []) if (h.type === "purpose" && h.id === aimId) mark(h.study?.topics);
+  // Without a study session, marks are for the map's parts: what you said moves a part forward, and a
+  // part you couldn't explain after all goes back to partly.
+  const markMap = map => {
+    for (const m of list) {
+      const part = map?.parts?.find(x => x.title === m.topic);
+      if (!part) continue;
+      const to = m.status === "demonstrated" ? "explained" : m.status === "partial" ? "partial" : part.status === "explained" ? "partial" : part.status;
+      if (to !== part.status) { part.status = to; part.at = Date.now(); changed = true; }
+    }
+  };
+  for (const r of [d.purpose, ...(d.paused || []), ...(d.history || [])]) {
+    if (r?.id !== aimId) continue;
+    if (r.study?.topics?.length) mark(r.study.topics); else markMap(r.map);
+  }
   if (changed) await chrome.storage.local.set({ purpose: d.purpose || null, paused: d.paused || [], history: d.history || [] });
   return { result: "applied", changed };
+}
+
+// ---------- Your understanding: what a learning aim takes ----------
+// The librarian's parts of a good answer (no order, not a curriculum), each with how far you've got:
+// new → explored (you watched something on it; no AI, shared words) → partial / explained (only from
+// what you said to the librarian). "How it fits together" is explained by putting it all together.
+const MAP_RANK = { new: 0, explored: 1, partial: 2, explained: 3 };
+function newMap(parts) {
+  const now = Date.now();
+  return { createdAt: now, links: "new", synthesis: null, removed: [],
+    parts: parts.slice(0, 6).map((x, i) => ({ id: `p${i + 1}`, title: clip(x.title, 60), brief: clip(x.brief, 160), search: clip(x.search, 150), status: "new" }))
+      .filter(x => x.title && x.search) };
+}
+// A video watched for a minute or more counts toward a part it's plainly about: found by that part's
+// search, or its title shares a distinctive word (or two words) with the part.
+function mapExplored(p, v) {
+  const q = (p.allowed || []).find(a => a.id === v.id)?.q?.toLowerCase() || "";
+  const words = new Set(meaningfulWords(`${v.title} ${q}`));
+  for (const part of p.map.parts) {
+    if (part.status !== "new") continue;
+    const own = meaningfulWords(`${part.title} ${part.search}`);
+    if ((q && q === part.search.toLowerCase()) || own.some(w => w.length >= 6 && words.has(w)) || own.filter(w => words.has(w)).length >= 2) {
+      part.status = "explored";
+      part.at = Date.now();
+    }
+  }
+}
+// Ready to put it together: at least two parts explained and most of them at least partly.
+function mapReady(map) {
+  if (!map?.parts?.length || map.synthesis?.verdict === "solid") return false;
+  const explained = map.parts.filter(x => x.status === "explained").length, partly = map.parts.filter(x => MAP_RANK[x.status] >= 2).length;
+  return explained >= 2 && partly >= Math.ceil(map.parts.length * 0.6);
+}
+async function mapRemove(partId) {
+  const { purpose } = await chrome.storage.local.get("purpose");
+  const part = purpose?.map?.parts.find(x => x.id === partId);
+  if (!part) return { result: "error", message: "That part isn't there." };
+  purpose.map.parts = purpose.map.parts.filter(x => x !== part);
+  purpose.map.removed = [...(purpose.map.removed || []), part.title].slice(-10);
+  await chrome.storage.local.set({ purpose });
+  return { result: "applied" };
+}
+// What putting it together showed. "solid" is a finish line: the aim can end, or go on to the debates.
+async function talkVerdict(aimId, verdict) {
+  if (!["solid", "getting_there"].includes(verdict)) return { result: "error", message: "Unknown verdict." };
+  const d = await chrome.storage.local.get(["purpose", "paused", "history"]);
+  const rec = [d.purpose, ...(d.paused || []), ...(d.history || [])].find(r => r?.id === aimId && r.map);
+  if (!rec) return { result: "error", message: "No map for that aim." };
+  rec.map.synthesis = { at: Date.now(), verdict };
+  if (verdict === "solid") rec.map.links = "explained";
+  await chrome.storage.local.set({ purpose: d.purpose || null, paused: d.paused || [], history: d.history || [] });
+  return { result: "applied" };
 }

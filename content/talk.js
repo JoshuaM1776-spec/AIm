@@ -14,14 +14,17 @@ const talkCall = (state, extra = {}) => send({ type: "librarian", task: "librari
 
 // Everything a conversation needs, with its opening question already asked. Null when there's
 // nothing to talk about, no account, or the AI couldn't open (the error is in .error).
-async function prepareTalk({ aimId = null, connect = null, source = "menu" } = {}) {
+async function prepareTalk({ aimId = null, connect = null, source = "menu", mode = null } = {}) {
   const brief = await send({ type: "plus-brief" });
   if (!brief?.account) return { error: "Sign in to talk things through with the librarian." };
   const ctx = await send({ type: "talk-session", id: aimId });
   if (!ctx || ctx.result !== "applied") return { error: ctx?.message || "Nothing to talk about yet." };
-  if (!ctx.session.videos.length && !ctx.session.searches.length) return { error: "Watch something first, then let's talk it through." };
+  const mapped = ctx.session.map?.parts?.some(x => x.status !== "new");
+  if (!ctx.session.videos.length && !ctx.session.searches.length && !mapped) return { error: "Watch something first, then let's talk it through." };
   const plus = brief.plus === true, remember = plus && settings.librarianMemory !== false;
-  const state = { aimId: ctx.id, mode: ctx.mode, session: ctx.session, thread: [], connect, plus, remember, source, done: false, busy: false,
+  // A learning aim that's nearly there finishes by putting it together; asked for, or offered after Done.
+  const synthesis = mode === "synthesis" || (source === "done" && ctx.ready);
+  const state = { aimId: ctx.id, mode: synthesis ? "synthesis" : ctx.mode, session: ctx.session, thread: [], connect, plus, remember, source, done: false, busy: false,
     memory: remember ? (await send({ type: "memory-for", id: ctx.id })) || [] : [] };
   const r = await talkCall(state, { opening: true });
   if (!r || r.error) return { error: r?.error || "The librarian couldn't start just now. Try again in a minute." };
@@ -54,7 +57,13 @@ function showTalk(state) {
       ...(state.busy ? [el("div", { class: "wp-talk-msg wp-talk-aim wp-talk-typing", "aria-label": "The librarian is thinking" }, el("i"), el("i"), el("i"))] : []),
       ...(note ? [el("div", { class: "wp-muted wp-talk-note" }, note)] : []));
     log.scrollTop = log.scrollHeight;
-    if (state.done) {
+    if (state.done && state.verdict === "solid") {
+      // The finish line: done here, or on to where people disagree.
+      const live = activePurpose()?.id === state.aimId;
+      foot.replaceChildren(el("div", { class: "wp-talk-actions" },
+        el("button", { class: "wp-btn wp-btn-text", onclick: () => { closeTalk(); debatesFor(state.session.aim); } }, "Explore the debates"),
+        el("button", { class: "wp-btn wp-btn-primary", onclick: () => { closeTalk(); if (live) finishPurpose("yes"); } }, live ? "Call it done" : "Close")));
+    } else if (state.done) {
       const kept = state.kept?.length ? `Remembered: ${state.kept.join(", ")}` : null;
       foot.replaceChildren(...[kept ? el("span", { class: "wp-muted wp-talk-kept" }, kept) : null,
         el("button", { class: "wp-btn wp-btn-tonal", onclick: closeTalk }, "Close")].filter(Boolean));
@@ -82,6 +91,7 @@ function showTalk(state) {
       state.done = true;
       if (state.remember && r.memory?.length) { await send({ type: "memory-add", items: r.memory, aimId: state.aimId }); state.kept = r.memory.map(m => m.subject); }
       if (r.marks?.length) await send({ type: "talk-marks", aimId: state.aimId, marks: r.marks });
+      if (r.verdict) { state.verdict = r.verdict; await send({ type: "talk-verdict", aimId: state.aimId, verdict: r.verdict }); }
     }
     draw();
     if (!state.done) input.focus();
@@ -94,11 +104,19 @@ function showTalk(state) {
   });
   for (const t of ["keyup", "keypress"]) input.addEventListener(t, e => e.stopPropagation());
   document.body.append(panel);
-  // Scripted, so it plays once: a CSS animation would replay whenever YouTube restyles the page.
+  // A slide, not a fade: a paused animation (a background tab) can never leave it half see-through.
   if (!matchMedia("(prefers-reduced-motion: reduce)").matches)
-    panel.animate([{ opacity: 0, transform: "translateY(8px)" }, { opacity: 1, transform: "none" }], { duration: 180, easing: "ease-out" });
+    panel.animate([{ transform: "translateY(8px)" }, { transform: "none" }], { duration: 180, easing: "ease-out" });
   draw();
   input.focus();
+}
+
+// Past the finish line: a new aim about where people disagree, searched on YouTube.
+async function debatesFor(aim) {
+  const text = `Where people disagree: ${aim}`.slice(0, 300);
+  const r = await send({ type: "purpose-start", text, search: `${aim} debate different views` });
+  if (!r || r.result !== "applied") return toast(r?.message || "Couldn't start that. Try again.");
+  location.href = `/results?search_query=${encodeURIComponent(`${aim} debate different views`)}`;
 }
 
 // From Aim's menu or a link: prepare, then show (with a small panel saying it's thinking meanwhile).

@@ -315,8 +315,8 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.evaluate(() => ytNav("/watch?v=elsewhere"));
   await p.waitForSelector(".wp-player-card", { timeout: 6000 });
   card = await text(".wp-player-card");
-  step("a video your searches didn't find asks once: back to my aim, or it's part of it", card.includes("Part of your aim?") && card.includes("Back to my aim") &&
-    card.includes("Yes, it's part of it") && card.includes("Change my aim") && !(await p.isVisible(".wp-player-card .wp-more input")), card.slice(0, 140));
+  step("a video your searches didn't find asks once: back to my aim, it's part of it, or follow this instead", card.includes("Part of your aim?") && card.includes("Back to my aim") &&
+    card.includes("Yes, it's part of it") && card.includes("Follow this instead") && !(await p.isVisible(".wp-player-card .wp-more input")), card.slice(0, 140));
   if (process.env.SHOTS) await p.screenshot({ path: `${process.env.SHOTS}/part-of-your-aim.png` });
   await p.evaluate(() => ytNav("/watch?v=bbb"));
   await p.waitForTimeout(1500);

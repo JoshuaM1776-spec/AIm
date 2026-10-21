@@ -779,3 +779,23 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 .wp-talk-q { font-size: 15px; line-height: 22px; color: var(--wp-text); }
 .wp-end-talk { min-width: 0; }
 .wp-talk-offer { flex-direction: column; gap: 0; }
+
+/* Your understanding: the parts of what a learning aim takes, and how far you've got. */
+.wp-map { display: flex; flex-direction: column; gap: 2px; margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: var(--wp-tonal); }
+.wp-map .wp-row-between { margin-bottom: 4px; }
+.wp-map-count { font-size: 12px; }
+.wp-map-part { display: grid; grid-template-columns: 10px 1fr auto 24px; align-items: center; gap: 10px; min-height: 30px; font-size: 13px; line-height: 18px; }
+.wp-map-dot { width: 10px; height: 10px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--wp-muted); }
+.wp-map-explored .wp-map-dot { box-shadow: inset 0 0 0 1.5px var(--wp-primary); background: linear-gradient(90deg, var(--wp-primary) 30%, transparent 30%); }
+.wp-map-partial .wp-map-dot { box-shadow: inset 0 0 0 1.5px var(--wp-primary); background: linear-gradient(90deg, var(--wp-primary) 60%, transparent 60%); }
+.wp-map-explained .wp-map-dot { background: var(--wp-primary); box-shadow: none; }
+.wp .wp-map-title { text-align: left; background: none; border: 0; padding: 0; font: inherit; color: var(--wp-text); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wp-map-links .wp-map-title { cursor: default; font-style: italic; }
+.wp-map-status { color: var(--wp-muted); font-size: 12px; white-space: nowrap; }
+.wp-map-explained .wp-map-status { color: var(--wp-text); font-weight: 500; }
+.wp-map-x { width: 24px; height: 24px; opacity: 0; }
+.wp-map-part:hover .wp-map-x, .wp-map-x:focus-visible { opacity: 1; }
+.wp-map-links { grid-template-columns: 10px 1fr auto 24px; }
+.wp-map-next { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 8px; padding-top: 10px;
+  border-top: 1px solid var(--wp-divider); font-size: 13px; line-height: 18px; }
+.wp-map-next .wp-btn { flex: none; }

@@ -32,7 +32,7 @@ async function renderHome() {
   const p = activePurpose();
   const others = status.paused || [];
   const key = status.totalReached ? "total" : exploreOpen ? "explore"
-    : [p ? `p|${p.id}|${p.text}|${(status.currentVideos || []).map(v => v.id).join(",")}|${p.study ? `${p.study.current}:${p.study.topics.map(t => t.check?.at || 0).join(".")}:${p.study.apply?.doneAt || 0}` : ""}` : "idle", leisureUsedUp(),
+    : [p ? `p|${p.id}|${p.text}|${(p.map?.parts || []).map(x => x.id + x.status).join(".")}${p.map?.synthesis?.verdict || ""}|${(status.currentVideos || []).map(v => v.id).join(",")}|${p.study ? `${p.study.current}:${p.study.topics.map(t => t.check?.at || 0).join(".")}:${p.study.apply?.doneAt || 0}` : ""}` : "idle", leisureUsedUp(),
       others.map(x => `${x.id}:${x.recent?.[0]?.id || ""}`).join(","), (status.saved || []).map(v => v.id).join(","),
       account.on, status.pathways?.offer?.name || "", (settings.learnTopics || []).join("+"), (settings.learnOff || []).length].join("|");
   if ($("#wp-home")?.dataset.key === key) return; // don't rebuild while someone is typing
@@ -202,6 +202,7 @@ function currentTargetRow(p) {
     el("div", { class: "wp-home-purpose" }, p.text),
     el("div", { class: "wp-muted wp-home-meta" }, targetMeta({ ...p, videos: (p.videos || []).length })),
     studyTodayBlock(p),
+    activeStudy(p) ? null : understandingBlock(p),
     vids[0] ? lastVideoCard(p, vids[0]) : null,
     moreVideos(vids.slice(1)),
     el("div", { class: "wp-home-alt" },
@@ -213,6 +214,8 @@ function currentTargetRow(p) {
 // What picking this aim up would mean, in a few words: the study topic that needs review or comes
 // next, or the video you stopped partway through.
 function nextStep(t) {
+  const u = understandingNext(t.understanding);
+  if (u && !t.study) return u;
   const n = t.study?.next;
   if (n) return n.kind === "review" ? `Next: review ${n.title}` : n.kind === "topic" ? `Next: ${n.title}` : "Next: put it to work";
   const v = t.recent?.[0];

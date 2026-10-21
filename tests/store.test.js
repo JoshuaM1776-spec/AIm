@@ -575,6 +575,54 @@ test("talk: what a conversation showed about study topics becomes their check", 
   assert.deepStrictEqual(JSON.parse(JSON.stringify((await env.run(`studyProgress(${JSON.stringify(env.local.purpose)})`)).next)), { kind: "review", title: "Glycolysis" });
 });
 
+test("your understanding: a learning aim's map, explored by watching, explained only by what you say, then put together", async () => {
+  const env = fresh();
+  const parts = [{ title: "Political instability", brief: "Civil wars and short reigns.", search: "roman political instability crisis third century" },
+    { title: "Economic pressures", brief: "Coins, taxes, trade.", search: "roman economy decline" },
+    { title: "Military challenges", brief: "Armies loyal to generals.", search: "roman army late empire" }];
+  await env.run(`applyLibrarian({ request: "why did rome fall", answer: { target: "Why the Western Roman Empire fell", kind: "learn", note: "", searches: ["fall of rome"], parts: ${JSON.stringify(parts)} } })`);
+  let p = env.local.purpose;
+  assert.deepStrictEqual(p.map.parts.map(x => [x.title, x.status]), parts.map(x => [x.title, "new"]));
+  assert.strictEqual((await env.run(`checkSearch("roman economy decline")`)).fits, true, "a part's search is part of the aim");
+  // Watching a minute of a video on the economy: Explored. A glance doesn't count.
+  await env.run(`allowVideos({ query: "roman economy decline", videos: [{ id: "e1", title: "Why Rome ran out of money", channel: "X" }] })`);
+  env.local.purpose.videos.push({ id: "e1", title: "Why Rome ran out of money", channel: "X", sec: 55, at: Date.now() });
+  await env.run(`recordTick(10, { id: "e1", title: "Why Rome ran out of money", channel: "X" })`);
+  p = env.local.purpose;
+  assert.strictEqual(p.map.parts[1].status, "explored", "found by that part's search, watched a minute");
+  assert.strictEqual(p.map.parts[0].status, "new");
+  // Only what you say moves a part further.
+  await env.run(`talkMarks(${JSON.stringify(p.id)}, [{ topic: "Political instability", status: "demonstrated" }, { topic: "Economic pressures", status: "partial" }])`);
+  p = env.local.purpose;
+  assert.deepStrictEqual(p.map.parts.map(x => x.status), ["explained", "partial", "new"]);
+  assert.strictEqual((await env.run(`talkSession(null)`)).ready, false, "two parts explained needed");
+  await env.run(`talkMarks(${JSON.stringify(p.id)}, [{ topic: "Military challenges", status: "demonstrated" }])`);
+  const t = await env.run(`talkSession(null)`);
+  assert.strictEqual(t.ready, true, "most of it explained: time to put it together");
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(t.session.map.parts.map(x => x.status))), ["explained", "partial", "explained"]);
+  await env.run(`talkVerdict(${JSON.stringify(p.id)}, "solid")`);
+  p = env.local.purpose;
+  assert.strictEqual(p.map.links, "explained");
+  assert.strictEqual((await env.run(`talkSession(null)`)).ready, false, "past the finish line");
+  // Not part of it for you: remove it.
+  await env.run(`mapRemove("p2")`);
+  assert.deepStrictEqual(env.local.purpose.map.parts.map(x => x.id), ["p1", "p3"]);
+  await env.run(`finishPurpose("yes")`);
+  assert.ok(env.local.history.at(-1).map?.synthesis?.verdict === "solid", "the map stays with the finished aim");
+});
+
+test("your understanding: a part you couldn't explain after all goes back to partly; non-learning aims have no map", async () => {
+  const env = fresh();
+  await env.run(`applyLibrarian({ request: "fix my faucet", answer: { target: "Fix a leaky faucet", kind: "project", note: "", searches: ["faucet"], parts: [] } })`);
+  assert.ok(!env.local.purpose.map);
+  await env.run(`applyLibrarian({ request: "how do batteries work", answer: { target: "How batteries work", kind: "learn", note: "", searches: ["batteries"],
+    parts: [{ title: "Chemistry", brief: "", search: "battery chemistry" }, { title: "Charging", brief: "", search: "how charging works" }] } })`);
+  const id = env.local.purpose.id;
+  await env.run(`talkMarks(${JSON.stringify(id)}, [{ topic: "Chemistry", status: "demonstrated" }])`);
+  await env.run(`talkMarks(${JSON.stringify(id)}, [{ topic: "Chemistry", status: "needs_review" }])`);
+  assert.strictEqual(env.local.purpose.map.parts[0].status, "partial");
+});
+
 // ---------- activity ----------
 test("recent purposes: newest first, distinct, without the current one", async () => {
   const env = fresh();
