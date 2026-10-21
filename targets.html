@@ -1,5 +1,5 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="color-scheme" content="light dark">
@@ -19,18 +19,25 @@
   .tabs button:hover { background: var(--tonal); }
   .tabs button[aria-selected="true"] { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
   .tabs .n { margin-left: 6px; opacity: .7; font-weight: 400; }
-  .shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 28px 22px; padding: 22px 22px 26px; border-radius: 16px;
-    background: linear-gradient(var(--tonal) 0 0) bottom / 100% 10px no-repeat, var(--surface); border: 1px solid var(--card-border); }
-  .slot { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-  .slot > button { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: pointer; text-align: left; border-radius: 10px; transition: transform .15s; }
-  .slot > button:hover { transform: translateY(-3px); }
-  .slot > button:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
-  .slot .where { font-size: 12px; line-height: 16px; color: var(--muted); }
-  .new-book { aspect-ratio: 3 / 4.2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border: 1.5px dashed var(--field-border);
-    border-radius: 4px 10px 10px 4px; color: var(--muted); text-align: center; padding: 12px; font-size: 13px; text-decoration: none; }
-  .new-book:hover { color: var(--text); border-color: var(--muted); text-decoration: none; }
-  .new-book b { font: 500 18px var(--font-serif); color: var(--text); }
-  .empty-tab { color: var(--muted); padding: 8px 2px; grid-column: 1 / -1; }
+  /* A bookcase, drawn: dark wood with a little grain, each row of books standing on a plank. */
+  .shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); row-gap: 26px; padding: 26px 18px 20px; border-radius: 14px;
+    background:
+      repeating-linear-gradient(90deg, rgba(255, 230, 190, .025) 0 2px, transparent 2px 9px, rgba(0, 0, 0, .04) 9px 10px, transparent 10px 23px),
+      radial-gradient(120% 90% at 50% 0%, #3b2a1f, #1f150e 70%);
+    box-shadow: inset 0 0 0 10px #3a2617, inset 0 0 0 11px rgba(0, 0, 0, .35), inset 0 18px 30px rgba(0, 0, 0, .35), 0 10px 26px rgba(30, 20, 10, .25); }
+  .slot { display: flex; flex-direction: column; min-width: 0; padding: 0 11px; }
+  .slot > button, .slot > .new-book { position: relative; z-index: 1; margin: 0 6px; }
+  .slot > button { display: block; padding: 0; border: 0; background: none; cursor: pointer; text-align: left; border-radius: 10px; transition: transform .15s; }
+  .slot > button:hover { transform: translateY(-4px); }
+  .slot > button:focus-visible { outline: 2px solid #f1dfae; outline-offset: 3px; }
+  .plank { height: 13px; margin: 0 -11px; border-radius: 1px;
+    background: linear-gradient(#9a6a3e, #7a4f2b 35%, #5a381d); box-shadow: inset 0 1px 0 rgba(255, 220, 170, .35), 0 6px 10px rgba(0, 0, 0, .45); }
+  .slot .where { margin-top: 8px; font-size: 12px; line-height: 16px; color: rgba(241, 223, 190, .75); text-align: center; }
+  .new-book { aspect-ratio: 3 / 4.25; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border: 1.5px dashed rgba(241, 223, 190, .35);
+    border-radius: 3px 9px 9px 3px; color: rgba(241, 223, 190, .7); text-align: center; padding: 12px; font-size: 13px; text-decoration: none; background: rgba(255, 240, 210, .04); }
+  .new-book:hover { color: #f1dfae; border-color: rgba(241, 223, 190, .6); text-decoration: none; }
+  .new-book b { font: 500 19px var(--font-serif); color: #f1dfae; }
+  .empty-tab { color: rgba(241, 223, 190, .8); padding: 8px 12px; grid-column: 1 / -1; }
   @media (prefers-reduced-motion: reduce) { .slot > button { transition: none; } }
 </style>
 </head>

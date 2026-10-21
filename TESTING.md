@@ -443,3 +443,7 @@ Needs a signed-in account and the server redeployed.
 - [ ] Popup: your aim with its book (as on the library shelf), Resume / Done, and tiles for **Take a Break**, **Librarian** (signed in; opens the conversation on your YouTube tab) and **My Library**. With a time limit: "Session · 32 of 90 minutes" and a bar.
 - [ ] The Staying on track pill on the player also names the aim ("Learning: …", or "Exploring: History").
 - [ ] Talking it through: sometimes, after you reply, the librarian suggests a video ("A visual explanation", "A simpler explanation", "A different perspective", "Going deeper") with why. The card is a real video (YouTube's top result for its search). Clicking it plays it as part of your aim. It never says it will draw or show something itself.
+
+### 47. Book covers (0.57.1)
+- [ ] The library is a bookcase: dark wood, each row of books on a plank. Covers are clothbound: woven texture, a spine with raised bands, a double gilt frame, the subject in small capitals between rules, the name in gold serif type, and an engraved emblem (the Colosseum for history, an atom for science, a hand plane for craft, a column for leadership, an open book, a seedling…).
+- [ ] Long names fit (a smaller size), and so does a single long word. The aim page's large cover and the popup's small one match.

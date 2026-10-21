@@ -42,9 +42,11 @@ async function render() {
   list.replaceChildren(...[
     ...shown.map(t => node("div", { className: "slot" },
       node("button", { type: "button", title: `Open “${t.text}”`, onclick: () => (location.href = `aim.html?id=${encodeURIComponent(t.id)}`) }, cover(t)),
+      node("div", { className: "plank" }),
       node("span", { className: "where", textContent: where(t) }))),
     q || tab === "completed" ? null : node("div", { className: "slot" },
-      node("a", { className: "new-book", href: "https://www.youtube.com/" }, node("b", { textContent: "+ New aim" }), "Start something new on YouTube")),
+      node("a", { className: "new-book", href: "https://www.youtube.com/" }, node("b", { textContent: "+ New aim" }), "Start something new on YouTube"),
+      node("div", { className: "plank" })),
     shown.length ? null : node("p", { className: "empty-tab", textContent: q ? `Nothing in your library matches “${query}”.`
       : { all: "Your library is empty. Search on YouTube, and your search becomes your first aim.", progress: "Nothing in progress.", completed: "Finished aims show up here." }[tab] })].filter(Boolean));
   document.getElementById("tabs").replaceChildren(...[["all", "All"], ["progress", "In progress"], ["completed", "Completed"]].map(([key, label]) =>
