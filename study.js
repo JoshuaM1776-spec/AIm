@@ -49,7 +49,7 @@ function topicCard(st, t, i) {
         notes: [t.brief, st.notes].filter(Boolean).join("\n\n").slice(0, 3000), study: t.id }))));
 }
 
-// "Put it to work": one small project using what the session covered, once there's something to
+// "Put it into practice": one small project using what the session covered, once there's something to
 // build on (a topic checked, or the session ended). Optional, and never graded.
 let applyBusy = false, applyErr = "", applyNoteOpen = false, applyDraft = "";
 async function suggestApply(st) {
@@ -68,7 +68,7 @@ async function suggestApply(st) {
 function applyCard(st) {
   if (!st.topics.some(t => t.check) && !st.endedAt) return null;
   const a = st.apply;
-  const head = node("div", { className: "spread" }, node("h2", { textContent: "Put it to work" }),
+  const head = node("div", { className: "spread" }, node("h2", { textContent: "Put it into practice" }),
     a?.minutes ? node("span", { className: "pill", textContent: `About ${a.minutes} min` }) : null);
   if (!a) return node("div", { className: "card apply" }, head,
     node("p", { className: "muted", textContent: "A small project that uses what you studied, aimed at what your checks say to practice. Optional, and never graded." }),

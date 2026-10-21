@@ -10,6 +10,8 @@
 //   focus:   up to three questions, pushing gently where an answer is thin, then a closing remark.
 //            With a map of what the aim takes ("Your understanding"), it aims at the parts not yet
 //            explained, and marks each part from what the person said.
+//   Closing (not in Explore), it may suggest one small way to put it into practice, with a search
+//            for a project video; the next conversation asks how it went.
 //   synthesis: the finish line. It asks them to put the whole answer together, then says plainly
 //            what the explanation does well and the most important gap or debate, with a verdict.
 // With Plus, what the person explained comes back as memory (kept in their browser), and in a study
@@ -83,6 +85,14 @@ Your understanding (when listed): the parts this aim takes, with how far they've
 
 Putting it together (MODE: Synthesis): open with one specific invitation to explain the whole answer in a few sentences, in the aim's own terms ("So, in a few sentences: why did the Western Roman Empire fall?"). After their reply, close in 2 to 4 sentences: what their explanation does well, then the most important thing it leaves out or the main place experts disagree. Then set verdict: "solid" if it covers the main parts and how they connect reasonably, otherwise "getting_there". It's evidence of understanding, not a certificate: never call them an expert, never grade with numbers.
 
+Put it into practice (only in your closing message, never in Explore): sometimes the most useful next step isn't another video but doing something with it. Suggest one only when all three hold: it directly serves their aim; they've met enough of the material to attempt it (they've explained some of it, or watched a fair amount); and doing it would teach them something watching another explanation wouldn't. Otherwise leave practice empty; most conversations end without one.
+- The smallest meaningful application: something they could do in under an hour, with things a beginner would have, that still makes them use what they learned ("Cut one bridle joint in scrap pine", "Wire a 9-volt LED circuit on a breadboard", "Write a one-month budget from last month's bank statement", "Fold three paper planes that change one thing each and compare how they fly").
+- If their aim is itself building or doing something big (AIM KIND: project), suggest a practice step before the real thing ("Try the joint on scrap before the door").
+- Hazards: for mains electricity, machinery, chemicals, heat or heights, only a beginner-safe version (low voltage, hand tools, no cutting toward yourself) or nothing.
+- When the application is an explanation or an argument (history, philosophy, debates), leave it empty: putting the whole answer together already does that.
+- title: the activity in a few words, as an imperative (under 70 characters); why: one sentence on what doing it will show them (under 140); search: a YouTube search for a good project video to follow (beginner-friendly).
+- If THEY TRIED a practice before, ask about it first, specifically ("How did the joint come out? Where did it go wrong?"), and use what they say.
+
 Marks (only when study topics or understanding parts are listed): for each listed topic this conversation actually covered, "demonstrated", "partial" or "needs_review" from their replies. Leave out topics you didn't discuss.`;
 
 const TALK_SCHEMA = {
@@ -99,6 +109,11 @@ const TALK_SCHEMA = {
       }
     },
     verdict: { type: "string", enum: ["solid", "getting_there", "none"] },
+    practice: {
+      type: "object",
+      properties: { title: { type: "string" }, why: { type: "string" }, search: { type: "string" } },
+      required: ["title", "why", "search"], additionalProperties: false
+    },
     marks: {
       type: "array",
       items: {
@@ -108,7 +123,7 @@ const TALK_SCHEMA = {
       }
     }
   },
-  required: ["message", "done", "memory", "marks", "verdict"],
+  required: ["message", "done", "memory", "marks", "verdict", "practice"],
   additionalProperties: false
 };
 
@@ -170,12 +185,15 @@ export async function talk(ctx: TaskCtx & { plan?: string; usage?: TalkUsage }) 
   const connect = free ? null : asObject(input.connect);
   const connectLine = connect?.idea ? `${clean(connect.subject, 60)}: ${clean(connect.idea, 160)}` : "";
 
+  const kind = ["learn", "project", "lookup"].includes(s.kind as string) ? s.kind as string : "";
+  const tried = asObject(s.practice);
+  const triedLine = tried.title && tried.tried ? `THEY TRIED: ${clean(tried.title, 80)}${tried.note ? `. What they said about it: ${clean(tried.note, 300)}` : " (no notes)"}` : "";
   const asked = thread.filter(m => m.role === "aim").length;
   const max = TALK_LIMITS.questions[mode];
   const mustEnd = !opening && asked >= max;
 
   const prompt = `MODE: ${mode === "explore" ? "Explore. They were following their curiosity, not studying for anything. Light touch." : mode === "synthesis" ? "Synthesis. They've explored most of what this aim takes; now they put the whole answer together." : "Focus. They're working toward a specific aim. A bit more intentional."}
-THEIR AIM: ${aim}
+THEIR AIM: ${aim}${kind ? `\nAIM KIND: ${kind}` : ""}${triedLine ? `\n${triedLine}` : ""}
 TIME: about ${num(s.minutes, 1440)} minutes
 ${searches.length ? `SEARCHES, IN ORDER: ${searches.join(" → ")}\n` : ""}${videos.length ? `VIDEOS (${withCaptions ? "with caption excerpts where shown" : "titles only; you haven't seen them"}):\n${videos.join("\n")}\n` : ""}${notes ? `THEIR NOTES: ${notes}\n` : ""}${studyTopics.length ? `STUDY TOPICS: ${studyTopics.join(" | ")}\n` : ""}${parts.length ? `YOUR UNDERSTANDING (what this aim takes, and how far they've got):\n${parts.map(x => `- ${x.title}: ${x.status}`).join("\n")}\n` : ""}${memory.length ? `THINGS THEY TOLD YOU BEFORE:\n${memory.join("\n")}\n` : ""}${connectLine ? `OPEN WITH THIS CONNECTION if it genuinely fits the session: ${connectLine}\n` : ""}
 LIMITS: at most ${max} question${max > 1 ? "s" : ""} in this conversation. You've asked ${asked}. ${mustEnd ? "This message must be a closing remark, not a question. Set done to true." : opening ? "Open with one specific question. Set done to false." : "Ask another question only if it would really help; otherwise close with a remark and set done to true."}
@@ -197,6 +215,11 @@ ${free ? "Return memory as an empty list." : "Return memory from their replies s
       const o = asObject(m);
       return { subject: clean(o.subject, 60), idea: clean(o.idea, 160), understood: o.understood === "shaky" ? "shaky" : "solid" };
     }).filter(m => m.subject && m.idea).slice(0, 3),
+    // One practice suggestion at most, only when it closes, and never while exploring.
+    practice: (() => {
+      const pr = asObject(r.practice), title = clean(pr.title, 80), search = clean(pr.search, 150);
+      return done && mode !== "explore" && title && search ? { title, why: clean(pr.why, 160), search } : null;
+    })(),
     verdict: mode === "synthesis" && done && ["solid", "getting_there"].includes(r.verdict as string) ? r.verdict : null,
     marks: list(r.marks).map(m => {
       const o = asObject(m), topic = clean(o.topic, 120);

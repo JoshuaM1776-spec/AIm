@@ -438,7 +438,7 @@ test("librarian: the channels you prefer go to the ranking (names only, at most 
   assert.ok(!prompt.includes("CHANNELS THEY TRUST"));
 });
 
-test("Put it to work: Plus only; leans on what needs practice; tidied and bounded", async () => {
+test("Put it into practice (study sessions): Plus only; leans on what needs practice; tidied and bounded", async () => {
   let prompt = "";
   const deps = makeDeps({ plan: "plus", claude: req => {
     prompt = req.prompt;
@@ -561,6 +561,25 @@ test("talk: with caption excerpts (Plus), questions can be grounded in what was 
   const big = { ...session, videos: [{ ...session.videos[0], transcript: "[0:00] " + "word ".repeat(4000) }] };
   assert.strictEqual((await call(d, { task: "librarian-talk", input: { mode: "focus", opening: true, session: big } })).status, 200, "a long excerpt fits the request");
   assert.ok(d.calls.at(-1).prompt.length < 8000, "and is trimmed on the server");
+});
+
+test("talk: put it into practice: one small suggestion, only when it closes, never while exploring; and it asks how it went", async () => {
+  const practice = { title: "Cut one bridle joint in scrap pine", why: "You'll find out if your layout lines are accurate.", search: "bridle joint hand tools beginner" };
+  const d = talkDeps("plus", () => talkReply({ message: "Sounds like the theory's there.", done: true, practice }));
+  const session = { ...SESSION, aim: "Learn to build strong cabinet doors", kind: "project" };
+  const thread = [{ role: "aim", text: "q" }, { role: "person", text: "a" }];
+  const r = await call(d, { task: "librarian-talk", input: { mode: "focus", session, thread } });
+  assert.deepStrictEqual(r.body.practice, practice);
+  assert.match(d.calls[0].prompt, /AIM KIND: project/);
+  assert.match(d.calls[0].system, /smallest meaningful application/);
+  assert.match(d.calls[0].system, /beginner-safe version/);
+  assert.strictEqual((await call(d, { task: "librarian-talk", input: { mode: "explore", session, thread } })).body.practice, null, "never in Explore");
+  const open = talkDeps("plus", () => talkReply({ practice }));
+  assert.strictEqual((await call(open, { task: "librarian-talk", input: { mode: "focus", opening: true, session } })).body.practice, null, "only when it closes");
+  await call(open, { task: "librarian-talk", input: { mode: "focus", opening: true, session: { ...session, practice: { title: "Cut one bridle joint", tried: true, note: "the shoulders came out uneven" } } } });
+  assert.match(open.calls.at(-1).prompt, /THEY TRIED: Cut one bridle joint\. What they said about it: the shoulders came out uneven/);
+  const none = talkDeps("plus", () => talkReply({ done: true, practice: { title: "", why: "", search: "" } }));
+  assert.strictEqual((await call(none, { task: "librarian-talk", input: { mode: "focus", session, thread } })).body.practice, null, "most conversations end without one");
 });
 
 // ---------- billing (Stripe) ----------

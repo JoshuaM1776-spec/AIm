@@ -32,7 +32,7 @@ function entryCard(e) {
         t.check ? t.check.objectives.map(o => node("div", { className: "obj" },
           node("span", { className: `pill ${STATUS[o.status]?.[1] || ""}`, textContent: STATUS[o.status]?.[0] || o.status }), node("span", { textContent: o.text }))) : null)),
       st.apply ? node("div", { className: "project" },
-        node("b", { textContent: `${st.apply.doneAt ? "Put it to work" : "Project suggested"}: ${st.apply.title}` }),
+        node("b", { textContent: `${st.apply.doneAt ? "You tried it" : "Put it into practice"}: ${st.apply.title}` }),
         node("div", { className: "small", textContent: st.apply.task }),
         st.apply.doneAt ? node("div", { className: "small" }, node("span", { className: "pill ok", textContent: `Done ${date(st.apply.doneAt)}` }), st.apply.note ? `“${st.apply.note}”` : null) : null) : null) : null,
     e.videos.length ? node("ul", { className: "vids" }, e.videos.map(v => node("li", { textContent: `${v.title || "Video"}${v.channel ? ` · ${v.channel}` : ""}` }))) : null);

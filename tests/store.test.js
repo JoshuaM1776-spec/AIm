@@ -623,6 +623,25 @@ test("your understanding: a part you couldn't explain after all goes back to par
   assert.strictEqual(env.local.purpose.map.parts[0].status, "partial");
 });
 
+test("put it into practice: saved with the aim, tried on your word with a note, and the next conversation knows", async () => {
+  const env = fresh();
+  await env.run(`startPurpose({ text: "Learn to build strong cabinet doors" })`);
+  const id = env.local.purpose.id;
+  const practice = { title: "Cut one bridle joint in scrap pine", why: "Checks your layout.", search: "bridle joint hand tools beginner" };
+  await env.run(`practiceSet(${JSON.stringify(id)}, { practice: ${JSON.stringify(practice)} })`);
+  assert.strictEqual(env.local.purpose.practice.title, practice.title);
+  assert.strictEqual((await env.run(`checkSearch("bridle joint jig")`)).fits, true, "searching for the practice is part of the aim");
+  let t = await env.run(`talkSession(null)`);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(t.session.practice)), { title: practice.title, tried: false, note: "" });
+  await env.run(`practiceSet(${JSON.stringify(id)}, { tried: true, note: "shoulders came out uneven" })`);
+  t = await env.run(`talkSession(null)`);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(t.session.practice)), { title: practice.title, tried: true, note: "shoulders came out uneven" });
+  await env.run(`practiceSet(${JSON.stringify(id)}, { practice: ${JSON.stringify(practice)} })`);
+  assert.ok(env.local.purpose.practice.triedAt, "saving the same suggestion again keeps that you tried it");
+  await env.run(`finishPurpose("yes")`);
+  assert.ok(env.local.history.at(-1).practice?.triedAt, "it stays with the finished aim");
+});
+
 // ---------- activity ----------
 test("recent purposes: newest first, distinct, without the current one", async () => {
   const env = fresh();

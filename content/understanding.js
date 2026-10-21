@@ -59,3 +59,61 @@ function understandingNext(u) {
   const done = u.parts.filter(x => x.status === "explained").length;
   return next ? `Next: ${next.title} · ${done} of ${u.parts.length} explained` : null;
 }
+
+// ---------- Put it into practice ----------
+// The librarian's suggestion of one small way to use what you learned, with a project video to follow.
+// "I tried it" is your word for it (no proof asked); a note on how it went comes up next time you talk.
+async function findPractice(aimId, practice) {
+  await send({ type: "practice-set", aimId, practice });
+  if (activePurpose()?.id !== aimId) {
+    const r = await send({ type: "purpose-resume", id: aimId }); // a finished aim starts again, with its practice
+    if (!r || r.result !== "applied") return toast(r?.message || "Couldn't do that. Try again.");
+  }
+  location.href = `/results?search_query=${encodeURIComponent(practice.search)}`;
+}
+
+// In the librarian's panel, when a conversation ends with a suggestion.
+function practiceCard(aimId, practice) {
+  const status = el("div", { class: "wp-row" },
+    el("button", { class: "wp-btn wp-btn-primary", onclick: () => { closeTalk(); findPractice(aimId, practice); } }, icon("search"), "Find a project video"),
+    el("button", { class: "wp-btn wp-btn-text", onclick: async () => {
+      const r = await send({ type: "practice-set", aimId, practice });
+      status.replaceChildren(el("span", { class: "wp-muted" }, r?.result === "applied" ? "Saved with your aim. It's on the homepage." : "Couldn't save that."));
+    } }, "Save for later"));
+  return el("div", { class: "wp-practice" },
+    el("div", { class: "wp-label" }, "Put it into practice"),
+    el("div", { class: "wp-strong" }, practice.title),
+    practice.why ? el("div", { class: "wp-muted" }, practice.why) : null,
+    status);
+}
+
+// On the homepage, under the current aim: the saved practice, and I tried it.
+function practiceBlock(p) {
+  const pr = p?.practice;
+  if (!pr) return null;
+  const box = el("div", { class: "wp-practice wp-practice-home" });
+  const draw = () => box.replaceChildren(...[
+    el("div", { class: "wp-label" }, pr.triedAt ? "You tried it" : "Put it into practice"),
+    el("div", { class: "wp-strong" }, pr.title),
+    pr.triedAt ? (pr.note ? el("div", { class: "wp-muted" }, `“${pr.note}”`) : null) : pr.why ? el("div", { class: "wp-muted" }, pr.why) : null,
+    pr.triedAt
+      ? el("div", { class: "wp-row" }, account.on ? el("button", { class: "wp-btn wp-btn-tonal", onclick: () => openTalk({ aimId: p.id }) }, "Talk about how it went") : null)
+      : el("div", { class: "wp-row" },
+          el("button", { class: "wp-btn wp-btn-tonal", onclick: () => findPractice(p.id, pr) }, icon("search"), "Find a project video"),
+          el("button", { class: "wp-btn wp-btn-text", onclick: () => tried() }, "I tried it"))].filter(Boolean));
+  const tried = () => {
+    const note = el("textarea", { class: "wp-input", rows: "2", maxlength: "500", placeholder: "How did it go? What would you change? (optional)", "aria-label": "How it went" });
+    keepKeys(note);
+    box.replaceChildren(el("div", { class: "wp-label" }, "You tried it"), el("div", { class: "wp-strong" }, pr.title), note,
+      el("div", { class: "wp-row" },
+        el("button", { class: "wp-btn wp-btn-primary", onclick: async () => {
+          const r = await send({ type: "practice-set", aimId: p.id, tried: true, note: note.value });
+          if (r?.practice) Object.assign(pr, r.practice);
+          draw();
+        } }, "Save"),
+        el("button", { class: "wp-btn wp-btn-text", onclick: draw }, "Cancel")));
+    note.focus();
+  };
+  draw();
+  return box;
+}

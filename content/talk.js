@@ -80,6 +80,10 @@ function showTalk(state) {
       ...(state.busy ? [el("div", { class: "wp-talk-msg wp-talk-aim wp-talk-typing", "aria-label": "The librarian is thinking" }, el("i"), el("i"), el("i"))] : []),
       ...(note ? [el("div", { class: "wp-muted wp-talk-note" }, note)] : []));
     log.scrollTop = log.scrollHeight;
+    // Put it into practice: the librarian's one suggestion, if it made one, above the usual buttons.
+    // Built once, so "Saved" stays put when the panel redraws.
+    if (state.done && state.practice && !state.practiceCard) state.practiceCard = practiceCard(state.aimId, state.practice);
+    if (state.practiceCard) log.append(state.practiceCard);
     if (state.done && state.verdict === "solid") {
       // The finish line: done here, or on to where people disagree.
       const live = activePurpose()?.id === state.aimId;
@@ -116,6 +120,7 @@ function showTalk(state) {
       if (state.remember && r.memory?.length) { await send({ type: "memory-add", items: r.memory, aimId: state.aimId }); state.kept = r.memory.map(m => m.subject); }
       if (r.marks?.length) await send({ type: "talk-marks", aimId: state.aimId, marks: r.marks });
       if (r.verdict) { state.verdict = r.verdict; await send({ type: "talk-verdict", aimId: state.aimId, verdict: r.verdict }); }
+      if (r.practice) state.practice = r.practice;
     }
     draw();
     if (!state.done) input.focus();

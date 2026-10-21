@@ -421,3 +421,13 @@ Needs Aim Plus and the server redeployed.
 - [ ] Settings now says "Captions were there for N of the last M videos it looked at." Note what it says after a week of normal use: that's how often this can help.
 - [ ] "In this video" on a captioned video: it says "From the video's captions, title, description…", and concepts have times even without chapters.
 - [ ] Turn it off: no caption requests at all (DevTools → Network on YouTube: no `timedtext`).
+
+### 44. Put it into practice (0.55)
+Needs a signed-in account and the server redeployed.
+- [ ] Talk through a practical aim after a few videos (cabinet doors, circuits, budgeting, photography): sometimes the closing message comes with **Put it into practice**: one small activity (under an hour, beginner tools), why it helps, **Find a project video** and **Save for later**. Often there's none; that's intended.
+- [ ] A history or "why" aim gets no practice suggestion (Put it together is the application). Explore never gets one.
+- [ ] Hazardous subjects (mains wiring, power tools, chemicals) only get a beginner-safe version, or none.
+- [ ] **Find a project video** searches YouTube for it within the aim (no "part of your aim?" question), with the librarian's picks.
+- [ ] **Save for later**: it's on the homepage under the aim. **I tried it** takes an optional note. Set-aside aims say "Next: try it · …".
+- [ ] The next conversation on that aim starts by asking how it went, using your note.
+- [ ] Study sessions' project step is now called **Put it into practice** too.

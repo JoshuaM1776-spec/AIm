@@ -542,7 +542,7 @@ step("the summary shows topics, videos, checks and what to review", ov.includes(
 await overview.click(".apply button:text-is('Suggest a project')");
 await overview.waitForSelector(".apply h3");
 const ap = await overview.textContent(".apply");
-step("Put it to work: a project aimed at what needs practice", ap.includes("Trace a sugar cube") && ap.includes("About 30 min") && ap.includes("Mark glycolysis") &&
+step("Put it into practice: a project aimed at what needs practice", ap.includes("Trace a sugar cube") && ap.includes("About 30 min") && ap.includes("Mark glycolysis") &&
   /needs practice: /.test(srv.applyPrompt || ""), (srv.applyPrompt || "").slice(0, 200));
 await overview.click(".apply button:text-is('I did it')");
 await overview.fill(".apply textarea", "Drew it on the whiteboard and explained it to my sister.");
@@ -697,6 +697,47 @@ step("Call it done ends the aim, with its map put together", finished.text === "
   finished.map.parts.every(x => x.status === "explained"), JSON.stringify(finished.map?.parts));
 
 step("with captions off, the librarian reads none", srv.captionFetches === fetchesBefore && !srv.talkPrompts.at(-1).includes("WHAT WAS SAID"));
+// ---------- Put it into practice ----------
+srv.talk.push({ message: "You've watched three takes on frame-and-panel doors. If your rails came out a hair short, what would you do?", done: false, memory: [], marks: [], verdict: "none" },
+  { message: "That's the instinct you want. The best way to find out is on scrap, before the real door.", done: true, memory: [], marks: [], verdict: "none",
+    practice: { title: "Build a miniature frame-and-panel door", why: "You'll see if your cope-and-stick joints line up before you cut good wood.", search: "miniature frame and panel door beginner" } });
+await sw.evaluate(() => serial(async () => {
+  await startPurpose({ text: "Learn to build strong cabinet doors" });
+  const { purpose } = await chrome.storage.local.get("purpose");
+  purpose.videos = [{ id: "cab1", title: "Frame and panel doors explained", channel: "Woodworking for Everyone", sec: 600, at: Date.now() }];
+  await chrome.storage.local.set({ purpose });
+}));
+await yt.goto("https://www.youtube.com/");
+await yt.bringToFront();
+await yt.waitForSelector("#wp-home .wp-home-current");
+await yt.click("#wp-chip .wp-pill");
+await yt.click(".wp-dropdown button:has-text('Talk it through')");
+await yt.waitForSelector(".wp-talk .wp-talk-input");
+await yt.fill(".wp-talk-input", "Recut them. Or shim the joint, I guess.");
+await yt.press(".wp-talk-input", "Enter");
+await yt.waitForSelector(".wp-talk .wp-practice");
+const prText = (await yt.textContent(".wp-talk .wp-practice")).replace(/\s+/g, " ");
+step("a conversation can close with one small way to put it into practice, and a project video to find", prText.includes("Put it into practice") &&
+  prText.includes("Build a miniature frame-and-panel door") && prText.includes("Find a project video") && prText.includes("Save for later"), prText);
+if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/practice.png` });
+await yt.click(".wp-talk .wp-practice button:text-is('Save for later')");
+await yt.waitForSelector(".wp-talk .wp-practice :text('Saved with your aim')");
+await yt.click(".wp-talk button:text-is('Close')");
+await yt.reload();
+await yt.waitForSelector("#wp-home .wp-practice-home");
+step("saved, it's on the homepage with the aim", (await yt.textContent(".wp-practice-home")).includes("Build a miniature frame-and-panel door"));
+await yt.click(".wp-practice-home button:text-is('I tried it')");
+await yt.fill(".wp-practice-home textarea", "The rails were short; I measured from the wrong edge.");
+await yt.click(".wp-practice-home button:text-is('Save')");
+await yt.waitForSelector(".wp-practice-home :text('You tried it')");
+step("I tried it: your word for it, with a note", ((await sw.evaluate(() => chrome.storage.local.get("purpose"))).purpose.practice || {}).note === "The rails were short; I measured from the wrong edge.");
+srv.talk.push({ message: "How did the miniature door come out? You said the rails were short.", done: false, memory: [], marks: [], verdict: "none" });
+await yt.click(".wp-practice-home button:text-is('Talk about how it went')");
+await yt.waitForSelector(".wp-talk .wp-talk-input");
+step("the next conversation asks how it went, with your note", srv.talkPrompts.at(-1).includes("THEY TRIED: Build a miniature frame-and-panel door. What they said about it: The rails were short"));
+await yt.click(".wp-talk [aria-label='Close']");
+await sw.evaluate(() => serial(() => finishPurpose("yes")));
+
 // Exploring: back on the homepage after a real stretch, one invitation; Maybe later backs off.
 srv.talk.push({ message: "You went from Roman roads to aqueducts. If you had to get water into a hill town with no pumps, how would you do it?", done: false, memory: [], marks: [] });
 await sw.evaluate(() => serial(async () => {

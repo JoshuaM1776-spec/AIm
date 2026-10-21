@@ -73,7 +73,7 @@ function progress(t) {
   const [done, of, label] = u?.parts?.length ? [u.parts.filter(x => x.status === "explained").length + (u.solid ? 1 : 0), u.parts.length + 1,
     u.solid ? "Put together" : u.ready ? "Ready to put together" : `${u.parts.filter(x => x.status === "explained").length} of ${u.parts.length} explained`]
     : st ? [st.checked, st.of, `${st.checked} of ${st.of} topics checked`] : [0, 0, null];
-  if (!label) return null;
+  if (!label) return t.practice?.tried ? node("div", { className: "progress" }, node("span", { textContent: `You tried it: ${t.practice.title}` })) : null;
   return node("div", { className: "progress" }, node("span", { className: "track" }, node("i", { style: `width:${Math.round((done / of) * 100)}%` })), node("span", { textContent: label }));
 }
 

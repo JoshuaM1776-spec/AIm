@@ -263,6 +263,7 @@ function summary(p, state) {
     usedSec: Math.round(p.usedSec || 0), videos: (p.videos || []).length, searches: (p.searches || []).length,
     outcome: p.outcome || null, last: p.last || null, study: studyProgress(p), notes: p.notes || "", elsewhere: !!p.elsewhere, recent: recentVideos(p), trail: searchTrail(p),
     exploring: !!p.learn,
+    practice: p.practice ? { title: p.practice.title, tried: !!p.practice.triedAt } : null,
     understanding: p.map?.parts?.length ? { parts: p.map.parts.map(x => ({ title: x.title, status: x.status })), ready: mapReady(p.map), solid: p.map.synthesis?.verdict === "solid" } : null };
 }
 
@@ -320,7 +321,7 @@ function archive(history, record) {
 function purposeRecord(p, outcome) {
   return { type: "purpose", id: p.id, text: p.text, startedAt: p.startedAt, endedAt: Date.now(), usedSec: Math.round(p.usedSec),
     outcome: outcome || null, path: p.path, searches: p.searches, videos: p.videos, notes: p.notes || "",
-    kind: p.librarian?.kind || null, study: studySnapshot(p.study), map: p.map || null };
+    kind: p.librarian?.kind || null, study: studySnapshot(p.study), map: p.map || null, practice: p.practice || null };
 }
 
 // What a study session showed, kept when its aim ends, for the learning record.
@@ -569,6 +570,7 @@ function searchFits(purpose, query) {
   const known = [purpose.text, ...(purpose.searches || []).map(s => s.q), ...(purpose.librarian?.searches || []),
     ...(purpose.videos || []).filter(v => (v.sec || 0) >= 30).map(v => v.title),
     ...(purpose.map?.parts || []).flatMap(x => [x.title, x.search]),
+    ...(purpose.practice ? [purpose.practice.title, purpose.practice.search] : []),
     ...(purpose.study?.topics || []).flatMap(t => [t.title, ...t.searches])].flatMap(meaningfulWords);
   const same = (a, b) => a === b || (a.length >= 5 && b.length >= 5 && a.slice(0, 5) === b.slice(0, 5));
   return q.some(w => known.some(k => same(w, k)));
@@ -670,7 +672,7 @@ async function updateStudy({ topicId, videos, current, check, end, apply, applyD
   const st = s.purpose?.study;
   if (!st) return { result: "error", message: "No study session." };
   if (end) st.endedAt = Date.now();
-  // "Put it to work": the suggested project, and whether (and how) the student did it.
+  // "Put it into practice": the suggested project, and whether (and how) the student did it.
   if (apply && typeof apply === "object") st.apply = { title: clip(apply.title, 80), task: clip(apply.task, 500),
     steps: (Array.isArray(apply.steps) ? apply.steps : []).map(x => clip(x, 200)).filter(Boolean).slice(0, 5), shows: clip(apply.shows, 200),
     minutes: Number(apply.minutes) || 30, safety: clip(apply.safety, 300), at: Date.now(), doneAt: null, note: "" };
@@ -1416,9 +1418,11 @@ async function talkSession(id) {
     minutes: Math.max(1, Math.round((v.sec || 0) / 60)), finished: v.d > 0 && v.t >= v.d * 0.9 }));
   const topics = (p.study?.topics || []).map(t => ({ title: t.title }));
   const map = p.map?.parts?.length ? { parts: p.map.parts.map(x => ({ title: x.title, status: x.status })) } : null;
+  const practice = p.practice ? { title: p.practice.title, tried: !!p.practice.triedAt, note: p.practice.note || "" } : null;
   return { result: "applied", id: p.id, mode: p.learn ? "explore" : "focus", plan: !!p.plan, ready: mapReady(p.map),
     session: { aim: p.learn ? `Exploring ${p.learn}` : p.text, minutes: Math.round((p.usedSec || 0) / 60), searches: (p.searches || []).map(x => x.q).slice(-12),
-      videos, notes: p.notes || "", ...(topics.length ? { study: { topics } } : {}), ...(map ? { map } : {}) } };
+      videos, notes: p.notes || "", kind: p.librarian?.kind || "", ...(topics.length ? { study: { topics } } : {}), ...(map ? { map } : {}),
+      ...(practice ? { practice } : {}) } };
 }
 
 // The librarian's memory: ideas you explained in your own words, with what they were about. In this
@@ -1592,4 +1596,22 @@ async function captionsStat(found) {
 async function captionsStats() {
   const { captionStats = [] } = await chrome.storage.local.get("captionStats");
   return { tried: captionStats.length, found: captionStats.filter(Boolean).length };
+}
+
+// ---------- Put it into practice ----------
+// One small way to use what an aim taught, suggested by the librarian when it closes a conversation.
+// Kept with the aim; "I tried it" is your word for it (no proof asked), with an optional note that
+// the next conversation asks about.
+async function practiceSet(aimId, { practice, tried, note } = {}) {
+  const d = await chrome.storage.local.get(["purpose", "paused", "history"]);
+  const rec = [d.purpose, ...(d.paused || []), ...(d.history || [])].find(r => r?.id === aimId);
+  if (!rec) return { result: "error", message: "That aim isn't here." };
+  if (practice) {
+    const title = clip(practice.title, 80), search = clip(practice.search, 150);
+    if (!title || !search) return { result: "error", message: "Nothing to save." };
+    if (rec.practice?.title !== title) rec.practice = { title, why: clip(practice.why, 160), search, savedAt: Date.now() };
+  }
+  if (tried && rec.practice) { rec.practice.triedAt = Date.now(); rec.practice.note = clip(note, 500); }
+  await chrome.storage.local.set({ purpose: d.purpose || null, paused: d.paused || [], history: d.history || [] });
+  return { result: "applied", practice: rec.practice || null };
 }

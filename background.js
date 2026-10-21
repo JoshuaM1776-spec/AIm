@@ -71,6 +71,7 @@ const writes = {
   "talk-marks": m => talkMarks(m.aimId, m.marks),
   "talk-verdict": m => talkVerdict(m.aimId, m.verdict),
   "captions-stat": m => captionsStat(!!m.found),
+  "practice-set": m => practiceSet(m.aimId, { practice: m.practice, tried: !!m.tried, note: m.note }),
   "map-remove": m => mapRemove(m.partId),
   "purpose-done": m => finishPurpose(m.outcome),
   "purpose-pause": () => pausePurpose(),

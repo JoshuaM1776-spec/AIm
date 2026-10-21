@@ -44,7 +44,7 @@ function studyTodayBlock(p) {
     allChecked && !review.length ? el("div", { class: "wp-study-today-row" },
       el("span", { class: "wp-study-today-kind" }, "Done"),
       el("span", {}, st.apply?.doneAt ? "Every topic checked, and you put it to work." : "Every topic checked. Ready to put it to work?"),
-      el("button", { class: "wp-btn wp-btn-tonal", onclick: () => send({ type: "open-study" }) }, st.apply?.doneAt ? "See summary" : "Put it to work")) : null);
+      el("button", { class: "wp-btn wp-btn-tonal", onclick: () => send({ type: "open-study" }) }, st.apply?.doneAt ? "See summary" : "Put it into practice")) : null);
 }
 
 // Which topic the page is about: the one whose video is playing or whose search this is.

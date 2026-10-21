@@ -106,7 +106,7 @@ function accountView(st) {
   if (!isPlus(st) && b?.available) {
     lines.push(node("div", { className: "note" },
       node("b", { textContent: "Aim Plus" }),
-      node("div", { textContent: "Study sessions built from your syllabus, TeachBack checks, Put it to work, Pathways, and the librarian with a bigger daily allowance." })));
+      node("div", { textContent: "Study sessions built from your syllabus, TeachBack checks, Put it into practice, Pathways, and the librarian with a bigger daily allowance." })));
   }
   if (isPlus(st) && st.usage && st.limits) {
     lines.push(node("div", { className: "setting" }, node("div", { className: "what" }, node("b", { textContent: "AI use, last 24 hours" }),

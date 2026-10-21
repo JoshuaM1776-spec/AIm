@@ -27,7 +27,7 @@ function features(ctx) {
     { icon: "?", title: "TeachBack", text: "Check your understanding by explaining it, the way you'd teach a friend. You get what you've shown, what to review, and a search for each gap. Not a grade.",
       how: "From a study topic, after a video, or here.",
       action: ["Test my understanding", () => open("teachback.html")] },
-    { icon: "✎", title: "Put it to work", text: "At the end of a study session, one small project that uses what you learned, aimed at what your checks say to practice.",
+    { icon: "✎", title: "Put it into practice", text: "At the end of a study session, one small project that uses what you learned, aimed at what your checks say to practice.",
       how: "In a study session's summary, once a topic is checked." },
     { icon: "▶", title: "In this video", text: "Beside a video you're watching to learn: the ideas it covers, a jump to each chapter, the same idea in another context, and a test on the video when it ends.",
       how: "Appears on its own for learning aims." },
