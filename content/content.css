@@ -730,3 +730,23 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 .wp-home-end { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-radius: 12px; background: var(--wp-tonal); text-align: left; }
 .wp-home-end .wp-notice-text { flex: 1; }
 .wp-home-end .wp-notice-actions.wp-col { align-items: flex-end; }
+.wp-home-next { font-size: 13px; line-height: 18px; color: var(--wp-text); margin-top: 2px; }
+
+/* Explore: the homepage's one line, and the view it opens in the homepage card. */
+.wp-explore-line { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; font-size: 13px; line-height: 18px; }
+.wp-explore-open { gap: 6px; }
+.wp-explore-top { display: flex; }
+.wp .wp-explore-back { display: inline-flex; align-items: center; gap: 4px; color: var(--wp-muted); font-size: 13px; }
+.wp-explore-lede { text-align: center; font-size: 14px; line-height: 20px; margin-top: -10px; }
+.wp-explore-head { display: flex; align-items: center; gap: 4px 10px; flex-wrap: wrap; font-size: 13px; line-height: 18px; }
+.wp-explore-interests { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.wp-explore-body { display: flex; flex-direction: column; gap: 10px; }
+.wp-explore-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 12px; overflow: visible; }
+.wp .wp-explore-grid .wp-learn-item { width: auto; }
+.wp-explore-grid .wp-thumb-sm { width: 100%; height: auto; aspect-ratio: 16 / 9; }
+@media (max-width: 760px) { .wp-explore-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .wp-explore-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.wp-explore-end { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 6px 0 2px; font-size: 13px; text-align: center; }
+.wp-home-card.wp-explore { width: min(880px, calc(100% - 32px)); }
+/* Go deeper: one quiet line at the top of More to explore. */
+.wp-deeper { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 0 10px; font-size: 13px; line-height: 18px; }

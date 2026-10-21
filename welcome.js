@@ -49,7 +49,7 @@ function how() {
       node("div", { className: "how" },
         node("div", { className: "num", textContent: "1" }),
         node("div", {}, node("b", { textContent: "Say what you're here for" }),
-          node("p", { textContent: `YouTube's homepage asks what brings you here. Ask the way you'd ask a librarian. That becomes your aim.` })),
+          node("p", { textContent: `YouTube's homepage asks what brings you here. Ask the way you'd ask a librarian. That becomes your aim. Not sure? Explore a few picks worth learning from.` })),
         node("div", { className: "mock" }, node("div", { className: "field" }, node("span", { textContent: "Help me study for my biology exam." }), arrow))),
       node("div", { className: "how" },
         node("div", { className: "num", textContent: "2" }),

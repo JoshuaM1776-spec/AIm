@@ -8,6 +8,7 @@ const EXAMPLES = ["How do jet engines work?", "Help me study for my biology exam
 let homeEnd = null;
 
 function removeHome() {
+  exploreOpen = false;
   early.showFeed();
   document.documentElement.classList.remove("wp-home");
   $("#wp-home")?.remove();
@@ -30,7 +31,7 @@ async function renderHome() {
   if (planOn() && !status.totalReached) return renderToday(host); // a Homeschool student's day
   const p = activePurpose();
   const others = status.paused || [];
-  const key = status.totalReached ? "total"
+  const key = status.totalReached ? "total" : exploreOpen ? "explore"
     : [p ? `p|${p.id}|${p.text}|${(status.currentVideos || []).map(v => v.id).join(",")}|${p.study ? `${p.study.current}:${p.study.topics.map(t => t.check?.at || 0).join(".")}:${p.study.apply?.doneAt || 0}` : ""}` : "idle", leisureUsedUp(),
       others.map(x => `${x.id}:${x.recent?.[0]?.id || ""}`).join(","), (status.saved || []).map(v => v.id).join(","),
       account.on, status.pathways?.offer?.name || "", (settings.learnTopics || []).join("+"), (settings.learnOff || []).length].join("|");
@@ -68,6 +69,13 @@ async function renderHome() {
     return;
   }
 
+  if (exploreOpen) {
+    card.classList.add("wp-explore");
+    exploreView(card);
+    host.prepend(card);
+    return;
+  }
+
   const resumeBlock = (p || others.length) ? el("div", { class: "wp-home-resume" },
     el("div", { class: "wp-label" }, "Pick up where you left off"),
     p ? currentTargetRow(p) : null,
@@ -87,9 +95,9 @@ async function renderHome() {
     !p && !others.length && !(settings.learnTopics || []).length ? el("div", { class: "wp-home-examples" },
       el("span", { class: "wp-muted" }, "Try"), ...EXAMPLES.map(t =>
         el("button", { class: "wp-home-example", onclick: () => { input.value = t; input.focus(); } }, `“${t}”`))) : null,
+    exploreLine(p),
     resumeBlock,
     savedBlock(),
-    learnBlock(),
     el("div", { class: "wp-label wp-home-break-label" }, p ? "Or take a break" : "Just browsing? Take a break"),
     breakChips(takeBreak)].filter(Boolean));
   host.prepend(card);
@@ -201,13 +209,24 @@ function currentTargetRow(p) {
       el("button", { class: "wp-btn wp-btn-text", onclick: setAsideTarget }, "Set aside")));
 }
 
-function pausedTargetRow(t) {
+// What picking this aim up would mean, in a few words: the study topic that needs review or comes
+// next, or the video you stopped partway through.
+function nextStep(t) {
+  const n = t.study?.next;
+  if (n) return n.kind === "review" ? `Next: review ${n.title}` : n.kind === "topic" ? `Next: ${n.title}` : "Next: put it to work";
   const v = t.recent?.[0];
+  if (v?.title && v.d > 0 && v.t > 30 && v.t < v.d * 0.9) return `Next: finish “${v.title}” · ${Math.max(1, Math.round((v.d - v.t) / 60))} min left`;
+  return null;
+}
+
+function pausedTargetRow(t) {
+  const v = t.recent?.[0], next = nextStep(t);
   return el("div", { class: "wp-home-row" },
     v ? el("button", { class: "wp-home-row-thumb", title: `Resume: ${v.title}`, onclick: () => resumeTarget(t.id) }, thumb(v, "wp-thumb-xs")) : null,
     el("div", { class: "wp-home-row-text" },
       el("div", { class: "wp-strong wp-ellipsis" }, t.text),
-      el("div", { class: "wp-muted wp-home-meta" }, targetMeta(t))),
+      el("div", { class: "wp-muted wp-home-meta" }, targetMeta(t)),
+      next ? el("div", { class: "wp-home-next wp-ellipsis" }, next) : null),
     el("button", { class: "wp-btn wp-btn-tonal", onclick: () => resumeTarget(t.id) }, "Resume"));
 }
 

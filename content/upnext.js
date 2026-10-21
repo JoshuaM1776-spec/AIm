@@ -6,6 +6,7 @@ function upNextItems(p) {
   const pool = (p.allowed || []).filter(v => v.id !== currentId && v.title);
   const lastQ = p.searches?.[p.searches.length - 1]?.q;
   const fromLast = pool.filter(v => v.q === lastQ);
+  if (p.learn && !lastQ) return pool.slice(0, 12); // exploring: today's picks, in their order
   return (fromLast.length >= 3 ? fromLast : pool.slice().reverse()).slice(0, 12);
 }
 
@@ -21,13 +22,14 @@ function renderUpNext() {
   $("#wp-study")?.remove();
   const items = upNextItems(p);
   const lastQ = p.searches?.[p.searches.length - 1]?.q;
-  const key = `${currentId}|${lastQ}|${items.map(v => v.id).join(",")}`;
+  const key = `${currentId}|${lastQ}|${p.learn || ""}|${currentInfo?.title || ""}|${items.map(v => v.id).join(",")}`;
   if (existing && existing.parentElement === host && existing.dataset.key === key) return;
   existing?.remove();
   host.prepend(el("div", { id: "wp-upnext", class: "wp wp-upnext", "data-key": key },
     el("div", { class: "wp-upnext-head" },
-      el("div", { class: "wp-strong" }, p.learn && !lastQ ? "More from your topics" : "Up next from your search"),
-      el("div", { class: "wp-muted wp-ellipsis" }, lastQ ? `“${lastQ}”` : p.learn ? p.learn : p.text)),
+      el("div", { class: "wp-strong" }, p.learn && !lastQ ? "More to explore" : "Up next from your search"),
+      el("div", { class: "wp-muted wp-ellipsis" }, lastQ ? `“${lastQ}”` : p.learn ? "Today's picks" : p.text)),
+    goDeeperRow(p),
     ...(items.length
       ? items.map(v => el("a", { class: "wp-upnext-item", href: `/watch?v=${encodeURIComponent(v.id)}`, title: v.title || "" },
           // A background image: if the thumbnail can't load, a grey box remains, not a broken-image icon.

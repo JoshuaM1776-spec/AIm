@@ -288,7 +288,11 @@ function recentVideos(p, n = 7) {
 function studyProgress(p) {
   const st = p.study;
   if (!st || st.endedAt || !st.topics?.length) return null;
-  return { topic: Math.min(st.topics.length, (st.current || 0) + 1), of: st.topics.length, checked: st.topics.filter(t => t.check).length };
+  // The next step: a topic a check said needs work, else the next one not checked yet.
+  const review = st.topics.find(t => t.check?.objectives?.some(o => o.status !== "demonstrated"));
+  const cur = st.topics[st.current || 0], todo = cur && !cur.check ? cur : st.topics.find(t => !t.check);
+  const next = review ? { kind: "review", title: review.title } : todo ? { kind: "topic", title: todo.title } : { kind: "apply", title: st.title };
+  return { topic: Math.min(st.topics.length, (st.current || 0) + 1), of: st.topics.length, checked: st.topics.filter(t => t.check).length, next };
 }
 
 // Where to land when an aim is resumed: the last video, at the moment you left it; otherwise
@@ -468,10 +472,12 @@ async function setPurposeLimit({ minutes, add }) {
 }
 
 // Clarifying is not pivoting: same goal, said more precisely.
-async function refinePurpose(text) {
+// With deeper, exploring becomes an aim: same videos and time, no longer marked as exploring.
+async function refinePurpose(text, deeper = false) {
   const s = await readAll();
   text = clip(text, 300);
   if (!s.purpose || !text) return { result: "error", message: "Nothing to change." };
+  if (deeper) delete s.purpose.learn;
   s.purpose.text = text;
   s.purpose.vague = isVague(text);
   s.purpose.path[s.purpose.path.length - 1].text = text;
@@ -570,7 +576,8 @@ async function checkVideo(video) {
   const p = s.purpose, v = video || {};
   if (!p || !v.id || (await getSettings()).strict) return { fits: false };
   const channel = clip(v.channel, 200);
-  const sameChannel = !!channel && (p.videos || []).some(w => w.channel === channel);
+  // Exploring, the channels behind your picks count too: you came to look around them.
+  const sameChannel = !!channel && [...(p.videos || []), ...(p.learn ? p.allowed || [] : [])].some(w => w.channel === channel);
   const fits = sameChannel || (meaningfulWords(v.title).length > 0 && searchFits(p, clip(v.title, 300)));
   if (!fits) return { fits: false };
   allow(p, [{ id: v.id, title: v.title, channel }], [], "");

@@ -1,5 +1,5 @@
 {
-  "at": "2026-10-21T02:54:47.768Z",
+  "at": "2026-10-21T04:55:35.744Z",
   "checks": [
     {
       "name": "home: Aim's card replaces the feed",
@@ -49,32 +49,32 @@
     {
       "name": "results: selector resultVideos",
       "ok": true,
-      "detail": "20"
+      "detail": "22"
     },
     {
       "name": "results: selector resultTitleLabel",
       "ok": true,
-      "detail": "20"
+      "detail": "22"
     },
     {
       "name": "results: selector resultMeta",
       "ok": true,
-      "detail": "20 / 0 / 0"
+      "detail": "22 / 0 / 0"
     },
     {
       "name": "results: selector resultChannel",
       "ok": true,
-      "detail": "40 / 40 / 60"
+      "detail": "44 / 44 / 66"
     },
     {
       "name": "results: selector itemWatchLink",
       "ok": true,
-      "detail": "169"
+      "detail": "198"
     },
     {
       "name": "results: selector itemTitle",
       "ok": true,
-      "detail": "20 / 229"
+      "detail": "22 / 270"
     },
     {
       "name": "results: at least 5 videos found",
@@ -109,7 +109,7 @@
     {
       "name": "results: Aim keeps them for the aim, most with a length",
       "ok": true,
-      "detail": "19 of 19: 5:01 3:13 4:56 39:00"
+      "detail": "21 of 21: 5:01 3:13 5:21 1:35:00"
     },
     {
       "name": "results: a video to open",
@@ -194,7 +194,12 @@
     {
       "name": "channel rows: each has an @handle and a name",
       "ok": true,
-      "detail": "/@ScienceMax Science Max - Scholastic, /@Scienceabc Science ABC, /@becausescience Because Science, /@ScienceMagazine Science Magazine, /@NGScience Next Generation Science"
+      "detail": "/@ScienceMax Science Max - Scholastic, /@Scienceabc Science ABC, /@ScienceMagazine Science Magazine, /@sciencechannel Science Channel, /@becausescience Because Science"
+    },
+    {
+      "name": "home: one Explore line under the box",
+      "ok": true,
+      "detail": ""
     },
     {
       "name": "channel: Veritasium (@veritasium)",
@@ -204,7 +209,7 @@
     {
       "name": "channel: Kurzgesagt (@kurzgesagt)",
       "ok": true,
-      "detail": "5 videos, 8 Shorts, id UCsXVk37bltHxD1rDPwtNM8Q"
+      "detail": "8 videos, 8 Shorts, id UCsXVk37bltHxD1rDPwtNM8Q"
     },
     {
       "name": "channel: SciShow (@SciShow)",
@@ -382,12 +387,12 @@
       "detail": "28 of 36"
     },
     {
-      "name": "home: Learn something shows a row",
+      "name": "Explore shows picks, with an end",
       "ok": true,
       "detail": ""
     },
     {
-      "name": "home: Quick review shows Shorts",
+      "name": "Explore: Quick review shows Shorts",
       "ok": true,
       "detail": ""
     },
@@ -428,27 +433,27 @@
         1
       ],
       "resultVideos": [
-        20
+        22
       ],
       "resultTitleLabel": [
-        20
+        22
       ],
       "resultMeta": [
-        20,
+        22,
         0,
         0
       ],
       "resultChannel": [
-        40,
-        40,
-        60
+        44,
+        44,
+        66
       ],
       "itemWatchLink": [
-        169
+        198
       ],
       "itemTitle": [
-        20,
-        229
+        22,
+        270
       ],
       "ads": 0
     },
@@ -515,7 +520,7 @@
       "handle": "@kurzgesagt",
       "hintId": "UCsXVk37bltHxD1rDPwtNM8Q",
       "id": "UCsXVk37bltHxD1rDPwtNM8Q",
-      "videos": 5,
+      "videos": 8,
       "shorts": 8,
       "newest": "You Will Only Like Half of This Video"
     },
@@ -617,7 +622,7 @@
       "id": "UCLA_DiR1FfKNvjuUpBHmylQ",
       "videos": 8,
       "shorts": 8,
-      "newest": "U.S. Spacewalk Preview News Conference (Oct. 20, 2026)"
+      "newest": "NASA Moon Base: Rovers and Lunar Terrain Vehicles (October 2026 Update)"
     },
     {
       "topic": "Space",
@@ -637,7 +642,7 @@
       "id": "UC6uKrU_WqJ1R2HMTY3LIx5Q",
       "videos": 8,
       "shorts": 8,
-      "newest": "[4K] Watch the FIRST Orbital Starship Mission!!!"
+      "newest": "The Genius Reason Why SpaceX Deleted A Grid Fin"
     },
     {
       "topic": "Engineering",
@@ -767,7 +772,7 @@
       "id": "UC8butISFwT-Wl7EV0hUK0BQ",
       "videos": 8,
       "shorts": 8,
-      "newest": "Inside an AI Factory – Power, Cooling, and GPUs Explained"
+      "newest": "Building an AI Data Center – Grid Power, Liquid Cooling, & Cloud Economics"
     },
     {
       "topic": "Coding",

@@ -37,7 +37,7 @@ const STAGES = [
   { id: "watching", name: "Watching", title: "How strict should Aim be?", q: `${BRAND} always asks what you're here for, then keeps the videos that fit. Choose what else steps aside.` }
 ];
 const KEYS = ["homeCard", "learnRow", "learnTopics", "hideShorts", "learnShorts", "hideRecs", "noAutoplay", "hideFeeds", "strict"];
-const greeting = d => (!d.homeCard ? "feed" : d.learnRow === false ? "clean" : "channels");
+const greeting = d => (!d.homeCard ? "feed" : "clean");
 
 const S = { cur: null, d: null, stage: 0, review: false, wizard: true, view: "after", data: { videos: {}, shorts: {} }, avoid: {}, readonly: false, applied: false };
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -120,10 +120,7 @@ function homeView(d, after) {
   const main = node("div", { class: "yt-main" });
   if (after && d.homeCard) {
     main.append(node("div", { class: "aim-ask", "data-go": "home" }, node("img", { src: MARK, alt: "" }), node("b", {}, "What brings you here?"), node("span", {}, "Tell me what you're looking for…")));
-    const vids = videosFor(d, 2);
-    if (d.learnRow !== false) main.append(node("div", { "data-go": "home" },
-      node("div", { class: "yt-head" }, node("h3", {}, "Learn something"), node("small", {}, "From channels you choose"), node("span", { class: "tag" }, "Curated")),
-      vids.length ? node("div", { class: "yt-cards" }, vids.map(card)) : node("div", { class: "yt-gone" }, "Pick topics below, and new videos from channels that teach them show here.")));
+    main.append(node("div", { class: "aim-explore", "data-go": "home" }, node("span", {}, "Not sure what you're looking for?"), node("b", {}, "Explore")));
   } else {
     main.append(node("div", { "data-go": "home" }, node("div", { class: "yt-head" }, node("h3", {}, "Recommended for you")),
       node("div", { class: "yt-cards" }, [0, 1].map(loudCard))));
@@ -190,12 +187,12 @@ function set(key, value) {
   S.d = { ...S.d, [key]: value };
   draw();
 }
-// Topic picks and the way to your channels: under "Videos from channels I choose", and under
-// "Only Shorts from selected channels" while none are chosen.
+// Topic picks and the way to your channels: under "Only Shorts from selected channels" while none
+// are chosen. (Your interests are otherwise picked in Explore, on YouTube.)
 function channelPicks(d) {
   const on = new Set(d.learnTopics || []);
   const learnFrom = Object.values(S.avoid).filter(r => r.action === "prefer").length;
-  return node("div", { class: "under" }, node("div", { class: "group-label", style: "margin-top:4px" }, "Learn something about…"),
+  return node("div", { class: "under" }, node("div", { class: "group-label", style: "margin-top:4px" }, "Your interests"),
     node("div", { class: "seg", role: "group", "aria-label": "Topics" }, LEARN_TOPICS.map(t => node("button", { type: "button", "aria-pressed": String(on.has(t.id)), disabled: S.readonly,
       onclick: () => set("learnTopics", on.has(t.id) ? [...on].filter(x => x !== t.id) : [...on, t.id]) }, t.name))),
     node("p", { class: "hint" }, learnFrom ? `Plus ${learnFrom} channel${learnFrom === 1 ? "" : "s"} you learn from. ` : "",
@@ -207,9 +204,7 @@ function stagePanel(id) {
   if (id === "home") {
     const g = greeting(d);
     return [
-      opt("A clean page with my aim", "Just \u201cWhat brings you here?\u201d", g === "clean", () => { S.d = { ...S.d, homeCard: true, learnRow: false }; draw(); }),
-      opt("Videos from channels I choose", "Your aim, plus a few new videos from channels that teach what you want to learn.", g === "channels", () => { S.d = { ...S.d, homeCard: true, learnRow: true }; draw(); }),
-      g === "channels" ? channelPicks(d) : null,
+      opt("A clean page with my aim", "Just \u201cWhat brings you here?\u201d, with Explore one tap away for when you're not sure.", g === "clean", () => { S.d = { ...S.d, homeCard: true }; draw(); }),
       opt("The regular YouTube feed", "Recommendations, as YouTube chooses them.", g === "feed", () => { S.d = { ...S.d, homeCard: false }; draw(); })].flat();
   }
   if (id === "shorts") {
@@ -235,7 +230,7 @@ function stagePanel(id) {
 }
 
 const LABELS = {
-  homeCard: d => ({ clean: "A clean page with your aim", channels: "Videos from channels you choose", feed: "The regular feed" }[greeting(d)]),
+  homeCard: d => ({ clean: "A clean page with your aim, and Explore", feed: "The regular feed" }[greeting(d)]),
   learnTopics: d => ((d.learnTopics || []).length ? LEARN_TOPICS.filter(t => d.learnTopics.includes(t.id)).map(t => t.name).join(", ") : "No topics"),
   shorts: d => ({ off: "Hidden", topics: "Only from selected channels", all: "All Shorts" }[shortsMode(d)]),
   watching: d => [d.strict ? "Strictly on my aim" : "Asks once", d.hideRecs ? "only your search's videos" : "recommendations", d.noAutoplay ? "autoplay off" : "autoplay on"].join(", "),
@@ -244,7 +239,7 @@ const LABELS = {
 const fill = (el, ...kids) => el.replaceChildren(...kids.flat().filter(k => k != null && k !== false));
 
 function reviewPanel() {
-  const rows = [["Homepage", LABELS.homeCard, 0], ...(greeting(S.d) === "channels" || shortsMode(S.d) === "topics" ? [["Learn something", LABELS.learnTopics, 0]] : []), ["Shorts", LABELS.shorts, 1], ["Watching", LABELS.watching, 2]];
+  const rows = [["Homepage", LABELS.homeCard, 0], ...(shortsMode(S.d) === "topics" ? [["Your interests", LABELS.learnTopics, 1]] : []), ["Shorts", LABELS.shorts, 1], ["Watching", LABELS.watching, 2]];
   return [node("div", { class: "count" }, "Your design"), node("h2", {}, S.applied ? "It's on" : "Here's your YouTube"),
     node("p", { class: "q" }, S.applied ? "Open YouTube to see it. Change anything here any time." : "Before, and with your choices. Apply it, and that's how YouTube looks from now on."),
     node("ul", { class: "summary" }, rows.map(([label, fn, i]) => node("li", {}, node("span", {}, node("b", {}, label), fn(S.d)),

@@ -490,6 +490,29 @@ test("a video the searches didn't find still fits when it's from a channel you w
   assert.strictEqual(await fits({ id: "t2", title: "Sourdough crumb", channel: "Someone" }), false, "strict mode: only what your searches found");
 });
 
+test("exploring: any video from the channels behind today's picks plays without asking; Go deeper makes it an aim", async () => {
+  const env = fresh();
+  await env.run(`startPurpose({ text: "Exploring History", video: { id: "h1", title: "The fall of Rome", channel: "OverSimplified" },
+    learn: { topic: "History", videos: [{ id: "h2", title: "Byzantium", channel: "Kings and Generals" }] } })`);
+  const fits = async v => (await env.run(`checkVideo(${JSON.stringify(v)})`)).fits;
+  assert.strictEqual(await fits({ id: "k9", title: "Battle of Hastings", channel: "Kings and Generals" }), true, "a channel from the picks");
+  assert.strictEqual(await fits({ id: "z9", title: "Gaming setup tour", channel: "Tech Guy" }), false);
+  await env.run(`refinePurpose("The fall of Rome", true)`);
+  assert.strictEqual(env.local.purpose.text, "The fall of Rome");
+  assert.ok(!env.local.purpose.learn && env.local.purpose.allowed.some(v => v.id === "h1"), "no longer exploring, same videos");
+});
+
+test("a set-aside study aim knows its next step: review first, then the next topic", async () => {
+  const env = fresh();
+  await env.run(`startPurpose({ text: "Biology exam" })`);
+  await env.run(`startStudy({ title: "Biology", topics: [{ title: "Glycolysis", brief: "", searches: ["glycolysis"] }, { title: "Krebs cycle", brief: "", searches: ["krebs cycle"] }] })`);
+  let p = env.local.purpose;
+  assert.deepStrictEqual(JSON.parse(JSON.stringify((await env.run(`studyProgress(${JSON.stringify(p)})`)).next)), { kind: "topic", title: "Glycolysis" });
+  await env.run(`updateStudy({ topicId: ${JSON.stringify(p.study.topics[0].id)}, check: { assessmentId: "a1", objectives: [{ text: "Net ATP", status: "partial" }] } })`);
+  p = env.local.purpose;
+  assert.deepStrictEqual(JSON.parse(JSON.stringify((await env.run(`studyProgress(${JSON.stringify(p)})`)).next)), { kind: "review", title: "Glycolysis" });
+});
+
 // ---------- activity ----------
 test("recent purposes: newest first, distinct, without the current one", async () => {
   const env = fresh();

@@ -190,13 +190,13 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     await design.click(".opt:has-text('The regular YouTube feed')");
     step("choosing YouTube's feed changes the preview at once", !(await prev()).includes("What brings you here?") && (await prev()).includes("Recommended for you"));
     await design.click(".opt:has-text('A clean page with my aim')");
-    step("a clean page: just What brings you here, no videos", (await prev()).includes("What brings you here?") && !(await prev()).includes("Learn something"));
-    await design.click(".opt:has-text('Videos from channels I choose')");
-    await design.click(".seg button:text-is('Math')");
-    step("picking a topic adds Learn something to the preview, from that topic's channels", (await prev()).includes("Learn something") && (await prev()).includes("3Blue1Brown"));
+    step("a clean page: What brings you here, with Explore one tap away, no videos", (await prev()).includes("What brings you here?") && (await prev()).includes("Explore") &&
+      !(await prev()).includes("Learn something"));
+    step("the Home stage has two choices, not three", (await design.$$(".panel .opt")).length === 2);
     await design.click("#next");
     step("Shorts: hidden to start", (await prev()).includes("No Shorts"));
     await design.click(".opt:has-text('Only Shorts from selected channels')");
+    await design.click(".seg button:text-is('Math')");
     step("only from my topics: a Quick review row in the preview", (await prev()).includes("Quick review"));
     await design.click("#next");
     step("Watching: the watch page, with only your search's videos beside it", (await prev()).includes("Up next from your search") && !(await prev()).includes("Recommended"));
@@ -214,7 +214,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     await design.click("#apply");
     await design.waitForSelector("#openYouTube");
     let st = await store();
-    step("Apply saves the design", st.settings.learnShorts === true && st.settings.hideShorts === true && st.settings.learnRow === true && st.settings.learnTopics.join() === "math" && !!st.design?.appliedAt);
+    step("Apply saves the design", st.settings.learnShorts === true && st.settings.hideShorts === true && st.settings.learnTopics.join() === "math" && !!st.design?.appliedAt);
     // Later: straight to a stage, and clicking the preview opens the part you clicked.
     await design.goto(`chrome-extension://${extId}/design.html#home`);
     await design.waitForSelector(".yt");
@@ -646,43 +646,70 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   st = await store();
   step("Got my answer ends the aim as found, with no questions", !st.purpose && st.history[st.history.length - 1].outcome === "yes" && !(await p.$(".wp-done-dialog")));
 
-  // ---------- Learn something ----------
+  // ---------- Explore ----------
   await setLocal({ onboarding: { welcomed: true, tips: { home: true, chip: true, results: true }, hsTour: true }, learn: {} });
   await p.goto("https://www.youtube.com/");
-  await p.waitForSelector("#wp-home .wp-learn-invite");
-  step("Learn something: one quiet line inviting you to pick topics, when none are chosen", (await text(".wp-learn-invite")).includes("Choose topics") &&
-    (await p.$eval(".wp-learn-invite", n => n.getBoundingClientRect().height)) < 40);
-  await p.click('.wp-learn-invite button[aria-label="No thanks"]');
-  await p.waitForTimeout(300);
-  step("No thanks puts the invitation away for good", !(await p.$(".wp-learn-invite")) && (await store()).onboarding.tips.learn === true);
-  await sw.evaluate(() => serial(() => setSetting("learnTopics", ["math"])));
-  await p.goto("https://www.youtube.com/");
-  await p.waitForSelector("#wp-home .wp-learn-row .wp-learn-item", { timeout: 15000 });
-  const learnIds = await p.$$eval(".wp-learn-row .wp-learn-item", ns => ns.map(n => n.querySelector(".wp-thumb").style.backgroundImage.match(/vi\/([^/]+)\//)[1]));
-  step("six new videos from the topic's channels: newest first, taking turns, no Shorts; an id looked up from the channel page",
-    learnIds.join() === "tbobvid1,numbvid1,khanvid1,sumavid1,tbobvid2,numbvid2", learnIds.join());
-  step("each says its channel and topic", (await text(".wp-learn-row .wp-learn-item")).includes("3Blue1Brown · Math") && (await text(".wp-learn-row")).includes("lesson 1 & more"));
+  await p.waitForSelector("#wp-home .wp-explore-open");
+  step("the homepage offers Explore in one line under the box, and no row of videos", (await text(".wp-explore-line")).includes("Not sure what you're looking for?") &&
+    !(await p.$("#wp-home .wp-learn")));
+  await p.click(".wp-explore-open");
+  await p.waitForSelector("#wp-home.wp-explore .wp-explore-head");
+  step("Explore needs no setup: a bit of everything, with interests to pick", (await text("#wp-home")).includes("A bit of everything") && (await text("#wp-home")).includes("Pick interests") &&
+    !/\bnull\b/.test(await text(".wp-explore-head")));
+  await p.waitForSelector("#wp-home .wp-explore-grid, #wp-home .wp-explore-end", { timeout: 20000 });
+  await p.click('.wp-explore-head button:has-text("Pick interests")');
+  await p.click('.wp-explore-interests button:text-is("Math")');
+  await p.waitForTimeout(400);
+  step("picking an interest right there saves it", (await store()).settings.learnTopics.join() === "math" && (await text(".wp-explore-head")).includes("Your interests: Math"));
+  await p.waitForFunction(() => document.querySelectorAll("#wp-home .wp-explore-grid .wp-learn-item").length >= 8, null, { timeout: 20000 });
+  const pickIds = () => p.$$eval("#wp-home .wp-explore-grid .wp-learn-item", ns => ns.map(n => n.querySelector(".wp-thumb").style.backgroundImage.match(/vi\/([^/]+)\//)[1]));
+  const exIds = await pickIds();
+  step("from your interests: newest first, taking turns, no Shorts; an id looked up from the channel page",
+    exIds.slice(0, 8).join() === "tbobvid1,numbvid1,khanvid1,sumavid1,tbobvid2,numbvid2,khanvid2,sumavid2", exIds.join());
+  step("each says its channel and topic, and the list says where it ends", (await text(".wp-explore-grid .wp-learn-item")).includes("3Blue1Brown · Math") &&
+    (await text("#wp-home")).includes("That's today's picks."));
+  if (process.env.SHOTS) { await p.waitForTimeout(400); await p.screenshot({ path: `${process.env.SHOTS}/explore.png`, fullPage: true }); }
   st = await store();
   step("the feeds are cached for a day; a channel that can't be found is noted", !!st.learn.channels["@3blue1brown"].videos.length &&
     st.learn.channels["@standupmaths"].id === "UCSju5G2aFaWMqn-_0YBtq5A" && st.learn.channels["@standupmaths"].videos[0]?.id === "sumavid1" && st.learn.channels["@Mathologer"].failed === true);
-  await p.click(".wp-learn-row .wp-learn-item");
+  await p.click('.wp-explore-end button:text-is("Show others")');
+  await p.waitForTimeout(500);
+  const exIds2 = await pickIds();
+  step("Show others moves past what you've seen, never back to it", exIds2.length > 0 && !exIds2.some(id => exIds.includes(id)), exIds2.join());
+  await p.click('.wp-explore-end button:text-is("Show others")');
+  await p.waitForTimeout(500);
+  step("and when they run out, that's it for today", (await text(".wp-explore-end")).includes("That's everything new for today"));
+  await p.goto("https://www.youtube.com/");
+  await p.click(".wp-explore-open");
+  await p.waitForSelector("#wp-home .wp-explore-grid .wp-learn-item", { timeout: 20000 });
+  await p.click("#wp-home .wp-explore-grid .wp-learn-item");
   await p.waitForURL(/watch\?v=tbobvid1/);
   st = await store();
-  step("picking one starts a light aim from your topics", st.purpose?.text === "Exploring: 3Blue1Brown lesson 1 & more" && st.purpose.learn === "Math" &&
-    st.purpose.allowed.length >= 6);
-  await p.waitForSelector("#wp-upnext");
-  step("Up next shows more from your topics", (await text("#wp-upnext")).includes("More from your topics") && (await text("#wp-upnext")).includes("Numberphile lesson 1"));
+  step("picking one starts a light aim, Exploring Math, with today's picks to watch", st.purpose?.text === "Exploring Math" && st.purpose.learn === "Math" &&
+    st.purpose.allowed.length >= 8, st.purpose?.text);
+  await p.waitForSelector("#wp-upnext .wp-deeper", { timeout: 8000 });
+  const ex = await text("#wp-upnext");
+  step("the sidebar: More to explore, with one quiet Go deeper line", ex.includes("More to explore") && ex.includes("Numberphile lesson 1") && ex.includes("Go deeper on this?"));
+  if (process.env.SHOTS) await p.screenshot({ path: `${process.env.SHOTS}/go-deeper.png` });
+  await p.click('#wp-upnext .wp-deeper button:text-is("Make it my aim")');
+  await p.waitForTimeout(600);
+  st = await store();
+  step("Go deeper turns exploring into an aim, keeping the video and its time", st.purpose?.text === "3Blue1Brown lesson 1 & more" && !st.purpose.learn &&
+    st.purpose.allowed.some(v => v.id === "tbobvid1") && (await text("#wp-chip")).includes("3Blue1Brown lesson 1") && !(await p.$("#wp-upnext .wp-deeper")), st.purpose?.text);
   await sw.evaluate(() => serial(() => recordTick(10, { id: "tbobvid1", title: "3Blue1Brown lesson 1 & more", channel: "3Blue1Brown", t: 30, d: 600 })));
   await sw.evaluate(() => serial(() => finishPurpose("yes")));
   await sw.evaluate(() => serial(() => setSetting("learnOff", ["@numberphile"])));
   await p.goto("https://www.youtube.com/");
-  await p.waitForSelector("#wp-home .wp-learn-row .wp-learn-item", { timeout: 15000 });
-  const learnIds2 = await p.$$eval(".wp-learn-row .wp-learn-item", ns => ns.map(n => n.querySelector(".wp-thumb").style.backgroundImage.match(/vi\/([^/]+)\//)[1]));
-  step("what you watched isn't offered again, and a channel you took out is gone", !learnIds2.includes("tbobvid1") && !learnIds2.some(id => id.startsWith("numb")), learnIds2.join());
+  await p.click(".wp-explore-open");
+  await p.waitForSelector("#wp-home .wp-explore-grid .wp-learn-item", { timeout: 20000 });
+  const exIds3 = await pickIds();
+  step("what you watched isn't offered again, and a channel you took out is gone", !exIds3.includes("tbobvid1") && !exIds3.some(id => id.startsWith("numb")), exIds3.join());
+  await p.click(".wp-explore-back");
+  step("back returns to What brings you here?", (await text("#wp-home")).includes("What brings you here?") && !(await p.$("#wp-home.wp-explore")));
   await sw.evaluate(() => serial(async () => { await startPurpose({ text: "fix a leaky faucet" }); }));
   await p.goto("https://www.youtube.com/");
   await p.waitForSelector("#wp-home .wp-home-current");
-  step("with an aim going, Learn something stays out of the way", !(await p.$(".wp-learn")));
+  step("with an aim going, Explore is still one line away", (await text(".wp-explore-line")).includes("Or find something new?"));
 
   // ---------- Shorts from your topics: a Quick review ----------
   await sw.evaluate(() => serial(async () => {
@@ -695,6 +722,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     await setSetting("learnShorts", true);
   }));
   await p.goto("https://www.youtube.com/");
+  await p.click(".wp-explore-open");
   await p.waitForSelector("#wp-home .wp-review-item", { timeout: 15000 });
   if (process.env.SHOTS) { await p.waitForTimeout(300); await (await p.$("#wp-home")).screenshot({ path: `${process.env.SHOTS}/quick-review.png` }); }
   const reviewIds = await p.$$eval(".wp-review-item", ns => ns.map(n => n.querySelector(".wp-review-thumb").style.backgroundImage.match(/vi\/([^/]+)\//)[1]));

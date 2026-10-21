@@ -23,9 +23,7 @@ async function setSetting(key, value) {
 // The design, in words, one line per stage, each with a link straight to that stage. The switches
 // themselves live in Design your YouTube only, so there's one place to change them.
 function designSummary(S) {
-  const topics = (S.learnTopics || []).length;
-  const home = S.homeCard === false ? "YouTube's own feed"
-    : S.learnRow !== false && topics ? `A clean page, plus new videos from ${topics} topic${topics > 1 ? "s" : ""}` : "A clean page with your aim";
+  const home = S.homeCard === false ? "YouTube's own feed" : "A clean page with your aim, and Explore";
   const shorts = S.hideShorts === false ? "Shown" : S.learnShorts ? "Only from selected channels" : "Hidden";
   const watching = [S.hideRecs !== false ? "recommendations hidden" : "recommendations shown",
     S.noAutoplay !== false ? "autoplay off" : "autoplay on", S.hideFeeds !== false ? "feeds hidden" : "feeds shown",

@@ -1,6 +1,6 @@
 // A smoke test against the real youtube.com: loads Aim in Chromium and checks the parts most likely
 // to break when YouTube changes its pages (the selectors in content/youtube.js), plus every channel
-// in Learn something's list. It reports what matched and what didn't; it doesn't change anything.
+// in Explore's list. It reports what matched and what didn't; it doesn't change anything.
 // Needs network access to YouTube (see TESTING.md → Real-YouTube check).
 //
 //   PLAYWRIGHT=… CHROMIUM_PATH=… node tools/real-youtube-check.mjs [out-dir]
@@ -118,15 +118,18 @@ try {
     href: n.querySelector(link)?.getAttribute("href"), name: names.map(s => n.querySelector(s)?.textContent.trim()).find(Boolean) })), [YT.channelRow, YT.channelLink, sels(YT.channelName)]);
   check("channel rows: each has an @handle and a name", rows.length >= 3 && rows.every(r => /^\/@/.test(r.href || "") && r.name), rows.map(r => `${r.href} ${r.name}`).join(", "));
 
-  // ---------- Learn something: every curated channel, through Aim's own code ----------
-  // Every topic and Shorts from your topics on; the home page then fetches each channel (feed, or
-  // channel page when the feed fails) and the background caches what it found.
+  // ---------- Explore: every curated channel, through Aim's own code ----------
+  // Every topic as an interest and Shorts from your topics on; Explore then fetches each channel (feed,
+  // or channel page when the feed fails) and the background caches what it found.
   await worker();
   const handles = [...new Set(TOPICS.flatMap(t => t.channels.map(c => c.handle)))];
-  // The search above started an aim, and Learn something only shows without one.
+  // The search above started an aim; end it first.
   await sw.evaluate(async ids => { await serial(() => finishPurpose("yes")); await serial(() => setOnboarding({ seenAll: true }));
     await serial(() => setSetting("learnTopics", ids)); await serial(() => setSetting("learnShorts", true)); }, TOPICS.map(t => t.id));
   await page.goto("https://www.youtube.com/", { waitUntil: "domcontentloaded" });
+  await page.waitForSelector("#wp-home .wp-explore-open", { timeout: 20000 }).catch(() => {});
+  check("home: one Explore line under the box", await page.$("#wp-home .wp-explore-open"));
+  await page.click("#wp-home .wp-explore-open").catch(() => {});
   const until = Date.now() + 240_000;
   let cache = {};
   while (Date.now() < until) {
@@ -145,8 +148,8 @@ try {
   }
   check("Shorts found for most channels", report.channels.filter(c => c.shorts > 0).length >= report.channels.length / 2,
     `${report.channels.filter(c => c.shorts > 0).length} of ${report.channels.length}`);
-  check("home: Learn something shows a row", await page.$("#wp-home .wp-learn-row .wp-learn-item"));
-  check("home: Quick review shows Shorts", await page.$("#wp-home .wp-review-item"));
+  check("Explore shows picks, with an end", (await page.$$("#wp-home .wp-explore-grid .wp-learn-item")).length >= 8 && await page.$("#wp-home .wp-explore-end"));
+  check("Explore: Quick review shows Shorts", await page.$("#wp-home .wp-review-item"));
   // A Short from the review plays; one YouTube picks (its /shorts page) waits behind Aim's card.
   if (await page.$("#wp-home .wp-review-item")) {
     await page.click("#wp-home .wp-review-item");

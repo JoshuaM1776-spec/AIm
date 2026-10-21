@@ -296,7 +296,7 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] A finished aim that had a study session still shows its topics, what each check showed, and the Put it to work project with your note.
 - [ ] **Study sessions** and **Completed** filter the list; **Print or save as PDF** prints just the record (no buttons).
 
-### 30. Learn something (0.42)
+### 30. Learn something (0.42; replaced by Explore in 0.50, see 39)
 - [ ] With no topics chosen and no aim, YouTube's home page has one quiet line, **Learn something new? Choose topics** (opens Design your YouTube → Home); its × hides it for good.
 - [ ] Pick Math and Engineering: the home page shows **Learn something**, six new videos (three by two) from those channels, newest first, at most two per channel, no Shorts, each labeled with its channel and topic. The first visit takes a few seconds while feeds load; after that it's instant for a day.
 - [ ] **Check every curated channel loads** (Settings lists them, each linked): a channel that never shows up has a wrong handle in content/topics.js.
@@ -369,3 +369,14 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] The homepage card is short: the question, the box, one hint, and on a first visit one line of two examples ("Try …"). No paragraph under the title.
 - [ ] Settings → **Your YouTube** describes the current design in three lines (Home, Shorts, Watching), each with **Change** opening that stage. There are no separate switches for Shorts, recommendations, feeds, autoplay, strict mode or topics anywhere else in Settings.
 - [ ] Settings → **Learn something channels** lists the channels behind your topics, with Take out / Put back; with no topics, it links to Choose topics.
+
+### 39. Explore (0.50)
+- [ ] YouTube's homepage: under the box and examples, one line, **Not sure what you're looking for? Explore**. No row of videos on the homepage.
+- [ ] Explore with no interests: "A bit of everything", picks from several subjects. **Pick interests** shows the subjects as chips; tapping one saves it and the picks change.
+- [ ] With interests: **From your interests** (newest first, taking turns between channels, no Shorts, nothing you've watched) and **Something different** (up to four from subjects you haven't picked; the subjects change daily). About twelve in all.
+- [ ] The list ends with "That's today's picks." **Show others** shows ones you haven't seen; when they run out: "That's everything new for today."
+- [ ] Picking one starts **Exploring <subject>**. Other picks, and other videos from the same channels, play without asking. The sidebar says **More to explore**, with **Go deeper on this? Make it my aim** at the top.
+- [ ] **Make it my aim** turns it into an aim named after the video, keeping the video and its time; the chip shows the new aim and the Go deeper line goes away.
+- [ ] With Shorts from your topics on, Explore shows the Quick review row.
+- [ ] Set-aside aims on the homepage say what's next: "Next: review Glycolysis", "Next: Krebs cycle", or "Next: finish “…” · N min left".
+- [ ] Design your YouTube → Home has two choices: a clean page (with Explore) or YouTube's feed.

@@ -53,9 +53,9 @@ On the server, `supabase/functions/ai/homeschool.ts` holds every rule (approval,
 | `content/video.js` | "In this video" (Aim Plus): beside a video watched for a learning aim, the concepts it covers (from its title, description and chapters), chapter jumps, "See it in another context", and "Test me on this video" when it ends |
 | `content/relax.js` | "Relax with a theme": a break with something you'd enjoy in mind (from a relax request to the librarian), with a slim bar on its results and "More on <theme>" beside each video |
 | `content/filetext.js` | Reads a study guide file (.txt, .docx, .pdf) in the browser for a study session (Aim Plus) |
-| `content/topics.js` | Learn something: the topics and their hand-picked channels (also loaded by Settings) |
-| `content/learn.js` | Learn something: six new videos from your topics on the home page, from YouTube's public channel feeds, cached a day |
-| `content/shorts.js` | Shorts from your topics (a Learn something setting): the Quick review row, matched to what you've learned, and which Shorts may play |
+| `content/topics.js` | Explore: the subjects and their hand-picked channels (also loaded by Settings and the designer) |
+| `content/learn.js` | Explore: about twelve picks worth learning from (your interests, or a bit of everything, plus four from subjects you haven't picked), from hand-picked channels' public feeds or pages, cached a day; Go deeper turns exploring into an aim |
+| `content/shorts.js` | Shorts from your topics: the Quick review row, matched to what you've learned, and which Shorts may play |
 | `content/channels.js` | Your channels on YouTube: Learn from (a "Your channel" badge; the librarian puts them first), For breaks (asks on an aim), Keep out (Hide or Ask first) |
 | `content/subs.js` | Reads your subscriptions on youtube.com/feed/channels (scrolling for the rest) for the Your channels page |
 | `content/notes.js` | Notes on an aim (Aim menu, or the notes icon in the results bar), saved as you type, with "Suggest questions" when signed in |

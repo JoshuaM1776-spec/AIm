@@ -12,7 +12,7 @@ Loudness, from loudest to quietest:
 - **Line:** one line of text with a link and an ×.
 - **On request:** appears only when you open it.
 
-## The list (0.49)
+## The list (0.49, Explore in 0.50)
 
 | Moment | What it's for | Before | Now |
 |---|---|---|---|
@@ -26,7 +26,8 @@ Loudness, from loudest to quietest:
 | **Done with this aim?** | Close the loop | A dialog with five buttons before ending | **One tap.** Done ends it. |
 | **After Done** | Reflect, if you like | A card asking Yes / Partly / No | **One light card:** "32 min on …", the videos, a quiet *Found what you needed? Yes · Partly · No* line that thanks you in place, **Test my understanding** (Plus, learning aims), and **Not done? Pick it back up** in case Done was a slip. "Want more of this?" moved here too (Pathways only). |
 | **Still looking?** (three searches, nothing watched) | Help when stuck | A shaded row with a title, a sentence and two buttons | **Line:** *Still looking? Tell Aim what you need* and an ×. |
-| **Learn something new?** (no topics chosen) | Invite, once | A shaded block with two buttons | **Line:** *Learn something new? Choose topics* and an ×. |
+| **Explore** (homepage) | Curiosity, on purpose | A row of six videos on the homepage, or an invitation to pick topics | **Line:** *Not sure what you're looking for? Explore*. The picks live behind it: finite, with an end. |
+| **Go deeper on this?** (exploring) | Turn curiosity into an aim | (new) | **Line** at the top of More to explore. One tap makes the video's subject your aim. |
 | **First-time tips** | Orientation | Three coach bubbles: the homepage box, the Aim button, the results bar | **Two**, both on the first homepage visit: the box, then the Aim button ("the only button to remember"). The results bar explains itself. |
 | **Welcome tour** | Setup | Five screens, including a two-minute designer | **Three screens, about 30 seconds**: welcome and how it works together; four switches already on, saved as you flip them, with **Customize with a preview** for the full designer; where to find Aim. Plus adds the librarian screen when accounts exist. |
 | **Pathways theme offer** | Curiosity (Homeschool) | Card on the homepage and Today | Unchanged: only with Pathways on, never during a video. |

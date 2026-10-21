@@ -120,61 +120,153 @@ function pickLearn(channels, cache, seen, n = LEARN_SHOWN) {
   return out;
 }
 
-async function loadLearn() {
-  const channels = learnChannels(), shorts = !!settings.learnShorts;
-  const key = channels.map(c => c.handle).join(",") + (shorts ? "+shorts" : "");
-  if (!channels.length) return (learnState = { key, videos: [], shorts: [] });
-  if (learnState?.key === key) return learnState;
-  if (learnLoading?.key === key) return learnLoading.promise;
-  const promise = (async () => {
-    const { learn = {} } = await chrome.storage.local.get("learn");
-    const cache = { ...(learn.channels || {}) }, fresh = {};
-    const stale = channels.filter(c => !cache[c.handle] || Date.now() - (cache[c.handle].at || 0) > LEARN_REFRESH_MS || (shorts && !cache[c.handle].shorts));
-    for (let i = 0; i < stale.length; i += 3) // a few at a time
-      await Promise.all(stale.slice(i, i + 3).map(async c => { fresh[c.handle] = cache[c.handle] = await refreshChannel(c, cache[c.handle], shorts); }));
-    if (Object.keys(fresh).length) send({ type: "learn-cache", channels: fresh });
-    const seen = new Set((await send({ type: "learn-seen" })) || []);
-    learnState = { key, videos: pickLearn(channels, cache, seen),
-      shorts: shorts ? channels.flatMap(c => (cache[c.handle]?.shorts || []).filter(v => !seen.has(v.id)).map(v => ({ ...v, topic: c.topic }))) : [] };
-    learnLoading = null;
-    return learnState;
-  })();
-  learnLoading = { key, promise };
-  return promise;
+// The cache for these channels, fetching the stale ones a few at a time. With onFresh, it's called
+// with what's cached right away, so a page can show something before the fetching is done.
+async function channelCache(channels, shorts, onFresh) {
+  const { learn = {} } = await chrome.storage.local.get("learn");
+  const cache = { ...(learn.channels || {}) }, fresh = {};
+  const stale = channels.filter(c => !cache[c.handle] || Date.now() - (cache[c.handle].at || 0) > LEARN_REFRESH_MS || (shorts && !cache[c.handle].shorts));
+  if (onFresh && stale.length < channels.length) onFresh(cache);
+  for (let i = 0; i < stale.length; i += 3) // a few at a time
+    await Promise.all(stale.slice(i, i + 3).map(async c => { fresh[c.handle] = cache[c.handle] = await refreshChannel(c, cache[c.handle], shorts); }));
+  if (Object.keys(fresh).length) send({ type: "learn-cache", channels: fresh });
+  return { cache, changed: Object.keys(fresh).length > 0 };
 }
 
-// Start a light aim from a video you picked, with the rest of the row for Up next.
+// ---------------- Explore ----------------
+// "Not sure what you're looking for?" A finite set of picks worth learning from: about twelve, from
+// your interests (or, with none chosen, a bit of everything), four of them from subjects you haven't
+// picked. Curated channels only, newest first, nothing you've watched. When they run out, that's it
+// for today: Refresh shows ones you haven't seen, never the same ones again, and never more.
+const EXPLORE_SHOWN = 12, EXPLORE_DIFFERENT = 4;
+let exploreOpen = false;
+const exploreSkip = new Set(); // shown on this page already; Refresh moves past them
+
+// Today's channels. The rotation moves daily, so the mix moves too.
+function exploreChannels() {
+  const on = new Set(settings.learnTopics || []), off = new Set(settings.learnOff || []);
+  const day = Math.floor(Date.now() / 864e5);
+  const one = t => { const cs = t.channels.filter(c => !off.has(c.handle)); return cs.length ? { ...cs[day % cs.length], topic: t.name } : null; };
+  const mine = learnChannels();
+  const others = LEARN_TOPICS.filter(t => !on.has(t.id));
+  if (!mine.length) return { mine: others.map(one).filter(Boolean), different: [] }; // a bit of everything: one channel per subject
+  const have = new Set(mine.map(c => c.handle));
+  const different = Array.from({ length: Math.min(EXPLORE_DIFFERENT, others.length) }, (_, i) => others[(day + i) % others.length])
+    .map(one).filter(c => c && !have.has(c.handle));
+  return { mine, different };
+}
+
+function explorePicks(chs, cache, seen) {
+  const skip = new Set([...seen, ...exploreSkip]);
+  const different = pickLearn(chs.different, cache, skip, EXPLORE_DIFFERENT).map(v => ({ ...v, different: true }));
+  for (const v of different) skip.add(v.id);
+  const mine = pickLearn(chs.mine, cache, skip, EXPLORE_SHOWN - different.length);
+  return { mine, different };
+}
+
+function exploreCard(v, all) {
+  return el("button", { class: "wp-mini wp-learn-item", title: v.title, onclick: () => startLearning(v, all) },
+    thumb(v, "wp-thumb-sm"), el("span", { class: "wp-mini-title" }, v.title), el("span", { class: "wp-learn-meta" }, `${v.channel} · ${v.topic}`));
+}
+
+// Your interests, as chips that save the moment you tap them.
+function interestPicker(onChange) {
+  const on = new Set(settings.learnTopics || []);
+  return el("div", { class: "wp-explore-interests", role: "group", "aria-label": "Your interests" },
+    ...LEARN_TOPICS.map(t => el("button", { class: `wp-chip${on.has(t.id) ? " wp-chip-on" : ""}`, "aria-pressed": String(on.has(t.id)),
+      onclick: async () => {
+        const next = on.has(t.id) ? [...on].filter(x => x !== t.id) : [...on, t.id];
+        const r = await send({ type: "setting", key: "learnTopics", value: next });
+        if (r?.result === "applied") { settings.learnTopics = next; onChange(); }
+      } }, t.name)));
+}
+
+// The Explore view, in place of the homepage card's usual contents.
+function exploreView(card) {
+  const body = el("div", { class: "wp-explore-body" }, el("div", { class: "wp-muted wp-learn-loading" }, "Finding picks worth learning from…"));
+  let editing = false;
+  const names = () => LEARN_TOPICS.filter(t => (settings.learnTopics || []).includes(t.id)).map(t => t.name).join(", ");
+  const head = el("div", { class: "wp-explore-head" });
+  const drawHead = () => head.replaceChildren(...[
+    el("div", { class: "wp-muted" }, (settings.learnTopics || []).length ? `Your interests: ${names()}` : "A bit of everything. Pick interests to shape it."),
+    el("button", { class: "wp-link", onclick: () => { editing = !editing; drawHead(); } }, editing ? "Done" : (settings.learnTopics || []).length ? "Change" : "Pick interests"),
+    editing ? interestPicker(() => { drawHead(); exploreSkip.clear(); fill(); }) : null].filter(Boolean));
+  drawHead();
+
+  let picks = { mine: [], different: [] };
+  const draw = (seenAll = false) => {
+    const all = [...picks.mine, ...picks.different];
+    if (!all.length) return body.replaceChildren(el("div", { class: "wp-muted wp-explore-end" },
+      seenAll ? "That's everything new for today. Come back tomorrow for more." : "Nothing new from these channels right now. Come back tomorrow."));
+    const mixed = !(settings.learnTopics || []).length && !channelsBy("prefer").length;
+    body.replaceChildren(...[
+      el("div", { class: "wp-label" }, mixed ? "Worth a look" : "From your interests"),
+      el("div", { class: "wp-home-minis wp-explore-grid" }, ...picks.mine.map(v => exploreCard(v, all))),
+      picks.different.length ? el("div", { class: "wp-label" }, "Something different") : null,
+      picks.different.length ? el("div", { class: "wp-home-minis wp-explore-grid" }, ...picks.different.map(v => exploreCard(v, all))) : null,
+      el("div", { class: "wp-explore-end" },
+        el("span", { class: "wp-muted" }, "That's today's picks."),
+        el("button", { class: "wp-link", onclick: () => { for (const v of all) exploreSkip.add(v.id); fill(true); } }, "Show others"))].filter(Boolean));
+    if (settings.learnShorts) fillReview(body, reviewShorts);
+  };
+  let reviewShorts = [];
+  const fill = async (refresh = false) => {
+    const chs = exploreChannels(), all = [...chs.mine, ...chs.different];
+    const seen = new Set((await send({ type: "learn-seen" })) || []);
+    const show = cache => { picks = explorePicks(chs, cache, seen); if (body.isConnected) draw(refresh); };
+    const { cache, changed } = await channelCache(all, !!settings.learnShorts, refresh ? null : show);
+    reviewShorts = settings.learnShorts ? chs.mine.flatMap(c => (cache[c.handle]?.shorts || []).filter(v => !seen.has(v.id)).map(v => ({ ...v, topic: c.topic }))) : [];
+    // Fresh videos arrived, or there was nothing to show yet: draw once more. Otherwise leave what's on screen.
+    if (refresh || changed || !body.querySelector(".wp-explore-grid, .wp-explore-end")) show(cache);
+    else if (settings.learnShorts && !body.querySelector(".wp-review")) fillReview(body, reviewShorts);
+  };
+  card.append(
+    brandLine(),
+    el("div", { class: "wp-explore-top" },
+      el("button", { class: "wp-link wp-explore-back", onclick: () => { exploreOpen = false; renderHome(); } }, icon("back"), "What brings you here?")),
+    el("h1", { class: "wp-home-title" }, "Explore"),
+    el("div", { class: "wp-muted wp-explore-lede" }, `A few videos worth learning from, from channels that teach well. When you find something, ${BRAND} can turn it into an aim.`),
+    head, body);
+  fill();
+}
+
+// Start exploring from a pick: a light aim, "Exploring History", with all of today's picks to watch.
+// Already exploring, another pick just joins it.
 async function startLearning(v, row) {
-  const r = await send({ type: "purpose-start", text: `Exploring: ${v.title}`.slice(0, 300),
-    video: { id: v.id, title: v.title, channel: v.channel }, learn: { topic: v.topic, videos: row.filter(x => x.id !== v.id).map(x => ({ id: x.id, title: x.title, channel: x.channel })) } });
-  if (!r || r.result !== "applied") return toast(r?.message || "Couldn't start that. Try again.");
+  const videos = row.map(x => ({ id: x.id, title: x.title, channel: x.channel }));
+  const p = activePurpose();
+  if (p?.learn) await send({ type: "purpose-allow", query: `Explore: ${p.learn}`, videos, lists: [] });
+  else {
+    const r = await send({ type: "purpose-start", text: `Exploring ${v.topic}`.slice(0, 300),
+      video: { id: v.id, title: v.title, channel: v.channel }, learn: { topic: v.topic, videos: videos.filter(x => x.id !== v.id) } });
+    if (!r || r.result !== "applied") return toast(r?.message || "Couldn't start that. Try again.");
+  }
+  exploreOpen = false;
   location.href = `/watch?v=${encodeURIComponent(v.id)}`;
 }
 
-// The home card's block: the row once loaded (filled in when the feeds arrive), or the invitation.
-function learnBlock() {
-  if (activePurpose() || status.totalReached || settings.learnRow === false) return null;
-  if (!(settings.learnTopics || []).length && !channelsBy("prefer").length) {
-    if (status.onboarding?.tips?.learn) return null;
-    // One quiet line, not a block: the offer is there for whoever wants it.
-    return el("div", { class: "wp-learn wp-learn-invite" },
-      el("span", { class: "wp-muted" }, "Learn something new?"),
-      el("button", { class: "wp-link", onclick: () => send({ type: "open-design", stage: "home" }) }, "Choose topics"),
-      el("button", { class: "wp-icon-btn wp-learn-invite-x", "aria-label": "No thanks", title: "No thanks",
-        onclick: e => { send({ type: "onboarding", tip: "learn" }); e.currentTarget.closest(".wp-learn").remove(); } }, svgIcon("close")));
-  }
-  const box = el("div", { class: "wp-learn" },
-    el("div", { class: "wp-row-between" },
-      el("div", { class: "wp-label" }, "Learn something"),
-      el("button", { class: "wp-link wp-learn-edit", onclick: () => send({ type: "open-design", stage: "home" }) }, "Your topics")),
-    el("div", { class: "wp-muted wp-learn-loading" }, "Finding new videos from your topics…"));
-  loadLearn().then(({ videos, shorts }) => {
-    if (!box.isConnected) return;
-    box.querySelector(".wp-learn-loading")?.remove();
-    fillReview(box, shorts);
-    if (!videos.length) return box.append(el("div", { class: "wp-muted" }, "Nothing new from your topics right now. Check back tomorrow."));
-    box.append(el("div", { class: "wp-home-minis wp-learn-row" }, ...videos.map(v => el("button", { class: "wp-mini wp-learn-item", title: v.title, onclick: () => startLearning(v, videos) },
-      thumb(v, "wp-thumb-sm"), el("span", { class: "wp-mini-title" }, v.title), el("span", { class: "wp-learn-meta" }, `${v.channel} · ${v.topic}`)))));
-  });
-  return box;
+// The homepage's one line about Explore.
+function exploreLine(p) {
+  if (status.totalReached) return null;
+  return el("div", { class: "wp-explore-line" },
+    el("span", { class: "wp-muted" }, p ? "Or find something new?" : "Not sure what you're looking for?"),
+    el("button", { class: "wp-btn wp-btn-tonal wp-explore-open", onclick: () => { exploreOpen = true; renderHome(); } }, icon("compass"), "Explore"));
+}
+
+// "Go deeper": on a video you're exploring, one quiet line turns it into an aim.
+const deeperText = title => String(title || "").replace(/#\S+/g, "").replace(/\s+[|｜•·-]\s+[^|｜•·]*$/, "").replace(/[!?.…]+$/, "").replace(/\s+/g, " ").trim().slice(0, 120);
+function goDeeperRow(p) {
+  if (!p?.learn || !currentId) return null;
+  const title = p.allowed?.find(v => v.id === currentId)?.title || (currentInfo?.id === currentId ? currentInfo.title : "");
+  const text = deeperText(title);
+  if (text.length < 4) return null;
+  return el("div", { class: "wp-deeper" },
+    el("span", { class: "wp-muted" }, "Go deeper on this?"),
+    el("button", { class: "wp-link", onclick: async () => {
+      const r = await send({ type: "purpose-refine", text, deeper: true });
+      if (!r || r.result !== "applied") return toast(r?.message || "Couldn't change that. Try again.");
+      applyStatus(await send({ type: "status" }));
+      renderChip(); renderUpNext();
+      toast(`Your aim: ${text}. ${BRAND} keeps YouTube on it.`);
+    } }, "Make it my aim"));
 }
