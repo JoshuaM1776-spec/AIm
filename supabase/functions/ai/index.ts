@@ -274,6 +274,12 @@ const deps: Deps = {
     if (error) throw error;
     return { calls: data.length, tokens: data.reduce((s, r) => s + r.input_tokens + r.output_tokens, 0) };
   },
+  async taskCountSince(userId, task, since) {
+    const { count, error } = await admin.from("ai_usage").select("id", { count: "exact", head: true })
+      .eq("user_id", userId).eq("task", task).gte("created_at", since.toISOString());
+    if (error) throw error;
+    return count || 0;
+  },
   async begin(userId, task, limits) {
     const { data, error } = await admin.rpc("ai_begin", {
       p_user: userId, p_task: task,

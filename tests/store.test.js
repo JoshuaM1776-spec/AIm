@@ -31,7 +31,7 @@ function makeEnv(initial = {}) {
 const VIDEO = { id: "abc123", title: "Feeding a sourdough starter", channel: "Bread Co" };
 const fresh = () => makeEnv({ schemaVersion: 5 });
 const DEFAULTS = { homeCard: true, leisureMin: 60, graceMin: 15, totalMin: 0, purposeLimitMin: 0,
-  hideShorts: true, hideRecs: true, hideFeeds: true, noAutoplay: true, strict: false, learnTopics: [], learnOff: [], learnShorts: false, learnRow: true, myTopics: [] };
+  hideShorts: true, hideRecs: true, hideFeeds: true, noAutoplay: true, strict: false, learnTopics: [], learnOff: [], learnShorts: false, learnRow: true, librarianMemory: true, myTopics: [] };
 
 const tests = [];
 const test = (name, fn) => tests.push([name, fn]);
@@ -511,6 +511,68 @@ test("a set-aside study aim knows its next step: review first, then the next top
   await env.run(`updateStudy({ topicId: ${JSON.stringify(p.study.topics[0].id)}, check: { assessmentId: "a1", objectives: [{ text: "Net ATP", status: "partial" }] } })`);
   p = env.local.purpose;
   assert.deepStrictEqual(JSON.parse(JSON.stringify((await env.run(`studyProgress(${JSON.stringify(p)})`)).next)), { kind: "review", title: "Glycolysis" });
+});
+
+test("talk: the session the librarian sees is titles, time and searches, never more; explore or focus", async () => {
+  const env = fresh();
+  await env.run(`startPurpose({ text: "Why did Rome fall", search: "fall of rome" })`);
+  await env.run(`recordTick(30, { id: "r1", title: "The Fall of Rome", channel: "OverSimplified", t: 590, d: 600 })`);
+  await env.run(`recordTick(5, { id: "r2", title: "A glance", channel: "X" })`);
+  const t = JSON.parse(JSON.stringify(await env.run(`talkSession(null)`)));
+  assert.strictEqual(t.mode, "focus");
+  assert.deepStrictEqual(t.session.videos, [{ title: "The Fall of Rome", channel: "OverSimplified", minutes: 1, finished: true }], "a glance isn't part of it");
+  assert.deepStrictEqual(t.session.searches, ["fall of rome"]);
+  await env.run(`startPurpose({ text: "Exploring History", learn: { topic: "History", videos: [] } })`);
+  assert.strictEqual((await env.run(`talkSession(null)`)).mode, "explore");
+});
+
+test("talk: memory is kept in this browser, forgotten one by one or all, and off means nothing new", async () => {
+  const env = fresh();
+  await env.run(`startPurpose({ text: "Roman engineering" })`);
+  await env.run(`memoryAdd([{ subject: "Roman concrete", idea: "Volcanic ash reacts with seawater and keeps strengthening", understood: "solid" }], "a1")`);
+  await env.run(`memoryAdd([{ subject: "Roman concrete", idea: "Volcanic ash reacts with seawater and keeps strengthening", understood: "shaky" }], "a1")`);
+  let list = await env.run(`memoryList()`);
+  assert.strictEqual(list.length, 1, "the same idea again updates it");
+  assert.strictEqual(list[0].understood, "shaky");
+  env.local.memory[0].at = Date.now() - 10 * 864e5;
+  const m = await env.run(`memoryMatch("How self-healing concrete works")`);
+  assert.strictEqual(m?.subject, "Roman concrete", "a later video that shares its subject brings it back");
+  await env.run(`memoryOffered(${JSON.stringify(m.id)})`);
+  assert.strictEqual(await env.run(`memoryMatch("Roman concrete secrets")`), null, "at most once a day");
+  assert.strictEqual((await env.run(`memoryFor(null)`)).length, 1, "related memories go along with a conversation");
+  await env.run(`setSetting("librarianMemory", false)`);
+  await env.run(`memoryAdd([{ subject: "Aqueducts", idea: "Gravity and a tiny slope", understood: "solid" }], "a2")`);
+  assert.strictEqual((await env.run(`memoryList()`)).length, 1, "off: nothing new is kept");
+  await env.run(`memoryForget(${JSON.stringify(list[0].id)})`);
+  assert.strictEqual((await env.run(`memoryList()`)).length, 0);
+});
+
+test("talk: Explore invitations wait for a real session, come once per session, and back off after Maybe later", async () => {
+  const env = fresh();
+  await env.run(`startPurpose({ text: "Exploring Space", learn: { topic: "Space", videos: [] } })`);
+  const id = env.local.purpose.id;
+  const offer = async () => (await env.run(`talkOffer(${JSON.stringify(id)})`)).offer;
+  assert.strictEqual(await offer(), false, "nothing watched yet");
+  env.local.purpose.videos = ["s1", "s2", "s3"].map(v => ({ id: v, title: v, channel: "NASA", sec: 90, at: Date.now() }));
+  assert.strictEqual(await offer(), true, "three videos in");
+  await env.run(`talkOffered({ aimId: ${JSON.stringify(id)}, answer: "shown" })`);
+  assert.strictEqual(await offer(), false, "once per session");
+  await env.run(`talkOffered({ aimId: ${JSON.stringify(id)}, answer: "later" })`);
+  assert.strictEqual(env.local.talk.wait, 2 * 864e5, "Maybe later doubles the wait");
+  await env.run(`talkOffered({ aimId: ${JSON.stringify(id)}, answer: "replied" })`);
+  assert.strictEqual(env.local.talk.wait, 864e5, "answering resets it");
+});
+
+test("talk: what a conversation showed about study topics becomes their check", async () => {
+  const env = fresh();
+  await env.run(`startPurpose({ text: "Biology exam" })`);
+  await env.run(`startStudy({ title: "Biology", topics: [{ title: "Glycolysis", brief: "", searches: ["glycolysis"] }, { title: "Krebs cycle", brief: "", searches: ["krebs"] }] })`);
+  const id = env.local.purpose.id;
+  await env.run(`talkMarks(${JSON.stringify(id)}, [{ topic: "Glycolysis", status: "partial" }, { topic: "Unknown", status: "demonstrated" }])`);
+  const t = env.local.purpose.study.topics;
+  assert.strictEqual(t[0].check.objectives[0].status, "partial");
+  assert.ok(!t[1].check, "only topics it talked about");
+  assert.deepStrictEqual(JSON.parse(JSON.stringify((await env.run(`studyProgress(${JSON.stringify(env.local.purpose)})`)).next)), { kind: "review", title: "Glycolysis" });
 });
 
 // ---------- activity ----------

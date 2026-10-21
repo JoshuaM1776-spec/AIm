@@ -39,4 +39,5 @@ function renderUpNext() {
             el("div", { class: "wp-upnext-title" }, v.title || "Video"),
             v.channel ? el("div", { class: "wp-muted" }, v.channel) : null)))
       : [el("div", { class: "wp-muted wp-upnext-empty" }, "Search toward your aim, and what you find shows up here.")])));
+  connectionLine($("#wp-upnext"));
 }

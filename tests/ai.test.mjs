@@ -440,6 +440,80 @@ test("Put it to work: Plus only; leans on what needs practice; tidied and bounde
   assert.strictEqual((await call(makeDeps({ plan: "free" }), { task: "study-apply", input: { title: "x y" } })).status, 403);
 });
 
+// ---------- talking a session through ----------
+const SESSION = { aim: "Why did the Roman Republic fall", minutes: 42, searches: ["fall of roman republic", "gracchi brothers"],
+  videos: [{ title: "The Fall of the Roman Republic", channel: "OverSimplified", minutes: 18, finished: true },
+    { title: "The Gracchi Brothers", channel: "Historia Civilis", minutes: 12 }], notes: "Marius reforms?" };
+const talkReply = (o = {}) => ({ ok: true, model: "m", inputTokens: 30, outputTokens: 20,
+  text: JSON.stringify({ message: "You watched two takes on it. If you had to bet on one cause, which would it be?", done: false, memory: [], marks: [], ...o }) });
+function talkDeps(plan, reply = talkReply) {
+  const d = makeDeps({ plan, claude: req => reply(req) });
+  d.config.limits = { dayCalls: 50, dayTokens: 1e6, minuteCalls: 50 };
+  d.config.freeLimits = { dayCalls: 50, dayTokens: 1e6, minuteCalls: 50 };
+  d.taskCountSince = async (_u, task) => d.rows.filter(r => r.task === task).length;
+  return d;
+}
+
+test("talk: the friend's rules are in the prompt, with the session, and it knows it hasn't seen the videos", async () => {
+  const d = talkDeps("plus");
+  const r = await call(d, { task: "librarian-talk", input: { mode: "explore", opening: true, session: SESSION } });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.match(r.body.message, /bet on one cause/);
+  assert.strictEqual(r.body.done, false, "an opening never ends the conversation");
+  const { system, prompt } = d.calls[0];
+  assert.match(system, /You have NOT seen the videos/);
+  assert.match(system, /Specific, always/);
+  assert.match(system, /What did you learn\?/, "the vague questions are named as ones not to ask");
+  assert.match(prompt, /The Fall of the Roman Republic \(OverSimplified\), 18 min, watched to the end/);
+  assert.match(prompt, /fall of roman republic → gracchi brothers/);
+  assert.match(prompt, /at most 1 question/);
+  assert.strictEqual(d.rows[0].task, "talk-open");
+});
+
+test("talk: explore closes after one answer, focus after three; praise filler is dropped", async () => {
+  const d = talkDeps("plus", () => talkReply({ message: "Great answer! The grain dole was part of it, as I understand it.", done: false }));
+  const thread = [{ role: "aim", text: "Which cause would you bet on?" }, { role: "person", text: "Probably the armies being loyal to generals" }];
+  const r = await call(d, { task: "librarian-talk", input: { mode: "explore", session: SESSION, thread } });
+  assert.strictEqual(r.body.done, true, "explore: one question, then it's over");
+  assert.strictEqual(r.body.message, "The grain dole was part of it, as I understand it.");
+  assert.match(d.calls[0].prompt, /must be a closing remark/);
+  const f = await call(d, { task: "librarian-talk", input: { mode: "focus", session: SESSION, thread } });
+  assert.strictEqual(f.body.done, false, "focus can keep going after one");
+  const long = [...thread, { role: "aim", text: "q2" }, { role: "person", text: "a2" }, { role: "aim", text: "q3" }, { role: "person", text: "a3" }];
+  assert.strictEqual((await call(d, { task: "librarian-talk", input: { mode: "focus", session: SESSION, thread: long } })).body.done, true, "three questions, then a closing remark");
+  assert.strictEqual((await call(d, { task: "librarian-talk", input: { mode: "focus", session: SESSION, thread: [{ role: "aim", text: "q" }] } })).status, 400, "a turn needs their reply");
+});
+
+test("talk: Plus gets memory and study marks; marks only for the session's own topics", async () => {
+  const d = talkDeps("plus", () => talkReply({ done: true, memory: [{ subject: "Marian reforms", idea: "Soldiers became loyal to generals who paid them", understood: "solid" }],
+    marks: [{ topic: "the marian reforms", status: "demonstrated" }, { topic: "Something else", status: "partial" }] }));
+  const session = { ...SESSION, study: { topics: [{ title: "The Marian reforms" }, { title: "The Gracchi" }] } };
+  const r = await call(d, { task: "librarian-talk", input: { mode: "focus", session, thread: [{ role: "aim", text: "q" }, { role: "person", text: "a" }],
+    memory: [{ subject: "Roman concrete", idea: "Volcanic ash reacts with water", daysAgo: 20 }] } });
+  assert.deepStrictEqual(r.body.memory, [{ subject: "Marian reforms", idea: "Soldiers became loyal to generals who paid them", understood: "solid" }]);
+  assert.deepStrictEqual(r.body.marks, [{ topic: "The Marian reforms", status: "demonstrated" }]);
+  assert.match(d.calls[0].prompt, /THINGS THEY TOLD YOU BEFORE:\n- Roman concrete: Volcanic ash reacts with water \(20 days ago\)/);
+});
+
+test("talk: a free account gets one conversation a day, and no memory", async () => {
+  const d = talkDeps("free", () => talkReply({ memory: [{ subject: "x", idea: "y", understood: "solid" }] }));
+  const open = await call(d, { task: "librarian-talk", input: { mode: "focus", opening: true, session: SESSION, memory: [{ subject: "Roman concrete", idea: "ash", daysAgo: 3 }] } });
+  assert.strictEqual(open.status, 200);
+  assert.ok(!/THINGS THEY TOLD YOU BEFORE/.test(d.calls[0].prompt), "a free account's memory isn't used");
+  const t1 = [{ role: "aim", text: "q1" }, { role: "person", text: "a1" }];
+  const r1 = await call(d, { task: "librarian-talk", input: { mode: "focus", session: SESSION, thread: t1 } });
+  assert.deepStrictEqual(r1.body.memory, [], "no memory on the free plan");
+  await call(d, { task: "librarian-talk", input: { mode: "focus", session: SESSION, thread: [...t1, { role: "aim", text: "q2" }, { role: "person", text: "a2" }] } });
+  await call(d, { task: "librarian-talk", input: { mode: "focus", session: SESSION, thread: [...t1, { role: "aim", text: "q2" }, { role: "person", text: "a2" }, { role: "aim", text: "q3" }, { role: "person", text: "a3" }] } });
+  const second = await call(d, { task: "librarian-talk", input: { mode: "focus", session: SESSION, thread: t1 } });
+  assert.strictEqual(second.status, 403, "a second conversation the same day");
+  assert.match(second.body.error.message, /today's conversation/);
+  await call(d, { task: "librarian-talk", input: { mode: "focus", opening: true, session: SESSION } });
+  await call(d, { task: "librarian-talk", input: { mode: "focus", opening: true, session: SESSION } });
+  assert.strictEqual((await call(d, { task: "librarian-talk", input: { mode: "focus", opening: true, session: SESSION } })).status, 403, "openings are capped too");
+  assert.strictEqual((await call(talkDeps("plus"), { task: "librarian-talk", input: { mode: "focus", session: SESSION, thread: t1 } })).status, 200, "Plus isn't capped");
+});
+
 // ---------- billing (Stripe) ----------
 const WHSEC = "whsec_test_secret";
 async function signed(payload, secret = WHSEC, t = Math.floor(Date.now() / 1000)) {

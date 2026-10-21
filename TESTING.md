@@ -380,3 +380,15 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] With Shorts from your topics on, Explore shows the Quick review row.
 - [ ] Set-aside aims on the homepage say what's next: "Next: review Glycolysis", "Next: Krebs cycle", or "Next: finish “…” · N min left".
 - [ ] Design your YouTube → Home has two choices: a clean page (with Explore) or YouTube's feed.
+
+### 40. Talking it through with the librarian (0.51)
+Needs a signed-in account and the server redeployed with `supabase/functions/ai/talk.ts`.
+- [ ] Finish a learning aim with a couple of videos watched: the card after Done asks one question about **this** session, naming something from it (a video's subject, a search, what you were trying to do). Not "What did you learn?". No "Found what you needed?" and no Test my understanding beside it.
+- [ ] **Reply** opens a small panel at the bottom right. Answer in a sentence: the librarian reacts to what you said (no "Great answer!"), maybe asks one more, and ends on a remark, not a question. Focus: up to three questions. Explore: one.
+- [ ] Say something wrong on purpose: it corrects it plainly, in a sentence. Ask it something it can't know from titles: it doesn't pretend to have seen the video.
+- [ ] Free account: one conversation a day; a second one says "That's today's conversation." Plus: no limit.
+- [ ] Plus: after it ends, "Remembered: …". Settings → **What the librarian remembers** lists it with Forget, Forget everything, and an off switch (off: nothing new is kept).
+- [ ] Plus, exploring: after three videos (or 30 minutes), going back to the homepage shows one invitation at the top of the card. Maybe later: gone, and not offered again for that session; the next one waits two days.
+- [ ] Plus: watch a video whose title shares a subject with something remembered from a few days ago: the sidebar shows "This connects to something you were into: …" with **Talk about it**.
+- [ ] Plus, in a study session: Aim's menu → **Talk it through**; afterwards, the topics it covered show their result (Review today / the homepage's next step).
+- [ ] Signed out: none of this appears.

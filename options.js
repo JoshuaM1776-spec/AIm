@@ -43,6 +43,7 @@ async function render() {
   if (!st) return;
   const S = st.settings, t = st.today || { purpose: 0, leisure: 0, other: 0 };
   designSummary(S);
+  renderMemory(S);
   $("homeschoolPreview").checked = !!st.homeschool;
   $("homeschoolResetRow").hidden = !st.homeschool;
   renderLearn(S);
@@ -121,6 +122,32 @@ function renderLearn(S) {
     }
   }
 }
+
+// The librarian's memory: each idea, when, and Forget.
+async function renderMemory(S) {
+  const [brief, items] = await Promise.all([send({ type: "plus-brief" }), send({ type: "memory-list" })]);
+  const list = Array.isArray(items) ? items : [];
+  $("memoryCard").hidden = !brief?.plus && !list.length;
+  $("librarianMemory").checked = S.librarianMemory !== false;
+  $("forgetRow").hidden = !list.length;
+  const day = ts => new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  $("memoryList").replaceChildren(...(list.length ? list.map(m => {
+    const row = document.createElement("div"), what = document.createElement("div"), b = document.createElement("b"), v = document.createElement("span"), x = document.createElement("button");
+    row.className = "setting"; what.className = "what";
+    b.textContent = m.subject; v.textContent = `${m.idea} · ${day(m.at)}${m.understood === "shaky" ? " · still working on it" : ""}`;
+    x.type = "button"; x.className = "btn text"; x.textContent = "Forget";
+    x.onclick = async () => { await send({ type: "memory-forget", id: m.id }); toast("Forgotten."); render(); };
+    what.append(b, v); row.append(what, x);
+    return row;
+  }) : [Object.assign(document.createElement("div"), { className: "empty", textContent: "Nothing yet. Talk a session through, and what you explain shows up here." })]));
+}
+$("librarianMemory").onchange = () => setSetting("librarianMemory", $("librarianMemory").checked);
+$("forgetAll").onclick = async () => {
+  if (!confirm("Forget everything the librarian remembers? This can't be undone.")) return;
+  await send({ type: "memory-forget", id: "all" });
+  toast("Forgotten.");
+  render();
+};
 
 if (location.hash === "#learn") setTimeout(() => $("learn").scrollIntoView({ block: "start" }), 200);
 if (location.hash === "#advanced") { $("advanced").open = true; $("advanced").scrollIntoView(); }

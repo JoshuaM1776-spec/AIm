@@ -102,6 +102,7 @@ async function renderHome() {
     breakChips(takeBreak)].filter(Boolean));
   host.prepend(card);
   showTips();
+  maybeOfferTalk(card);
 }
 
 // "Last active yesterday"

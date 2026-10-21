@@ -750,3 +750,32 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 .wp-home-card.wp-explore { width: min(880px, calc(100% - 32px)); }
 /* Go deeper: one quiet line at the top of More to explore. */
 .wp-deeper { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 0 10px; font-size: 13px; line-height: 18px; }
+
+/* Talking it through with the librarian: a small panel at the bottom right, never over the video's controls. */
+.wp-talk { position: fixed; z-index: 2360; right: 20px; bottom: 20px; width: min(380px, calc(100vw - 32px)); max-height: min(560px, calc(100vh - 100px));
+  display: flex; flex-direction: column; background: var(--wp-raised); border: 1px solid var(--wp-card-border); border-radius: 16px; box-shadow: var(--wp-shadow);
+  font-size: 14px; line-height: 20px; color: var(--wp-text); }
+.wp-talk-wait { padding: 14px 16px; }
+.wp-talk-head { display: flex; align-items: center; gap: 10px; padding: 12px 10px 10px 14px; border-bottom: 1px solid var(--wp-divider, rgba(0,0,0,.08)); }
+.wp-talk-mark { display: flex; color: var(--wp-text); }
+.wp-talk-who { flex: 1; min-width: 0; }
+.wp-talk-who .wp-muted { font-size: 12px; line-height: 16px; }
+.wp-talk-log { flex: 1; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.wp-talk-msg { max-width: 88%; padding: 8px 12px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.wp-talk-aim { align-self: flex-start; background: var(--wp-tonal); border-bottom-left-radius: 4px; }
+.wp-talk-you { align-self: flex-end; background: var(--wp-primary); color: var(--wp-on-primary); border-bottom-right-radius: 4px; }
+.wp-talk-note { font-size: 12px; text-align: center; }
+.wp-talk-typing { display: inline-flex; gap: 4px; padding: 12px; width: max-content; }
+.wp-talk-typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--wp-muted); animation: wp-dot 1s infinite ease-in-out; }
+.wp-talk-typing i:nth-child(2) { animation-delay: .15s; } .wp-talk-typing i:nth-child(3) { animation-delay: .3s; }
+@keyframes wp-dot { 0%, 80%, 100% { opacity: .3; } 40% { opacity: 1; } }
+.wp-talk-foot { display: flex; flex-direction: column; gap: 8px; padding: 10px 14px 14px; border-top: 1px solid var(--wp-divider, rgba(0,0,0,.08)); }
+.wp-talk-foot:has(> .wp-btn:only-child), .wp-talk-foot:has(.wp-talk-kept) { flex-direction: row; align-items: center; justify-content: space-between; }
+.wp-talk-input { width: 100%; resize: none; min-height: 44px; font: inherit; }
+.wp-talk-actions { display: flex; justify-content: space-between; align-items: center; }
+.wp-talk-kept { font-size: 12px; line-height: 16px; }
+/* The question inside a card: the card after Done, or the Explore invitation. */
+.wp-talk-invite { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.wp-talk-q { font-size: 15px; line-height: 22px; color: var(--wp-text); }
+.wp-end-talk { min-width: 0; }
+.wp-talk-offer { flex-direction: column; gap: 0; }

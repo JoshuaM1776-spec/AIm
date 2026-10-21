@@ -9,6 +9,7 @@ import { ask, questions, rank } from "./librarian.ts";
 import { studyPlan, studyApply } from "./study.ts";
 import { careers, step, themes, where } from "./pathways.ts";
 import { videoConcepts } from "./video.ts";
+import { talk } from "./talk.ts";
 import { type SyncStore, SyncError, readSyncInput } from "./sync.ts";
 import { type HsDb, HS_TASKS } from "./homeschool.ts";
 
@@ -37,6 +38,7 @@ export interface Deps {
   getUser(token: string): Promise<{ id: string; email?: string } | null>;
   getPlan(userId: string): Promise<Plan>;
   usageSince(userId: string, since: Date): Promise<{ calls: number; tokens: number }>;
+  taskCountSince?(userId: string, task: string, since: Date): Promise<number>; // AI calls of one kind, for per-feature caps
   begin(userId: string, task: string, limits: Limits): Promise<{ usageId: number | null; limited: string | null }>;
   finish(usageId: number, model: string | null, inputTokens: number, outputTokens: number, ok: boolean): Promise<void>;
   callClaude(req: AiRequest): Promise<ClaudeResult>;
@@ -62,7 +64,7 @@ export interface Deps {
 // never send arbitrary prompts on Aim's key. Every AI call a task makes counts against the limits.
 interface Task {
   plan?: Plan;
-  run(ctx: TaskCtx): Promise<Record<string, unknown>>;
+  run(ctx: TaskCtx & { plan?: Plan; usage?: { countSince(task: string, since: Date): Promise<number> } }): Promise<Record<string, unknown>>;
 }
 
 export const TASKS: Record<string, Task> = {
@@ -90,6 +92,8 @@ export const TASKS: Record<string, Task> = {
   "librarian-ask": { run: ask },
   "librarian-rank": { run: rank },
   "librarian-questions": { run: questions },
+  // Talking a session through: any account; free ones get one conversation a day (talk.ts).
+  "librarian-talk": { run: talk },
   // Pathways: see pathways.ts. "Where could this take me?" uses nothing about the student, so any
   // signed-in account may ask; the rest is Aim Plus.
   "pathways-where": { run: where },
@@ -274,9 +278,10 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
   if (task.plan === "plus" && plan === "free") return fail(403, "plan", "This needs Aim Plus.", cors);
 
   const userId = user.id;
-  const ctx: TaskCtx = {
-    userId, input: body.input, now: deps.now(), db: deps.db || NO_DB,
-    ai: (taskName, req) => useAI(deps, userId, taskName, req, limitsFor(plan, deps.config))
+  const ctx = {
+    userId, input: body.input, now: deps.now(), db: deps.db || NO_DB, plan,
+    usage: deps.taskCountSince ? { countSince: (t: string, since: Date) => deps.taskCountSince!(userId, t, since) } : undefined,
+    ai: (taskName: string, req: AiRequest) => useAI(deps, userId, taskName, req, limitsFor(plan, deps.config))
   };
   try {
     return json(200, { ok: true, ...(await task.run(ctx)) }, cors);

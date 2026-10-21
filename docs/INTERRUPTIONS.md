@@ -12,7 +12,7 @@ Loudness, from loudest to quietest:
 - **Line:** one line of text with a link and an ×.
 - **On request:** appears only when you open it.
 
-## The list (0.49, Explore in 0.50)
+## The list (0.49; Explore in 0.50; the librarian talking it through in 0.51)
 
 | Moment | What it's for | Before | Now |
 |---|---|---|---|
@@ -24,7 +24,9 @@ Loudness, from loudest to quietest:
 | **Shorts** (opening one on an aim) | Protect the aim | Stop | Unchanged. Shorts from your Learn from channels play as Quick review. |
 | **Time's up / daily limit / grace** | Limits you set | Stop | Unchanged. Off unless you set a limit. |
 | **Done with this aim?** | Close the loop | A dialog with five buttons before ending | **One tap.** Done ends it. |
-| **After Done** | Reflect, if you like | A card asking Yes / Partly / No | **One light card:** "32 min on …", the videos, a quiet *Found what you needed? Yes · Partly · No* line that thanks you in place, **Test my understanding** (Plus, learning aims), and **Not done? Pick it back up** in case Done was a slip. "Want more of this?" moved here too (Pathways only). |
+| **After Done** | Reflect, if you like | A card asking Yes / Partly / No | **One light card:** "32 min on …", the videos, a quiet *Found what you needed? Yes · Partly · No* line that thanks you in place, **Test my understanding** (Plus, learning aims), and **Not done? Pick it back up** in case Done was a slip. "Want more of this?" moved here too (Pathways only). **0.51:** signed in, a learning aim's card asks the librarian's one specific question instead of the rating and the test (**Reply** · Maybe later); if it can't, the rating comes back. |
+| **Talk it through** (exploring, Plus) | Remember by talking it over | (new) | **Card at the top of the homepage**, only after three videos or half an hour of exploring, once per session, at most once a day. Maybe later doubles the wait (up to a week). Never during a video. |
+| **This connects to…** (watching, Plus) | Retrieval when it's relevant | (new) | **Line** at the top of the sidebar when a video shares a subject with something you explained before. At most once a day; the same memory once a month. |
 | **Still looking?** (three searches, nothing watched) | Help when stuck | A shaded row with a title, a sentence and two buttons | **Line:** *Still looking? Tell Aim what you need* and an ×. |
 | **Explore** (homepage) | Curiosity, on purpose | A row of six videos on the homepage, or an invitation to pick topics | **Line:** *Not sure what you're looking for? Explore*. The picks live behind it: finite, with an end. |
 | **Go deeper on this?** (exploring) | Turn curiosity into an aim | (new) | **Line** at the top of More to explore. One tap makes the video's subject your aim. |

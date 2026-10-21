@@ -26,7 +26,9 @@ const DEFAULT_SETTINGS = {
   // The Learn something row on the homepage (off: a clean page, just "What brings you here?").
   learnRow: true,
   // Your own topics for channels you learn from (the Your channels page).
-  myTopics: []
+  myTopics: [],
+  // The librarian remembers what you explained to it (Aim Plus; kept in this browser).
+  librarianMemory: true
 };
 const GRACE_CHOICES = [0, 5, 10, 15, 30];
 const minutesSetting = max => v => Number.isInteger(v) && v >= 0 && v <= max;
@@ -45,7 +47,8 @@ const SETTING_RULES = {
   learnOff: v => Array.isArray(v) && v.length <= 200 && v.every(x => typeof x === "string" && /^@[\w.-]{1,60}$/.test(x)),
   learnShorts: v => typeof v === "boolean",
   learnRow: v => typeof v === "boolean",
-  myTopics: v => Array.isArray(v) && v.length <= 30 && v.every(x => typeof x === "string" && x.trim().length >= 1 && x.length <= 40)
+  myTopics: v => Array.isArray(v) && v.length <= 30 && v.every(x => typeof x === "string" && x.trim().length >= 1 && x.length <= 40),
+  librarianMemory: v => typeof v === "boolean"
 };
 
 // ---------- write queue ----------
@@ -1384,4 +1387,124 @@ async function syncMerge(items, first = false) {
   saved.sort((a, b) => (a.at || 0) - (b.at || 0));
   await chrome.storage.local.set({ purpose, paused, history: history.slice(-200), saved: saved.slice(-200), avoid, stop, ...(settings ? { settings } : {}) });
   return { result: "applied" };
+}
+
+// ---------- talking a session through (the librarian, content/talk.js) ----------
+// What the librarian may know about an aim: the aim, searches, the videos' titles and how long you
+// watched each, your notes, and a study session's topics. Never anything from inside a video.
+async function findAim(id) {
+  const { purpose = null, paused = [], history = [] } = await chrome.storage.local.get(["purpose", "paused", "history"]);
+  if (!id) return purpose; // the aim you're on
+  if (purpose?.id === id) return purpose;
+  return paused.find(p => p.id === id) || history.find(h => h.type === "purpose" && h.id === id) || null;
+}
+
+async function talkSession(id) {
+  const p = await findAim(id);
+  if (!p) return { result: "error", message: "Nothing to talk about yet." };
+  const videos = (p.videos || []).filter(v => v.title && (v.sec || 0) >= 20).slice(-12).map(v => ({ title: v.title, channel: v.channel || "",
+    minutes: Math.max(1, Math.round((v.sec || 0) / 60)), finished: v.d > 0 && v.t >= v.d * 0.9 }));
+  const topics = (p.study?.topics || []).map(t => ({ title: t.title }));
+  return { result: "applied", id: p.id, mode: p.learn ? "explore" : "focus", plan: !!p.plan,
+    session: { aim: p.learn ? `Exploring ${p.learn}` : p.text, minutes: Math.round((p.usedSec || 0) / 60), searches: (p.searches || []).map(x => x.q).slice(-12),
+      videos, notes: p.notes || "", ...(topics.length ? { study: { topics } } : {}) } };
+}
+
+// The librarian's memory: ideas you explained in your own words, with what they were about. In this
+// browser only; Settings lists them, and each can be forgotten.
+const MEMORY_MAX = 300;
+async function memoryAdd(items, aimId) {
+  if ((await getSettings()).librarianMemory === false) return { result: "applied", added: 0 };
+  const { memory = [] } = await chrome.storage.local.get("memory");
+  const now = Date.now(), out = memory.slice();
+  for (const it of (Array.isArray(items) ? items : []).slice(0, 3)) {
+    const subject = clip(it?.subject, 60), idea = clip(it?.idea, 160);
+    if (!subject || !idea) continue;
+    const same = out.find(m => m.subject.toLowerCase() === subject.toLowerCase() && m.idea.toLowerCase() === idea.toLowerCase());
+    if (same) { same.at = now; same.understood = it.understood === "shaky" ? "shaky" : "solid"; continue; }
+    out.push({ id: `m${now.toString(36)}${Math.random().toString(36).slice(2, 6)}`, subject, idea, understood: it.understood === "shaky" ? "shaky" : "solid",
+      aim: clip(aimId, 64) || null, at: now });
+  }
+  await chrome.storage.local.set({ memory: out.slice(-MEMORY_MAX) });
+  return { result: "applied", added: out.length - memory.length };
+}
+async function memoryList() {
+  const { memory = [] } = await chrome.storage.local.get("memory");
+  return memory.slice().reverse();
+}
+async function memoryForget(id) {
+  const { memory = [] } = await chrome.storage.local.get("memory");
+  await chrome.storage.local.set({ memory: id === "all" ? [] : memory.filter(m => m.id !== id) });
+  return { result: "applied" };
+}
+// The few memories most related to this session, for the librarian's context. No AI: shared words.
+async function memoryFor(id) {
+  const [{ memory = [] }, p] = await Promise.all([chrome.storage.local.get("memory"), findAim(id)]);
+  if (!memory.length || !p) return [];
+  const words = new Set([p.text, p.learn, ...(p.searches || []).map(x => x.q), ...(p.videos || []).map(v => v.title)].flatMap(meaningfulWords));
+  const score = m => meaningfulWords(`${m.subject} ${m.idea}`).filter(w => words.has(w)).length;
+  return memory.map(m => [m, score(m)]).filter(([m, n]) => n > 0 && m.aim !== p.id).sort((a, b) => b[1] - a[1]).slice(0, 5)
+    .map(([m]) => ({ subject: m.subject, idea: m.idea, understood: m.understood, daysAgo: Math.round((Date.now() - m.at) / 864e5) }));
+}
+// "This reminds me of…": a memory from at least three days ago that shares a distinctive word of its
+// subject, or two words, with this video's title. Offered at most once a day, the same one once a month.
+async function memoryMatch(title) {
+  const { memory = [], talk = {} } = await chrome.storage.local.get(["memory", "talk"]);
+  const now = Date.now();
+  if (!memory.length || now - (talk.connectAt || 0) < 864e5) return null;
+  const words = new Set(meaningfulWords(title));
+  const pick = memory.filter(m => now - m.at > 3 * 864e5 && now - (m.offeredAt || 0) > 30 * 864e5).find(m => {
+    // One distinctive word of its subject ("concrete") is enough; otherwise two shared words.
+    return meaningfulWords(m.subject).some(w => w.length >= 5 && words.has(w)) || meaningfulWords(`${m.subject} ${m.idea}`).filter(w => words.has(w)).length >= 2;
+  });
+  return pick ? { id: pick.id, subject: pick.subject, idea: pick.idea, daysAgo: Math.round((now - pick.at) / 864e5) } : null;
+}
+async function memoryOffered(id) {
+  const { memory = [], talk = {} } = await chrome.storage.local.get(["memory", "talk"]);
+  const m = memory.find(x => x.id === id);
+  if (m) m.offeredAt = Date.now();
+  await chrome.storage.local.set({ memory, talk: { ...talk, connectAt: Date.now() } });
+  return { result: "applied" };
+}
+
+// When an Explore session may be invited to talk: three videos or half an hour into it, back on the
+// homepage, once per session, and never sooner than a day after the last offer. Each "Maybe later"
+// doubles the wait (up to a week); answering puts it back to a day.
+const TALK_WAIT = 864e5;
+async function talkOffer(aimId) {
+  const [{ talk = {} }, p] = await Promise.all([chrome.storage.local.get("talk"), findAim(aimId)]);
+  if (!p?.learn || talk.offeredFor === p.id) return { offer: false };
+  if (Date.now() - (talk.offeredAt || 0) < (talk.wait || TALK_WAIT)) return { offer: false };
+  const watched = (p.videos || []).filter(v => (v.sec || 0) >= 60).length;
+  return { offer: watched >= 3 || (p.usedSec || 0) >= 30 * 60 };
+}
+async function talkOffered({ aimId, answer }) {
+  const { talk = {} } = await chrome.storage.local.get("talk");
+  const next = { ...talk };
+  if (answer === "shown") Object.assign(next, { offeredAt: Date.now(), offeredFor: clip(aimId, 64) });
+  if (answer === "later") next.wait = Math.min(7 * TALK_WAIT, (talk.wait || TALK_WAIT) * 2);
+  if (answer === "replied") next.wait = TALK_WAIT;
+  await chrome.storage.local.set({ talk: next });
+  return { result: "applied" };
+}
+
+// What a conversation showed about a study session's topics, as their check (the same shape TeachBack
+// leaves), so Review today, Quick review and the homepage's next step follow from it.
+async function talkMarks(aimId, marks) {
+  const d = await chrome.storage.local.get(["purpose", "paused", "history"]);
+  const list = Array.isArray(marks) ? marks : [];
+  let changed = false;
+  const mark = topics => {
+    for (const m of list) {
+      const t = topics?.find(x => x.title === m.topic);
+      if (!t || !["demonstrated", "partial", "needs_review"].includes(m.status)) continue;
+      t.check = { assessmentId: "talk", at: Date.now(), endedEarly: false, objectives: [{ text: `Talked through ${t.title}`, status: m.status, search: "" }] };
+      changed = true;
+    }
+  };
+  if (d.purpose?.id === aimId) mark(d.purpose.study?.topics);
+  for (const p of d.paused || []) if (p.id === aimId) mark(p.study?.topics);
+  for (const h of d.history || []) if (h.type === "purpose" && h.id === aimId) mark(h.study?.topics);
+  if (changed) await chrome.storage.local.set({ purpose: d.purpose || null, paused: d.paused || [], history: d.history || [] });
+  return { result: "applied", changed };
 }

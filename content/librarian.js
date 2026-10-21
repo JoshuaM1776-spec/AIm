@@ -104,7 +104,7 @@ function librarianBlock(p) {
     L?.kind === "learn" && account.plus && !activeStudy(p) ? el("div", { class: "wp-lib-refine" },
       el("span", { class: "wp-muted" }, "Studying this?"),
       studyOffer(p),
-      el("button", { class: "wp-chip", onclick: () => send({ type: "open-teachback", topic: p.text }) }, "Test my understanding")) : null,
+      (p.videos || []).length ? el("button", { class: "wp-chip", onclick: () => openTalk() }, "Talk it through") : null) : null,
     el("div", { class: "wp-lib-ask" }, input, go));
 }
 

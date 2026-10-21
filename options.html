@@ -47,6 +47,18 @@
     <div id="learnChannels"></div>
   </section>
 
+  <!-- Aim Plus, or anything already remembered. -->
+  <section class="card" id="memoryCard" hidden>
+    <h2>What the librarian remembers</h2>
+    <p class="muted">When you talk a session through, the librarian keeps the ideas you explained in your own words, so a later conversation can connect to them. Only that, never what you watched. Kept in this browser; it's sent to Aim's server only as part of a conversation, and not stored there.</p>
+    <div class="setting">
+      <div class="what"><b>Remember what I explain</b><span>Off: nothing new is kept. What's below stays until you forget it.</span></div>
+      <label class="switch"><input type="checkbox" id="librarianMemory" aria-label="Remember what I explain"><i></i></label>
+    </div>
+    <div id="memoryList"></div>
+    <div class="form" id="forgetRow" hidden><button class="btn tonal" id="forgetAll" type="button">Forget everything</button></div>
+  </section>
+
   <!-- Shown only when config.js names Aim's server (see plus.js). -->
   <section class="card" id="plus" hidden>
     <h2>Aim Plus</h2>

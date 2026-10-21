@@ -20,7 +20,7 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CODE = "123456";
 const LINK_TOKEN = "b3c1f0e2a9d84c7f9e6a5b4c3d2e1f00aabbccdd";
 const ev = (rating, evidence) => ({ rating, evidence, misconception: "", applied: false, note: "" });
-const srv = { deletedUsers: [], rankCalls: 0, lastAskPrompt: "",
+const srv = { deletedUsers: [], rankCalls: 0, lastAskPrompt: "", talk: [], talkPrompts: [],
   ask: [
     { target: "Replace the alternator on my 2014 Tacoma", kind: "project", note: "The steps differ between the 2.7L and 4.0L engines.",
       searches: ["2014 tacoma alternator replacement", "tacoma alternator removal tools"], question: "Which engine does it have?",
@@ -52,7 +52,8 @@ const deps = {
     srv.aiCalls++;
     const props = Object.keys(req.schema?.properties || {});
     const reply = !req.schema ? "ready" : JSON.stringify(
-      props.includes("first_question") ? { type: "concepts", first_question: "What does a plant actually make during photosynthesis?",
+      props.includes("marks") ? (srv.talkPrompts.push(req.prompt), srv.talk.shift())
+      : props.includes("first_question") ? { type: "concepts", first_question: "What does a plant actually make during photosynthesis?",
           objectives: ["Explain what photosynthesis produces", "Explain the role of light", "Explain where it happens in the cell"] }
       : props.includes("shows") ? (srv.applyPrompt = req.prompt, { title: "Trace a sugar cube", task: "Follow one glucose molecule from breakfast to ATP and draw where each step happens.",
           steps: ["Draw a cell", "Mark glycolysis", "Mark the Krebs cycle"], shows: "You can explain where ATP comes from.", minutes: 30, safety: "" })
@@ -583,6 +584,90 @@ await yt.click(".wp-dropdown button:has-text('Back to my aim')");
 await yt.waitForTimeout(600);
 relaxState = await sw.evaluate(() => chrome.storage.local.get(["brk", "history"]));
 step("back on your aim: the themed break is over and recorded with its theme", !relaxState.brk && relaxState.history.some(h => h.type === "break" && h.theme === "Fun biology"));
+
+// ---------- talking it through with the librarian ----------
+srv.talk.push(
+  { message: "You watched two different takes on why the Republic fell. If you had to bet on one cause, which would it be?", done: false, memory: [], marks: [] },
+  { message: "The generals, then. Why would a soldier back his general over the Senate?", done: false, memory: [], marks: [] },
+  { message: "That's the Marian reforms in a nutshell, as I understand it: the army became a career, and the general was the one paying.", done: true,
+    memory: [{ subject: "Marian reforms", idea: "Soldiers backed the generals who paid and settled them, not the Senate", understood: "solid" }], marks: [] });
+await sw.evaluate(() => serial(async () => {
+  await startPurpose({ text: "Why did the Roman Republic fall" });
+  const { purpose } = await chrome.storage.local.get("purpose");
+  purpose.videos = [{ id: "rom1", title: "The Fall of the Roman Republic", channel: "OverSimplified", sec: 900, t: 890, d: 900, at: Date.now() },
+    { id: "rom2", title: "The Gracchi Brothers", channel: "Historia Civilis", sec: 600, at: Date.now() }];
+  purpose.usedSec = 1500;
+  await chrome.storage.local.set({ purpose });
+  await finishPurpose(null);
+}));
+await yt.goto("https://www.youtube.com/");
+await yt.bringToFront();
+await yt.waitForSelector("#wp-home .wp-home-end .wp-talk-q", { timeout: 10000 });
+const endCard = (await yt.textContent(".wp-home-end")).replace(/\s+/g, " ");
+step("after Done, the librarian asks one specific question about the session, in place of the rating and the test",
+  endCard.includes("bet on one cause") && !endCard.includes("Found what you needed?") && !(await yt.isVisible(".wp-home-end button:text-is('Test my understanding')")), endCard.slice(0, 200));
+step("it sees titles, time and searches, never a transcript, and knows this was focused work",
+  srv.talkPrompts[0].includes("The Fall of the Roman Republic (OverSimplified), 15 min, watched to the end") && srv.talkPrompts[0].includes("MODE: Focus"), srv.talkPrompts[0].slice(0, 300));
+if (process.env.SHOTS) { await yt.setViewportSize({ width: 1100, height: 760 }); await yt.screenshot({ path: `${process.env.SHOTS}/talk-after-done.png` }); }
+await yt.click(".wp-home-end button:text-is('Reply')");
+await yt.waitForSelector(".wp-talk .wp-talk-input");
+await yt.fill(".wp-talk-input", "Probably the generals. The armies ended up loyal to them, not to Rome.");
+await yt.press(".wp-talk-input", "Enter");
+await yt.waitForFunction(() => document.querySelectorAll(".wp-talk .wp-talk-aim").length === 2);
+await yt.fill(".wp-talk-input", "Because after Marius the general paid them and got them land when they retired.");
+await yt.press(".wp-talk-input", "Enter");
+await yt.waitForSelector(".wp-talk .wp-talk-kept");
+const talkText = (await yt.textContent(".wp-talk")).replace(/\s+/g, " ");
+step("a conversation: it follows up on what you said, then ends on a remark and says what it kept",
+  talkText.includes("Why would a soldier back his general") && talkText.includes("Marian reforms in a nutshell") && talkText.includes("Remembered: Marian reforms") &&
+  !(await yt.$(".wp-talk .wp-talk-input")) && srv.talkPrompts[2].includes("THEM: Because after Marius"), talkText.slice(0, 240));
+await yt.bringToFront(); // a background tab pauses animations
+await yt.waitForTimeout(400);
+step("the panel is fully opaque once it's in", await yt.$eval(".wp-talk", n => getComputedStyle(n).opacity === "1"));
+if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/talk-panel.png` });
+const mem = (await sw.evaluate(() => chrome.storage.local.get("memory"))).memory || [];
+step("what you explained is remembered in this browser", mem.length === 1 && mem[0].subject === "Marian reforms" && mem[0].understood === "solid");
+await yt.click(".wp-talk button:text-is('Close')");
+step("Close puts the panel away", !(await yt.$(".wp-talk")));
+await opt.reload();
+await opt.waitForSelector("#memoryCard:not([hidden]) #memoryList .setting");
+step("Settings lists what the librarian remembers, each with Forget", (await opt.textContent("#memoryList")).includes("Marian reforms"));
+await opt.click("#memoryList button:text-is('Forget')");
+await opt.waitForTimeout(400);
+step("Forget removes it", ((await sw.evaluate(() => chrome.storage.local.get("memory"))).memory || []).length === 0);
+// Exploring: back on the homepage after a real stretch, one invitation; Maybe later backs off.
+srv.talk.push({ message: "You went from Roman roads to aqueducts. If you had to get water into a hill town with no pumps, how would you do it?", done: false, memory: [], marks: [] });
+await sw.evaluate(() => serial(async () => {
+  await startPurpose({ text: "Exploring History", learn: { topic: "History", videos: [] } });
+  const { purpose } = await chrome.storage.local.get("purpose");
+  purpose.videos = ["r1", "r2", "r3"].map((id, i) => ({ id, title: ["How Roman roads were built", "Roman aqueducts", "Roman concrete"][i], channel: "History Dose", sec: 300, at: Date.now() }));
+  await chrome.storage.local.set({ purpose });
+}));
+await yt.goto("https://www.youtube.com/");
+await yt.waitForSelector("#wp-home .wp-talk-offer .wp-talk-q", { timeout: 10000 });
+step("exploring: back on the homepage after three videos, one invitation to talk, lightly", (await yt.textContent(".wp-talk-offer")).includes("hill town") &&
+  srv.talkPrompts[srv.talkPrompts.length - 1].includes("MODE: Explore") && srv.talkPrompts[srv.talkPrompts.length - 1].includes("at most 1 question"));
+if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/talk-explore.png` });
+await yt.click(".wp-talk-offer button:text-is('Maybe later')");
+await yt.waitForTimeout(300);
+let talkState = (await sw.evaluate(() => chrome.storage.local.get("talk"))).talk;
+step("Maybe later: it goes, and the next one waits twice as long", !(await yt.$(".wp-talk-offer")) && talkState.wait === 2 * 86400000);
+await yt.reload();
+await yt.waitForSelector("#wp-home .wp-home-title");
+await yt.waitForTimeout(800);
+step("and it isn't offered again for this session", !(await yt.$(".wp-talk-offer")));
+// While watching: a video that connects to something you explained before.
+await sw.evaluate(() => serial(async () => {
+  await memoryAdd([{ subject: "Roman concrete", idea: "Volcanic ash reacts with seawater and keeps strengthening", understood: "solid" }], "old");
+  const { memory, purpose } = await chrome.storage.local.get(["memory", "purpose"]);
+  memory[0].at = Date.now() - 20 * 86400000;
+  purpose.allowed.push({ id: "conc9", title: "Why self-healing concrete works", channel: "Practical Engineering", at: Date.now() });
+  await chrome.storage.local.set({ memory, purpose });
+}));
+await yt.goto("https://www.youtube.com/watch?v=conc9");
+await yt.waitForSelector("#wp-upnext .wp-connect", { timeout: 8000 });
+step("while watching: one quiet line when a video connects to something you explained before", (await yt.textContent(".wp-connect")).includes("Roman concrete"));
+await sw.evaluate(() => serial(() => finishPurpose("yes")));
 await yt.close();
 
 // An expired access token refreshes quietly, once, even with calls racing.

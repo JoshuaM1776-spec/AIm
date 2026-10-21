@@ -95,6 +95,7 @@ function purposeMenu() {
     menuItem("pivot", "Change my aim", () => openPivotDialog()),
     menuItem("pause", "Set aside for later", setAsideTarget),
     menuItem("book", p.notes ? "Notes" : "Add notes", openNotesDialog),
+    account.on && (p.videos || []).length ? menuItem("ask", "Talk it through", () => openTalk()) : null,
     left !== null ? menuItem("clock", "Change time limit", openLimitDialog) : null,
     ...videoItems())].filter(Boolean);
 }
@@ -288,7 +289,10 @@ async function showReflection() {
   if (s.outcome) return toast(s.outcome === "yes" ? "Done. Glad you found it." : "Done. Noted for next time.");
   const mins = Math.max(1, Math.round(s.usedSec / 60));
   const learning = s.kind === "learn" || !!s.study || !s.kind;
-  const plus = learning && (await send({ type: "plus-brief" }))?.plus === true;
+  const brief = learning ? await send({ type: "plus-brief" }) : null, plus = brief?.plus === true;
+  // Signed in, a learning aim gets the librarian's question in place of "Found what you needed?" and
+  // Test my understanding: one prompt, not three. If it can't open, those come back.
+  const talkable = !!brief?.account && (s.videos || []).some(v => (v.sec || 0) >= 20);
   const rated = el("div", { class: "wp-end-rate" });
   const rate = outcome => async () => {
     await send({ type: "purpose-rate", id: s.id, outcome });
@@ -297,16 +301,25 @@ async function showReflection() {
   rated.append(el("span", { class: "wp-muted" }, "Found what you needed?"),
     ...[["yes", "Yes"], ["partly", "Partly"], ["no", "No"]].map(([v, label]) => el("button", { class: "wp-link", onclick: rate(v) }, label)));
   const close = () => { homeEnd?.remove(); homeEnd = null; closeNotice(); };
+  const teach = plus ? el("button", { class: "wp-btn wp-btn-tonal", onclick: () => { close(); send({ type: "open-teachback", topic: s.text }); } }, "Test my understanding") : null;
+  const slot = el("div", { class: "wp-end-talk" }, talkable ? el("div", { class: "wp-talk-msg wp-talk-typing", "aria-label": "The librarian is reading your session" }, el("i"), el("i"), el("i")) : rated);
+  if (talkable) {
+    if (teach) teach.hidden = true;
+    prepareTalk({ aimId: s.id, source: "done" }).then(state => {
+      if (state.error) { slot.replaceChildren(rated); if (teach) teach.hidden = false; return; }
+      slot.replaceChildren(talkInvite(state, { onEnd: () => slot.replaceChildren() }));
+    });
+  }
   const parts = [
     el("span", { class: "wp-notice-icon wp-accent" }, icon("check")),
     el("div", { class: "wp-notice-text" },
       el("div", { class: "wp-strong" }, `Done · ${mins} min on ${s.text}`),
       s.videos?.length ? el("div", { class: "wp-muted" }, `${s.videos.length} video${s.videos.length > 1 ? "s" : ""}`) : null,
-      rated,
+      slot,
       // With Pathways on, a learning aim asks once whether you'd like more of it.
       status.pathways && learning ? interestChips({ topic: s.study?.title || s.text, source: "target" }) : null),
     el("div", { class: "wp-notice-actions wp-col" },
-      plus ? el("button", { class: "wp-btn wp-btn-tonal", onclick: () => { close(); send({ type: "open-teachback", topic: s.text }); } }, "Test my understanding") : null,
+      teach,
       el("button", { class: "wp-link", onclick: () => { close(); resumeTarget(s.id); } }, "Not done? Pick it back up"))];
   // On Aim's homepage it sits at the top of the card, so it never covers anything; elsewhere it's a notice.
   if (location.pathname !== "/" || !settings.homeCard || brk || planOn()) return showNotice(parts);
