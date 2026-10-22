@@ -103,19 +103,20 @@ function ways(a, refs) {
       go: () => goTo(), label: "Continue studying" } : null,
     { key: "practice", title: "Put it into practice", best: "Skills and projects: one small thing to try, so it sticks because you used it.",
       go: () => document.getElementById("practice")?.scrollIntoView({ behavior: "smooth" }), label: "See practice" },
-    health ? { key: "scenario", title: "Scenario", best: "Calls, patients and medications: work a situation as it unfolds, using your own protocols.",
-      go: () => (location.href = "references.html"), label: refs ? "Your references" : "Add your protocols",
-      note: refs ? `${refs} reference${refs > 1 ? "s" : ""} ready. Scenarios arrive in the next update.` : "Add your protocols first, so scenarios use your doses and steps. Scenarios arrive in the next update." } : null
+    health ? { key: "scenario", title: "Scenario", best: "Calls, patients and medications: work a situation as it unfolds, using your own protocols. Aim Plus.",
+      go: () => (location.href = `scenario.html?aim=${encodeURIComponent(id)}`), label: "Run a scenario",
+      note: refs ? `From your ${refs} reference${refs > 1 ? "s" : ""}.` : "Add your protocols first, so it uses your doses and steps.",
+      extra: refs ? null : node("a", { href: "references.html", textContent: "Add your protocols" }) } : null
   ].filter(Boolean);
   const pick = a.understanding?.ready && a.map?.synthesis?.verdict !== "solid" ? "together"
     : a.practice && !a.practice.triedAt ? "practice"
     : a.study?.of && a.study.checked < a.study.of ? "check"
-    : health && !refs ? "scenario" : "talk";
+    : health ? "scenario" : "talk";
   return node("section", { className: "card", id: "ways" }, node("h2", { textContent: "Ways to practice" }),
     node("div", { className: "ways" }, tools.map(t => node("div", { className: `way${t.key === pick ? " best" : ""}`, title: t.title },
       t.key === pick ? node("span", { className: "pill strong", textContent: "Best for this aim" }) : null,
       node("b", { textContent: t.title }), node("span", { className: "muted", textContent: t.best }),
-      t.note ? node("small", { className: "muted", textContent: t.note }) : null,
+      t.note ? node("small", { className: "muted", textContent: t.note }) : null, t.extra || null,
       node("div", {}, btn(t.label, t.key === pick ? "" : "tonal", t.go))))));
 }
 
@@ -123,6 +124,8 @@ function learned(a) {
   const items = [
     ...a.learned.map(m => node("li", {}, node("b", { textContent: `${m.subject}: ` }), m.idea, m.understood === "shaky" ? node("span", { className: "muted", textContent: " (still working on it)" }) : null)),
     ...(a.map?.parts || []).filter(p => p.status === "explained").map(p => node("li", {}, node("b", { textContent: p.title }), node("span", { className: "muted", textContent: " · explained in your own words" }))),
+    ...(a.scenarios || []).map(x => node("li", {}, node("b", { textContent: `Scenario: ${x.title}` }),
+      node("span", { className: "muted", textContent: ` · ${x.happening || "debriefed"}${x.missed?.length ? ` To work on: ${x.missed[0]}` : ""}` }))),
     ...(a.study?.topics || []).filter(t => t.check).map(t => node("li", {}, node("b", { textContent: t.title }),
       node("span", { className: "muted", textContent: ` · ${t.check.objectives.filter(o => o.status === "demonstrated").length} of ${t.check.objectives.length} shown in a check` })))];
   return node("section", { className: "card", id: "learned" }, node("h2", { textContent: "What you've learned" }),

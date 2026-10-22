@@ -2291,12 +2291,14 @@ export const TASKS: Record<string, Task> = {
   "pathways-careers": { plan: "plus", run: careers },
   "pathways-step": { plan: "plus", run: step },
   // "In this video": a video's concepts from its title, description and chapters. See video.ts.
-  "video-concepts": { plan: "plus", run: videoConcepts }
+  "video-concepts": { plan: "plus", run: videoConcepts },
+  // Scenarios: a situation as it unfolds, from the person's own references. See scenario.ts.
+  "scenario-turn": { plan: "plus", run: scenarioTurn }
 };
 
 // Requests that may carry more than a few pages: up to maxSyncBytes.
 const BIG_TASKS = new Set(["sync", "hs-upload-add", "hs-curriculum-build", "hs-curriculum-save", "hs-week-save",
-  "librarian-talk", "video-concepts"]); // these two carry caption excerpts (Plus); each task trims them to its own limits
+  "librarian-talk", "video-concepts", "scenario-turn"]); // caption excerpts or reference passages (Plus); each task trims them to its own limits
 
 // Handled directly in handle(), without AI.
 const ACCOUNT_TASKS = new Set(["status", "account-export", "account-delete", "billing-checkout", "billing-portal", "sync", "sync-erase"]);

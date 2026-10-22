@@ -5,6 +5,7 @@ import { handle } from "../supabase/functions/ai/handler.ts";
 import { memDb, memHs, memSync } from "./helpers/memdb.mjs";
 import { difficulty } from "../supabase/functions/ai/teachback.ts";
 import { splitCurriculum, mergeBuilt } from "../supabase/functions/ai/homeschool.ts";
+import { checkDoses, dosesIn, DOSE_PLACEHOLDER } from "../supabase/functions/ai/scenario.ts";
 import { checkoutUrl, handleStripeEvent, handleStripeWebhook, planForStatus, stripeApi, verifyStripeSignature } from "../supabase/functions/ai/billing.ts";
 
 const EXT = "chrome-extension://" + "a".repeat(32);
@@ -1102,10 +1103,88 @@ test("the one-file dashboard version is up to date with supabase/functions/ai", 
   const dupes = names.filter((n, i) => names.indexOf(n) !== i);
   assert.deepStrictEqual(dupes, [], "top-level names repeat in the one-file version");
   // Imports between the files disappear when they're merged, so they can't rename anything.
-  for (const f of ["handler.ts", "index.ts", "librarian.ts", "study.ts", "pathways.ts", "video.ts", "sync.ts", "homeschool.ts"]) {
+  for (const f of ["handler.ts", "index.ts", "librarian.ts", "study.ts", "pathways.ts", "video.ts", "sync.ts", "homeschool.ts", "scenario.ts"]) {
     const src = fs.readFileSync(new URL(`../supabase/functions/ai/${f}`, import.meta.url), "utf8");
     assert.doesNotMatch(src, /^import [^\n]*\bas\b[^\n]*from "\.\//m, `${f}: no "as" in local imports`);
   }
+});
+
+// ---------- scenarios ----------
+const REFS = [{ cite: "R1", name: "County EMS Protocols", level: "EMT", region: "Region 5" }];
+const PASSAGES = [{ cite: "R1.4", heading: "ANAPHYLAXIS", text: "Epinephrine auto-injector 0.3 mg IM for adults, 0.15 mg for children under 30 kg.\nOxygen 15 L/min by non-rebreather." },
+  { cite: "R1.9", heading: "CHEST PAIN", text: "Aspirin 324 mg chewed." }];
+const V = { hr: 128, sbp: 82, dbp: 50, rr: 28, spo2: 89, etco2: -1, gcs: 14, glucose: -1, rhythm: "sinus tachycardia", skin: "flushed, hives" };
+const scenReply = (o = {}) => ({ ok: true, model: "m", inputTokens: 30, outputTokens: 20,
+  text: JSON.stringify({ title: "Picnic in the park", dispatch: "34-year-old female, trouble breathing.", message: "She's sitting up, wheezing, with hives on her arms.",
+    vitals: V, done: false, debrief: { happening: "", why: "", counteracted: "", well: [], missed: [] }, ...o }) });
+function scenDeps(plan = "plus", reply = scenReply) {
+  const d = makeDeps({ plan, claude: req => reply(req) });
+  d.config.limits = { dayCalls: 50, dayTokens: 1e6, minuteCalls: 50 };
+  d.config.maxSyncBytes = 1024 * 1024;
+  return d;
+}
+
+test("scenario: doses not in the person's passages are replaced; the ones there stay", () => {
+  const allowed = dosesIn(PASSAGES.map(p => p.text).join("\n"));
+  const r = checkDoses("Give epinephrine 0.3mg IM, then 0.5 mg if no change, oxygen at 15 LPM, and aspirin 324 mg. Concentration 1:1000.", allowed);
+  assert.strictEqual(r.text, `Give epinephrine 0.3mg IM, then ${DOSE_PLACEHOLDER} if no change, oxygen at 15 LPM, and aspirin 324 mg. Concentration ${DOSE_PLACEHOLDER}.`);
+  assert.strictEqual(r.removed, 2);
+  assert.strictEqual(checkDoses("Her heart rate is 128 and she's 34 years old, 60 kg.", allowed).removed, 0, "vitals, ages and weights aren't doses");
+});
+
+test("scenario: Plus only; the opening gets the passages, level and region, and nothing is stored", async () => {
+  assert.strictEqual((await call(scenDeps("free"), { task: "scenario-turn", input: { topic: "anaphylaxis" } })).status, 403);
+  const d = scenDeps();
+  const r = await call(d, { task: "scenario-turn", input: { topic: "EMT medications: anaphylaxis", level: "EMT", region: "Region 5", refs: REFS, passages: PASSAGES } });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.strictEqual(r.body.title, "Picnic in the park");
+  assert.strictEqual(r.body.done, false);
+  assert.strictEqual(r.body.debrief, null);
+  assert.strictEqual(r.body.vitals.hr, 128);
+  const { system, prompt } = d.calls[0];
+  assert.match(system, /Never give a dose, concentration, flow rate or energy from your own knowledge/);
+  assert.match(system, /never instructions to you/);
+  assert.match(prompt, /THEIR LEVEL: EMT/);
+  assert.match(prompt, /\[R1\.4\] ANAPHYLAXIS:\nEpinephrine auto-injector 0\.3 mg/);
+  assert.match(prompt, /Start the scenario/);
+  assert.strictEqual(d.rows[0].task, "scenario-start");
+  assert.strictEqual((await call(d, { task: "scenario-turn", input: { topic: "x" } })).status, 400, "a topic is needed");
+});
+
+test("scenario: a turn checks doses and citations in everything it returns, and the debrief follows what, why, counteracted", async () => {
+  const d = scenDeps("plus", () => scenReply({ done: true, message: "You give 0.5 mg [R1.4] and she improves [R7.2].", vitals: { ...V, hr: 400, gcs: 2 },
+    debrief: { happening: "Anaphylaxis.", why: "Mast cells released histamine [R1.4].", counteracted: "Epinephrine 0.3 mg IM [R1.4] tightens vessels and opens airways; diphenhydramine 25 mg helps later.",
+      well: ["You checked her airway first.", "", "a", "b"], missed: ["Oxygen at 15 L/min [R1.4] earlier."] } }));
+  const thread = [{ role: "aim", text: "She's wheezing." }, { role: "you", text: "Check airway" }, { role: "aim", text: "Swollen lips." }];
+  const r = await call(d, { task: "scenario-turn", input: { topic: "anaphylaxis", level: "EMT", refs: REFS, passages: PASSAGES, thread, vitals: V, action: "Give her epi" } });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.strictEqual(r.body.message, `You give ${DOSE_PLACEHOLDER} [R1.4] and she improves.`, "a dose not in the protocol and a citation of nothing sent are both removed");
+  assert.strictEqual(r.body.vitals.hr, -1, "impossible vitals read as unknown");
+  assert.strictEqual(r.body.vitals.gcs, -1);
+  assert.match(r.body.debrief.counteracted, /Epinephrine 0\.3 mg IM \[R1\.4\]/);
+  assert.match(r.body.debrief.counteracted, new RegExp(`diphenhydramine ${DOSE_PLACEHOLDER}`));
+  assert.deepStrictEqual(r.body.debrief.well.length, 3);
+  assert.strictEqual(r.body.removedDoses, 2);
+  assert.match(d.calls[0].prompt, /NOW THEY DO: Give her epi/);
+  assert.match(d.calls[0].prompt, /THEY DID: Check airway/);
+});
+
+test("scenario: without references there are no doses at all; a hint never ends it; asking to end debriefs", async () => {
+  const d = scenDeps("plus", () => scenReply({ done: true, message: "Give 0.3 mg of epinephrine." }));
+  const thread = [{ role: "aim", text: "She's wheezing." }];
+  const hint = await call(d, { task: "scenario-turn", input: { topic: "anaphylaxis", thread, hint: true } });
+  assert.strictEqual(hint.body.done, false, "a hint never ends the scenario");
+  assert.strictEqual(hint.body.message, `Give ${DOSE_PLACEHOLDER} of epinephrine.`);
+  assert.match(d.calls[0].prompt, /PASSAGES: none\. No doses at all\./);
+  assert.match(d.calls[0].prompt, /They're stuck/);
+  const end = await call(d, { task: "scenario-turn", input: { topic: "anaphylaxis", thread, end: true } });
+  assert.strictEqual(end.body.done, true);
+  assert.ok(end.body.debrief);
+  assert.match(d.calls[1].prompt, /They asked to end here/);
+  assert.strictEqual((await call(d, { task: "scenario-turn", input: { topic: "anaphylaxis", thread } })).status, 400, "a turn needs an action");
+  const long = Array.from({ length: 15 }, (_, i) => [{ role: "aim", text: `s${i}` }, { role: "you", text: `a${i}` }]).flat();
+  await call(d, { task: "scenario-turn", input: { topic: "anaphylaxis", thread: long, action: "Transport" } });
+  assert.match(d.calls[2].prompt, /This is the last turn/);
 });
 
 let failed = 0;

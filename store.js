@@ -321,7 +321,7 @@ function archive(history, record) {
 function purposeRecord(p, outcome) {
   return { type: "purpose", id: p.id, text: p.text, startedAt: p.startedAt, endedAt: Date.now(), usedSec: Math.round(p.usedSec),
     outcome: outcome || null, path: p.path, searches: p.searches, videos: p.videos, notes: p.notes || "",
-    kind: p.librarian?.kind || null, study: studySnapshot(p.study), map: p.map || null, practice: p.practice || null };
+    kind: p.librarian?.kind || null, study: studySnapshot(p.study), map: p.map || null, practice: p.practice || null, scenarios: p.scenarios || [] };
 }
 
 // What a study session showed, kept when its aim ends, for the learning record.
@@ -1616,6 +1616,21 @@ async function practiceSet(aimId, { practice, tried, note } = {}) {
   return { result: "applied", practice: rec.practice || null };
 }
 
+// A finished scenario, kept with its aim: what it was, and the debrief (what was happening, why, what
+// counteracted it, what went well and what was missed). The last 20.
+async function scenarioSave(aimId, s = {}) {
+  const d = await chrome.storage.local.get(["purpose", "paused", "history"]);
+  const rec = [d.purpose, ...(d.paused || []), ...(d.history || [])].find(r => r?.id === aimId);
+  if (!rec) return { result: "error", message: "That aim isn't here." };
+  const b = s.debrief || {};
+  const list = arr => (Array.isArray(arr) ? arr.map(x => clip(x, 240)).filter(Boolean).slice(0, 3) : []);
+  const entry = { at: Date.now(), title: clip(s.title, 80) || "Scenario", level: clip(s.level, 20), actions: Math.max(0, Math.min(99, Number(s.actions) || 0)),
+    happening: clip(b.happening, 400), why: clip(b.why, 500), counteracted: clip(b.counteracted, 700), well: list(b.well), missed: list(b.missed) };
+  rec.scenarios = [...(rec.scenarios || []), entry].slice(-20);
+  await chrome.storage.local.set({ purpose: d.purpose || null, paused: d.paused || [], history: d.history || [] });
+  return { result: "applied", scenario: entry };
+}
+
 // ---------- the library: one aim, whole ----------
 // Each aim is a book on the shelf. Its subject (for the cover) is a guess from its words, no AI: a
 // learning topic's channels it was watched from, else words in its name, searches and video titles.
@@ -1660,7 +1675,7 @@ async function aimGet(id) {
   }).filter(([, , n]) => n > 0).sort((a, b) => b[2] - a[2]).slice(0, 4)
     .map(([o, st]) => ({ id: o.id, text: o.text, state: st, subject: aimSubject(o) }));
   return { result: "applied", aim: { ...summary(p, state), subject, kind: p.librarian?.kind || (p.learn ? "explore" : null),
-    map: p.map || null, practice: p.practice || null, study: p.study ? studySnapshot(p.study) : null, librarianNote: p.librarian?.note || "",
+    map: p.map || null, practice: p.practice || null, scenarios: (p.scenarios || []).slice(-5).reverse(), study: p.study ? studySnapshot(p.study) : null, librarianNote: p.librarian?.note || "",
     learned: (d.memory || []).filter(m => m.aim === id).map(m => ({ subject: m.subject, idea: m.idea, understood: m.understood, at: m.at })),
     startedAt: p.startedAt || null, endedAt: p.endedAt || null }, related };
 }

@@ -360,6 +360,14 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] An aim's page has **Ways to practice**: Talk it through, Put it into practice, and Put it together (with a map) or Check yourself (study sessions); one marked **Best for this aim** (ready to put it together → that; a practice not tried → that; otherwise Talk it through). A health or EMS aim ("EMT medications") adds **Scenario**, pointing to your references.
 - [ ] A "how does X work" learn aim's parts follow what's happening → why → what counteracts it; the librarian's questions follow that order and never quiz doses.
 
+### 49. Scenarios (0.59, Aim Plus)
+- [ ] An EMS or medication aim's page: **Ways to practice** marks **Scenario** best. **Run a scenario** opens the setup with the aim's name, your references' level, and your references ticked. With no references, it says doses are left out.
+- [ ] **Start the call**: a title without the diagnosis, a dispatch, the scene, and the monitor (ECG and pleth traces moving at the heart rate, numbers; "--" for anything not yet assessed). The safety line is always visible.
+- [ ] Say what you do: the scene responds, vitals change (changed numbers blink), and protocol citations like R1.4 open the passage underneath. **I'm stuck** asks one guiding question without the answer. Something outside your level is handled as it would be on scene.
+- [ ] No dose appears that isn't written in your references (try a protocol without doses: "the dose in your protocol" instead). The debrief says how many were left out.
+- [ ] Handoff or **End and debrief**: What was happening, Why, What counteracts it, What you did well, To work on. Reload mid-call: it's still there. The aim's page lists the scenario under What you've learned.
+- [ ] Without Plus: the page explains scenarios are part of Aim Plus.
+
 ## Known issues (not regressions)
 
 - The word check knows words, not meanings: synonyms ("tap" vs "faucet") get the question once; answering Yes teaches it that search.

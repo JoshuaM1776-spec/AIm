@@ -846,6 +846,20 @@ test("references: a protocol is kept in passages with its heading, and found by 
   assert.strictEqual(env.local[`ref:${r.reference.id}`], undefined, "its text goes too");
 });
 
+test("scenarios: a debrief is kept with its aim, and goes with it into history", async () => {
+  const env = fresh();
+  await env.run(`startPurpose({ text: "EMT medications: anaphylaxis" })`);
+  const id = env.local.purpose.id;
+  assert.strictEqual((await env.run(`scenarioSave("nope", {})`)).result, "error");
+  const r = await env.run(`scenarioSave(${JSON.stringify(id)}, { title: "Picnic in the park", level: "EMT", actions: 4,
+    debrief: { happening: "Anaphylaxis.", why: "Histamine.", counteracted: "Epinephrine [R1.4].", well: ["Airway first", "", "b", "c", "d"], missed: ["Reassess"] } })`);
+  assert.strictEqual(r.result, "applied");
+  assert.deepStrictEqual(env.local.purpose.scenarios[0].well, ["Airway first", "b", "c"]);
+  assert.strictEqual((await env.run(`aimGet(${JSON.stringify(id)})`)).aim.scenarios[0].title, "Picnic in the park");
+  await env.run(`finishPurpose("yes")`);
+  assert.strictEqual(env.local.history.at(-1).scenarios[0].happening, "Anaphylaxis.");
+});
+
 test("subjects: EMS and medications read as health", async () => {
   const env = fresh();
   assert.strictEqual((await env.run(`aimSubject({ text: "EMT medications for my cert exam" })`)).id, "health");

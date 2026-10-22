@@ -317,7 +317,7 @@ async function plusLibrarian(task, input) {
 
 // Aim Plus features Aim's pages may call. Each is a task on Aim's server, which builds the prompts.
 const PLUS_TASKS = new Set(["teachback-start", "teachback-turn", "teachback-finish", "teachback-get",
-  "pathways-themes", "pathways-careers", "pathways-step", "study-apply"]);
+  "pathways-themes", "pathways-careers", "pathways-step", "study-apply", "scenario-turn"]);
 
 // Messages from Aim's own pages (Settings, TeachBack). Network calls don't go through serial(), so a slow
 // server never holds up the timer.

@@ -33,6 +33,14 @@ const srv = { deletedUsers: [], rankCalls: 0, lastAskPrompt: "", talk: [], talkP
     { evaluation: ev("sound", "glucose and oxygen"), next: { action: "follow_up", objective: 1, student: "ivy", kind: "application", question: "So what does the plant do with that glucose later?" } },
     { evaluation: ev("partial", "stores the glucose as starch"), next: { action: "next_objective", objective: 2, student: "reese", kind: "question", question: "How do we know light is needed at all?" } },
     { evaluation: ev("unclear", ""), next: { action: "next_objective", objective: 3, student: "grant", kind: "question", question: "Which part of the cell, exactly?" } }
+  ], scenario: [
+    { title: "Picnic in the park", dispatch: "34-year-old female, trouble breathing at a park.", message: "She's sitting up, wheezing, hives on her arms and lips swelling.",
+      vitals: { hr: 128, sbp: 82, dbp: 50, rr: 28, spo2: 89, etco2: -1, gcs: 14, glucose: -1, rhythm: "sinus tachycardia", skin: "flushed, hives" }, done: false, debrief: { happening: "", why: "", counteracted: "", well: [], missed: [] } },
+    { title: "", dispatch: "", message: "You give the auto-injector at 0.5 mg [R1.1]. Within minutes her wheezing eases.", vitals: { ...{ hr: 128, sbp: 82, dbp: 50, rr: 28, spo2: 89, etco2: -1, gcs: 14, glucose: -1, rhythm: "sinus tachycardia", skin: "flushed, hives" }, hr: 112, sbp: 104, spo2: 94 }, done: false,
+      debrief: { happening: "", why: "", counteracted: "", well: [], missed: [] } },
+    { title: "", dispatch: "", message: "You hand her over at the ED with a clear report.", vitals: { ...{ hr: 128, sbp: 82, dbp: 50, rr: 28, spo2: 89, etco2: -1, gcs: 14, glucose: -1, rhythm: "sinus tachycardia", skin: "flushed, hives" }, hr: 104, sbp: 112, spo2: 96 }, done: true,
+      debrief: { happening: "Anaphylaxis from a bee sting.", why: "Histamine widened her vessels and swelled her airway.", counteracted: "Epinephrine 0.3 mg IM [R1.1] tightens vessels and opens airways.",
+        well: ["You recognized the swelling early."], missed: ["Reassess after the epinephrine, as the protocol says [R1.1]."] } }
   ], sent: [], refreshes: 0, revoked: 0, aiCalls: 0, plan: "free", expiresIn: 3600, sessions: new Map(), n: 0 };
 const user = { id: "u1", email: "learner@example.com" };
 function issue() {
@@ -57,6 +65,7 @@ const deps = {
           objectives: ["Explain what photosynthesis produces", "Explain the role of light", "Explain where it happens in the cell"] }
       : props.includes("shows") ? (srv.applyPrompt = req.prompt, { title: "Trace a sugar cube", task: "Follow one glucose molecule from breakfast to ATP and draw where each step happens.",
           steps: ["Draw a cell", "Mark glycolysis", "Mark the Krebs cycle"], shows: "You can explain where ATP comes from.", minutes: 30, safety: "" })
+      : props.includes("debrief") ? (srv.scenarioPrompts = [...(srv.scenarioPrompts || []), req.prompt], srv.scenario.shift())
       : props.includes("evaluation") ? srv.director.shift()
       : props.includes("hint") ? { hint: "Think about what the plant keeps for later." }
       : props.includes("topics") ? (srv.studyPrompt = req.prompt, { title: "Cellular respiration", scope_note: "",
@@ -929,6 +938,46 @@ await landing.close();
 await opt.fill("#plusCode", CODE);
 await opt.click("button:text-is('Sign in')");
 await opt.waitForSelector("#plusExport");
+// ---------- Scenarios: a call from your own protocols ----------
+const scenAim = await sw.evaluate(async () => {
+  await serial(() => refAdd({ name: "County EMS Protocols", kind: "protocol", level: "EMT", region: "Region 5",
+    text: "ANAPHYLAXIS\n\nEpinephrine auto-injector 0.3 mg IM for adults per medical direction. Reassess breathing and blood pressure after giving it, and again every five minutes.\n\nCHEST PAIN\n\nAspirin 324 mg chewed if no allergy and no recent bleeding. Reassess pain and vitals often." }));
+  await serial(() => startPurpose({ text: "EMT medications: anaphylaxis" }));
+  return (await chrome.storage.local.get("purpose")).purpose.id;
+});
+const sc = await ctx.newPage();
+await sc.goto(`chrome-extension://${extId}/aim.html?id=${scenAim}`);
+await sc.waitForSelector("#ways");
+step("an EMS aim's best way to practice is a scenario", (await sc.textContent("#ways .way.best")).includes("Scenario"));
+await sc.click("#ways .way.best button");
+await sc.waitForSelector("text=Set up a scenario");
+step("the scenario is set up from the aim, at your references' level", (await sc.inputValue(".setup input[type=text]")) === "EMT medications: anaphylaxis" &&
+  (await sc.inputValue(".setup select")) === "EMT" && (await sc.textContent(".setup .refs")).includes("County EMS Protocols"));
+await sc.click("button:text-is('Start the call')");
+await sc.waitForSelector(".monitor");
+step("the call: dispatch, the scene, and the monitor with her vitals", (await sc.textContent(".msg.dispatch")).includes("trouble breathing") &&
+  (await sc.textContent(".monitor .num.hr b")) === "128" && (await sc.textContent(".monitor")).includes("82/50"));
+step("the opening was grounded in her protocol's passage, at her level", /\[R1\.\d+\] ANAPHYLAXIS:\nEpinephrine auto-injector 0\.3 mg/.test(srv.scenarioPrompts[0]) && /THEIR LEVEL: EMT/.test(srv.scenarioPrompts[0]));
+if (process.env.SHOTS) { await sc.setViewportSize({ width: 1200, height: 860 }); await sc.screenshot({ path: `${process.env.SHOTS}/scenario.png`, fullPage: true }); }
+await sc.fill(".act textarea", "Give her the epinephrine auto-injector");
+await sc.click("button:text-is('Do it')");
+await sc.waitForSelector(".msg.you");
+const said = await sc.textContent(".feed .msg.aim:last-of-type");
+step("a dose that isn't in her protocol never reaches the page; the citation opens the passage", said.includes("the dose in your protocol") && !said.includes("0.5 mg") &&
+  (await sc.textContent(".monitor .num.hr b")) === "112", said);
+await sc.click(".feed .msg.aim:last-of-type .cite");
+step("the cited passage is the protocol's own text", (await sc.textContent(".passage")).includes("Epinephrine auto-injector 0.3 mg IM"));
+await sc.fill(".act textarea", "Transport and give a handoff report");
+await sc.click("button:text-is('Do it')");
+await sc.waitForSelector("h2:text-is('Debrief')");
+const deb = await sc.textContent("main");
+step("the debrief: what was happening, why, what counteracts it, what went well and what to work on", ["What was happening", "Why", "What counteracts it", "What you did well", "To work on", "Anaphylaxis from a bee sting"].every(t => deb.includes(t)) &&
+  deb.includes("Aim left out 1 dose"));
+if (process.env.SHOTS) await sc.screenshot({ path: `${process.env.SHOTS}/scenario-debrief.png`, fullPage: true });
+const kept = await sw.evaluate(async id => (await chrome.storage.local.get("purpose")).purpose.scenarios, scenAim);
+step("the debrief is kept with the aim, and nothing of the call stays on the server", kept?.length === 1 && kept[0].happening === "Anaphylaxis from a bee sting." && kept[0].actions === 2);
+await sc.close();
+await sw.evaluate(() => serial(() => finishPurpose("yes")));
 const [download] = await Promise.all([opt.waitForEvent("download"), opt.click("#plusExport")]);
 const exported = JSON.parse(fs.readFileSync(await download.path(), "utf8"));
 step("Download my data: account, server data and this browser's data in one file", exported.format === "aim-export-1" &&
