@@ -70,7 +70,8 @@ On the server, `supabase/functions/ai/homeschool.ts` holds every rule (approval,
 | `record.html/js` | The learning record: totals, then each aim with its time, videos, study checks and projects; printable |
 | `channels.html/js` | Your channels: subscriptions sorted into Not sorted, Learn from (with your own topics), For breaks and Keep out, by tap or drag, with suggestions |
 | `targets.html/js` | Your library: every aim as a book (All, In progress, Completed, search, New aim) |
-| `aim.html/js` | One aim's page: its book, Your understanding, a question to explore, Put it into practice, what you've learned, key videos, notes, path and related aims |
+| `aim.html/js` | One aim's page: its book, Ways to practice (the tools, what each is best for, one marked best), Your understanding, a question to explore, Put it into practice, what you've learned, key videos, notes, path and related aims |
+| `references.html/js` | Your references: protocols and course texts (uploaded or pasted, read in the browser), with level and region, kept in passages for scenarios; search shows what a scenario would read |
 | `covers.js` | Book covers for aims: the subject's color and icon, the name in a serif, a progress line (subjects guessed in store.js, no AI) |
 | `aim.css` | The shared look for all of Aim's own pages (see Design) |
 | `tokens.css` | Aim's fonts and colors, from the mark (used by `aim.css` and the popup) |

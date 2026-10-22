@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="light dark">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your references</title>
+<link rel="stylesheet" href="aim.css">
+<style>
+  /* References: your protocols and course texts, which scenarios use for medications and doses. */
+  h1.serif { font-size: 36px; line-height: 42px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .refform label { display: flex; flex-direction: column; gap: 4px; font-weight: 500; }
+  .refform input[type=text], .refform select, .refform textarea { font: inherit; color: var(--text); background: var(--field); border: 1px solid var(--field-border); border-radius: 10px; padding: 8px 10px; }
+  .refform textarea { width: 100%; box-sizing: border-box; min-height: 110px; resize: vertical; }
+  .drop { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1.5px dashed var(--field-border); border-radius: 12px; background: var(--tonal); }
+  .doc { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 14px 0; border-top: 1px solid var(--divider); }
+  .doc:first-child { border-top: 0; }
+  .doc .ico { width: 44px; height: 56px; border-radius: 3px 6px 6px 3px; background: var(--primary); color: #e9d9b4; display: flex; align-items: center; justify-content: center; font: 600 10px var(--font); letter-spacing: .08em; }
+  .doc b { font-weight: 500; }
+  .doc .meta { font-size: 12px; color: var(--muted); }
+  .hit { padding: 10px 12px; border-radius: 10px; background: var(--tonal); margin-top: 8px; font-size: 13px; line-height: 19px; white-space: pre-wrap; }
+  .hit b { font-weight: 600; }
+  .hint { font-size: 13px; color: var(--muted); }
+  @media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="page-head">
+    <img class="for-light" src="icons/48.png" alt=""><img class="for-dark" src="icons/light/48.png" alt="">
+    <span class="brand" data-brand>Aim</span><span class="crumb"><a href="targets.html">Library</a> · References</span>
+  </header>
+  <h1 class="serif">Your references</h1>
+  <p class="lede">Your protocols and course texts. Scenarios take medications, doses and steps only from these, and cite where each came from. Kept in this browser; when a scenario runs, only the passages it needs are sent to Aim's server, and nothing is stored there.</p>
+
+  <section class="card refform" id="add">
+    <h2>Add a document</h2>
+    <div class="drop">
+      <input type="file" id="file" accept=".pdf,.docx,.txt,.md" aria-label="Choose a file">
+      <span class="hint" id="fileNote">A PDF, Word or text file, up to 10 MB. Scanned pages can't be read: paste their text below instead.</span>
+    </div>
+    <label style="margin-top:12px">Or paste the text<textarea id="text" placeholder="Paste a protocol, a chapter, or your course notes…"></textarea></label>
+    <div class="grid2" style="margin-top:12px">
+      <label>Name<input type="text" id="name" placeholder="e.g. County EMS Protocols 2026"></label>
+      <label>Agency or region<input type="text" id="region" placeholder="e.g. Ohio, Region 5"></label>
+      <label>What it is<select id="kind"><option value="protocol">Protocols</option><option value="course">Course text</option><option value="other">Other</option></select></label>
+      <label>Your level<select id="level"><option value="">Not specific</option><option>EMR</option><option>EMT</option><option>AEMT</option><option>Paramedic</option><option>Nursing</option><option>Other</option></select></label>
+    </div>
+    <div class="row" style="margin-top:14px;gap:10px;align-items:center"><button class="btn" id="save" type="button">Add to references</button><span class="hint" id="msg" role="status"></span></div>
+    <p class="hint" style="margin:12px 0 0">Use documents you're allowed to use, such as your own agency's protocols or your course materials. Practice only: for patients, always follow your current protocols and medical direction.</p>
+  </section>
+
+  <section class="card">
+    <h2>Your documents</h2>
+    <div id="list"></div>
+  </section>
+
+  <section class="card">
+    <h2>See what Aim reads</h2>
+    <p class="hint">Search your documents the way a scenario would, to check the text came through well.</p>
+    <div class="row" style="gap:8px"><input type="text" id="q" class="field" placeholder="e.g. epinephrine anaphylaxis dose" style="flex:1" aria-label="Search your references"><button class="btn tonal" id="go" type="button">Search</button></div>
+    <div id="hits"></div>
+  </section>
+</main>
+<div id="toast" role="status"></div>
+<script src="content/filetext.js"></script>
+<script src="references.js"></script>
+</body>
+</html>

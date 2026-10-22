@@ -352,6 +352,14 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] Settings → **Design your YouTube**, and its Jump to links, open a stage directly. Clicking a part of the preview opens its stage. A change shows **Changes not applied yet**, with Undo.
 - [ ] A student's browser connected to a family shows the design but can't change it.
 
+### 48. References and Ways to practice (0.58)
+- [ ] Library → **References** (also Settings → Your references). Add a PDF, Word or text protocol: "Read …: about Nk characters", the name filled from the file. Pick EMT, add a region, **Add to references**: it's listed with its passages and level.
+- [ ] Paste text instead of a file: same result. Under 200 characters: "That document has too little text to use…".
+- [ ] **See what Aim reads**: "epinephrine anaphylaxis" shows the protocol's passages on it, each with a citation like [R1.4] and its heading. A scanned PDF reads as little or no text (paste instead).
+- [ ] Change a document's level from its list; Remove asks first, then it's gone.
+- [ ] An aim's page has **Ways to practice**: Talk it through, Put it into practice, and Put it together (with a map) or Check yourself (study sessions); one marked **Best for this aim** (ready to put it together → that; a practice not tried → that; otherwise Talk it through). A health or EMS aim ("EMT medications") adds **Scenario**, pointing to your references.
+- [ ] A "how does X work" learn aim's parts follow what's happening → why → what counteracts it; the librarian's questions follow that order and never quiz doses.
+
 ## Known issues (not regressions)
 
 - The word check knows words, not meanings: synonyms ("tap" vs "faucet") get the question once; answering Yes teaches it that search.

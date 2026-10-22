@@ -90,6 +90,35 @@ function practice(a) {
   return box;
 }
 
+// Ways to practice: the tools Aim has for learning something, what each is best for, and the one
+// that fits this aim best right now. You pick.
+function ways(a, refs) {
+  const health = a.subject?.id === "health";
+  const tools = [
+    { key: "talk", title: "Talk it through", best: "Checking you understand: the librarian asks what you'd tell a friend, then what you'd ask next.",
+      go: () => goTo("https://www.youtube.com/#aim-talk"), label: "Talk it through" },
+    a.map?.parts?.length ? { key: "together", title: "Put it together", best: "Seeing how the parts connect: what's happening, why, and what counteracts it, in a few sentences of your own.",
+      go: () => goTo("https://www.youtube.com/#aim-put-together"), label: "Put it together" } : null,
+    a.study?.of ? { key: "check", title: "Check yourself", best: "Course material: short checks on each topic, so you know what's solid before a test.",
+      go: () => goTo(), label: "Continue studying" } : null,
+    { key: "practice", title: "Put it into practice", best: "Skills and projects: one small thing to try, so it sticks because you used it.",
+      go: () => document.getElementById("practice")?.scrollIntoView({ behavior: "smooth" }), label: "See practice" },
+    health ? { key: "scenario", title: "Scenario", best: "Calls, patients and medications: work a situation as it unfolds, using your own protocols.",
+      go: () => (location.href = "references.html"), label: refs ? "Your references" : "Add your protocols",
+      note: refs ? `${refs} reference${refs > 1 ? "s" : ""} ready. Scenarios arrive in the next update.` : "Add your protocols first, so scenarios use your doses and steps. Scenarios arrive in the next update." } : null
+  ].filter(Boolean);
+  const pick = a.understanding?.ready && a.map?.synthesis?.verdict !== "solid" ? "together"
+    : a.practice && !a.practice.triedAt ? "practice"
+    : a.study?.of && a.study.checked < a.study.of ? "check"
+    : health && !refs ? "scenario" : "talk";
+  return node("section", { className: "card", id: "ways" }, node("h2", { textContent: "Ways to practice" }),
+    node("div", { className: "ways" }, tools.map(t => node("div", { className: `way${t.key === pick ? " best" : ""}`, title: t.title },
+      t.key === pick ? node("span", { className: "pill strong", textContent: "Best for this aim" }) : null,
+      node("b", { textContent: t.title }), node("span", { className: "muted", textContent: t.best }),
+      t.note ? node("small", { className: "muted", textContent: t.note }) : null,
+      node("div", {}, btn(t.label, t.key === pick ? "" : "tonal", t.go))))));
+}
+
 function learned(a) {
   const items = [
     ...a.learned.map(m => node("li", {}, node("b", { textContent: `${m.subject}: ` }), m.idea, m.understood === "shaky" ? node("span", { className: "muted", textContent: " (still working on it)" }) : null)),
@@ -133,7 +162,7 @@ function related(list) {
 }
 
 async function render() {
-  const d = await send({ type: "aim-get", id });
+  const [d, refList] = await Promise.all([send({ type: "aim-get", id }), send({ type: "ref-list" })]);
   const page = document.getElementById("page");
   if (!d || d.result !== "applied") { page.replaceChildren(node("p", { className: "error", textContent: d?.message || "Couldn't load this aim." }), node("a", { href: "targets.html", textContent: "Back to your library" })); return; }
   const a = d.aim;
@@ -151,13 +180,14 @@ async function render() {
       node("div", { className: "overview" },
         node("div", {}, understanding(a) || learned(a)),
         node("div", {}, nextQuestion(a), practice(a)))),
+    ways(a, (refList || []).length),
     a.map?.parts?.length ? learned(a) : null,
     videos(a), notes(a), related(d.related));
   const side = node("aside", { className: "aim-side" },
     node("a", { className: "back", href: "targets.html", textContent: "← Back to library" }),
     cover(a, "large"),
     node("nav", { className: "aim-nav", ariaLabel: "This aim" },
-      [["overview", "Overview"], ["learned", "What you've learned"], ["videos", "Key videos"], ["notes", "Notes & ideas"], ["practice", "Practice"], ["related", "Related aims"]]
+      [["overview", "Overview"], ["ways", "Ways to practice"], ["learned", "What you've learned"], ["videos", "Key videos"], ["notes", "Notes & ideas"], ["practice", "Practice"], ["related", "Related aims"]]
         .map(([k, label]) => node("a", { href: `#${k}`, textContent: label }))));
   page.replaceChildren(node("div", { className: "aim-layout" }, side, main));
   for (const s of main.querySelectorAll("section.card")) s.style.marginTop = "16px";

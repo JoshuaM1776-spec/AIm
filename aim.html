@@ -48,6 +48,11 @@
   .related .book { width: 120px; }
   .related .book-title { font-size: 14px; line-height: 17px; }
   .related .book-subject { font-size: 7px; }
+  .ways { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+  .way { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border-radius: 12px; background: var(--tonal); }
+  .way.best { background: none; box-shadow: inset 0 0 0 1.5px var(--primary); }
+  .way .pill { align-self: flex-start; }
+  .way > div:last-child { margin-top: auto; padding-top: 6px; }
   main section { scroll-margin-top: 16px; }
   textarea.field { width: 100%; font: inherit; color: var(--text); background: var(--field); border: 1px solid var(--field-border); border-radius: 10px; padding: 10px 12px; resize: vertical; }
   @media (max-width: 860px) { .aim-layout, .overview { grid-template-columns: 1fr; } .aim-side { position: static; flex-direction: row; flex-wrap: wrap; align-items: flex-start; } .aim-nav { flex-direction: row; flex-wrap: wrap; } }

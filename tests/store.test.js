@@ -824,6 +824,34 @@ test("sync: only deliberate deletions are passed on, and only while sync is on",
   assert.deepStrictEqual(env.local.syncDeleted.map(d => d.kind), ["saved", "target"]);
 });
 
+test("references: a protocol is kept in passages with its heading, and found by what a scenario is about", async () => {
+  const env = fresh();
+  const filler = "Assess airway, breathing and circulation. Reassess every five minutes and document findings. ".repeat(4);
+  const text = `ALLERGIC REACTION AND ANAPHYLAXIS\n\nSigns include hives, wheezing, and hypotension. Epinephrine auto-injector 0.3 mg IM for adults per medical direction.\n\nCHEST PAIN\n\n${filler}Aspirin 324 mg chewed if no allergy.\n\nSEIZURES\n\n${filler}`;
+  assert.strictEqual((await env.run(`refAdd({ name: "x", text: "too short" })`)).result, "error", "too little text to be a reference");
+  const r = await env.run(`refAdd(${JSON.stringify({ name: "County EMS Protocols", kind: "protocol", level: "EMT", region: "Region 5", text })})`);
+  assert.strictEqual(r.result, "applied");
+  assert.ok(r.reference.passages >= 3);
+  assert.strictEqual(env.local.references.length, 1);
+  assert.ok(!("text" in env.local.references[0]), "the list stays small; the text is kept on its own");
+  const ex = await env.run(`refExcerpts([${JSON.stringify(r.reference.id)}], "epinephrine for anaphylaxis")`);
+  assert.deepStrictEqual(ex.refs.map(x => x.cite), ["R1"]);
+  assert.match(ex.passages[0].cite, /^R1\.\d+$/);
+  assert.match(ex.passages[0].text, /Epinephrine/);
+  assert.match(ex.passages[0].heading, /ANAPHYLAXIS/i);
+  await env.run(`refUpdate(${JSON.stringify(r.reference.id)}, { level: "Paramedic" })`);
+  assert.strictEqual(env.local.references[0].level, "Paramedic");
+  await env.run(`refRemove(${JSON.stringify(r.reference.id)})`);
+  assert.deepStrictEqual(env.local.references, []);
+  assert.strictEqual(env.local[`ref:${r.reference.id}`], undefined, "its text goes too");
+});
+
+test("subjects: EMS and medications read as health", async () => {
+  const env = fresh();
+  assert.strictEqual((await env.run(`aimSubject({ text: "EMT medications for my cert exam" })`)).id, "health");
+  assert.strictEqual((await env.run(`aimSubject({ text: "How nitroglycerin works for cardiac chest pain" })`)).id, "health");
+});
+
 (async () => {
   let failed = 0;
   for (const [name, fn] of tests) {

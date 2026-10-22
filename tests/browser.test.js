@@ -620,6 +620,30 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await all.click("#notes button:text-is('Save notes')");
   await all.waitForTimeout(300);
   step("notes save from the aim's page, for an aim that's set aside", (await store()).paused.find(x => x.text === "Study for my biology exam")?.notes === "Exam is Friday.");
+  step("Ways to practice: the tools for this aim, what each is best for, one marked best",
+    (await all.$$("#ways .way")).length >= 2 && (await all.$$("#ways .way.best")).length === 1 && (await all.textContent("#ways")).includes("Talk it through"));
+
+  // ---------- Your references: protocols for scenarios ----------
+  const refs = await ctx.newPage();
+  await refs.goto(`chrome-extension://${extId}/references.html`);
+  await refs.waitForSelector("#list p, #list .doc");
+  await refs.fill("#text", "ANAPHYLAXIS\n\nEpinephrine auto-injector for adults per medical direction. Reassess breathing and blood pressure after giving it. ".repeat(3) + "\n\nCHEST PAIN\n\nAspirin chewed if no allergy and no recent bleeding. Reassess pain and vitals often.".repeat(3));
+  await refs.fill("#name", "County EMS Protocols");
+  await refs.selectOption("#level", "EMT");
+  await refs.click("#save");
+  await refs.waitForSelector("#list .doc");
+  step("References: paste a protocol, and it's kept in this browser with its level", (await refs.textContent("#list")).includes("County EMS Protocols") &&
+    (await store()).references?.[0]?.level === "EMT", await refs.textContent("#msg"));
+  await refs.fill("#q", "epinephrine anaphylaxis");
+  await refs.click("#go");
+  await refs.waitForSelector("#hits .hit");
+  step("References: search shows the passages a scenario would use, with citations", /\[R1\.\d+\] County EMS Protocols/.test(await refs.textContent("#hits .hit")));
+  if (process.env.SHOTS) { await refs.setViewportSize({ width: 1000, height: 900 }); await refs.screenshot({ path: `${process.env.SHOTS}/references.png`, fullPage: true }); }
+  refs.once("dialog", d => d.accept());
+  await refs.click("#list .doc button:text-is('Remove')");
+  await refs.waitForSelector("#list p");
+  step("References: remove one, and its text goes too", !(await store()).references.length && !Object.keys(await store()).some(k => k.startsWith("ref:")));
+  await refs.close();
   await all.goto(`chrome-extension://${extId}/targets.html`);
   await all.waitForSelector("#list .book");
   const rec = await ctx.newPage();

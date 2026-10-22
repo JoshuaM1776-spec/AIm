@@ -1629,7 +1629,7 @@ const SUBJECTS = [
   ["coding", "Technology", /\b(code|coding|program|python|javascript|software|computer|web\b|apps?\b|ai\b|data\b)/],
   ["money", "Personal finance", /\b(money|budget|invest|finance|tax\b|taxes|stock|saving|retire|debt)/],
   ["aviation", "Aviation", /\b(aviation|pilot|plane|aircraft|flight|airline|checkride|faa\b)/],
-  ["health", "Health", /\b(health|fitness|exercise|nutrition|sleep|habit|workout|diet|medical|anatomy)/],
+  ["health", "Health", /\b(health|fitness|exercise|nutrition|sleep|habit|workout|diet|medical|anatomy|emt\b|ems\b|paramedic|medication|pharmacolog|nursing|patient|cardiac|trauma|first aid|anaphyla|epinephrine|naloxone|overdose|stroke|asthma|diabet|seizure|cpr\b|vital signs)/],
   ["language", "Language", /\b(spanish|french|german|japanese|chinese|language|grammar|vocabulary|english)/],
   ["arts", "Arts", /\b(music|guitar|piano|drawing|painting|photography|photo|design|art\b|artist|writing|poetry)/],
   ["cooking", "Cooking", /\b(cook|cooking|bake|baking|bread|sourdough|recipe|kitchen|food)/],
@@ -1673,4 +1673,88 @@ async function setAimNotes(id, text) {
   rec.notes = String(text || "").slice(0, 4000);
   await chrome.storage.local.set({ purpose: d.purpose || null, paused: d.paused || [], history: d.history || [] });
   return { result: "applied", notes: rec.notes };
+}
+
+// ---------- References: your protocols and course texts ----------
+// Documents you add (an agency's EMS protocols, a course textbook chapter), read in your browser and
+// kept here: the list under "references", each one's text under "ref:<id>". Scenarios and checks use
+// only the passages that matter, with a citation like [R1.12] (document 1, passage 12). Never synced,
+// and sent to Aim's server only as those passages, when a scenario needs them.
+const REF_KINDS = ["protocol", "course", "other"];
+const REF_LEVELS = ["", "EMR", "EMT", "AEMT", "Paramedic", "Nursing", "Other"];
+const REF_MAX = 3_000_000; // characters of text per document
+
+async function refList() {
+  const { references = [] } = await chrome.storage.local.get("references");
+  return references;
+}
+async function refAdd({ name, kind, level, region, text }) {
+  text = String(text || "").replace(/\r/g, "").replace(/[ \t]+\n/g, "\n").trim();
+  if (text.length < 200) return { result: "error", message: "That document has too little text to use. If it's a scan, copy its text and paste it." };
+  const { references = [] } = await chrome.storage.local.get("references");
+  const id = `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+  const ref = { id, name: clip(name, 120) || "Untitled", kind: REF_KINDS.includes(kind) ? kind : "protocol", level: REF_LEVELS.includes(level) ? level : "",
+    region: clip(region, 120), addedAt: Date.now(), chars: Math.min(text.length, REF_MAX), passages: refPassages(text.slice(0, REF_MAX)).length };
+  await chrome.storage.local.set({ references: [...references, ref], [`ref:${id}`]: text.slice(0, REF_MAX) });
+  return { result: "applied", reference: ref };
+}
+async function refUpdate(id, fields = {}) {
+  const { references = [] } = await chrome.storage.local.get("references");
+  const ref = references.find(r => r.id === id);
+  if (!ref) return { result: "error", message: "That document isn't here." };
+  if (fields.name !== undefined) ref.name = clip(fields.name, 120) || ref.name;
+  if (REF_KINDS.includes(fields.kind)) ref.kind = fields.kind;
+  if (REF_LEVELS.includes(fields.level)) ref.level = fields.level;
+  if (fields.region !== undefined) ref.region = clip(fields.region, 120);
+  await chrome.storage.local.set({ references });
+  return { result: "applied", reference: ref };
+}
+async function refRemove(id) {
+  const { references = [] } = await chrome.storage.local.get("references");
+  await chrome.storage.local.set({ references: references.filter(r => r.id !== id) });
+  await chrome.storage.local.remove(`ref:${id}`);
+  return { result: "applied" };
+}
+
+// A document as passages: split at headings and blank lines, then joined up to about 1,200 characters,
+// each keeping the nearest heading above it, so a passage still says what it's about.
+function refPassages(text) {
+  const blocks = text.split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
+  const isHeading = b => b.length < 90 && !/[.:;,]$/.test(b) && /^[\p{Lu}\d]/u.test(b) && b.split(/\s+/).length <= 10;
+  const out = [];
+  let heading = "", cur = "";
+  const flush = () => { if (cur.trim()) out.push({ heading, text: cur.trim() }); cur = ""; };
+  for (const b of blocks) {
+    if (isHeading(b)) { flush(); heading = b; continue; }
+    if (cur.length + b.length > 1200) flush();
+    cur += (cur ? "\n" : "") + b;
+    while (cur.length > 1800) { out.push({ heading, text: cur.slice(0, 1200) }); cur = cur.slice(1200); }
+  }
+  flush();
+  return out;
+}
+
+// The passages most related to what a scenario is about, labelled [R1.12], within maxChars. No AI:
+// shared words, with the passage's heading counting double. Medication names always match exactly.
+async function refExcerpts(ids, about, maxChars = 12000) {
+  const refs = (await refList()).filter(r => ids.includes(r.id));
+  const want = new Set(meaningfulWords(about));
+  const scored = [];
+  for (const [n, r] of refs.entries()) {
+    const text = (await chrome.storage.local.get(`ref:${r.id}`))[`ref:${r.id}`] || "";
+    refPassages(text).forEach((p, i) => {
+      const words = meaningfulWords(p.text), head = meaningfulWords(p.heading);
+      const score = words.filter(w => want.has(w)).length + 2 * head.filter(w => want.has(w)).length;
+      if (score) scored.push({ cite: `R${n + 1}.${i + 1}`, ref: r.name, heading: p.heading, text: p.text, score });
+    });
+  }
+  const picked = [];
+  let used = 0;
+  for (const p of scored.sort((a, b) => b.score - a.score)) {
+    const block = `[${p.cite}] ${p.heading ? `${p.heading}: ` : ""}${p.text}`;
+    if (used + block.length > maxChars) continue;
+    picked.push({ ...p, block });
+    used += block.length;
+  }
+  return { refs: refs.map((r, n) => ({ cite: `R${n + 1}`, id: r.id, name: r.name, level: r.level, region: r.region })), passages: picked };
 }

@@ -15,12 +15,15 @@ Aim keeps the following in your browser's extension storage (`chrome.storage.loc
 - **Your settings,** **saved-for-later videos,** and **how you sorted channels** (Learn from, with your own topics; For breaks; Keep out).
 - **Your YouTube subscriptions,** only if you ask Aim to read them (Your channels → Get my subscriptions): each channel's name, address and picture, read from YouTube's own subscriptions page in your YouTube tab.
 - **History** of your last 200 purposes and breaks.
+- **Your references,** only if you add them (Library → References): the text of protocols or course documents you upload or paste, with the name, level and region you give them. Files are read in your browser; the file itself isn't kept, only its text.
 
 This data never leaves your computer. Aim does not sell, share or transfer it, and there is nothing to transfer it to.
 
 ## Network requests
 
 Aim itself makes one kind of request: when you open a video, it asks YouTube's public "oEmbed" address on youtube.com for that video's title and channel, so it can tell which video is on screen. This request goes to YouTube, the site you're already on, and contains only the video's address.
+
+Your references stay in this browser. When a scenario runs (Aim Plus), only the passages it needs (a few thousand characters, cited by document and passage) are sent to Aim's server and the AI, and nothing of them is stored there.
 
 A study guide file you upload for a study session (Aim Plus) is read in your browser; only its text, which you see and can edit first, is sent, exactly as if you had pasted it.
 
@@ -37,6 +40,7 @@ Your use of YouTube remains subject to YouTube's and Google's own privacy polici
 ## Permissions
 
 - **Storage:** to keep the data listed above on your computer.
+- **Unlimited storage:** so long protocol documents fit in your browser's storage. It lets Aim keep more on your computer; it sends nothing anywhere.
 - **Access to www.youtube.com:** to show Aim on YouTube pages: the purpose indicator, the cards and the distraction controls. Aim runs on no other site.
 
 Aim switches YouTube's own autoplay setting off while you're not on a break, and back on afterwards if Aim was the one that switched it off. It changes no other YouTube settings.
