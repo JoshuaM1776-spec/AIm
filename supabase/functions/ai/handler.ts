@@ -11,6 +11,7 @@ import { careers, step, themes, where } from "./pathways.ts";
 import { videoConcepts } from "./video.ts";
 import { talk } from "./talk.ts";
 import { scenarioTurn } from "./scenario.ts";
+import { deeperStep } from "./deeper.ts";
 import { type SyncStore, SyncError, readSyncInput } from "./sync.ts";
 import { type HsDb, HS_TASKS } from "./homeschool.ts";
 
@@ -104,7 +105,9 @@ export const TASKS: Record<string, Task> = {
   // "In this video": a video's concepts from its title, description and chapters. See video.ts.
   "video-concepts": { plan: "plus", run: videoConcepts },
   // Scenarios: a situation as it unfolds, from the person's own references. See scenario.ts.
-  "scenario-turn": { plan: "plus", run: scenarioTurn }
+  "scenario-turn": { plan: "plus", run: scenarioTurn },
+  // Going deeper: one more level of why. See deeper.ts.
+  "deeper-step": { plan: "plus", run: deeperStep }
 };
 
 // Requests that may carry more than a few pages: up to maxSyncBytes.

@@ -149,3 +149,16 @@ details.videos > summary { cursor: pointer; color: var(--link); font-size: 12px;
 .mini-title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
 .serif { font-family: var(--font-serif); font-weight: 500; letter-spacing: -.2px; }
+
+/* Going deeper (deeper.js): a ladder of why, one rung per level. */
+.ladder { margin: 6px 0 4px; padding: 12px 14px; border-radius: 12px; background: var(--tonal); }
+.ladder-root { margin: 0 0 8px; }
+.rungs { display: flex; flex-direction: column; gap: 0; margin: 4px 0 10px; }
+.rung { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px; position: relative; padding: 8px 0; }
+.rung + .rung::before { content: ""; position: absolute; left: 12px; top: -8px; height: 16px; border-left: 2px solid var(--primary); opacity: .5; }
+.rung-n { width: 24px; height: 24px; border-radius: 50%; background: var(--primary); color: var(--on-primary); font: 600 12px/24px var(--font); text-align: center; }
+.rung p { margin: 0 0 4px; line-height: 21px; }
+.rung-what { font-weight: 500; }
+.ladder-actions { gap: 8px; flex-wrap: wrap; }
+.ladder-status:empty { display: none; }
+.ladder-status { margin: 8px 0 0; }

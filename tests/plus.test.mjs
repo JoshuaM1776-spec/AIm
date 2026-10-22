@@ -35,12 +35,16 @@ const srv = { deletedUsers: [], rankCalls: 0, lastAskPrompt: "", talk: [], talkP
     { evaluation: ev("unclear", ""), next: { action: "next_objective", objective: 3, student: "grant", kind: "question", question: "Which part of the cell, exactly?" } }
   ], scenario: [
     { title: "Picnic in the park", dispatch: "34-year-old female, trouble breathing at a park.", message: "She's sitting up, wheezing, hives on her arms and lips swelling.",
-      vitals: { hr: 128, sbp: 82, dbp: 50, rr: 28, spo2: 89, etco2: -1, gcs: 14, glucose: -1, rhythm: "sinus tachycardia", skin: "flushed, hives" }, done: false, debrief: { happening: "", why: "", counteracted: "", well: [], missed: [] } },
-    { title: "", dispatch: "", message: "You give the auto-injector at 0.5 mg [R1.1]. Within minutes her wheezing eases.", vitals: { ...{ hr: 128, sbp: 82, dbp: 50, rr: 28, spo2: 89, etco2: -1, gcs: 14, glucose: -1, rhythm: "sinus tachycardia", skin: "flushed, hives" }, hr: 112, sbp: 104, spo2: 94 }, done: false,
+      readings: { hr: 128, sbp: 82, dbp: 50, rr: 28, spo2: 89, etco2: -1, gcs: 14, glucose: -1, rhythm: "sinus tachycardia", skin: "flushed, hives" }, done: false, debrief: { happening: "", why: "", counteracted: "", well: [], missed: [] } },
+    { title: "", dispatch: "", message: "You give the auto-injector at 0.5 mg [R1.1]. Within minutes her wheezing eases.", readings: { ...{ hr: 128, sbp: 82, dbp: 50, rr: 28, spo2: 89, etco2: -1, gcs: 14, glucose: -1, rhythm: "sinus tachycardia", skin: "flushed, hives" }, hr: 112, sbp: 104, spo2: 94 }, done: false,
       debrief: { happening: "", why: "", counteracted: "", well: [], missed: [] } },
-    { title: "", dispatch: "", message: "You hand her over at the ED with a clear report.", vitals: { ...{ hr: 128, sbp: 82, dbp: 50, rr: 28, spo2: 89, etco2: -1, gcs: 14, glucose: -1, rhythm: "sinus tachycardia", skin: "flushed, hives" }, hr: 104, sbp: 112, spo2: 96 }, done: true,
+    { title: "", dispatch: "", message: "You hand her over at the ED with a clear report.", readings: { ...{ hr: 128, sbp: 82, dbp: 50, rr: 28, spo2: 89, etco2: -1, gcs: 14, glucose: -1, rhythm: "sinus tachycardia", skin: "flushed, hives" }, hr: 104, sbp: 112, spo2: 96 }, done: true,
       debrief: { happening: "Anaphylaxis from a bee sting.", why: "Histamine widened her vessels and swelled her airway.", counteracted: "Epinephrine 0.3 mg IM [R1.1] tightens vessels and opens airways.",
         well: ["You recognized the swelling early."], missed: ["Reassess after the epinephrine, as the protocol says [R1.1]."] } }
+  ], deeper: [
+    { what: "Histamine makes the walls of small blood vessels leaky and wide [R1.1].", why: "It loosens the joins between the cells lining them.", counter: "Epinephrine tightens the vessels again.",
+      next: "Why does histamine loosen those joins?", floor: false, floor_note: "", background: false },
+    { what: "Her pressure falls because fluid leaves the vessels.", why: "Less fluid in the pipes means less pressure.", counter: "", next: "Why do the vessels widen?", floor: false, floor_note: "", background: true }
   ], sent: [], refreshes: 0, revoked: 0, aiCalls: 0, plan: "free", expiresIn: 3600, sessions: new Map(), n: 0 };
 const user = { id: "u1", email: "learner@example.com" };
 function issue() {
@@ -65,6 +69,7 @@ const deps = {
           objectives: ["Explain what photosynthesis produces", "Explain the role of light", "Explain where it happens in the cell"] }
       : props.includes("shows") ? (srv.applyPrompt = req.prompt, { title: "Trace a sugar cube", task: "Follow one glucose molecule from breakfast to ATP and draw where each step happens.",
           steps: ["Draw a cell", "Mark glycolysis", "Mark the Krebs cycle"], shows: "You can explain where ATP comes from.", minutes: 30, safety: "" })
+      : props.includes("floor_note") ? (srv.deeperPrompts = [...(srv.deeperPrompts || []), req.prompt], srv.deeper.shift())
       : props.includes("debrief") ? (srv.scenarioPrompts = [...(srv.scenarioPrompts || []), req.prompt], srv.scenario.shift())
       : props.includes("evaluation") ? srv.director.shift()
       : props.includes("hint") ? { hint: "Think about what the plant keeps for later." }
@@ -952,7 +957,7 @@ step("an EMS aim's best way to practice is a scenario", (await sc.textContent("#
 await sc.click("#ways .way.best button");
 await sc.waitForSelector("text=Set up a scenario");
 step("the scenario is set up from the aim, at your references' level", (await sc.inputValue(".setup input[type=text]")) === "EMT medications: anaphylaxis" &&
-  (await sc.inputValue(".setup select")) === "EMT" && (await sc.textContent(".setup .refs")).includes("County EMS Protocols"));
+  (await sc.inputValue(".setup select[aria-label='Your level']")) === "EMT" && (await sc.inputValue(".setup select[aria-label='Field']")) === "medical" && (await sc.textContent(".setup .refs")).includes("County EMS Protocols"));
 await sc.click("button:text-is('Start the call')");
 await sc.waitForSelector(".monitor");
 step("the call: dispatch, the scene, and the monitor with her vitals", (await sc.textContent(".msg.dispatch")).includes("trouble breathing") &&
@@ -976,6 +981,48 @@ step("the debrief: what was happening, why, what counteracts it, what went well 
 if (process.env.SHOTS) await sc.screenshot({ path: `${process.env.SHOTS}/scenario-debrief.png`, fullPage: true });
 const kept = await sw.evaluate(async id => (await chrome.storage.local.get("purpose")).purpose.scenarios, scenAim);
 step("the debrief is kept with the aim, and nothing of the call stays on the server", kept?.length === 1 && kept[0].happening === "Anaphylaxis from a bee sting." && kept[0].actions === 2);
+await sc.click("button:text-is('Go deeper: why?')");
+await sc.waitForSelector(".ladder .rung");
+step("Go deeper from the debrief: the next level down, with what counteracts it there, from her references", (await sc.textContent(".ladder .rung")).includes("leaky and wide") &&
+  (await sc.textContent(".ladder .rung")).includes("From your references") && (await sc.textContent(".ladder")).includes("Go deeper: Why does histamine loosen those joins?") &&
+  /STARTING FROM: Anaphylaxis from a bee sting: Histamine widened her vessels/.test(srv.deeperPrompts[0]));
+if (process.env.SHOTS) await sc.screenshot({ path: `${process.env.SHOTS}/scenario-deeper.png`, fullPage: true });
+// The aim's map: go deeper on a part, then explain it yourself to the librarian.
+await sw.evaluate(async () => {
+  const { purpose } = await chrome.storage.local.get("purpose");
+  purpose.map = { parts: [{ id: "p1", title: "Why pressure drops", brief: "Leaky, widened vessels lose volume", search: "anaphylaxis hypotension", status: "explored" },
+    { id: "p2", title: "How epinephrine reverses it", brief: "Squeeze vessels, open airways", search: "epinephrine anaphylaxis", status: "new" }], links: [] };
+  await chrome.storage.local.set({ purpose });
+});
+await sc.goto(`chrome-extension://${extId}/aim.html?id=${scenAim}`);
+await sc.waitForSelector("#understanding");
+await sc.click("#understanding .part:has-text('Why pressure drops') button:text-is('Go deeper')");
+await sc.click("#understanding .ladder button:text-is('Go deeper: why?')");
+await sc.waitForSelector("#understanding .ladder .rung");
+const chains = await sw.evaluate(async () => (await chrome.storage.local.get("purpose")).purpose.chains);
+step("Go deeper on a part of the map: a level marked general background, kept with the aim under that part", (await sc.textContent("#understanding .ladder .rung")).includes("General background") &&
+  chains?.find(c => c.partId === "p1")?.levels.length === 1);
+if (process.env.SHOTS) { await sc.setViewportSize({ width: 1200, height: 900 }); await sc.screenshot({ path: `${process.env.SHOTS}/aim-deeper.png`, fullPage: true }); }
+srv.talk.push({ message: "Okay, but why would leaky vessels make her pressure drop that fast?", done: false, memory: [], marks: [] });
+await sc.click("#understanding .ladder button:text-is('Explain it yourself')");
+await sc.waitForSelector(".wp-talk .wp-talk-input", { timeout: 15000 });
+step("Explain it yourself: the librarian asks the next why about exactly that part", (await sc.textContent(".wp-talk")).includes("why would leaky vessels") &&
+  /MODE: Deeper/.test(srv.talkPrompts.at(-1)) && /GO DEEPER ON: Why pressure drops \(Leaky, widened vessels lose volume\)\nTHE CHAIN SO FAR: Her pressure falls because fluid leaves the vessels\./.test(srv.talkPrompts.at(-1)), srv.talkPrompts.at(-1)?.slice(0, 300));
+// An in-flight emergency: the instrument panel instead of a vitals monitor.
+srv.scenario.push({ title: "Quiet over the lake", dispatch: "Cessna 172S, 3,500 ft, cruise over the lake, clear day.", message: "The engine coughs, then RPM drops and the oil pressure needle sags.",
+  readings: { ias: 95, alt: 3400, vsi: -500, hdg: 270, rpm: 1200, oilp: 10, oilt: 230, fuel: 30, volts: 28, annunciator: "OIL PRESS" }, done: false,
+  debrief: { happening: "", why: "", counteracted: "", well: [], missed: [] } });
+await sc.goto(`chrome-extension://${extId}/scenario.html?field=aviation`);
+await sc.waitForSelector("text=Set up a scenario");
+await sc.fill(".setup input[type=text]", "Engine failure in cruise");
+step("a flying scenario: pilot levels, the aircraft, and the safety line for flying", (await sc.inputValue(".setup select[aria-label='Your level']")) === "Private pilot" &&
+  (await sc.textContent(".setup")).includes("Aircraft") && (await sc.textContent(".safety")).includes("not flight instruction"));
+await sc.click("button:text-is('Start the call')");
+await sc.waitForSelector(".panel");
+step("the panel: airspeed, altitude, vertical speed and heading dials, engine gauges and the warning light", (await sc.$$(".panel .dial")).length === 4 &&
+  (await sc.textContent(".panel .annunciator")) === "OIL PRESS" && (await sc.textContent(".panel")).includes("1200") && /THEIR LEVEL: Private pilot/.test(srv.scenarioPrompts.at(-1) || "") &&
+  (await sc.textContent(".msg.dispatch")).includes("Cessna 172S"));
+if (process.env.SHOTS) await sc.screenshot({ path: `${process.env.SHOTS}/scenario-aviation.png`, fullPage: true });
 await sc.close();
 await sw.evaluate(() => serial(() => finishPurpose("yes")));
 const [download] = await Promise.all([opt.waitForEvent("download"), opt.click("#plusExport")]);

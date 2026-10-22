@@ -860,6 +860,34 @@ test("scenarios: a debrief is kept with its aim, and goes with it into history",
   assert.strictEqual(env.local.history.at(-1).scenarios[0].happening, "Anaphylaxis.");
 });
 
+test("scenarios fit some fields, not everything: medical, aviation, other emergencies", async () => {
+  const env = fresh();
+  const dom = async text => env.run(`scenarioDomain({ text: ${JSON.stringify(text)} })`);
+  assert.strictEqual(await dom("EMT medications for my exam"), "medical");
+  assert.strictEqual(await dom("Engine failure procedures for my private pilot checkride"), "aviation");
+  assert.strictEqual(await dom("Wilderness first aid for backpacking"), "medical");
+  assert.strictEqual(await dom("Swiftwater rescue for our volunteer team"), "general");
+  assert.strictEqual(await dom("Respond to a ransomware incident"), "general");
+  assert.strictEqual(await dom("Why did the Roman Republic fall"), null);
+  assert.strictEqual(await dom("Learn calculus derivatives"), null);
+});
+
+test("going deeper: a chain of levels is kept with its aim, updated in place, and goes into history", async () => {
+  const env = fresh();
+  await env.run(`startPurpose({ text: "How epinephrine works in anaphylaxis" })`);
+  const id = env.local.purpose.id;
+  assert.strictEqual((await env.run(`chainSave(${JSON.stringify(id)}, { root: "Why pressure drops", levels: [] })`)).result, "error", "nothing to keep");
+  const one = await env.run(`chainSave(${JSON.stringify(id)}, { root: "Why pressure drops", partId: "b", levels: [{ what: "Vessels leak", why: "Histamine", counter: "Epinephrine", background: true }] })`);
+  assert.strictEqual(one.result, "applied");
+  await env.run(`chainSave(${JSON.stringify(id)}, { id: ${JSON.stringify(one.chain.id)}, root: "Why pressure drops", partId: "b", levels: [{ what: "Vessels leak", why: "Histamine" }, { what: "Mast cells", why: "IgE", floor: true }] })`);
+  assert.strictEqual(env.local.purpose.chains.length, 1, "the same chain, updated");
+  assert.strictEqual(env.local.purpose.chains[0].levels.length, 2);
+  assert.strictEqual(env.local.purpose.chains[0].levels[1].floor, true);
+  assert.strictEqual((await env.run(`aimGet(${JSON.stringify(id)})`)).aim.chains[0].partId, "b");
+  await env.run(`finishPurpose("yes")`);
+  assert.strictEqual(env.local.history.at(-1).chains[0].root, "Why pressure drops");
+});
+
 test("subjects: EMS and medications read as health", async () => {
   const env = fresh();
   assert.strictEqual((await env.run(`aimSubject({ text: "EMT medications for my cert exam" })`)).id, "health");

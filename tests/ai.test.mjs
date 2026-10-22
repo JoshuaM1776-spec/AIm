@@ -5,7 +5,7 @@ import { handle } from "../supabase/functions/ai/handler.ts";
 import { memDb, memHs, memSync } from "./helpers/memdb.mjs";
 import { difficulty } from "../supabase/functions/ai/teachback.ts";
 import { splitCurriculum, mergeBuilt } from "../supabase/functions/ai/homeschool.ts";
-import { checkDoses, dosesIn, DOSE_PLACEHOLDER } from "../supabase/functions/ai/scenario.ts";
+import { checkDoses, checkNumbers, dosesIn, numbersIn, DOSE_PLACEHOLDER, PLACEHOLDER } from "../supabase/functions/ai/scenario.ts";
 import { checkoutUrl, handleStripeEvent, handleStripeWebhook, planForStatus, stripeApi, verifyStripeSignature } from "../supabase/functions/ai/billing.ts";
 
 const EXT = "chrome-extension://" + "a".repeat(32);
@@ -1095,18 +1095,45 @@ test("homeschool: a unit with no objectives is warned about, left out of the wee
 
 test("the one-file dashboard version is up to date with supabase/functions/ai", async () => {
   const fs = await import("node:fs");
-  const { build, OUT, buildWebhook, OUT_WEBHOOK } = await import("../tools/bundle-ai.mjs");
+  const { build, OUT, buildWebhook, OUT_WEBHOOK, FILES } = await import("../tools/bundle-ai.mjs");
+  // Every file of the function is in the one-file version; a missing one leaves its names undefined there.
+  const all = fs.readdirSync(new URL("../supabase/functions/ai/", import.meta.url)).filter(f => f.endsWith(".ts"));
+  assert.deepStrictEqual(all.filter(f => !FILES.includes(f)), [], "files missing from tools/bundle-ai.mjs FILES");
   assert.ok(fs.readFileSync(OUT, "utf8") === build(), "out of date: run node tools/bundle-ai.mjs");
   assert.ok(fs.readFileSync(OUT_WEBHOOK, "utf8") === buildWebhook(), "webhook out of date: run node tools/bundle-ai.mjs");
   // The files are pasted together, so top-level names must not repeat across them.
-  const names = [...build().matchAll(/^(?:export )?(?:const|let|function|class|async function) (\w+)/gm)].map(m => m[1]);
+  const names = [...build().matchAll(/^(?:export )?(?:const|let|function|class|async function) (\w+)(?:[^\n]*?, (\w+) =)?/gm)].flatMap(m => [m[1], m[2]].filter(Boolean));
   const dupes = names.filter((n, i) => names.indexOf(n) !== i);
   assert.deepStrictEqual(dupes, [], "top-level names repeat in the one-file version");
+  // It loads: every name it uses is defined (the npm packages and Deno stood in for).
+  const os = await import("node:os"), path = await import("node:path");
+  const tmp = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "aim-bundle-")), "ai.ts");
+  fs.writeFileSync(tmp, build().replace(/^import (\w+) from "npm:[^"]+";$/gm, "const $1 = class {};").replace(/^import \{ (\w+) \} from "npm:[^"]+";$/gm, "const $1 = () => ({});"));
+  const was = globalThis.Deno;
+  let served = false;
+  globalThis.Deno = { env: { get: () => undefined }, serve: () => { served = true; } };
+  try { await import(tmp); } finally { globalThis.Deno = was; }
+  assert.ok(served, "the one-file version loads and starts");
   // Imports between the files disappear when they're merged, so they can't rename anything.
-  for (const f of ["handler.ts", "index.ts", "librarian.ts", "study.ts", "pathways.ts", "video.ts", "sync.ts", "homeschool.ts", "scenario.ts"]) {
+  for (const f of FILES) {
     const src = fs.readFileSync(new URL(`../supabase/functions/ai/${f}`, import.meta.url), "utf8");
     assert.doesNotMatch(src, /^import [^\n]*\bas\b[^\n]*from "\.\//m, `${f}: no "as" in local imports`);
   }
+});
+
+test("talk: going deeper is Aim Plus, asks the next why about exactly that, and suggests no practice", async () => {
+  const d = talkDeps("plus", () => talkReply({ message: "Okay, but why would histamine make her pressure drop?", done: false, practice: { title: "x", why: "y", search: "z" } }));
+  const focus = { title: "Why pressure drops", brief: "Leaky, widened vessels lose volume", chain: ["Her blood pressure dropped", "Her vessels widened"] };
+  const r = await call(d, { task: "librarian-talk", input: { mode: "deeper", opening: true, session: SESSION, focus } });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.match(d.calls[0].prompt, /MODE: Deeper/);
+  assert.match(d.calls[0].prompt, /GO DEEPER ON: Why pressure drops \(Leaky, widened vessels lose volume\)\nTHE CHAIN SO FAR: Her blood pressure dropped → Her vessels widened/);
+  assert.match(d.calls[0].system, /Never ask or state a dose/);
+  const end = await call(d, { task: "librarian-talk", input: { mode: "deeper", session: SESSION, focus, thread: [{ role: "aim", text: "q" }, { role: "person", text: "a" }, { role: "aim", text: "q2" }, { role: "person", text: "a2" }, { role: "aim", text: "q3" }, { role: "person", text: "a3" }] } });
+  assert.strictEqual(end.body.done, true);
+  assert.ok(!end.body.practice, "going deeper doesn't end in a practice suggestion");
+  assert.strictEqual((await call(talkDeps("free"), { task: "librarian-talk", input: { mode: "deeper", opening: true, session: SESSION, focus } })).status, 403);
+  assert.strictEqual((await call(d, { task: "librarian-talk", input: { mode: "deeper", opening: true, session: SESSION } })).status, 400, "deeper into what?");
 });
 
 // ---------- scenarios ----------
@@ -1116,7 +1143,7 @@ const PASSAGES = [{ cite: "R1.4", heading: "ANAPHYLAXIS", text: "Epinephrine aut
 const V = { hr: 128, sbp: 82, dbp: 50, rr: 28, spo2: 89, etco2: -1, gcs: 14, glucose: -1, rhythm: "sinus tachycardia", skin: "flushed, hives" };
 const scenReply = (o = {}) => ({ ok: true, model: "m", inputTokens: 30, outputTokens: 20,
   text: JSON.stringify({ title: "Picnic in the park", dispatch: "34-year-old female, trouble breathing.", message: "She's sitting up, wheezing, with hives on her arms.",
-    vitals: V, done: false, debrief: { happening: "", why: "", counteracted: "", well: [], missed: [] }, ...o }) });
+    readings: V, done: false, debrief: { happening: "", why: "", counteracted: "", well: [], missed: [] }, ...o }) });
 function scenDeps(plan = "plus", reply = scenReply) {
   const d = makeDeps({ plan, claude: req => reply(req) });
   d.config.limits = { dayCalls: 50, dayTokens: 1e6, minuteCalls: 50 };
@@ -1152,7 +1179,7 @@ test("scenario: Plus only; the opening gets the passages, level and region, and 
 });
 
 test("scenario: a turn checks doses and citations in everything it returns, and the debrief follows what, why, counteracted", async () => {
-  const d = scenDeps("plus", () => scenReply({ done: true, message: "You give 0.5 mg [R1.4] and she improves [R7.2].", vitals: { ...V, hr: 400, gcs: 2 },
+  const d = scenDeps("plus", () => scenReply({ done: true, message: "You give 0.5 mg [R1.4] and she improves [R7.2].", readings: { ...V, hr: 400, gcs: 2 },
     debrief: { happening: "Anaphylaxis.", why: "Mast cells released histamine [R1.4].", counteracted: "Epinephrine 0.3 mg IM [R1.4] tightens vessels and opens airways; diphenhydramine 25 mg helps later.",
       well: ["You checked her airway first.", "", "a", "b"], missed: ["Oxygen at 15 L/min [R1.4] earlier."] } }));
   const thread = [{ role: "aim", text: "She's wheezing." }, { role: "you", text: "Check airway" }, { role: "aim", text: "Swollen lips." }];
@@ -1175,7 +1202,7 @@ test("scenario: without references there are no doses at all; a hint never ends 
   const hint = await call(d, { task: "scenario-turn", input: { topic: "anaphylaxis", thread, hint: true } });
   assert.strictEqual(hint.body.done, false, "a hint never ends the scenario");
   assert.strictEqual(hint.body.message, `Give ${DOSE_PLACEHOLDER} of epinephrine.`);
-  assert.match(d.calls[0].prompt, /PASSAGES: none\. No doses at all\./);
+  assert.match(d.calls[0].prompt, /PASSAGES: none\. No doses or amounts at all\./);
   assert.match(d.calls[0].prompt, /They're stuck/);
   const end = await call(d, { task: "scenario-turn", input: { topic: "anaphylaxis", thread, end: true } });
   assert.strictEqual(end.body.done, true);
@@ -1185,6 +1212,61 @@ test("scenario: without references there are no doses at all; a hint never ends 
   const long = Array.from({ length: 15 }, (_, i) => [{ role: "aim", text: `s${i}` }, { role: "you", text: `a${i}` }]).flat();
   await call(d, { task: "scenario-turn", input: { topic: "anaphylaxis", thread: long, action: "Transport" } });
   assert.match(d.calls[2].prompt, /This is the last turn/);
+});
+
+test("scenario: in aviation, procedure speeds and limits come only from the POH; current indications stay", () => {
+  const allowed = numbersIn("ENGINE FAILURE IN FLIGHT\n1. Airspeed: 68 KIAS (best glide)\n2. Carburetor heat: ON\nMaximum 2700 RPM.", "aviation");
+  const r = checkNumbers("Pitch for best glide of 65 knots. Your POH says Vg 68 KIAS; keep RPM under 2700 rpm, oil at 25 psi. You're at 3,500 feet, 110 knots, winds 270 at 15 knots.", allowed, "aviation");
+  assert.strictEqual(r.text, `Pitch for best glide of ${PLACEHOLDER.aviation}. Your POH says Vg 68 KIAS; keep RPM under 2700 rpm, oil at ${PLACEHOLDER.aviation}. You're at 3,500 feet, 110 knots, winds 270 at 15 knots.`);
+  assert.strictEqual(r.removed, 2);
+});
+
+test("scenario: an in-flight emergency gets the instrument panel and the instructor who plays ATC", async () => {
+  const P = { ias: 72, alt: 3400, vsi: -700, hdg: 270, rpm: 0, oilp: 0, oilt: 180, fuel: 30, volts: 28, annunciator: "LOW OIL PRESSURE" };
+  const d = scenDeps("plus", () => ({ ok: true, model: "m", inputTokens: 1, outputTokens: 1, text: JSON.stringify({ title: "Quiet over the lake", dispatch: "Cessna 172, 3,500 ft, cruise.",
+    message: "The engine coughs and goes quiet. Glide at 80 KIAS.", readings: P, done: false, debrief: { happening: "", why: "", counteracted: "", well: [], missed: [] } }) }));
+  const r = await call(d, { task: "scenario-turn", input: { domain: "aviation", topic: "Engine failure after takeoff", level: "Private pilot", refs: [{ cite: "R1", name: "C172 POH" }],
+    passages: [{ cite: "R1.2", heading: "ENGINE FAILURE", text: "Airspeed 68 KIAS (best glide)." }] } });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.strictEqual(r.body.domain, "aviation");
+  assert.deepStrictEqual(r.body.readings, P);
+  assert.strictEqual(r.body.vitals, undefined);
+  assert.strictEqual(r.body.message, `The engine coughs and goes quiet. Glide at ${PLACEHOLDER.aviation}.`);
+  assert.match(d.calls[0].system, /you play ATC when they call/);
+  assert.match(d.calls[0].prompt, /THEIR LEVEL: Private pilot/);
+  assert.deepStrictEqual(Object.keys(d.calls[0].schema.properties.readings.properties), Object.keys(P));
+});
+
+// ---------- going deeper ----------
+test("deeper: one level at a time, grounded where their references cover it, never a dose", async () => {
+  const d = scenDeps("plus", () => ({ ok: true, model: "m", inputTokens: 1, outputTokens: 1, text: JSON.stringify({
+    what: "Histamine binds receptors on the vessel walls [R1.4].", why: "That loosens the joins between cells, so fluid leaks out.", counter: "Epinephrine at 0.5 mg tightens them back.",
+    next: "Why does loosening the joins drop her pressure?", floor: false, floor_note: "", background: false }) }));
+  const chain = [{ what: "Her blood pressure dropped.", why: "Her vessels widened and leaked." }];
+  const r = await call(d, { task: "deeper-step", input: { topic: "How epinephrine works in anaphylaxis", domain: "medical", level: "EMT", root: "Why pressure drops", chain, passages: PASSAGES } });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.strictEqual(r.body.level, 2);
+  assert.match(r.body.what, /\[R1\.4\]/);
+  assert.strictEqual(r.body.counter, `Epinephrine at ${DOSE_PLACEHOLDER} tightens them back.`);
+  assert.strictEqual(r.body.background, false, "it cites their reference");
+  assert.match(d.calls[0].prompt, /1\. what: Her blood pressure dropped\./);
+  assert.match(d.calls[0].prompt, /Give level 2/);
+  assert.match(d.calls[0].system, /useful floor/);
+  assert.strictEqual((await call(scenDeps("free"), { task: "deeper-step", input: { topic: "x", root: "y" } })).status, 403, "Aim Plus");
+});
+
+test("deeper: at the floor there's no next question unless they choose to go past it; uncited levels are background", async () => {
+  const reply = { what: "Mast cells release histamine.", why: "IgE on them binds the allergen.", counter: "", next: "Why does IgE do that?", floor: true, floor_note: "For EMT, this is the useful floor.", background: false };
+  const d = scenDeps("plus", () => ({ ok: true, model: "m", inputTokens: 1, outputTokens: 1, text: JSON.stringify(reply) }));
+  const r = await call(d, { task: "deeper-step", input: { topic: "Anaphylaxis", root: "Why", chain: [{ what: "a", why: "b" }] } });
+  assert.strictEqual(r.body.floor, true);
+  assert.strictEqual(r.body.next, "");
+  assert.strictEqual(r.body.floorNote, "For EMT, this is the useful floor.");
+  assert.strictEqual(r.body.background, true, "it cited nothing, so it's general background");
+  const past = await call(d, { task: "deeper-step", input: { topic: "Anaphylaxis", root: "Why", chain: [{ what: "a", why: "b" }], beyondFloor: true } });
+  assert.strictEqual(past.body.next, "Why does IgE do that?");
+  assert.match(d.calls[1].prompt, /go past the useful floor/);
+  assert.strictEqual((await call(d, { task: "deeper-step", input: { topic: "x", root: "y", chain: Array(8).fill({ what: "a", why: "b" }) } })).status, 400, "a chain has a bottom");
 });
 
 let failed = 0;

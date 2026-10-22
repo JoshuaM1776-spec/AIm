@@ -368,6 +368,13 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] Handoff or **End and debrief**: What was happening, Why, What counteracts it, What you did well, To work on. Reload mid-call: it's still there. The aim's page lists the scenario under What you've learned.
 - [ ] Without Plus: the page explains scenarios are part of Aim Plus.
 
+### 50. Scenarios for more fields, and Go deeper (0.60, Aim Plus)
+- [ ] Scenario shows under Ways to practice only where it fits: an EMS or medication aim (medical), a flying aim like "engine failure procedures" (aviation), an emergency or incident aim like "swiftwater rescue" or "respond to a ransomware incident" (general). Not for history, math or the arts.
+- [ ] Aviation: the setup offers pilot levels and Aircraft; the safety line says it isn't flight instruction. The panel shows airspeed, altitude, vertical speed and heading dials, engine gauges and a warning light. Call ATC: Aim answers as ATC. A procedure speed or limit that isn't in your POH reads "the number in your POH"; current indications (altitude, winds) stay.
+- [ ] Other fields: a situation board (how it's going, elapsed time, the state of things now).
+- [ ] **Go deeper** on a part of an aim's map, and under a scenario's debrief: each level says what's happening, why, and what counteracts it there, marked **From your references** (cited) or **General background**. The next button names the next question. At the useful floor for your level it says so, with **Go past the floor anyway**. The part shows "N levels deep" afterwards.
+- [ ] **Explain it yourself** on a map part opens the librarian on YouTube asking the next why about exactly that part, one level at a time. No dose or procedure number appears in a chain. Without Plus: "Going deeper is part of Aim Plus."
+
 ## Known issues (not regressions)
 
 - The word check knows words, not meanings: synonyms ("tap" vs "faucet") get the question once; answering Yes teaches it that search.

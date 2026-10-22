@@ -20,7 +20,19 @@ function toast(msg) {
   clearTimeout(toast.timer); toast.timer = setTimeout(() => (t.style.display = "none"), 3000);
 }
 const page = (...kids) => $("page").replaceChildren(...kids);
-const LEVELS = ["EMR", "EMT", "AEMT", "Paramedic", "Nursing", "Other"];
+// The fields scenarios fit: what to call things, the levels, and the safety line.
+const FIELDS = {
+  medical: { name: "Medical (EMS, nursing)", levels: ["EMR", "EMT", "AEMT", "Paramedic", "Nursing", "Other"], region: "Agency or region", regionHint: "e.g. Region 5",
+    placeholder: "e.g. Anaphylaxis at a picnic; an opioid overdose", act: "e.g. \"Check her airway and listen to lung sounds\"", start: "Dispatch is calling…", refsWord: "protocols",
+    safety: ["Practice for learning, not guidance for patient care.", "Medications and doses come only from your references, and any dose that isn't in them is left out. For real patients, follow your current protocols and medical direction."] },
+  aviation: { name: "Aviation (in-flight emergencies)", levels: ["Student pilot", "Private pilot", "Instrument rated", "Commercial pilot", "Flight instructor", "Airline pilot", "Other"],
+    region: "Aircraft", regionHint: "e.g. Cessna 172S", placeholder: "e.g. Engine failure after takeoff; an electrical fire at night", act: "e.g. \"Pitch for best glide and pick a field\"",
+    start: "Climbing out…", refsWord: "POH and checklists",
+    safety: ["Practice for learning, not flight instruction.", "Procedure speeds and limits come only from your POH and checklists; any that aren't in them are left out. In the airplane, follow your POH, your checklists and your instructor."] },
+  general: { name: "Another emergency or incident", levels: [], region: "Agency or setting", regionHint: "e.g. volunteer fire company",
+    placeholder: "e.g. A capsized kayak in cold water; a ransomware alert at 2 a.m.", act: "e.g. \"Size up the scene and call it in\"", start: "Setting the scene…", refsWord: "procedures",
+    safety: ["Practice for learning, not real-world guidance.", "Procedures and amounts come only from your references. In a real situation, follow your training, your procedures and the people in charge."] }
+};
 const KEY = `scenario:${aimId}`;
 
 // The scenario in progress, kept in this tab so a reload doesn't lose it.
@@ -106,45 +118,121 @@ function monitor(v, prev = {}) {
       v.skin ? num("wide gcs", "Skin", v.skin, ch("skin")) : null));
 }
 
+// ---------- the instrument panel (aviation) ----------
+// A round gauge: a needle over a 270° scale, the value in the middle; no needle when it's unknown.
+function dial(label, value, min, max, text, color = "#e5e7eb") {
+  const NS = "http://www.w3.org/2000/svg", svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", "0 0 100 100"); svg.setAttribute("class", "dial"); svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", `${label}: ${value === -1 ? "unknown" : text}`);
+  const add = (tag, attrs) => { const n = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v); svg.append(n); return n; };
+  add("circle", { cx: 50, cy: 50, r: 46, fill: "#111815", stroke: "#2b3a33", "stroke-width": 2 });
+  for (let i = 0; i <= 10; i++) {
+    const a = (-225 + i * 27) * Math.PI / 180, r1 = i % 5 ? 38 : 34;
+    add("line", { x1: 50 + Math.cos(a) * r1, y1: 50 + Math.sin(a) * r1, x2: 50 + Math.cos(a) * 42, y2: 50 + Math.sin(a) * 42, stroke: "#9aa", "stroke-width": i % 5 ? 1 : 2 });
+  }
+  if (value !== -1) {
+    const t = Math.max(0, Math.min(1, (value - min) / (max - min))), a = (-225 + t * 270) * Math.PI / 180;
+    add("line", { x1: 50, y1: 50, x2: 50 + Math.cos(a) * 36, y2: 50 + Math.sin(a) * 36, stroke: color, "stroke-width": 3, "stroke-linecap": "round" });
+  }
+  add("circle", { cx: 50, cy: 50, r: 3, fill: color });
+  const tx = add("text", { x: 50, y: 72, "text-anchor": "middle", fill: color, "font-size": 13, "font-weight": 600 }); tx.textContent = value === -1 ? "--" : text;
+  const lb = add("text", { x: 50, y: 88, "text-anchor": "middle", fill: "#9aa", "font-size": 7.5, "letter-spacing": ".5" }); lb.textContent = label;
+  return svg;
+}
+// An engine gauge: a bar with the value.
+function bar(label, value, max, unit) {
+  return node("div", { className: "eng" }, node("span", { textContent: label }),
+    node("i", {}, node("b", { style: `width:${value === -1 ? 0 : Math.max(0, Math.min(100, value / max * 100))}%` })),
+    node("em", { textContent: value === -1 ? "--" : `${value}${unit}` }));
+}
+function panel(v, prev = {}) {
+  const ch = k => prev[k] !== undefined && prev[k] !== v[k];
+  const fmt = n => (n === -1 ? "--" : n.toLocaleString());
+  return node("aside", { className: "monitor panel", ariaLabel: "Instrument panel" },
+    v.annunciator ? node("div", { className: `annunciator${ch("annunciator") ? " changed" : ""}`, role: "alert", textContent: v.annunciator }) : null,
+    node("div", { className: "dials" },
+      dial("AIRSPEED", v.ias, 0, 200, `${fmt(v.ias)} kt`, "#4ade80"),
+      dial("ALTITUDE", v.alt === -1 ? -1 : v.alt % 1000, 0, 1000, `${fmt(v.alt)} ft`, "#e5e7eb"),
+      dial("VERT SPEED", v.vsi, -2000, 2000, `${v.vsi > 0 ? "+" : ""}${fmt(v.vsi)}`, v.vsi < -1000 ? "#f87171" : "#e5e7eb"),
+      dial("HEADING", v.hdg, 0, 360, v.hdg === -1 ? "--" : `${String(v.hdg).padStart(3, "0")}°`, "#facc15")),
+    node("div", { className: "engine" },
+      bar("RPM", v.rpm, 3000, ""), bar("Oil press", v.oilp, 115, " psi"), bar("Oil temp", v.oilt, 250, "°F"),
+      bar("Fuel", v.fuel, 60, " gal"), bar("Volts", v.volts, 32, " V")),
+    node("div", { className: "num gcs" }, node("span", { textContent: "Actions" }), node("b", { textContent: String(s.thread.filter(t => t.role === "you").length) })));
+}
+
+// ---------- the situation board (other fields) ----------
+function board(v, prev = {}) {
+  const ch = k => prev[k] !== undefined && prev[k] !== v[k];
+  return node("aside", { className: "monitor board", ariaLabel: "Situation board" },
+    node("div", { className: `sev sev-${v.severity || "none"}${ch("severity") ? " changed" : ""}` }, node("span", { textContent: "Situation" }), node("b", { textContent: v.severity || "unknown" })),
+    node("div", { className: "nums" },
+      node("div", { className: "num gcs" }, node("span", { textContent: "Elapsed" }), node("b", { textContent: v.elapsed >= 0 ? `${v.elapsed} min` : "--" })),
+      node("div", { className: "num gcs" }, node("span", { textContent: "Actions" }), node("b", { textContent: String(s.thread.filter(t => t.role === "you").length) })),
+      v.status ? node("div", { className: `num wide gcs${ch("status") ? " changed" : ""}` }, node("span", { textContent: "Now" }), node("b", { textContent: v.status })) : null));
+}
+
 // ---------- setup ----------
 let aim = null;
+function safety(field) {
+  const f = FIELDS[field] || FIELDS.medical;
+  document.querySelector(".safety span:last-child").replaceChildren(node("b", { textContent: f.safety[0] }), ` ${f.safety[1]}`);
+}
 async function setup() {
   const refs = await send({ type: "ref-list" });
+  let field = params.get("field") || aim?.scenarioDomain || "medical";
   const list = refs || [];
-  const topic = node("input", { type: "text", value: aim?.text || "", placeholder: "e.g. Anaphylaxis at a picnic; an opioid overdose", ariaLabel: "What the scenario is about" });
-  const level = node("select", { ariaLabel: "Your level" }, ...LEVELS.map(l => node("option", { value: l, textContent: l, selected: l === (list.find(r => r.level)?.level || "EMT") })));
+  const topic = node("input", { type: "text", value: aim?.text || "", ariaLabel: "What the scenario is about" });
+  const fieldSel = node("select", { ariaLabel: "Field" }, ...Object.entries(FIELDS).map(([k, f]) => node("option", { value: k, textContent: f.name, selected: k === field })));
+  const levelBox = node("span"), regionLabel = node("span");
+  const region = node("input", { type: "text", value: list.find(r => r.region)?.region || "" });
+  let level;
+  const fit = () => {
+    const f = FIELDS[field];
+    safety(field);
+    topic.placeholder = f.placeholder;
+    regionLabel.textContent = f.region; region.placeholder = f.regionHint;
+    const want = list.find(r => r.level && f.levels.includes(r.level))?.level || f.levels[1] || "";
+    level = f.levels.length ? node("select", { ariaLabel: "Your level" }, ...f.levels.map(l => node("option", { value: l, textContent: l, selected: l === want })))
+      : node("input", { type: "text", placeholder: "e.g. firefighter, incident responder (optional)", ariaLabel: "Your role or level" });
+    levelBox.replaceChildren(level);
+    refsNote.textContent = list.length ? "" : `No references yet. Without your ${f.refsWord}, the scenario runs on judgment and reasoning, and leaves numbers like doses and speeds out.`;
+  };
+  fieldSel.onchange = () => { field = fieldSel.value; fit(); };
   const checks = list.map(r => node("input", { type: "checkbox", checked: true, value: r.id }));
+  const refsNote = node("p", { className: "muted" });
   page(node("section", { className: "card setup" },
     node("h2", { textContent: "Set up a scenario" }),
-    node("p", { className: "muted", textContent: "You'll get a call, arrive on scene, and say what you do. The patient responds, the monitor changes, and at the end you get a debrief: what was happening, why, and what counteracted it." }),
+    node("p", { className: "muted", textContent: "You'll get the situation as it starts and say what you do. Things respond, the readings change, and at the end you get a debrief: what was happening, why, and what counteracted it." }),
     node("label", {}, "What it's about", topic),
-    node("label", {}, "Your level", level),
+    node("label", {}, "Field", fieldSel),
+    node("label", {}, "Your level", levelBox),
+    node("label", {}, regionLabel, region),
     node("div", { className: "refs" }, node("b", { textContent: "From your references" }),
-      list.length ? list.map((r, i) => node("label", {}, checks[i], `${r.name}${r.level ? ` (${r.level})` : ""}`))
-        : node("p", { className: "muted", textContent: "No references yet. Without them, the scenario runs on assessment and reasoning, and leaves doses out." }),
-      node("p", {}, node("a", { href: "references.html", textContent: list.length ? "Manage your references" : "Add your protocols" }))),
+      list.map((r, i) => node("label", {}, checks[i], `${r.name}${r.level ? ` (${r.level})` : ""}`)), refsNote,
+      node("p", {}, node("a", { href: "references.html", textContent: list.length ? "Manage your references" : "Add your references" }))),
     node("div", { className: "row", style: "margin-top:14px" }, btn("Start the call", "accent", async e => {
       if (topic.value.trim().length < 3) return toast("Say what the scenario should be about.");
-      e.target.disabled = true; e.target.textContent = "Dispatch is calling…";
-      s = { topic: topic.value.trim(), level: level.value, refIds: checks.filter(c => c.checked).map(c => c.value), thread: [], vitals: {}, seen: {}, removed: 0 };
+      e.target.disabled = true; e.target.textContent = FIELDS[field].start;
+      s = { field, topic: topic.value.trim(), level: level.value.trim(), region: region.value.trim(), refIds: checks.filter(c => c.checked).map(c => c.value), thread: [], readings: {}, seen: {}, removed: 0 };
       const { refs: cited, passages } = await passagesFor(s.topic, 12000);
       s.refs = cited;
-      s.region = list.find(r => s.refIds.includes(r.id) && r.region)?.region || "";
-      const r = await call({ topic: s.topic, level: s.level, region: s.region, refs: s.refs, passages });
+      const r = await call({ domain: s.field, topic: s.topic, level: s.level, region: s.region, refs: s.refs, passages });
       if (!r) { e.target.disabled = false; e.target.textContent = "Start the call"; return; }
-      Object.assign(s, { title: r.title, dispatch: r.dispatch, vitals: r.vitals, removed: r.removedDoses || 0 });
+      Object.assign(s, { title: r.title, dispatch: r.dispatch, readings: r.readings || r.vitals || {}, removed: r.removedDoses || 0 });
       s.thread.push({ role: "aim", text: r.message });
       save(); running();
     }))));
+  fit();
 }
 
 // ---------- the call ----------
 function running(prev) {
   $("title").textContent = s.title || "Scenario";
   const feed = node("div", { className: "feed" },
-    s.dispatch ? node("div", { className: "msg dispatch" }, node("span", { className: "tag", textContent: "Dispatch" }), s.dispatch) : null,
+    s.dispatch ? node("div", { className: "msg dispatch" }, node("span", { className: "tag", textContent: s.field === "medical" || !s.field ? "Dispatch" : "The situation" }), s.dispatch) : null,
     s.thread.map(t => { const m = node("div", { className: `msg ${t.role}` }); m.append(...withCites(t.text, m)); return m; }));
-  const box = node("textarea", { placeholder: "What do you do? (e.g. \"Check her airway and listen to lung sounds\")", ariaLabel: "What you do" });
+  const box = node("textarea", { placeholder: `What do you do? (${(FIELDS[s.field] || FIELDS.medical).act})`, ariaLabel: "What you do" });
   const busy = on => { for (const b of act.querySelectorAll("button")) b.disabled = on; box.disabled = on; };
   const turn = async input => {
     busy(true);
@@ -152,12 +240,12 @@ function running(prev) {
     const { passages } = await passagesFor(`${s.topic} ${s.title || ""} ${input.action || ""} ${last}`, 6000);
     // This turn's passages first, then the ones from the start, within the server's limit.
     const all = [...new Map([...passages, ...Object.entries(s.seen).map(([cite, p]) => ({ cite, heading: p.heading, text: p.text }))].map(p => [p.cite, p])).values()];
-    const r = await call({ topic: s.topic, level: s.level, region: s.region, refs: s.refs, passages: all.slice(0, 30), thread: s.thread, vitals: s.vitals, ...input });
+    const r = await call({ domain: s.field, topic: s.topic, level: s.level, region: s.region, refs: s.refs, passages: all.slice(0, 30), thread: s.thread, readings: s.readings, ...input });
     if (!r) return busy(false);
     if (input.action) s.thread.push({ role: "you", text: input.action });
     s.thread.push({ role: "aim", text: r.message });
-    const before = s.vitals;
-    s.vitals = r.vitals; s.removed += r.removedDoses || 0;
+    const before = s.readings;
+    s.readings = r.readings || r.vitals || {}; s.removed += r.removedDoses || 0;
     if (r.done) { s.debrief = r.debrief; save(); return finish(); }
     save(); running(before);
   };
@@ -166,7 +254,9 @@ function running(prev) {
     btn("I'm stuck", "tonal", () => turn({ hint: true })),
     btn("End and debrief", "text", () => turn({ end: true }))));
   box.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); act.querySelector("button").click(); } });
-  page(node("div", { className: "run" }, monitor(s.vitals, prev), node("div", { style: "display:flex;flex-direction:column;gap:14px" }, feed, act)));
+  safety(s.field);
+  const show = s.field === "aviation" ? panel : s.field === "general" ? board : monitor;
+  page(node("div", { className: "run" }, show(s.readings, prev), node("div", { style: "display:flex;flex-direction:column;gap:14px" }, feed, act)));
   box.focus();
   act.scrollIntoView({ block: "nearest" });
 }
@@ -175,7 +265,7 @@ function running(prev) {
 async function finish() {
   const b = s.debrief || {};
   if (aimId && !s.saved) {
-    await send({ type: "scenario-save", aimId, scenario: { title: s.title, level: s.level, actions: s.thread.filter(t => t.role === "you").length, debrief: b } });
+    await send({ type: "scenario-save", aimId, scenario: { title: s.title, field: s.field, level: s.level, actions: s.thread.filter(t => t.role === "you").length, debrief: b } });
     s.saved = true; save();
   }
   const card = (title, text) => { const c = node("section", { className: "card" }, node("h3", { textContent: title })); const p = node("p"); p.append(...withCites(text || "", c)); c.append(p); return c; };
@@ -188,7 +278,10 @@ async function finish() {
     node("div", { className: "debrief" },
       card("What was happening", b.happening), card("Why", b.why), card("What counteracts it", b.counteracted),
       node("div", { className: "two" }, listCard("What you did well", b.well, "Nothing noted."), listCard("To work on", b.missed, "Nothing missed."))),
-    s.removed ? node("p", { className: "removed", textContent: `Aim left out ${s.removed} dose${s.removed > 1 ? "s" : ""} that ${s.removed > 1 ? "aren't" : "isn't"} in your references. Look ${s.removed > 1 ? "them" : "it"} up in your protocol.` }) : null,
+    b.why ? node("section", { className: "card", style: "margin-top:12px" }, node("h3", { textContent: "Go deeper" }),
+      node("p", { className: "muted", textContent: "Follow the why down a level at a time: what's happening there, why, and what counteracts it." }),
+      deeperLadder({ aimId, topic: s.topic, domain: s.field, level: s.level, root: (b.happening || s.title).slice(0, 200), brief: b.why.slice(0, 300), partId: null, chain: null, talk: null })) : null,
+    s.removed ? node("p", { className: "removed", textContent: `Aim left out ${s.removed} ${s.field === "medical" ? "dose" : "number"}${s.removed > 1 ? "s" : ""} that ${s.removed > 1 ? "aren't" : "isn't"} in your references. Look ${s.removed > 1 ? "them" : "it"} up in your ${s.field === "aviation" ? "POH" : s.field === "medical" ? "protocol" : "reference"}.` }) : null,
     node("div", { className: "row", style: "margin-top:16px;gap:8px" },
       btn("Run another", "", () => { try { sessionStorage.removeItem(KEY); } catch {} s = null; $("title").textContent = "Scenario"; setup(); }),
       aimId ? btn("Back to the aim", "tonal", () => (location.href = `aim.html?id=${encodeURIComponent(aimId)}`)) : null));
@@ -197,7 +290,8 @@ async function finish() {
 (async () => {
   const d = aimId ? await send({ type: "aim-get", id: aimId }) : null;
   aim = d?.aim || null;
-  if (aim) { $("aimLink").textContent = aim.text; $("aimLink").href = `aim.html?id=${encodeURIComponent(aimId)}`; }
+  if (aim) { $("aimLink").textContent = aim.text; $("aimLink").href = `aim.html?id=${encodeURIComponent(aimId)}`; } else $("aimCrumb").remove();
   s = load();
+  if (s) { s.field ||= "medical"; s.readings ||= s.vitals || {}; }
   if (s?.debrief) finish(); else if (s?.thread?.length) running(); else setup();
 })();

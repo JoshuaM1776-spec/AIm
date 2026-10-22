@@ -32,6 +32,19 @@
   .hr { color: #4ade80; } .spo2 { color: #38bdf8; } .bp { color: #f87171; } .rr { color: #facc15; } .etco2 { color: #c4b5fd; } .gcs, .bgl { color: #e5e7eb; }
   .changed b { animation: blink 1.2s ease 2; }
   @keyframes blink { 50% { opacity: .35; } }
+  /* The instrument panel and the situation board use the monitor's dark case. */
+  .dials { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .dial { width: 100%; height: auto; }
+  .engine { display: grid; gap: 6px; }
+  .eng { display: grid; grid-template-columns: 64px 1fr 62px; gap: 8px; align-items: center; font-size: 11px; }
+  .eng i { height: 8px; border-radius: 4px; background: #1c2621; overflow: hidden; }
+  .eng i b { display: block; height: 100%; background: #4ade80; }
+  .eng em { font-style: normal; text-align: right; font-variant-numeric: tabular-nums; }
+  .annunciator { padding: 6px 8px; border-radius: 6px; background: #3b0d0d; color: #fca5a5; font: 700 12px/16px var(--font); letter-spacing: .06em; text-transform: uppercase; text-align: center; }
+  .sev { display: flex; flex-direction: column; padding: 10px; border-radius: 8px; background: #111815; }
+  .sev span { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; opacity: .8; }
+  .sev b { font: 600 24px/30px var(--font); text-transform: capitalize; }
+  .sev-stable b, .sev-resolved b { color: #4ade80; } .sev-worsening b { color: #facc15; } .sev-critical b { color: #f87171; }
   .feed { display: flex; flex-direction: column; gap: 10px; }
   .msg { padding: 12px 14px; border-radius: 12px; background: var(--card); box-shadow: inset 0 0 0 1px var(--card-border); line-height: 22px; }
   .msg.you { align-self: flex-end; max-width: 85%; background: var(--primary); color: var(--on-primary); box-shadow: none; }
@@ -56,13 +69,14 @@
 <main class="page wide">
   <header class="page-head">
     <img class="for-light" src="icons/48.png" alt=""><img class="for-dark" src="icons/light/48.png" alt="">
-    <span class="brand" data-brand>Aim</span><span class="crumb"><a href="targets.html">Library</a> · <a id="aimLink" href="targets.html">Aim</a> · Scenario</span>
+    <span class="brand" data-brand>Aim</span><span class="crumb"><a href="targets.html">Library</a><span id="aimCrumb"> · <a id="aimLink" href="targets.html">Aim</a></span> · Scenario</span>
   </header>
   <h1 class="serif" id="title">Scenario</h1>
   <div class="safety" role="note"><span aria-hidden="true">⚕</span><span><b>Practice for learning, not guidance for patient care.</b> Medications and doses come only from your references, and any dose that isn't in them is left out. For real patients, follow your current protocols and medical direction.</span></div>
   <div id="page" aria-live="polite"></div>
 </main>
 <div id="toast" role="status"></div>
+<script src="deeper.js"></script>
 <script src="scenario.js"></script>
 </body>
 </html>

@@ -31,6 +31,8 @@
   .dot.explored { border-color: var(--primary); background: linear-gradient(90deg, var(--primary) 30%, transparent 30%); }
   .dot.partial { border-color: var(--primary); background: linear-gradient(90deg, var(--primary) 60%, transparent 60%); }
   .dot.explained { border-color: var(--primary); background: var(--primary) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12.5l4 4 8-9' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 12px no-repeat; }
+  .part-tools { display: flex; gap: 14px; }
+  .deeper-holder:empty { display: none; }
   .linkish { background: none; border: 0; padding: 0; color: var(--link); font: inherit; font-weight: 500; cursor: pointer; }
   .linkish:hover { text-decoration: underline; }
   .tile { background: var(--tonal); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
@@ -68,6 +70,7 @@
 </main>
 <div id="toast" role="status"></div>
 <script src="covers.js"></script>
+<script src="deeper.js"></script>
 <script src="aim.js"></script>
 </body>
 </html>

@@ -321,7 +321,7 @@ function archive(history, record) {
 function purposeRecord(p, outcome) {
   return { type: "purpose", id: p.id, text: p.text, startedAt: p.startedAt, endedAt: Date.now(), usedSec: Math.round(p.usedSec),
     outcome: outcome || null, path: p.path, searches: p.searches, videos: p.videos, notes: p.notes || "",
-    kind: p.librarian?.kind || null, study: studySnapshot(p.study), map: p.map || null, practice: p.practice || null, scenarios: p.scenarios || [] };
+    kind: p.librarian?.kind || null, study: studySnapshot(p.study), map: p.map || null, practice: p.practice || null, scenarios: p.scenarios || [], chains: p.chains || [] };
 }
 
 // What a study session showed, kept when its aim ends, for the learning record.
@@ -1624,7 +1624,7 @@ async function scenarioSave(aimId, s = {}) {
   if (!rec) return { result: "error", message: "That aim isn't here." };
   const b = s.debrief || {};
   const list = arr => (Array.isArray(arr) ? arr.map(x => clip(x, 240)).filter(Boolean).slice(0, 3) : []);
-  const entry = { at: Date.now(), title: clip(s.title, 80) || "Scenario", level: clip(s.level, 20), actions: Math.max(0, Math.min(99, Number(s.actions) || 0)),
+  const entry = { at: Date.now(), title: clip(s.title, 80) || "Scenario", field: ["medical", "aviation", "general"].includes(s.field) ? s.field : "medical", level: clip(s.level, 40), actions: Math.max(0, Math.min(99, Number(s.actions) || 0)),
     happening: clip(b.happening, 400), why: clip(b.why, 500), counteracted: clip(b.counteracted, 700), well: list(b.well), missed: list(b.missed) };
   rec.scenarios = [...(rec.scenarios || []), entry].slice(-20);
   await chrome.storage.local.set({ purpose: d.purpose || null, paused: d.paused || [], history: d.history || [] });
@@ -1639,11 +1639,11 @@ const SUBJECTS = [
   ["science", "Science", /\b(science|physics|chemistry|biology|cells?\b|cellular|photosynthesis|atom|molecule|evolution|respiration|genetics|quantum|climate|weather)/],
   ["math", "Math", /\b(math|algebra|calculus|geometry|statistics|equation|derivative|integral|probability|trigonometry|fraction)/],
   ["space", "Space", /\b(space|planet|nasa|rocket|astronomy|galaxy|orbit|stars?\b|moon\b|mars|telescope)/],
+  ["aviation", "Aviation", /\b(aviation|pilot|plane|aircraft|flight|airline|checkride|faa\b)/],
   ["engineering", "Engineering", /\b(engineer|engine|bridge|mechanical|electrical|circuit|battery|batteries|motor|robot|electronics)/],
   ["craft", "Craft", /\b(wood|joinery|joints?\b|cabinet|carpentry|chisel|sharpen|weld|sew\b|sewing|knit|pottery|furniture|faucet|plumbing|repair|fix\b|fixing|alternator|truck|car\b|cars\b)/],
   ["coding", "Technology", /\b(code|coding|program|python|javascript|software|computer|web\b|apps?\b|ai\b|data\b)/],
   ["money", "Personal finance", /\b(money|budget|invest|finance|tax\b|taxes|stock|saving|retire|debt)/],
-  ["aviation", "Aviation", /\b(aviation|pilot|plane|aircraft|flight|airline|checkride|faa\b)/],
   ["health", "Health", /\b(health|fitness|exercise|nutrition|sleep|habit|workout|diet|medical|anatomy|emt\b|ems\b|paramedic|medication|pharmacolog|nursing|patient|cardiac|trauma|first aid|anaphyla|epinephrine|naloxone|overdose|stroke|asthma|diabet|seizure|cpr\b|vital signs)/],
   ["language", "Language", /\b(spanish|french|german|japanese|chinese|language|grammar|vocabulary|english)/],
   ["arts", "Arts", /\b(music|guitar|piano|drawing|painting|photography|photo|design|art\b|artist|writing|poetry)/],
@@ -1656,6 +1656,34 @@ function aimSubject(p) {
   const text = [p.text, ...(p.searches || []).map(x => x.q), ...(p.videos || []).slice(-10).map(v => v.title)].join(" ").toLowerCase();
   const hit = SUBJECTS.find(([, , re]) => re.test(String(p.text || "").toLowerCase())) || SUBJECTS.find(([, , re]) => re.test(text));
   return hit ? { id: hit[0], name: hit[1] } : { id: "general", name: p.librarian?.kind === "project" ? "Project" : "Learning" };
+}
+
+// Scenarios fit fields where a situation unfolds and decisions matter under time: medical (EMS,
+// nursing), aviation (in-flight emergencies), and other emergency or incident work. Not history,
+// math or the arts. Null when the aim isn't one of those.
+const SCENARIO_WORDS = /\b(emergenc|incident|rescue|firefight|fire ?fight|wildfire|wilderness|first aid|survival|boating|sailing|maritime|disaster|evacuat|troubleshoot|outage|on-call|lifeguard|hazmat|crisis|search and rescue|dispatch|security incident|incident response)/;
+function scenarioDomain(p, subject = aimSubject(p)) {
+  if (subject.id === "health") return "medical";
+  if (subject.id === "aviation") return "aviation";
+  return SCENARIO_WORDS.test(String(p.text || "").toLowerCase()) ? "general" : null;
+}
+
+// Going deeper: a chain of whys under something, kept with its aim. Each level is what's happening at
+// that level, why, and what counteracts it; background marks a level that isn't from their references.
+async function chainSave(aimId, { id, root, partId, levels } = {}) {
+  const d = await chrome.storage.local.get(["purpose", "paused", "history"]);
+  const rec = [d.purpose, ...(d.paused || []), ...(d.history || [])].find(r => r?.id === aimId);
+  if (!rec) return { result: "error", message: "That aim isn't here." };
+  const clean = (Array.isArray(levels) ? levels : []).slice(0, 8).map(l => ({ what: clip(l?.what, 300), why: clip(l?.why, 500), counter: clip(l?.counter, 400),
+    background: !!l?.background, floor: !!l?.floor })).filter(l => l.what || l.why);
+  if (!clip(root, 200) || !clean.length) return { result: "error", message: "Nothing to keep." };
+  const chains = rec.chains || [];
+  const at = chains.findIndex(c => c.id === id);
+  const chain = { id: at >= 0 ? id : `c${Date.now().toString(36)}`, root: clip(root, 200), partId: clip(partId, 40) || null, levels: clean, at: Date.now() };
+  if (at >= 0) chains[at] = chain; else chains.push(chain);
+  rec.chains = chains.slice(-30);
+  await chrome.storage.local.set({ purpose: d.purpose || null, paused: d.paused || [], history: d.history || [] });
+  return { result: "applied", chain };
 }
 
 // One aim with everything the aim page shows: its map, practice, notes, videos, path, study session,
@@ -1675,7 +1703,7 @@ async function aimGet(id) {
   }).filter(([, , n]) => n > 0).sort((a, b) => b[2] - a[2]).slice(0, 4)
     .map(([o, st]) => ({ id: o.id, text: o.text, state: st, subject: aimSubject(o) }));
   return { result: "applied", aim: { ...summary(p, state), subject, kind: p.librarian?.kind || (p.learn ? "explore" : null),
-    map: p.map || null, practice: p.practice || null, scenarios: (p.scenarios || []).slice(-5).reverse(), study: p.study ? studySnapshot(p.study) : null, librarianNote: p.librarian?.note || "",
+    map: p.map || null, practice: p.practice || null, scenarios: (p.scenarios || []).slice(-5).reverse(), scenarioDomain: scenarioDomain(p, subject), chains: p.chains || [], study: p.study ? studySnapshot(p.study) : null, librarianNote: p.librarian?.note || "",
     learned: (d.memory || []).filter(m => m.aim === id).map(m => ({ subject: m.subject, idea: m.idea, understood: m.understood, at: m.at })),
     startedAt: p.startedAt || null, endedAt: p.endedAt || null }, related };
 }

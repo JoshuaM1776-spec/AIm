@@ -23,7 +23,7 @@ This data never leaves your computer. Aim does not sell, share or transfer it, a
 
 Aim itself makes one kind of request: when you open a video, it asks YouTube's public "oEmbed" address on youtube.com for that video's title and channel, so it can tell which video is on screen. This request goes to YouTube, the site you're already on, and contains only the video's address.
 
-Your references stay in this browser. When a scenario runs (Aim Plus), each turn sends the scenario's topic, your level and region, the names of the references you chose, the passages it needs (cited by document and passage, at most about 16,000 characters), and the scenario so far to Aim's server and the AI. Nothing of it is stored there beyond usage. The scenario in progress is kept in that browser tab; when it ends, its debrief is kept with the aim in your browser.
+Your references stay in this browser. When a scenario runs (Aim Plus), each turn sends the scenario's topic, your level and region, the names of the references you chose, the passages it needs (cited by document and passage, at most about 16,000 characters), and the scenario so far to Aim's server and the AI. Nothing of it is stored there beyond usage. The scenario in progress is kept in that browser tab; when it ends, its debrief is kept with the aim in your browser. **Go deeper** (Aim Plus) works the same way: the aim's name, the thing you're going deeper into, the levels so far and, for medical and flying aims, related passages from your references go to Aim's server for each new level; the chain is kept with the aim in your browser.
 
 A study guide file you upload for a study session (Aim Plus) is read in your browser; only its text, which you see and can edit first, is sent, exactly as if you had pasted it.
 

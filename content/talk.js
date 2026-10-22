@@ -10,21 +10,23 @@ let talkPanel = null;
 function closeTalk() { talkPanel?.el.remove(); talkPanel = null; }
 
 const talkCall = (state, extra = {}) => send({ type: "librarian", task: "librarian-talk",
-  input: { mode: state.mode, session: state.session, thread: state.thread.map(({ role, text }) => ({ role, text })), memory: state.memory, connect: state.connect, ...extra } });
+  input: { mode: state.mode, session: state.session, thread: state.thread.map(({ role, text }) => ({ role, text })), memory: state.memory, connect: state.connect, focus: state.focus, ...extra } });
 
 // Everything a conversation needs, with its opening question already asked. Null when there's
 // nothing to talk about, no account, or the AI couldn't open (the error is in .error).
-async function prepareTalk({ aimId = null, connect = null, source = "menu", mode = null } = {}) {
+// mode "deeper" (Aim Plus) goes one "why" further into focus: { title, brief, chain }, from an aim's page.
+async function prepareTalk({ aimId = null, connect = null, source = "menu", mode = null, focus = null } = {}) {
   const brief = await send({ type: "plus-brief" });
   if (!brief?.account) return { error: "Sign in to talk things through with the librarian." };
   const ctx = await send({ type: "talk-session", id: aimId });
   if (!ctx || ctx.result !== "applied") return { error: ctx?.message || "Nothing to talk about yet." };
   const mapped = ctx.session.map?.parts?.some(x => x.status !== "new");
-  if (!ctx.session.videos.length && !ctx.session.searches.length && !mapped) return { error: "Watch something first, then let's talk it through." };
+  if (!ctx.session.videos.length && !ctx.session.searches.length && !mapped && mode !== "deeper") return { error: "Watch something first, then let's talk it through." };
   const plus = brief.plus === true, remember = plus && settings.librarianMemory !== false;
   // A learning aim that's nearly there finishes by putting it together; asked for, or offered after Done.
   const synthesis = mode === "synthesis" || (source === "done" && ctx.ready);
-  const state = { aimId: ctx.id, mode: synthesis ? "synthesis" : ctx.mode, session: ctx.session, thread: [], connect, plus, remember, source, done: false, busy: false,
+  const state = { aimId: ctx.id, mode: mode === "deeper" && focus?.title ? "deeper" : synthesis ? "synthesis" : ctx.mode, focus: mode === "deeper" ? focus : null,
+    session: ctx.session, thread: [], connect, plus, remember, source, done: false, busy: false,
     memory: remember ? (await send({ type: "memory-for", id: ctx.id })) || [] : [] };
   // Aim Plus, with captions on: what was actually said in the videos watched longest.
   if (plus && settings.captions) {

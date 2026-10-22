@@ -75,6 +75,7 @@ const writes = {
   "ref-add": m => refAdd({ name: m.name, kind: m.kind, level: m.level, region: m.region, text: m.text }),
   "ref-update": m => refUpdate(String(m.id || ""), m.fields || {}),
   "ref-remove": m => refRemove(String(m.id || "")),
+  "chain-save": m => chainSave(String(m.aimId || ""), m.chain || {}),
   "scenario-save": m => scenarioSave(String(m.aimId || ""), m.scenario || {}),
   "practice-set": m => practiceSet(m.aimId, { practice: m.practice, tried: !!m.tried, note: m.note }),
   "map-remove": m => mapRemove(m.partId),

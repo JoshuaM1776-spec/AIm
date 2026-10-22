@@ -24,6 +24,14 @@ async function renderHome() {
   // Explore, asked for from the popup (youtube.com/#aim-explore).
   if (location.hash === "#aim-explore") { exploreOpen = true; history.replaceState(null, "", "/"); }
   // From an aim's page: talk it through, or put it together (the aim was picked up first).
+  // Go deeper into one thing (Aim Plus): #aim-deeper= and the focus, from an aim's page.
+  if (location.hash.startsWith("#aim-deeper=")) {
+    let focus = null;
+    try { focus = JSON.parse(decodeURIComponent(location.hash.slice("#aim-deeper=".length))); } catch {}
+    history.replaceState(null, "", "/");
+    if (focus?.title) setTimeout(() => openTalk({ mode: "deeper", focus: { title: String(focus.title).slice(0, 120), brief: String(focus.brief || "").slice(0, 200),
+      chain: (Array.isArray(focus.chain) ? focus.chain : []).map(String).slice(0, 8) } }), 300);
+  }
   if (location.hash === "#aim-talk" || location.hash === "#aim-put-together") {
     const mode = location.hash === "#aim-put-together" ? "synthesis" : null;
     history.replaceState(null, "", "/");

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Aim",
-  "version": "0.59.0",
+  "version": "0.60.0",
   "minimum_chrome_version": "116",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyEpACB88ZiRwIiip0jf7b/SLYYh3kxvStjnFGhaO3Vd28YXY6gtXoE5PcqM43C2Fqy0qx/7gU4fET580ajZoZD0AVx7NaE7j9r3ED6dHeAkHG6qbncGBf29hAmDOyhysecqbi7vgPhxKL+jIFm5+2y01dOVtC50+48aIbFAXxEEOavJxD2LFCzY1NKMzHguaLTM2cL+Q5/kh10mHYuL4CEJJHZSfCnOJPDoTrW3UvU4OVm5PUjNM4VPxDolsg5d77SS9x41DBWH9RLFQVvi8zMk0pVrFGRDRVHPhoUYbH07SgPGQD2ZQfO4DpX6S8nxr2bgQbxQ/Qh1hsp8bLlzHIQIDAQAB",
   "description": "Study on YouTube without getting distracted. Your search becomes your aim, and Aim helps you stay focused on it.",
