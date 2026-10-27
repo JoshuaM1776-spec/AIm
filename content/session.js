@@ -53,22 +53,50 @@ function openDropdown() {
   dropdown = el("div", { class: "wp wp-dropdown", role: "menu", onclick: e => e.stopPropagation() },
     ...(brk ? breakMenu() : activePurpose() ? purposeMenu() : idleMenu()));
   dropdown.style.top = `${r.bottom + 8}px`;
-  dropdown.style.right = `${Math.max(16, innerWidth - r.right)}px`;
   document.body.append(dropdown);
+  // Right-aligned under the pill, but always inside the window, wherever YouTube puts the pill.
+  const w = dropdown.offsetWidth;
+  dropdown.style.left = `${Math.max(16, Math.min(r.right - w, innerWidth - w - 16))}px`;
 }
 
-function timeBlock(label, left, total) {
-  return el("div", { class: "wp-menu-block" },
-    el("div", { class: "wp-label" }, label),
-    el("div", { class: "wp-strong" }, `${fmtMin(left)} left`),
-    el("div", { class: "wp-bar" }, el("i", { style: `width:${Math.min(100, (left / total) * 100)}%` })));
+// Aim's menu on YouTube mirrors the toolbar popup (popup.js): Focus or Explore, the aim with its book,
+// Done and Set aside, the session tools and the session bar, in the same words and order. What only
+// makes sense on YouTube (this video, this channel) follows under "This video".
+const MENU_ICONS = {
+  target: [22, ["path", { d: "M12 21a9 9 0 1 1 9-9M12 17a5 5 0 1 1 5-5", fill: "none", stroke: "currentColor", "stroke-width": "1.8", "stroke-linecap": "round" }],
+    ["path", { d: "M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM14 10l6.5-6.5M17 3.5h3.5V7", fill: "none", stroke: "currentColor", "stroke-width": "1.8", "stroke-linecap": "round", "stroke-linejoin": "round" }]],
+  hourglass: [22, ["path", { d: "M7 3.5h10M7 20.5h10M8 3.5c0 5 8 5 8 8.5s-8 3.5-8 8.5M16 3.5c0 5-8 5-8 8.5s8 3.5 8 8.5", fill: "none", stroke: "currentColor", "stroke-width": "1.8", "stroke-linecap": "round", "stroke-linejoin": "round" }]],
+  talk: [22, ["path", { d: "M5 18.5l1.2-3.4A7.5 7.5 0 1 1 9 18.1z", fill: "none", stroke: "currentColor", "stroke-width": "1.8", "stroke-linejoin": "round" }]],
+  library: [22, ["path", { d: "M4 5.5C6.5 4 9.5 4 12 6c2.5-2 5.5-2 8-.5V19c-2.5-1.5-5.5-1.5-8 .5-2.5-2-5.5-2-8-.5zM12 6v13.5", fill: "none", stroke: "currentColor", "stroke-width": "1.8", "stroke-linejoin": "round" }]]
+};
+Object.assign(ICON, MENU_ICONS);
+const menuMin = sec => Math.max(0, Math.ceil(sec / 60));
+const menuDur = m => (m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ""}` : `${m} min`);
+const menuAct = fn => () => { closeDropdown(); fn(); };
+
+// Focus or Explore, as in the popup.
+function menuModes() {
+  const p = activePurpose(), exploring = !!p?.learn && !brk, focused = !!p && !p.learn && !brk;
+  const mode = (on, ic, name, sub, go) => el("button", { class: `wp-dd-mode${on ? " wp-on" : ""}`, "aria-pressed": String(on), onclick: menuAct(go) },
+    icon(ic), el("span", {}, el("b", {}, name), el("small", {}, sub)));
+  return el("div", { class: "wp-dd-modes" },
+    mode(focused, "target", "Focus", "Learn something specific", () => { location.href = "/"; }),
+    mode(exploring, "compass", "Explore", "Follow your curiosity", () => {
+      if (location.pathname === "/") { exploreOpen = true; renderHome(); } else location.href = "/#aim-explore";
+    }));
 }
 
-function breakBlock() {
-  return el("div", { class: "wp-menu-items" }, menuItem("coffee", "Take a break", openBreakDialog,
-    { hint: leisureUsedUp() ? "none left today" : status.leisureLeftMin !== null ? `${status.leisureLeftMin} min left` : "" }));
+// The session tools, as in the popup: Take a Break, the librarian, the library.
+function menuTools() {
+  const used = leisureUsedUp();
+  return el("div", { class: "wp-dd-tools" },
+    el("button", { class: "wp-dd-tool", disabled: used, onclick: menuAct(openBreakDialog) }, icon("hourglass"), "Take a Break",
+      el("small", {}, used ? "None today" : "5–60 min")),
+    account.on ? el("button", { class: "wp-dd-tool", onclick: menuAct(() => openTalk()) }, icon("talk"), "Librarian", el("small", {}, "Talk it through")) : null,
+    el("button", { class: "wp-dd-tool", onclick: menuAct(() => send({ type: "open-targets" })) }, icon("library"), "My Library", el("small", {}, "Every aim")));
 }
 
+// What only applies to the video on screen.
 function videoItems() {
   if (!currentId || !currentInfo) return [];
   return [
@@ -76,54 +104,82 @@ function videoItems() {
     menuItem("avoid", "Sort this channel", openAvoidDialog)
   ];
 }
+function videoSection(extra = []) {
+  const items = [...extra, ...videoItems()].filter(Boolean);
+  return items.length ? el("div", { class: "wp-menu-items" }, el("div", { class: "wp-dd-label wp-dd-pad" }, currentId ? "This video" : "More"), ...items) : null;
+}
+
+// The aim's book, as on the library's shelf and in the popup (its subject comes from the aim's page data).
+const menuBooks = new Map();
+function menuBook(p) {
+  const box = el("span", { class: "wp-dd-book" });
+  const put = a => box.replaceChildren(cover(a, "small"));
+  if (menuBooks.has(p.id)) put(menuBooks.get(p.id));
+  else send({ type: "aim-get", id: p.id }).then(d => { if (d?.aim) { menuBooks.set(p.id, d.aim); put(d.aim); } });
+  return box;
+}
 
 function purposeMenu() {
   const p = activePurpose();
-  const left = purposeLeft(p);
-  const head = el("button", { class: "wp-menu-head", onclick: () => { closeDropdown(); openPivotDialog(); } },
-    el("div", {}, el("div", { class: "wp-label" }, "Your aim"), el("div", { class: "wp-strong" }, p.text)),
-    icon("right"));
-  const time = left !== null ? timeBlock("Time limit", left, p.limitMin * 60)
-    : el("div", { class: "wp-menu-block wp-row-between" },
-        el("span", { class: "wp-muted" }, "No time limit"),
-        el("button", { class: "wp-link", onclick: () => { closeDropdown(); openLimitDialog(); } }, "Set one"));
-  const searches = p.searches.length > 1 ? el("div", { class: "wp-menu-block" },
-    el("div", { class: "wp-label" }, "Searches toward this aim"),
-    el("div", { class: "wp-muted" }, p.searches.slice(-4).map(s => s.q).join(" · "))) : null;
-  return [head, time, searches, focusBlock(), breakBlock(), el("div", { class: "wp-menu-items" },
-    menuItem("check2", doneLabel(activePurpose()), doneAction(activePurpose())),
-    menuItem("pivot", "Change my aim", () => openPivotDialog()),
-    menuItem("pause", "Set aside for later", setAsideTarget),
-    menuItem("book", p.notes ? "Notes" : "Add notes", openNotesDialog),
-    account.on && (p.videos || []).length ? menuItem("ask", "Talk it through", () => openTalk()) : null,
-    left !== null ? menuItem("clock", "Change time limit", openLimitDialog) : null,
-    ...videoItems())].filter(Boolean);
+  const parts = p.map?.parts || [];
+  const sub = parts.length ? `${parts.filter(x => x.status === "explained").length} of ${parts.length} explained` : `${menuDur(Math.max(1, menuMin(p.usedSec)))} so far`;
+  const card = el("div", { class: "wp-dd-card" },
+    el("div", { class: "wp-dd-label" }, p.learn ? "Exploring" : "Your aim"),
+    el("div", { class: "wp-dd-aimrow" },
+      menuBook(p),
+      el("button", { class: "wp-dd-aimlink", title: "Open this aim's page", onclick: menuAct(() => send({ type: "open-aim", id: p.id })) },
+        el("span", { class: "wp-dd-title" }, p.learn ? `Exploring: ${p.learn}` : p.text), el("span", { class: "wp-muted" }, sub)),
+      el("button", { class: "wp-dd-change", title: "Change my aim", onclick: menuAct(() => openPivotDialog()) }, "Change", icon("right"))),
+    el("div", { class: "wp-dd-actions" },
+      el("button", { class: "wp-btn wp-btn-primary", onclick: menuAct(doneAction(p)) }, icon("check2"), doneLabel(p) === "Done with this aim" ? "Done" : doneLabel(p)),
+      el("button", { class: "wp-btn wp-btn-tonal", onclick: menuAct(setAsideTarget) }, icon("pause"), "Set aside")),
+    el("div", { class: "wp-dd-label", style: "margin-top:14px" }, "Session tools"),
+    menuTools(),
+    p.limitMin ? el("div", { class: "wp-dd-limit" },
+      el("span", {}, `Session · ${Math.min(p.limitMin, menuMin(p.usedSec))} of ${p.limitMin} minutes`),
+      el("div", { class: "wp-bar" }, el("i", { style: `width:${Math.min(100, (menuMin(p.usedSec) / p.limitMin) * 100)}%` })))
+      : el("div", { class: "wp-dd-limit" }, el("span", { class: "wp-muted" }, "No time limit"),
+          el("button", { class: "wp-link", onclick: menuAct(openLimitDialog) }, "Set one")),
+    el("div", { class: "wp-dd-more" },
+      el("button", { class: "wp-link-muted", onclick: menuAct(() => openPivotDialog()) }, "Change my aim"),
+      el("button", { class: "wp-link-muted", onclick: menuAct(openNotesDialog) }, p.notes ? "Notes" : "Add notes"),
+      p.limitMin ? el("button", { class: "wp-link-muted", onclick: menuAct(openLimitDialog) }, "Time limit") : null));
+  return [menuModes(), card, videoSection(), focusBlock()].filter(Boolean);
 }
 
 function breakMenu() {
   const left = breakLeft(brk);
   const waiting = purpose?.suspended ? purpose : null;
-  const head = el("div", { class: "wp-menu-block wp-menu-first" },
-    el("div", { class: "wp-label" }, brk.theme ? `Relaxing: ${brk.theme.text}` : "On a break"),
-    el("div", { class: "wp-strong" }, brk.oneVideoId ? "Just this video" : `${fmtMin(left)} left`),
-    left !== null ? el("div", { class: "wp-bar" }, el("i", { style: `width:${Math.min(100, (left / (brk.durationMin * 60)) * 100)}%` })) : null,
-    waiting ? el("div", { class: "wp-muted wp-ellipsis", style: "margin-top:8px" }, `Your aim is waiting: ${waiting.text}`) : null);
-  return [head, el("div", { class: "wp-menu-items" },
-    waiting ? menuItem("play", "Back to my aim", endBreakNow) : menuItem("pivot", "Set aim", () => openStartDialog()),
-    // The homepage card is hidden during a break, so set-aside aims can be picked up from here.
-    ...(waiting ? [] : (status.paused || []).slice(0, 2).map(t => menuItem("play", `Resume: ${shorten(t.text, 34)}`, () => resumeTarget(t.id)))),
-    !brk.oneVideoId && !leisureUsedUp() ? menuItem("clock", "Add 15 minutes", extendBreakNow) : null,
-    menuItem("end", "End break", endBreakNow),
-    ...videoItems())].filter(Boolean);
+  const card = el("div", { class: "wp-dd-card" },
+    el("div", { class: "wp-dd-label" }, brk.theme ? `Relaxing: ${brk.theme.text}` : "On a break"),
+    el("div", { class: "wp-dd-big" }, brk.oneVideoId ? "Just this video" : left !== null ? `${menuDur(menuMin(left))} left` : "No limit"),
+    left !== null && brk.durationMin ? el("div", { class: "wp-dd-limit" }, el("span", { class: "wp-muted" }, `of ${menuDur(brk.durationMin)}`),
+      el("div", { class: "wp-bar" }, el("i", { style: `width:${Math.min(100, (left / (brk.durationMin * 60)) * 100)}%` }))) : null,
+    waiting ? el("div", { class: "wp-muted wp-ellipsis", style: "margin-top:8px" }, `Your aim is waiting: ${waiting.text}`) : null,
+    el("div", { class: "wp-dd-actions" },
+      el("button", { class: "wp-btn wp-btn-primary", onclick: menuAct(endBreakNow) }, waiting ? "Back to my aim" : "End break"),
+      !brk.oneVideoId && !leisureUsedUp() ? el("button", { class: "wp-btn wp-btn-tonal", onclick: menuAct(extendBreakNow) }, "+15 min")
+        : el("button", { class: "wp-btn wp-btn-tonal", onclick: menuAct(() => send({ type: "open-targets" })) }, "My Library")));
+  // The homepage card is hidden during a break, so set-aside aims can be picked up from here.
+  const resumes = waiting ? [] : [menuItem("pivot", "Set aim", () => openStartDialog()),
+    ...(status.paused || []).slice(0, 2).map(t => menuItem("play", `Resume: ${shorten(t.text, 34)}`, () => resumeTarget(t.id)))];
+  return [menuModes(), card, videoSection(resumes)].filter(Boolean);
 }
 
 function idleMenu() {
-  return [el("div", { class: "wp-menu-block wp-menu-first" },
-    el("div", { class: "wp-strong" }, status.totalReached ? "That's today's YouTube time" : "What brings you here?"),
-    el("div", { class: "wp-muted" }, status.totalReached ? "Your daily limit resets at midnight." : "Set an aim, or take a break.")),
-    status.totalReached ? null : el("div", { class: "wp-menu-items" }, menuItem("pivot", "Set aim", () => openStartDialog())),
-    status.totalReached ? null : focusBlock(),
-    status.totalReached ? null : breakBlock()].filter(Boolean);
+  if (status.totalReached) return [el("div", { class: "wp-dd-card" },
+    el("div", { class: "wp-strong" }, "That's today's YouTube time"),
+    el("div", { class: "wp-muted" }, "Your daily limit resets at midnight."))];
+  const card = el("div", { class: "wp-dd-card" },
+    el("div", { class: "wp-strong" }, "No aim set"),
+    el("div", { class: "wp-muted" }, "Tell Aim what you're looking for, or take a break."),
+    el("div", { class: "wp-dd-actions" },
+      el("button", { class: "wp-btn wp-btn-primary", onclick: menuAct(() => openStartDialog()) }, "Set aim"),
+      el("button", { class: "wp-btn wp-btn-tonal", disabled: leisureUsedUp(), onclick: menuAct(openBreakDialog) }, "Take a Break")),
+    el("div", { class: "wp-dd-more" },
+      el("button", { class: "wp-link-muted", onclick: menuAct(() => send({ type: "open-targets" })) }, "My Library")));
+  const resumes = (status.paused || []).slice(0, 2).map(t => menuItem("play", `Resume: ${shorten(t.text, 34)}`, () => resumeTarget(t.id)));
+  return [menuModes(), card, videoSection(resumes), focusBlock()].filter(Boolean);
 }
 
 async function endBreakNow() {

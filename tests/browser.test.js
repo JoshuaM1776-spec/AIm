@@ -355,12 +355,13 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   // ---------- the menu ----------
   await p.click("#wp-chip .wp-pill");
   let menu = await text(".wp-dropdown");
-  step("menu: purpose, no time limit, what's hidden, break choices, Done, Change my aim",
-    ["Your aim", "No time limit", "Shorts, recommendations and feeds hidden · autoplay off", "Adjust", "Take a break", "Done with this aim", "Change my aim", "Save this video", "Sort this channel"].every(t => menu.includes(t)) &&
-    !/Pause|Explore|Add 15/.test(menu), menu.slice(0, 200));
+  step("menu: laid out like the toolbar popup (Focus or Explore, the aim, Done, Set aside, session tools), then this video",
+    ["Focus", "Explore", "Your aim", "Done", "Set aside", "Session tools", "Take a Break", "My Library", "No time limit", "Change my aim", "This video", "Save this video", "Sort this channel",
+      "Shorts, recommendations and feeds hidden · autoplay off", "Adjust"].every(t => menu.includes(t)) && !/Add 15/.test(menu) &&
+    (await p.getAttribute(".wp-dropdown .wp-dd-mode:has-text('Focus')", "aria-pressed")) === "true", menu.slice(0, 200));
 
   // ---------- take a break and come back ----------
-  await p.click('.wp-dropdown button:has-text("Take a break")');
+  await p.click('.wp-dropdown .wp-dd-tool:has-text("Take a Break")');
   await p.click('.wp-break-dialog .wp-opt:text-is("15 minutes")');
   await p.click('.wp-break-dialog button:text-is("Start Break")');
   await p.waitForTimeout(600);
@@ -382,7 +383,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
 
   // ---------- a break running out ----------
   await p.click("#wp-chip .wp-pill");
-  await p.click('.wp-dropdown button:has-text("Take a break")');
+  await p.click('.wp-dropdown .wp-dd-tool:has-text("Take a Break")');
   await p.click('.wp-break-dialog .wp-opt:text-is("15 minutes")');
   await p.click('.wp-break-dialog button:text-is("Start Break")');
   await p.waitForTimeout(500);
@@ -415,7 +416,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
 
   // ---------- Done ----------
   await p.click("#wp-chip .wp-pill");
-  await p.click('.wp-dropdown button:has-text("Done with this aim")');
+  await p.click('.wp-dropdown .wp-dd-actions button:has-text("Done")');
   await p.waitForURL("https://www.youtube.com/", { timeout: 5000 });
   await p.waitForSelector("#wp-home .wp-home-end .wp-end-rate", { timeout: 5000 });
   const endText = await text(".wp-home-end");
@@ -432,7 +433,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.click('.wp-home-end [aria-label="Dismiss"]');
   step("dismissing it leaves the homepage card as usual", !(await p.$(".wp-home-end")) && !!(await p.$("#wp-home .wp-home-title")));
   await p.click("#wp-chip .wp-pill");
-  await p.click('.wp-dropdown button:has-text("Set aim")');
+  await p.click('.wp-dropdown .wp-dd-actions button:text-is("Set aim")');
   await p.waitForSelector(".wp-dialog .wp-recent", { timeout: 3000 });
   step("setting a purpose offers recent ones", (await text(".wp-dialog .wp-recent")).includes("Learn how sourdough starters work"));
   await p.click('.wp-dialog .wp-recent-item');
@@ -615,7 +616,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("a small thumbnail plays that video from where you stopped, still on the aim",
     p.url().includes("watch?v=bio3&t=90s") && (await store()).purpose?.text === "Study for my biology exam", p.url());
   await p.click("#wp-chip .wp-pill");
-  await p.click('.wp-dropdown button:has-text("Set aside for later")');
+  await p.click('.wp-dropdown .wp-dd-actions button:has-text("Set aside")');
   await p.waitForURL("https://www.youtube.com/");
   await p.waitForSelector("#wp-home .wp-home-recent");
   st = await store();

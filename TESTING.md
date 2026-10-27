@@ -386,6 +386,10 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] With Aim Plus signed in for more than an hour: Plus features and sync keep working without opening Settings.
 - [ ] A study page's note box keeps the cursor while a video plays in another tab.
 
+### 52. One menu, two places (0.60.2)
+- [ ] Click Aim's pill on YouTube and Aim's icon in Chrome's toolbar with the same aim going: both show Focus / Explore, the aim with its book and Change, Done and Set aside (the popup has Resume and Done), the session tools and the session bar, in the same words. On YouTube, "This video" adds Save for later and Sort this channel.
+- [ ] On a break, and with no aim, the YouTube menu matches the popup's card. The menu never runs off the edge of the window.
+
 ## Known issues (not regressions)
 
 - The word check knows words, not meanings: synonyms ("tap" vs "faucet") get the question once; answering Yes teaches it that search.
