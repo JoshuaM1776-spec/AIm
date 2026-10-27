@@ -21,7 +21,8 @@ function readChapters(description) {
     const m = line.match(/^\s*(?:(\d{1,2}):)?(\d{1,2}):(\d{2})\s+(.{2,120})$/);
     if (m) add((+(m[1] || 0)) * 3600 + (+m[2]) * 60 + (+m[3]), m[4]);
   }
-  for (const item of $$(YT.chapterItems)) {
+  // The watch page's own chapters panel, not the hidden search page's key moments.
+  for (const item of $$(`${YT.watchFlexy} ${YT.chapterItems}`)) {
     const time = squash(first(YT.chapterTime, item)?.textContent).split(":").map(Number);
     if (time.length < 2 || time.some(Number.isNaN)) continue;
     add(time.reduce((s, n) => s * 60 + n, 0), first(YT.chapterTitle, item)?.textContent);
@@ -34,11 +35,15 @@ const mmss = s => (s >= 3600 ? `${Math.floor(s / 3600)}:${String(Math.floor(s / 
 // The title and description as the watch page shows them, once YouTube has filled them in for this
 // video (it reuses the page between videos, so wait for it to catch up).
 async function pageVideoInfo(id) {
+  // The gate already waited for the page to catch up (readVideoInfo): use what it read when it can.
+  for (let i = 0; i < 20 && currentId === id && !(currentInfo?.id === id && currentInfo.description); i++) await sleep(250);
+  if (currentInfo?.id === id && currentInfo.description) return { id, title: currentInfo.title, channel: currentInfo.channel, description: currentInfo.description };
   const known = currentInfo?.id === id ? currentInfo : {};
-  for (let i = 0; i < 20 && currentId === id; i++) {
+  for (let i = 0; i < 8 && currentId === id; i++) {
     const title = squash($(YT.watchTitle)?.textContent);
     const d = $(YT.watchDescription);
-    if ($(YT.watchFlexy)?.getAttribute("video-id") === id && title && d) {
+    // The page's title must be this video's (YouTube changes the id before the title and description).
+    if ($(YT.watchFlexy)?.getAttribute("video-id") === id && title && d && (!known.title || title === known.title)) {
       return { id, title: known.title || title, channel: known.channel || squash(channelLink()?.textContent), description: (d.innerText || d.textContent || "").trim() };
     }
     await sleep(250);

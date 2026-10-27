@@ -271,16 +271,24 @@ async function maybeOfferTalk(card) {
 
 // While watching, with Aim Plus: a quiet line when this video connects to something you explained
 // before ("This connects to Roman concrete"). At most once a day; see memoryMatch in store.js.
-let connectChecked = null;
+// Asked once per video; the answer is kept, so the line comes back when YouTube redraws the sidebar.
+let connectChecked = null, connectFound = null;
 async function connectionLine(host) {
   const p = activePurpose();
-  if (!p || !currentId || connectChecked === currentId || settings.librarianMemory === false) return;
+  if (!p || !currentId || settings.librarianMemory === false) return;
+  if (connectChecked === currentId) return connectFound?.id === currentId && showConnection(host, connectFound.m);
   connectChecked = currentId;
+  const id = currentId;
   const title = p.allowed?.find(v => v.id === currentId)?.title || (currentInfo?.id === currentId ? currentInfo.title : "");
   if (!title || !(await send({ type: "plus-brief" }))?.plus) return;
   const m = await send({ type: "memory-match", title });
-  if (!m || !host.isConnected) return;
+  if (!m || currentId !== id) return;
   send({ type: "memory-offered", id: m.id });
+  connectFound = { id, m };
+  showConnection($("#wp-upnext") || host, m);
+}
+function showConnection(host, m) {
+  if (!host?.isConnected || host.querySelector(".wp-connect")) return;
   host.querySelector(".wp-upnext-head")?.after(el("div", { class: "wp-deeper wp-connect" },
     el("span", { class: "wp-muted" }, `This connects to something you were into: ${m.subject}.`),
     el("button", { class: "wp-link", onclick: () => openTalk({ connect: m }) }, "Talk about it")));

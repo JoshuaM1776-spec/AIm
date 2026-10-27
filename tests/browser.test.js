@@ -63,6 +63,25 @@ const REALPLAY = page(`<ytd-watch-flexy video-id="realplay">
     window.__started = false;
     v.play().then(() => { window.__started = true; }, e => { window.__abort = e.name; });
   </script>`, "Video realplay - YouTube");
+// Opening a video from the results the way YouTube does: one page, so the results (with their
+// hover-preview player, same class as the main one) stay in it, hidden, and the watch page's
+// player starts the new video on its own after the jump.
+const SPA = page(`<ytd-search><div id="inline-preview-player"><video class="html5-main-video" src="${silentWav}" muted></video></div>
+  <ytd-section-list-renderer><ytd-video-renderer><a id="video-title" href="/watch?v=spa1">SPA one</a></ytd-video-renderer></ytd-section-list-renderer></ytd-search>
+  <script>
+    window.openVideo = id => {
+      document.querySelector("ytd-search").hidden = true;
+      history.pushState({}, "", "/watch?v=" + id);
+      const f = document.createElement("ytd-watch-flexy");
+      f.setAttribute("video-id", id);
+      const mp = document.createElement("div"), v = document.createElement("video");
+      mp.id = "movie_player"; v.className = "html5-main-video"; v.src = "${silentWav}"; v.muted = true; v.loop = true;
+      mp.append(v); f.append(mp);
+      document.body.append(f);
+      window.dispatchEvent(new Event("yt-navigate-finish"));
+      f.querySelector("video").play();
+    };
+  </script>`);
 // Ask YouTube, as best Aim can guess it: an AI answer on the results page whose markup Aim doesn't
 // know, and a page of its own with videos to pick.
 const RESULTS_AI = page(`<ytd-search><div><ytd-section-list-renderer>
@@ -123,7 +142,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     }
     // Stand-up Maths' feed fails (as YouTube's feeds have for weeks at a time), so Aim reads its Videos tab.
     if (u.pathname === "/@standupmaths/videos") return route.fulfill({ contentType: "text/html", body: CHANNEL_PAGE });
-    const body = u.pathname === "/watch" && u.searchParams.get("v") === "realplay" ? REALPLAY : u.pathname === "/watch" ? WATCH(u.searchParams.get("v")) : u.pathname === "/results" && /dripping/.test(u.searchParams.get("search_query") || "") ? RESULTS_AI : u.pathname === "/new" ? ASKPAGE : u.pathname === "/results" ? RESULTS
+    const body = u.pathname === "/spa" ? SPA : u.pathname === "/watch" && u.searchParams.get("v") === "realplay" ? REALPLAY : u.pathname === "/watch" ? WATCH(u.searchParams.get("v")) : u.pathname === "/results" && /dripping/.test(u.searchParams.get("search_query") || "") ? RESULTS_AI : u.pathname === "/new" ? ASKPAGE : u.pathname === "/results" ? RESULTS
       : u.pathname.startsWith("/shorts/") ? SHORTS(u.pathname.split("/")[2]) : u.pathname === "/feed/subscriptions" ? SUBS : u.pathname === "/feed/channels" ? SUBSLIST : HOME;
     // Same Trusted Types policy YouTube sends, so string-to-HTML writes would fail here too.
     route.fulfill({ contentType: "text/html", body, headers: { "content-security-policy": "require-trusted-types-for 'script'" } });
@@ -282,6 +301,16 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.waitForTimeout(800);
   const held = await p.evaluate(() => ({ abort: window.__abort || null, started: window.__started, paused: document.querySelector("video").paused }));
   step("a held video lets the player's own start finish, then pauses (no 'An error occurred')", !held.abort && held.started && held.paused, JSON.stringify(held));
+
+  // ---------- opening a video inside YouTube's one page: the right player plays ----------
+  await sw.evaluate(() => serial(() => startBreak({ minutes: 30 })));
+  await p.goto("https://www.youtube.com/spa");
+  await p.waitForSelector("#wp-chip");
+  await p.evaluate(() => openVideo("spa1"));
+  await p.waitForFunction(() => { const v = document.querySelector("ytd-watch-flexy video"); return v && !v.paused && v.currentTime > 0; }, null, { timeout: 8000 }).catch(() => {});
+  const spa = await p.evaluate(() => ({ main: !document.querySelector("ytd-watch-flexy video").paused, preview: !document.querySelector("#inline-preview-player video").paused }));
+  step("opening a video in YouTube's one page plays that video, not the hidden results page's preview player", spa.main && !spa.preview, JSON.stringify(spa));
+  await sw.evaluate(() => serial(() => endBreak()));
 
   // ---------- a video with neither a purpose nor a break ----------
   await p.goto("https://www.youtube.com/watch?v=aaa");

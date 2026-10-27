@@ -80,7 +80,21 @@ const hrefChannel = a => { try { return a ? channelPath(new URL(a.href).pathname
 const squash = s => (s || "").replace(/\s+/g, " ").trim();
 
 // ---------------- page parts ----------------
-const getVideoEl = () => $(YT.mainVideo) || $("video");
+// The video you're watching. YouTube is one page: after you open a video from the homepage or a
+// search, the hidden home or results page (with its hover-preview player) is still in it, and its
+// video has the same class. So: the watch page's own player, or the Short on screen, or else a
+// video that's actually showing; never the first match blindly.
+function getVideoEl() {
+  if (location.pathname === "/watch") {
+    const v = $(`${YT.watchFlexy} #movie_player ${YT.mainVideo}`) || $(`${YT.watchFlexy} ${YT.mainVideo}`);
+    if (v) return v;
+  } else if (location.pathname.startsWith("/shorts/")) {
+    const v = $(`ytd-reel-video-renderer[is-active] video`) || $(`#shorts-player video`);
+    if (v) return v;
+  }
+  const all = [...document.querySelectorAll(YT.mainVideo)];
+  return all.find(v => v.getBoundingClientRect().width > 0) || all[0] || $("video");
+}
 const miniplayerVideo = () => $(YT.miniplayerVideo);
 const mastheadHost = () => $(YT.mastheadEnd);
 const mastheadCenter = () => $(YT.mastheadCenter);
@@ -89,8 +103,16 @@ const resultsAnchor = () => $(YT.resultsList);
 const channelLink = () => first(YT.videoChannelLink);
 // YouTube's per-video Ask button, if this video and account have it.
 const youTubeAskButton = () => $$(YT.watchActionButtons).find(b => /^ask\b/i.test(squash(b.getAttribute("aria-label") || b.textContent))) || null;
-const playerHost = () => first(YT.player);
-const autoplayToggle = () => $(YT.autoplayToggle);
+// The player you're looking at. The hidden watch page keeps its #movie_player after you open a Short,
+// so a card put there would be invisible and the Short would stay held.
+function playerHost() {
+  const on = n => n && n.getBoundingClientRect().width > 0 ? n : null;
+  if (location.pathname.startsWith("/shorts/"))
+    return on($("ytd-reel-video-renderer[is-active] #shorts-player")) || on($("#shorts-player")) || $("#shorts-player");
+  if (location.pathname === "/watch") return $(`${YT.watchFlexy} #movie_player`) || first(YT.player);
+  return [...document.querySelectorAll(YT.player.join(","))].find(on) || null;
+}
+const autoplayToggle = () => (playerHost() || document).querySelector(YT.autoplayToggle);
 const isShortsPage = () => location.pathname.startsWith("/shorts/");
 const feedBrowse = () => {
   for (const t of YT.feedSubtypes) { const n = $(`ytd-browse[page-subtype="${t}"]:not([hidden])`); if (n) return n; }
@@ -101,6 +123,7 @@ const feedBrowse = () => {
 // YouTube swaps videos without reloading, so for a moment the page can still show the
 // previous video's details. oEmbed gives the right title and channel for this ID, and the
 // description is only read once the page has caught up to the same video.
+let lastWatchTitle = "";
 async function readVideoInfo(id) {
   const info = { id, title: "", channel: "", channelKey: "", description: "" };
   try {
@@ -115,15 +138,18 @@ async function readVideoInfo(id) {
   const isWatch = location.pathname === "/watch";
   for (let i = 0; i < 15 && currentId === id; i++) {
     const pageTitle = squash($(YT.watchTitle)?.textContent);
+    // The page has the new video once its id and title are in. YouTube may show a translated title
+    // that never equals oEmbed's: then a title different from the last video's is enough.
     const caughtUp = isWatch
-      ? $(YT.watchFlexy)?.getAttribute("video-id") === id && !!pageTitle && (!info.title || pageTitle === info.title)
+      ? $(YT.watchFlexy)?.getAttribute("video-id") === id && !!pageTitle &&
+        (!info.title || pageTitle === info.title || (i >= 2 && pageTitle !== lastWatchTitle))
       : !!channelLink();
     if (caughtUp) {
       const link = channelLink();
       info.title ||= pageTitle;
       info.channel ||= squash(link?.textContent);
       info.channelKey ||= hrefChannel(link);
-      if (isWatch) { const d = $(YT.watchDescription); info.description = (d?.innerText || d?.textContent || "").trim(); }
+      if (isWatch) { const d = $(YT.watchDescription); info.description = (d?.innerText || d?.textContent || "").trim(); lastWatchTitle = pageTitle; }
       break;
     }
     await sleep(200);

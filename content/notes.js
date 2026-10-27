@@ -26,9 +26,10 @@ async function openNotesDialog() {
   const status_ = el("div", { class: "wp-muted wp-notes-status" });
   const suggest = account.on ? el("button", { class: "wp-btn wp-btn-tonal", onclick: async () => {
     suggest.disabled = true; status_.textContent = `${BRAND} is thinking of questions…`;
-    const r = await send({ type: "librarian", task: "librarian-questions", input: { target: p.text, notes: box.value,
+    const r = await sendRaw({ type: "librarian", task: "librarian-questions", input: { target: p.text, notes: box.value,
       searches: (p.searches || []).map(s => s.q).slice(-10), watched: (p.videos || []).slice(-8).map(v => ({ title: v.title })) } });
     suggest.disabled = false;
+    if (r?.error) { status_.textContent = r.code === "limit" ? "That's today's AI limit." : r.error; return; }
     if (!r?.questions?.length) { status_.textContent = "No new questions right now."; return; }
     box.value = `${box.value.trimEnd()}${box.value.trim() ? "\n" : ""}${r.questions.map(q => `- ${q}`).join("\n")}\n`;
     saveNotes(box.value);

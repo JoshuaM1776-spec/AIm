@@ -102,10 +102,14 @@ async function migrateStorage() {
   const { schemaVersion = 0 } = await chrome.storage.local.get("schemaVersion");
   if (schemaVersion >= SCHEMA_VERSION) return;
   // Version 1 only stamped the version, so 0 and 1 hold the same Waypoint 0.5 data.
-  if (schemaVersion < 2) await migrateTo2(await chrome.storage.local.get(null));
-  if (schemaVersion < 3) await migrateTo3(await chrome.storage.local.get(null));
-  if (schemaVersion < 4) await migrateTo4(await chrome.storage.local.get(null));
-  if (schemaVersion < 5) await migrateTo5(await chrome.storage.local.get(null));
+  // Each step is stamped as it finishes, so a step that fails is retried alone, never one already
+  // done (re-running an earlier step on migrated data would lose it).
+  const steps = [[2, migrateTo2], [3, migrateTo3], [4, migrateTo4], [5, migrateTo5]];
+  for (const [n, step] of steps) {
+    if (schemaVersion >= n) continue;
+    await step(await chrome.storage.local.get(null));
+    await chrome.storage.local.set({ schemaVersion: n });
+  }
   await chrome.storage.local.set({ schemaVersion: SCHEMA_VERSION });
 }
 
@@ -191,8 +195,10 @@ async function setSetting(key, value) {
 }
 
 // ---------- reading the current state ----------
-async function readAll() {
-  const d = await chrome.storage.local.get(["purpose", "brk", "stop", "usage", "usageLastAt", "history", "paused"]);
+// light: without history and the set-aside aims (the big keys), for the 10-second tick and status,
+// which don't use them. Don't write history or paused back from a light read.
+async function readAll({ light = false } = {}) {
+  const d = await chrome.storage.local.get(["purpose", "brk", "stop", "usage", "usageLastAt", ...(light ? [] : ["history", "paused"])]);
   const day = todayKey();
   const usage = d.usage || {};
   usage[day] ||= emptyDay();
@@ -211,7 +217,7 @@ function totalReached(settings, today) {
 
 // What every page needs to draw itself. Infinity can't cross a message, so "no limit" is null.
 async function getStatus() {
-  const s = await readAll(), settings = await getSettings();
+  const s = await readAll({ light: true }), settings = await getSettings();
   const { homeschool = null, onboarding = null, pathways = null } = await chrome.storage.local.get(["homeschool", "onboarding", "pathways"]);
   const today = s.usage[s.day];
   const left = leisureLeftSec(settings, today);
@@ -810,7 +816,7 @@ async function clearStop() {
 // video: { id, title, channel } of the video playing in the reporting tab, if any.
 async function recordTick(seconds, video) {
   const now = Date.now();
-  const s = await readAll(), settings = await getSettings();
+  const s = await readAll({ light: true }), settings = await getSettings();
   const today = s.usage[s.day];
   const add = credit(s.usageLastAt, now, seconds);
   let { purpose, brk, stop } = s;
@@ -856,19 +862,21 @@ async function recordTick(seconds, video) {
   else if (brk && brk.durationMin && brk.usedSec >= brk.durationMin * 60) kind = "break";
   else if (purpose && !brk && !purpose.timeUp && purpose.limitMin && purpose.usedSec >= purpose.limitMin * 60) kind = "purpose";
 
-  const history = s.history;
+  const write = {};
   if (kind && stop?.kind !== kind) {
     // The video playing right now may finish, within the grace period.
     const graceMs = video?.id ? settings.graceMin * 60 * 1000 : 0;
     stop = { kind, day: s.day, at: now, videoId: graceMs ? video.id : null, graceEndsAt: now + graceMs };
     if (brk && kind !== "purpose") {
+      const { history = [] } = await chrome.storage.local.get("history");
       history.push(breakRecord(brk));
+      write.history = history.slice(-200);
       brk = null;
       if (purpose) { purpose.suspended = false; purpose.lastCountAt = now; }
     }
     if (kind === "purpose") purpose.timeUp = true;
   }
-  await chrome.storage.local.set({ usage: s.usage, usageLastAt: now, purpose, brk, stop, history: history.slice(-200) });
+  await chrome.storage.local.set({ usage: s.usage, usageLastAt: now, purpose, brk, stop, ...write });
   return getStatus();
 }
 
@@ -1371,7 +1379,17 @@ async function syncMerge(items, first = false) {
           if (stop?.kind === "purpose") stop = null;
         } else {
           const allowed = [...(purpose.allowed || []), ...(rec.allowed || [])].filter((v, i, a) => a.findIndex(x => x.id === v.id) === i).slice(-MAX_ALLOWED);
-          purpose = { ...rec, allowed, usedSec: Math.max(rec.usedSec || 0, purpose.usedSec || 0), lastCountAt: purpose.lastCountAt || 0, suspended: !!purpose.suspended };
+          // What you watched and searched here since the last round stays: union both browsers' lists.
+          const vids = new Map();
+          for (const v of [...(rec.videos || []), ...(purpose.videos || [])]) {
+            const o = vids.get(v.id);
+            vids.set(v.id, o ? { ...o, ...((v.lastAt || 0) > (o.lastAt || 0) ? v : {}), sec: Math.max(o.sec || 0, v.sec || 0) } : v);
+          }
+          const searches = [...(rec.searches || []), ...(purpose.searches || [])].filter((x, i, a) => a.findIndex(y => y.q === x.q && y.at === x.at) === i)
+            .sort((a, b) => (a.at || 0) - (b.at || 0));
+          const last = (purpose.last?.at || 0) > (rec.last?.at || 0) ? purpose.last : rec.last;
+          purpose = { ...rec, allowed, videos: [...vids.values()].sort((a, b) => (a.at || 0) - (b.at || 0)).slice(-200), searches, last,
+            usedSec: Math.max(rec.usedSec || 0, purpose.usedSec || 0), lastCountAt: purpose.lastCountAt || 0, suspended: !!purpose.suspended };
           delete purpose.pausedAt;
         }
         continue;
@@ -1723,8 +1741,8 @@ async function setAimNotes(id, text) {
 // kept here: the list under "references", each one's text under "ref:<id>". Scenarios and checks use
 // only the passages that matter, with a citation like [R1.12] (document 1, passage 12). Never synced,
 // and sent to Aim's server only as those passages, when a scenario needs them.
-const REF_KINDS = ["protocol", "course", "other"];
-const REF_LEVELS = ["", "EMR", "EMT", "AEMT", "Paramedic", "Nursing", "Other"];
+const REF_KINDS = ["protocol", "poh", "course", "other"];
+const REF_LEVELS = ["", "EMR", "EMT", "AEMT", "Paramedic", "Nursing", "Student pilot", "Private pilot", "Instrument rated", "Commercial pilot", "Flight instructor", "Airline pilot", "Other"];
 const REF_MAX = 3_000_000; // characters of text per document
 
 async function refList() {
@@ -1756,6 +1774,7 @@ async function refRemove(id) {
   const { references = [] } = await chrome.storage.local.get("references");
   await chrome.storage.local.set({ references: references.filter(r => r.id !== id) });
   await chrome.storage.local.remove(`ref:${id}`);
+  refCache.delete(id);
   return { result: "applied" };
 }
 
@@ -1779,14 +1798,24 @@ function refPassages(text) {
 
 // The passages most related to what a scenario is about, labelled [R1.12], within maxChars. No AI:
 // shared words, with the passage's heading counting double. Medication names always match exactly.
+// A reference split into passages with their words, kept while the background runs: splitting a long
+// protocol book on every scenario turn would hold up everything else Aim does meanwhile.
+const refCache = new Map();
+async function refIndex(id) {
+  if (refCache.has(id)) return refCache.get(id);
+  const text = (await chrome.storage.local.get(`ref:${id}`))[`ref:${id}`] || "";
+  const index = refPassages(text).map(p => ({ ...p, words: meaningfulWords(p.text), head: meaningfulWords(p.heading) }));
+  if (refCache.size > 8) refCache.delete(refCache.keys().next().value);
+  refCache.set(id, index);
+  return index;
+}
 async function refExcerpts(ids, about, maxChars = 12000) {
   const refs = (await refList()).filter(r => ids.includes(r.id));
   const want = new Set(meaningfulWords(about));
   const scored = [];
   for (const [n, r] of refs.entries()) {
-    const text = (await chrome.storage.local.get(`ref:${r.id}`))[`ref:${r.id}`] || "";
-    refPassages(text).forEach((p, i) => {
-      const words = meaningfulWords(p.text), head = meaningfulWords(p.heading);
+    (await refIndex(r.id)).forEach((p, i) => {
+      const { words, head } = p;
       const score = words.filter(w => want.has(w)).length + 2 * head.filter(w => want.has(w)).length;
       if (score) scored.push({ cite: `R${n + 1}.${i + 1}`, ref: r.name, heading: p.heading, text: p.text, score });
     });

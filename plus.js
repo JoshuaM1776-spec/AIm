@@ -48,7 +48,9 @@ const AUTH_MESSAGES = [
 
 async function plusFetch(url, init) {
   let res;
-  try { res = await fetch(url, init); }
+  // A request that never settles would hold up sync and the family plan until the browser restarts.
+  // 150 s is the longest an Aim server function runs.
+  try { res = await fetch(url, { ...init, signal: AbortSignal.timeout(150_000) }); }
   catch { throw new PlusError("Couldn't reach Aim's server. Check your connection and try again."); }
   const data = await res.json().catch(() => ({}));
   return { res, data };
@@ -159,11 +161,14 @@ async function accessToken({ force = false } = {}) {
   refreshing ??= (async () => {
     try {
       const fresh = sessionFrom(await authCall("token?grant_type=refresh_token", { refresh_token: s.refreshToken }));
-      await saveSession(fresh);
+      // Keep what the session knows beyond the tokens (the plan, a student's family), or Plus
+      // features, sync and a student's daily plan would quietly stop after the first refresh.
+      await saveSession({ ...s, ...fresh, email: fresh.email || s.email, userId: fresh.userId || s.userId });
       return fresh.accessToken;
     } catch (e) {
       // A rejected refresh token means the session is over. Network trouble keeps it for later.
-      if (e.status >= 400 && e.status < 500) { await clearSession(); return null; }
+      // Too many requests (429) is a reason to wait, not to sign out.
+      if ([400, 401, 403].includes(e.status)) { await clearSession(); return null; }
       throw e;
     } finally { refreshing = null; }
   })();
@@ -208,8 +213,11 @@ function studentRefresh() {
     if (!s?.student || !plusConfigured()) return { result: "off" };
     try {
       const { hsOutbox = [] } = await chrome.storage.local.get("hsOutbox");
-      for (const x of hsOutbox) await plusCall("student-progress", { ...x, today: todayKey() }).catch(e => { if (e.status !== 404) throw e; }); // 404: no longer in the plan
-      if (hsOutbox.length) await serial(async () => { const { hsOutbox: now = [] } = await chrome.storage.local.get("hsOutbox"); await chrome.storage.local.set({ hsOutbox: now.slice(hsOutbox.length) }); });
+      // Each report leaves the outbox as soon as it's sent, so a later failure never sends it twice.
+      for (const x of hsOutbox) {
+        await plusCall("student-progress", { ...x, today: todayKey() }).catch(e => { if (e.status !== 404) throw e; }); // 404: no longer in the plan
+        await serial(async () => { const { hsOutbox: now = [] } = await chrome.storage.local.get("hsOutbox"); await chrome.storage.local.set({ hsOutbox: now.slice(1) }); });
+      }
       const r = await plusCall("student-today", { today: todayKey() });
       await serial(() => saveFamilyPlan(r));
       return { result: "applied" };

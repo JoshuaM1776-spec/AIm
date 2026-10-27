@@ -375,6 +375,17 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] **Go deeper** on a part of an aim's map, and under a scenario's debrief: each level says what's happening, why, and what counteracts it there, marked **From your references** (cited) or **General background**. The next button names the next question. At the useful floor for your level it says so, with **Go past the floor anyway**. The part shows "N levels deep" afterwards.
 - [ ] **Explain it yourself** on a map part opens the librarian on YouTube asking the next why about exactly that part, one level at a time. No dose or procedure number appears in a chain. Without Plus: "Going deeper is part of Aim Plus."
 
+### 51. Playback and reliability (0.60.1)
+- [ ] From the homepage or a search, open a video for your aim (or during a break) without refreshing: it plays. Hover a result first so its preview plays, then open a different one: the one you opened plays.
+- [ ] Open a Short after watching a normal video: the Short's card (or the Short) shows on the Short, not hidden.
+- [ ] Reload Aim at chrome://extensions with a YouTube tab open, then click a video in that tab: it plays (the old copy of Aim stays out of the way).
+- [ ] A video with a translated title (YouTube in another language) starts as quickly as any other.
+- [ ] Pause a video yourself, go to the homepage and come back with Back: it stays paused.
+- [ ] With an aim, search for something unrelated: its results aren't added to the aim before you answer "Is it part of your aim?".
+- [ ] Finish an aim, then run the same search again: it becomes a new aim.
+- [ ] With Aim Plus signed in for more than an hour: Plus features and sync keep working without opening Settings.
+- [ ] A study page's note box keeps the cursor while a video plays in another tab.
+
 ## Known issues (not regressions)
 
 - The word check knows words, not meanings: synonyms ("tap" vs "faucet") get the question once; answering Yes teaches it that search.

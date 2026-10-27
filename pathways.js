@@ -33,7 +33,15 @@ let state = null;      // { pathways, interests } from the background
 let account = null;    // plus-status
 const younger = () => state.pathways.stage === "middle";
 
-async function load() { state = await send({ type: "pathways" }); }
+// The background may be waking up (or Aim was just reloaded): ask again before giving up.
+async function sendRead(msg) {
+  for (let i = 0; i < 3; i++) { const r = await send(msg); if (r) return r; await new Promise(res => setTimeout(res, 300 * (i + 1))); }
+  return null;
+}
+async function load() {
+  state = await sendRead({ type: "pathways" });
+  if (!state) { document.querySelector("main").replaceChildren(Object.assign(document.createElement("p"), { className: "error", textContent: "Aim didn't answer. Reload this page." })); throw new Error("no state"); }
+}
 
 // One request to Aim's server through the background. Returns the reply, or null after saying why.
 async function ask(task, input, where) {
@@ -437,6 +445,6 @@ async function route() {
 
 (async () => {
   account = await send({ type: "plus-status" });
-  if (!account?.configured || !account.signedIn || (account.plan && account.plan !== "plus")) return gate();
+  if (!account?.configured || !account.signedIn || (account.plan && account.plan !== "plus" && account.plan !== "homeschool")) return gate();
   route();
 })();

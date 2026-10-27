@@ -7,13 +7,16 @@
 
 // "playing", not "play": a video is paused only once it has really started, so YouTube's player is
 // never interrupted while it sets up (that can end in "An error occurred. Please try again later").
+// Videos Aim paused itself, so release() resumes exactly those, and never one you paused.
+const pausedByAim = new WeakSet();
 document.addEventListener("playing", e => {
-  if (holding && e.target.tagName === "VIDEO") e.target.pause();
+  if (alive && holding && e.target.tagName === "VIDEO") { pausedByAim.add(e.target); e.target.pause(); }
 }, true);
 
 // When a video ends: a one-video break is over, and so is a grace period.
 document.addEventListener("ended", e => {
-  if (e.target.tagName !== "VIDEO" || !currentId) return;
+  // Only the video you're watching, and not an ad playing in it.
+  if (!alive || e.target.tagName !== "VIDEO" || !currentId || e.target !== getVideoEl() || playerHost()?.classList.contains("ad-showing")) return;
   if (brk?.oneVideoId === currentId) return endOneVideoBreak();
   if (stop?.videoId === currentId) endGrace();
 }, true);
@@ -21,16 +24,38 @@ document.addEventListener("ended", e => {
 // Hold the video on screen. One that hasn't started yet is left alone: the "playing" listener above
 // pauses it the moment it does.
 function hold() {
+  if (!alive) return;
   holding = true;
   const v = getVideoEl();
-  if (v && !v.paused && v.readyState >= 2) v.pause();
+  if (v && !v.paused && v.readyState >= 2) { pausedByAim.add(v); v.pause(); }
 }
 function release(id) {
   cleared.add(id);
   holding = false;
   closePlayerCard();
-  getVideoEl()?.play().catch(() => {});
+  resume(id);
   if (activePurpose() && !brk) onTrackPill();
+}
+// Play the video Aim held. YouTube may still be swapping the new video in (or showing an ad), so
+// check again for a few seconds; stop as soon as it plays, if you pause it yourself, or if you leave.
+function resume(id) {
+  let tries = 0;
+  const attempt = () => {
+    if (holding || currentId !== id) return;
+    const v = getVideoEl();
+    if (v && v.paused && !v.ended && (pausedByAim.has(v) || v.dataset.aimHeld || tries === 0)) {
+      pausedByAim.delete(v);
+      delete v.dataset.aimHeld;
+      v.play().catch(() => {});
+    }
+    if (v && !v.paused) return;
+    // YouTube keeps its own play state and can undo a play() from outside: then press its play button.
+    if (tries === 3 && v?.paused && !v.ended) playerHost()?.querySelector(".ytp-play-button")?.click();
+    if (++tries < 6) setTimeout(attempt, [250, 500, 1000, 1500, 2500][tries - 1]);
+  };
+  attempt();
+  // Anything Aim paused while it was deciding (a hover preview, an ad, the video itself) is no longer held.
+  for (const v of document.querySelectorAll("video")) if (pausedByAim.has(v) && v !== getVideoEl()) pausedByAim.delete(v);
 }
 
 // "Staying on track": a small pill on the player for a few seconds when a video plays for your aim.
@@ -110,9 +135,12 @@ async function continueAfterRules(info) {
   if (brk) {
     // A one-video break covers that video only; moving to another ends it.
     if (brk.oneVideoId && brk.oneVideoId !== id) {
-      applyStatus(await send({ type: "break-end" }) && await send({ type: "status" }));
+      const ended = await send({ type: "break-end" });
+      // No answer (Aim was reloaded): don't ask again and again; let the video be.
+      if (!ended) return release(id);
+      applyStatus(await send({ type: "status" }));
       renderChip();
-      if (currentId !== id) return;
+      if (currentId !== id || brk?.oneVideoId) return currentId === id ? release(id) : undefined;
       return continueAfterRules(info);
     }
     return release(id);

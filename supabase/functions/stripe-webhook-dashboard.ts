@@ -12,11 +12,11 @@ import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 //     applied once.
 // Plain fetch and Web Crypto, no Stripe SDK, so this runs in Deno (Supabase) and in Node (tests).
 
-export type Plan = "free" | "plus";
+export type PaidPlan = "free" | "plus";
 
 // Paying (or about to be): Plus. past_due keeps Plus while Stripe retries the card; Stripe ends
 // the subscription (and this sets Free) if retries fail.
-export function planForStatus(status: string): Plan {
+export function planForStatus(status: string): PaidPlan {
   return ["active", "trialing", "past_due"].includes(status) ? "plus" : "free";
 }
 
@@ -106,7 +106,7 @@ export async function verifyStripeSignature(payload: string, header: string, sec
 export interface BillingDb {
   firstTime(eventId: string, type: string): Promise<boolean>;            // records the event; false if seen before
   linkCustomer(userId: string, customerId: string): Promise<void>;
-  setPlanByCustomer(customerId: string, p: { plan: Plan; status: string; renewsAt: string | null; cancelAtPeriodEnd: boolean }): Promise<boolean>;
+  setPlanByCustomer(customerId: string, p: { plan: PaidPlan; status: string; renewsAt: string | null; cancelAtPeriodEnd: boolean }): Promise<boolean>;
 }
 
 // The end of the paid period: on the subscription (older API versions) or on its item (newer ones).

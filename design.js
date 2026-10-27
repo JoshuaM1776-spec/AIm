@@ -300,8 +300,14 @@ async function apply() {
   draw();
 }
 
+// The background may be waking up (or Aim was just reloaded): ask again before giving up.
+async function sendRead(msg) {
+  for (let i = 0; i < 3; i++) { const r = await send(msg); if (r) return r; await new Promise(res => setTimeout(res, 300 * (i + 1))); }
+  return null;
+}
 (async () => {
-  const st = await send({ type: "state" });
+  const st = await sendRead({ type: "state" });
+  if (!st) { document.querySelector("main").replaceChildren(Object.assign(document.createElement("p"), { className: "error", textContent: "Aim didn't answer. Reload this page." })); return; }
   const { learn = {}, avoid = {}, design = null } = await chrome.storage.local.get(["learn", "avoid", "design"]);
   for (const [h, c] of Object.entries(learn.channels || {})) { S.data.videos[h] = c.videos || []; S.data.shorts[h] = c.shorts || []; }
   S.avoid = avoid;

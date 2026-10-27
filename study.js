@@ -53,6 +53,7 @@ function topicCard(st, t, i) {
 // build on (a topic checked, or the session ended). Optional, and never graded.
 let applyBusy = false, applyErr = "", applyNoteOpen = false, applyDraft = "";
 async function suggestApply(st) {
+  if (applyBusy) return; // one suggestion at a time: each is an AI call
   applyBusy = true; applyErr = ""; render();
   let r;
   try {
@@ -129,4 +130,12 @@ async function render() {
 
 render();
 // Stay current while the session goes on in other tabs.
-chrome.storage.onChanged.addListener((changes, area) => { if (area === "local" && changes.purpose) render(); });
+// A tick every 10 seconds rewrites the aim's clock: redraw only when the study session itself
+// changed, and never while you're typing in it.
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== "local" || !changes.purpose) return;
+  const { oldValue: a, newValue: b } = changes.purpose;
+  if (a && b && a.id === b.id && JSON.stringify(a.study) === JSON.stringify(b.study)) return;
+  if (document.activeElement?.matches?.("textarea, input")) return;
+  render();
+});

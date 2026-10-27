@@ -534,7 +534,7 @@ test("talk: memory is kept in this browser, forgotten one by one or all, and off
   let list = await env.run(`memoryList()`);
   assert.strictEqual(list.length, 1, "the same idea again updates it");
   assert.strictEqual(list[0].understood, "shaky");
-  env.local.memory[0].at = Date.now() - 10 * 864e5;
+  env.local.memory[0].at = (await env.run("Date.now()")) - 10 * 864e5; // the test clock, not the real one
   const m = await env.run(`memoryMatch("How self-healing concrete works")`);
   assert.strictEqual(m?.subject, "Roman concrete", "a later video that shares its subject brings it back");
   await env.run(`memoryOffered(${JSON.stringify(m.id)})`);

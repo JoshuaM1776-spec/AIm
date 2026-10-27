@@ -312,7 +312,10 @@ const CAPTIONS = { rom1: [[0, "Welcome back to another episode"], [45, "after th
   rom2: [[0, "The Gracchi brothers tried land reform"], [190, "and both were killed for it"]] };
 await ctx.route(/^https:\/\/www\.youtube\.com\//, route => {
   const u = new URL(route.request().url());
-  if (u.pathname === "/oembed") return route.fulfill({ contentType: "application/json", body: '{"title":"x","author_name":"y","author_url":"https://www.youtube.com/@y"}' });
+  if (u.pathname === "/oembed") {
+    const v = new URL(u.searchParams.get("url")).searchParams.get("v");
+    return route.fulfill({ contentType: "application/json", body: JSON.stringify({ title: `Video ${v}`, author_name: "y", author_url: "https://www.youtube.com/@y" }) });
+  }
   if (u.pathname === "/api/timedtext") { srv.captionFetches = (srv.captionFetches || 0) + 1;
     return route.fulfill({ contentType: "application/json", body: JSON.stringify({ events: (CAPTIONS[u.searchParams.get("v")] || []).map(([t, text]) => ({ tStartMs: t * 1000, segs: [{ utf8: text }] })) }) }); }
   const body = u.pathname === "/results" ? ytResults(u.searchParams.get("search_query") || "")

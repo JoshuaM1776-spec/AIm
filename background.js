@@ -45,10 +45,12 @@ async function tabState() {
 }
 
 // A family's plan is for one day: on a new day (or after half an hour), fetch it again.
-let familyAt = 0;
+let familyAt = 0, outboxAt = 0;
 function familyFresh() {
   chrome.storage.local.get("homeschool").then(({ homeschool: hs }) => {
-    if (hs?.family && (hs.date !== todayKey() || Date.now() - familyAt > 30 * 60_000)) { familyAt = Date.now(); studentRefresh(); }
+    // A new day asks right away, but never more than once a minute (offline, or the server failing).
+    const due = hs?.date !== todayKey() ? Date.now() - familyAt > 60_000 : Date.now() - familyAt > 30 * 60_000;
+    if (hs?.family && due) { familyAt = Date.now(); studentRefresh(); }
   });
 }
 
@@ -188,8 +190,8 @@ function refreshThemes(force = false) {
     const r = await plusCall("pathways-themes", { stage: pathways.stage || "other",
       items: recent.map(x => ({ topic: x.topic, answer: x.answer, note: x.note })) }).catch(e => ({ error: String(e.message || e) }));
     if (r.error) return { result: "error", message: r.error };
-    await serial(() => savePathwayThemes(r.themes, recent.map(x => x.id)));
-    return { result: "applied", themes: r.themes.length };
+    await serial(() => savePathwayThemes(Array.isArray(r?.themes) ? r.themes : [], recent.map(x => x.id)));
+    return { result: "applied", themes: Array.isArray(r?.themes) ? r.themes.length : 0 };
   })().finally(() => { themesRunning = null; });
   return force ? themesRunning : (themesRunning.catch(() => {}), { result: "started" });
 }
@@ -212,6 +214,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   run.then(res => sendResponse(res ?? null), e => sendResponse({ error: String(e.message || e) }));
   if (SYNC_AFTER.has(msg.type)) run.then(syncSoon, () => {});
   // A student's lesson done (or watched to the end): tell the family's side soon.
-  if (msg.type === "plan-done" || msg.type === "tick") run.then(() => chrome.storage.local.get("hsOutbox")).then(d => d.hsOutbox?.length && studentRefresh(), () => {});
+  // Reports waiting to go to the parent: try after a lesson, and at most once a minute from ticks.
+  if (msg.type === "plan-done" || (msg.type === "tick" && Date.now() - outboxAt > 60_000))
+    run.then(() => chrome.storage.local.get("hsOutbox")).then(d => { if (d.hsOutbox?.length) { outboxAt = Date.now(); studentRefresh(); } }, () => {});
   return true;
 });

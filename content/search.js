@@ -2,13 +2,24 @@
 // you here?" step). With a purpose, a search that shares a meaningful word with it continues
 // silently; one that doesn't waits behind one question. Accepted results are what you can watch.
 
+// The search last handled. Redraws (a status change from another tab) don't handle it again; a real
+// navigation does (onNavigate resets this), so the same words searched again after an aim ended are new.
 let lastHandledSearch = null;
+// A search being checked against the aim: its results aren't taken into the aim until it's decided.
+let searchChecking = null;
 
 async function onSearch(query) {
   query = query.trim();
-  if (!query || query === lastHandledSearch) { await renderResultsBar(); captureResults(); return librarianPicks(); }
-  lastHandledSearch = query;
+  const key = query;
+  if (!query || key === lastHandledSearch) { if (searchChecking) return; await renderResultsBar(); captureResults(); return librarianPicks(); }
+  lastHandledSearch = key;
   setSearchPending(null);
+  searchChecking = query;
+  try { await handleSearch(query); } finally { if (searchChecking === query) searchChecking = null; }
+  if (searchQuery() === query && !searchPending) { captureResults(); librarianPicks(); }
+}
+
+async function handleSearch(query) {
   if (brk || status.totalReached) return renderResultsBar(); // on a break, searching is just browsing
   const p = activePurpose();
   if (!p) {
@@ -16,8 +27,7 @@ async function onSearch(query) {
     if (r?.result !== "applied") return;
     applyStatus(await send({ type: "status" }));
     renderChip();
-    renderResultsBar();
-    return captureResults();
+    return renderResultsBar();
   }
   if (p.searches?.[p.searches.length - 1]?.q !== query) {
     const check = await send({ type: "search-check", query });
@@ -25,8 +35,6 @@ async function onSearch(query) {
     await acceptSearch(query);
   }
   await renderResultsBar();
-  captureResults();
-  librarianPicks();
 }
 
 async function acceptSearch(query) {
@@ -45,7 +53,7 @@ function setSearchPending(query) {
 function captureResults() {
   if (theme()) return captureTheme();
   const p = activePurpose();
-  if (location.pathname !== "/results" || !p || brk || searchPending) return;
+  if (location.pathname !== "/results" || !p || brk || searchPending || searchChecking) return;
   const { videos, lists } = searchResults();
   // New results, and ones whose length or title YouTube has filled in since Aim last looked.
   const known = new Map((p.allowed || []).map(v => [v.id, v]));

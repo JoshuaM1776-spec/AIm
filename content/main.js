@@ -34,6 +34,8 @@ function react(r) {
   const newStop = stop && stop.at !== before.stop?.at;
   const breakEnded = before.brk && !brk;
   const purposeEnded = before.purpose && !purpose && !endingHere;
+  // Videos cleared under a break or an aim aren't cleared for the next one.
+  if (before.brk?.id !== brk?.id || before.purpose?.id !== purpose?.id || (!before.total && status.totalReached)) for (const c of [...cleared]) if (c !== currentId) cleared.delete(c);
   const changed = (before.brk?.id !== brk?.id) || (before.purpose?.id !== purpose?.id) ||
     (before.purpose?.suspended !== purpose?.suspended) || (before.purpose?.timeUp !== purpose?.timeUp) ||
     (before.purpose?.text !== purpose?.text) || before.total !== status.totalReached || before.plan !== planKey() ||
@@ -51,8 +53,12 @@ function react(r) {
 // YouTube keeps adding to the page (more results as you scroll, the sidebar after a video
 // loads). Catch up shortly after: hide hidden channels, capture new results, fill Up next.
 let pageTimer = null;
-const pageObserver = new MutationObserver(() => {
+// Changes inside the player (its clock and progress bar tick constantly), comments and chat never
+// matter here; ignoring them keeps Aim from working several times a second while a video plays.
+const QUIET = ".html5-video-player, ytd-comments, ytd-live-chat-frame, #wp-chip, .wp";
+const pageObserver = new MutationObserver(records => {
   if (pageTimer) return;
+  if (records.every(r => (r.target.nodeType === 1 ? r.target : r.target.parentElement)?.closest?.(QUIET))) return;
   pageTimer = setTimeout(() => {
     pageTimer = null;
     if (hiddenKeys().size || preferredKeys().size) applyHidden();
@@ -62,12 +68,24 @@ const pageObserver = new MutationObserver(() => {
   }, 400);
 });
 
+const TICK_FIELDS = new Set(["usedSec", "lastCountAt", "lastActiveAt", "last", "videos"]);
+function onlyTicked(a, b) {
+  if (!a || !b || a.id !== b.id) return false;
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  for (const k of keys) if (!TICK_FIELDS.has(k) && JSON.stringify(a[k]) !== JSON.stringify(b[k])) return false;
+  // A new video counted for the aim is worth a redraw (the homepage lists them); more seconds on one isn't.
+  return (a.videos || []).length === (b.videos || []).length;
+}
+
 // Keep in sync with changes made from the popup, settings or another tab.
 let syncTimer = null;
 chrome.storage.onChanged.addListener((ch, area) => {
   if (area !== "local" || !alive) return;
   if (ch.avoid) { settings.avoid = ch.avoid.newValue || {}; applyHidden(); }
   if (!(ch.purpose || ch.brk || ch.stop || ch.settings || ch.homeschool || ch.pathways)) return;
+  // Every 10 seconds a tick updates the aim's clock and where you are in the video; nothing a tab
+  // needs to redraw for. Only a change beyond that is worth asking for the whole status again.
+  if (Object.keys(ch).every(k => k === "purpose" || k === "usage" || k === "usageLastAt") && ch.purpose && onlyTicked(ch.purpose.oldValue, ch.purpose.newValue)) return;
   // Several keys change together; read the whole status once they've settled.
   clearTimeout(syncTimer);
   syncTimer = setTimeout(async () => react(await send({ type: "status" })), 50);
@@ -84,8 +102,14 @@ function route() {
   renderSubsBar();
 }
 
+let historyNav = false;
+addEventListener("popstate", () => { historyNav = true; });
 // yt-navigate-finish fires for every in-app navigation, back and forward included.
 function onNavigate() {
+  if (!alive) return;
+  // A search you run is handled afresh; going Back or Forward to one isn't a new search.
+  if (!historyNav) lastHandledSearch = null;
+  historyNav = false;
   const id = videoIdFromUrl();
   renderChip();
   closeDropdown();
@@ -101,6 +125,9 @@ function onNavigate() {
   if (!id) { holding = false; return; }
   if (cleared.has(id)) {
     holding = false;
+    // It may have been paused while the page changed; a video you paused yourself stays paused.
+    const v = getVideoEl();
+    if (v?.paused && (pausedByAim.has(v) || v.dataset.aimHeld)) resume(id);
     readVideoInfo(id).then(info => { if (currentId === id) currentInfo = info; });
     return;
   }
@@ -109,7 +136,10 @@ function onNavigate() {
 }
 
 async function init() {
-  applyStatus(await send({ type: "status" }));
+  // The background may be waking up: ask again rather than start as if there were no aim.
+  let st = null;
+  for (let i = 0; i < 4 && !st; i++) { st = await send({ type: "status" }); if (!st) await sleep(250 * (i + 1)); }
+  applyStatus(st);
   renderChip();
   syncFocus();
   showReflection();

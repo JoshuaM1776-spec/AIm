@@ -31,6 +31,14 @@ const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // Resolves to the reply, or null if the background failed or the extension went away.
+// Like send, but an error comes back as { error, code } instead of null, for callers that say what went wrong.
+function sendRaw(msg) {
+  if (!alive) return Promise.resolve(null);
+  return new Promise(res => {
+    try { chrome.runtime.sendMessage(msg, r => res(chrome.runtime.lastError ? null : r || null)); }
+    catch { shutDown(); res(null); }
+  });
+}
 function send(msg) {
   if (!alive) return Promise.resolve(null);
   return new Promise(res => {
@@ -54,7 +62,10 @@ function shutDown() {
   clearInterval(tickTimer);
   clearInterval(countdownTimer);
   pageObserver.disconnect();
+  // Aim is going away (reloaded or updated): don't leave a video it paused stuck.
+  if (holding) { const v = getVideoEl(); if (v?.paused && (pausedByAim.has(v) || v.dataset.aimHeld)) v.play().catch(() => {}); }
   holding = false;
+  window.removeEventListener(YT.navigateEvent, onNavigate);
   early.done();
   early.showFeed();
   for (const n of $$("#wp-chip, #wp-home, #wp-feed-note, #wp-results-bar, #wp-upnext, #wp-plan-panel, #wp-concepts, #wp-theme-panel, .wp-notice, .wp-scrim, .wp-dropdown, .wp-player-card")) n.remove();

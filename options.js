@@ -175,7 +175,7 @@ const spy = () => {
 };
 addEventListener("scroll", spy, { passive: true });
 spy();
-if (location.hash === "#plus") setTimeout(() => $("plus").scrollIntoView({ block: "start" }), 300); // shown once the account check is done
+// #plus scrolls once the account section is showing (renderPlus in options-plus.js waits for the server).
 $("welcomeTour").onclick = async e => { e.preventDefault(); await send({ type: "onboarding", reset: true }); send({ type: "open-welcome" }); };
 for (const k of ["leisureMin", "graceMin", "totalMin", "purposeLimitMin"]) $(k).onchange = () => setSetting(k, parseInt($(k).value, 10));
 

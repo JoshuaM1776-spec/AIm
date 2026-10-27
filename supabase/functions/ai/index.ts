@@ -276,7 +276,8 @@ const deps: Deps = {
   },
   async taskCountSince(userId, task, since) {
     const { count, error } = await admin.from("ai_usage").select("id", { count: "exact", head: true })
-      .eq("user_id", userId).eq("task", task).gte("created_at", since.toISOString());
+      // Calls that failed don't use up an allowance (a free conversation lost to an AI hiccup).
+      .eq("user_id", userId).eq("task", task).not("ok", "is", false).gte("created_at", since.toISOString());
     if (error) throw error;
     return count || 0;
   },

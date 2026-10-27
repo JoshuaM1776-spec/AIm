@@ -14,7 +14,9 @@ function toast(msg) {
   const t = $("toast"); t.textContent = msg; t.style.display = "block";
   clearTimeout(toast.timer); toast.timer = setTimeout(() => (t.style.display = "none"), 3000);
 }
-const KIND = { protocol: "Protocols", course: "Course text", other: "Document" };
+const KIND = { protocol: "Protocols", poh: "POH / checklists", course: "Course text", other: "Document" };
+// Levels for medical and flying references (the same lists scenarios use).
+const LEVELS = ["", "EMR", "EMT", "AEMT", "Paramedic", "Nursing", "Student pilot", "Private pilot", "Instrument rated", "Commercial pilot", "Flight instructor", "Airline pilot", "Other"];
 
 let fileText = "";
 $("file").onchange = async () => {
@@ -44,9 +46,9 @@ async function render() {
   const refs = (await send({ type: "ref-list" })) || [];
   $("list").replaceChildren(...(refs.length ? refs.map(r => {
     const level = node("select", { ariaLabel: "Level", onchange: () => send({ type: "ref-update", id: r.id, fields: { level: level.value } }).then(() => toast("Saved.")) },
-      ...["", "EMR", "EMT", "AEMT", "Paramedic", "Nursing", "Other"].map(v => node("option", { value: v, textContent: v || "Any level", selected: r.level === v })));
+      ...LEVELS.map(v => node("option", { value: v, textContent: v || "Any level", selected: r.level === v })));
     return node("div", { className: "doc" },
-      node("span", { className: "ico", textContent: r.kind === "protocol" ? "PROT" : r.kind === "course" ? "TEXT" : "DOC" }),
+      node("span", { className: "ico", textContent: r.kind === "protocol" ? "PROT" : r.kind === "poh" ? "POH" : r.kind === "course" ? "TEXT" : "DOC" }),
       node("div", {}, node("b", { textContent: r.name }),
         node("div", { className: "meta", textContent: [KIND[r.kind], r.region, `${r.passages} passages`, `added ${new Date(r.addedAt).toLocaleDateString()}`].filter(Boolean).join(" · ") })),
       node("div", { className: "row", style: "gap:8px" }, level,

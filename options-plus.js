@@ -228,6 +228,7 @@ async function renderPlus(keepMsg = false) {
   if (st.signedIn) plus.step = "email"; // signing out later starts from the email form
   const body = st.student ? studentView(st) : st.signedIn ? accountView(st) : plus.step === "code" ? codeForm() : emailForm();
   $("plusBody").replaceChildren(...body);
+  if (location.hash === "#plus" && !renderPlus.scrolled) { renderPlus.scrolled = true; $("plus").scrollIntoView({ block: "start" }); }
 }
 
 renderPlus();

@@ -53,8 +53,12 @@ let notes = params.get("notes") || ""; // kept for "Try again"; prefilled from a
 async function reload() {
   const id = session?.id || params.get("id");
   if (!id) return intro();
-  const r = await call("teachback-get", { id }, null);
-  if (r) show(r.session);
+  const err = node("p", { className: "error" });
+  const r = await call("teachback-get", { id }, err);
+  if (r) return show(r.session);
+  // Gone, someone else's, or the server didn't answer: say so, with a way on.
+  render(node("h1", { textContent: "Test my understanding" }), err.textContent ? err : node("p", { className: "error", textContent: "Couldn't open that session." }),
+    node("div", { className: "row" }, btn("Start a new one", "", () => { params.delete("id"); history.replaceState(null, "", `?${params}`); session = null; intro(); })));
 }
 
 function show(s) {
@@ -122,7 +126,7 @@ function question(s) {
     busy.textContent = action === "hint" ? `${q.student.name} is thinking of a hint…` : action === "skip" ? "Next question…" : `${q.student.name} is thinking about your answer…`;
     const r = await call("teachback-turn", { id: s.id, seq: q.seq, action, answer: action === "answer" ? answer.value : undefined }, err);
     busy.textContent = "";
-    if (!r) { lock(false); return; }
+    if (!r) { lock(false); hint.disabled = q.hintsLeft <= 0; return; }
     if (action === "hint") {
       lock(false);
       session = r.session;

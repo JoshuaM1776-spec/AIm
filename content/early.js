@@ -8,7 +8,8 @@ const aimEarly = (() => {
   let holding = true;
   // Pause only once the video is really playing ("playing"), never on "play": pausing while
   // YouTube's player is still starting up interrupts it, and it can fail with "An error occurred".
-  const onPlay = e => { if (holding && onVideoPage() && e.target.tagName === "VIDEO") e.target.pause(); };
+  // Videos paused here are marked, so the gate resumes them once a video is allowed (gate.js).
+  const onPlay = e => { if (holding && onVideoPage() && e.target.tagName === "VIDEO") { e.target.dataset.aimHeld = "1"; e.target.pause(); } };
   document.addEventListener("playing", onPlay, true);
 
   // Hide the homepage feed (see html.wp-boot in content.css) unless Aim won't replace it,

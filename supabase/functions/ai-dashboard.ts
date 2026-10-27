@@ -1879,11 +1879,11 @@ Give level ${chain.length + 1}: one level deeper than ${chain.length ? `level ${
 //     applied once.
 // Plain fetch and Web Crypto, no Stripe SDK, so this runs in Deno (Supabase) and in Node (tests).
 
-export type Plan = "free" | "plus";
+export type PaidPlan = "free" | "plus";
 
 // Paying (or about to be): Plus. past_due keeps Plus while Stripe retries the card; Stripe ends
 // the subscription (and this sets Free) if retries fail.
-export function planForStatus(status: string): Plan {
+export function planForStatus(status: string): PaidPlan {
   return ["active", "trialing", "past_due"].includes(status) ? "plus" : "free";
 }
 
@@ -1973,7 +1973,7 @@ export async function verifyStripeSignature(payload: string, header: string, sec
 export interface BillingDb {
   firstTime(eventId: string, type: string): Promise<boolean>;            // records the event; false if seen before
   linkCustomer(userId: string, customerId: string): Promise<void>;
-  setPlanByCustomer(customerId: string, p: { plan: Plan; status: string; renewsAt: string | null; cancelAtPeriodEnd: boolean }): Promise<boolean>;
+  setPlanByCustomer(customerId: string, p: { plan: PaidPlan; status: string; renewsAt: string | null; cancelAtPeriodEnd: boolean }): Promise<boolean>;
 }
 
 // The end of the paid period: on the subscription (older API versions) or on its item (newer ones).
@@ -2872,7 +2872,7 @@ export const TASKS: Record<string, Task> = {
 
 // Requests that may carry more than a few pages: up to maxSyncBytes.
 const BIG_TASKS = new Set(["sync", "hs-upload-add", "hs-curriculum-build", "hs-curriculum-save", "hs-week-save",
-  "librarian-talk", "video-concepts", "scenario-turn"]); // caption excerpts or reference passages (Plus); each task trims them to its own limits
+  "librarian-talk", "video-concepts", "scenario-turn", "deeper-step", "pathways-themes"]); // caption excerpts or reference passages (Plus); each task trims them to its own limits
 
 // Handled directly in handle(), without AI.
 const ACCOUNT_TASKS = new Set(["status", "account-export", "account-delete", "billing-checkout", "billing-portal", "sync", "sync-erase"]);
@@ -3330,7 +3330,8 @@ const deps: Deps = {
   },
   async taskCountSince(userId, task, since) {
     const { count, error } = await admin.from("ai_usage").select("id", { count: "exact", head: true })
-      .eq("user_id", userId).eq("task", task).gte("created_at", since.toISOString());
+      // Calls that failed don't use up an allowance (a free conversation lost to an AI hiccup).
+      .eq("user_id", userId).eq("task", task).not("ok", "is", false).gte("created_at", since.toISOString());
     if (error) throw error;
     return count || 0;
   },

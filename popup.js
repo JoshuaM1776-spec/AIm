@@ -99,7 +99,8 @@ async function resume(id) {
 
 async function act(msg) {
   const r = await send(msg);
-  if (r?.result === "error") alert(r.message);
+  if (!r) alert("Aim didn't answer. Try again.");
+  else if (r.error || r.result === "error") alert(r.message || r.error);
   open = null;
   render();
 }
@@ -261,9 +262,14 @@ function renderHistory() {
   }
 }
 
+// The background may be waking up (or Aim was just reloaded): ask again before giving up.
+async function sendRead(msg) {
+  for (let i = 0; i < 3; i++) { const r = await send(msg); if (r) return r; await new Promise(res => setTimeout(res, 300 * (i + 1))); }
+  return null;
+}
 async function render() {
-  st = await send({ type: "state" });
-  if (!st) return;
+  st = await sendRead({ type: "state" });
+  if (!st) { document.getElementById("modes").replaceChildren(Object.assign(document.createElement("p"), { className: "muted", textContent: "Aim didn't answer. Close this and open it again." })); return; }
   renderModes();
   renderCurrent();
   renderWeek();
