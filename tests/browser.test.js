@@ -615,6 +615,23 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.waitForURL(/watch\?v=bio3/);
   step("a small thumbnail plays that video from where you stopped, still on the aim",
     p.url().includes("watch?v=bio3&t=90s") && (await store()).purpose?.text === "Study for my biology exam", p.url());
+  // Change my aim: switch to one you have, or start a new one.
+  await p.click("#wp-chip .wp-pill");
+  await p.click(".wp-dropdown .wp-dd-change");
+  await p.waitForSelector(".wp-change-dialog .wp-switch-item");
+  const changeText = await text(".wp-change-dialog");
+  step("Change my aim offers the aims you have (with their books), a new one, and the library", changeText.includes("Switch to one you have") &&
+    changeText.includes("Fix my truck's AC") && changeText.includes("Start a new aim") && changeText.includes("Open my library") &&
+    !!(await p.$(".wp-switch-item .book")) && !/null|undefined/.test(changeText), changeText.slice(0, 200));
+  const bioId = (await store()).purpose.id;
+  await p.click(".wp-switch-item:has-text(\"Fix my truck's AC\")");
+  await p.waitForFunction(() => !document.querySelector(".wp-change-dialog"));
+  await p.waitForTimeout(800);
+  st = await store();
+  step("switching swaps them: the other aim is current, this one waits", st.purpose?.text === "Fix my truck's AC" && st.paused.some(x => x.id === bioId));
+  await sw.evaluate(id => serial(() => resumePurpose(id)), bioId);
+  await p.goto("https://www.youtube.com/watch?v=bio3");
+  await p.waitForSelector("#wp-chip .wp-pill");
   await p.click("#wp-chip .wp-pill");
   await p.click('.wp-dropdown .wp-dd-actions button:has-text("Set aside")');
   await p.waitForURL("https://www.youtube.com/");

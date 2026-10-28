@@ -390,6 +390,10 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] Click Aim's pill on YouTube and Aim's icon in Chrome's toolbar with the same aim going: both show Focus / Explore, the aim with its book and Change, Done and Set aside (the popup has Resume and Done), the session tools and the session bar, in the same words. On YouTube, "This video" adds Save for later and Sort this channel.
 - [ ] On a break, and with no aim, the YouTube menu matches the popup's card. The menu never runs off the edge of the window.
 
+### 53. Change my aim: switch or start new (0.60.3)
+- [ ] With set-aside aims, Change (on YouTube's menu or the popup) offers **Switch to one you have** (each with its book and when it was set aside), **Start a new aim**, and **Open my library**.
+- [ ] Switching picks the other aim up where you left off and sets this one aside; nothing is lost. From "Follow this instead", the new-aim box comes first, filled in.
+
 ## Known issues (not regressions)
 
 - The word check knows words, not meanings: synonyms ("tap" vs "faucet") get the question once; answering Yes teaches it that search.

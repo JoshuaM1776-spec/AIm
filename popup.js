@@ -119,16 +119,29 @@ function breakControls() {
       el("button", { class: "link", onclick: () => { open = null; renderCurrent(); } }, "Cancel")));
 }
 
+// Change my aim: switch to one you have (it picks up where you left off), or start a new one. Either
+// way the current aim is set aside. The same choice as the dialog on YouTube (content/session.js).
 function pivotControls() {
   const input = el("input", { class: "field", placeholder: "What do you want to focus on instead?", "aria-label": "New aim" });
   const go = () => input.value.trim() && act({ type: "purpose-pivot", text: input.value });
   input.addEventListener("keydown", e => { if (e.key === "Enter") go(); });
-  setTimeout(() => input.focus(), 0);
-  return el("div", { class: "stack" }, input,
-    ...(st.recent || []).slice(0, 4).map(t => el("button", { class: "link muted", onclick: () => { input.value = t; input.focus(); } }, `↺ ${t}`)),
+  const switchBox = el("div", { class: "stack switch" });
+  send({ type: "targets" }).then(d => {
+    const list = (d?.paused || []).filter(a => a.id !== st.purpose?.id);
+    if (!list.length) return;
+    switchBox.replaceChildren(el("div", { class: "label", style: "margin:10px 0 4px" }, "Switch to one you have"),
+      ...list.slice(0, 3).map(a => el("button", { class: "switch-item", onclick: () => resume(a.id) },
+        el("span", { class: "switch-book" }, cover(a, "small")), el("span", { class: "switch-text" }, a.text), ico(ICONS.chevron))),
+      el("button", { class: "link muted", onclick: () => send({ type: "open-targets" }) }, list.length > 3 ? `All ${list.length} in your library` : "Open my library"));
+  });
+  return el("div", { class: "stack" }, switchBox,
+    el("div", { class: "label", style: "margin:10px 0 0" }, "Start a new aim"),
+    input,
+    ...(st.recent || []).slice(0, 3).map(t => el("button", { class: "link muted", onclick: () => { input.value = t; input.focus(); } }, `↺ ${t}`)),
+    el("div", { class: "muted" }, "Your current aim is set aside, so you can pick it up again anytime."),
     el("div", { class: "pair" },
       el("button", { class: "btn", onclick: () => { open = null; renderCurrent(); } }, "Cancel"),
-      el("button", { class: "btn primary", onclick: go }, "Change my aim")));
+      el("button", { class: "btn primary", onclick: go }, "Start this aim")));
 }
 
 function renderCurrent() {

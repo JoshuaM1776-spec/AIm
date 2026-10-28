@@ -880,3 +880,18 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 .wp-link-muted { background: none; border: 0; padding: 2px 0; color: var(--wp-muted); font: 12px "Roboto", "Arial", sans-serif; cursor: pointer; }
 .wp-link-muted:hover { color: var(--wp-text); }
 .wp-dropdown > .wp-menu-block:last-child { border-bottom: 0; }
+
+/* ---------- Change my aim: switch to one you have, or start a new one ---------- */
+.wp-change-dialog { width: 460px; }
+.wp-switch:empty { display: none; }
+.wp-switch, .wp-switch-new { display: flex; flex-direction: column; gap: 8px; margin: 14px 0 4px; }
+.wp-switch-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 10px; border-radius: 12px; border: 1px solid var(--wp-card-border);
+  background: none; color: var(--wp-text); text-align: left; cursor: pointer; font: inherit; }
+.wp-switch-item:hover { background: var(--wp-tonal); }
+.wp-switch-book { flex: none; width: 40px; }
+.wp-switch-book .book { width: 40px; }
+.wp-switch-book .book-title, .wp-switch-book .book-subject { display: none; }
+.wp-switch-book .book-emblem { width: 70%; margin: auto; }
+.wp-switch-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.wp-ellipsis2 { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.wp-switch .wp-link { align-self: flex-start; }

@@ -108,6 +108,14 @@
   .limit { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 13px; }
   .limit .bar { flex: 1; margin: 0; height: 6px; border-radius: 3px; }
   .limit .bar i { background: var(--primary); }
+  .switch-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 8px; border-radius: 10px; border: 1px solid var(--card-border); background: none;
+    color: var(--text); font: inherit; text-align: left; cursor: pointer; margin-top: 6px; }
+  .switch-item:hover { background: var(--tonal); }
+  .switch-book { flex: none; width: 32px; }
+  .switch-book .book { width: 32px; }
+  .switch-book .book-title, .switch-book .book-subject, .switch-book .book-progress { display: none; }
+  .switch-book .book-emblem { width: 70%; margin: auto; }
+  .switch-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
   .actions { display: grid; grid-template-columns: 1.2fr 1fr; gap: 8px; margin-top: 12px; }
   .actions .btn { height: 40px; display: flex; align-items: center; justify-content: center; gap: 6px; }
 </style>

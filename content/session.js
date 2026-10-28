@@ -256,15 +256,42 @@ function openPivotDialog(prefill = "", { afterConfirm = null, video = null } = {
     if (currentId) regate(currentId);
   };
   keepKeys(input, confirm);
-  openModal(el("div", { class: "wp-dialog", role: "dialog", "aria-modal": "true" },
+  // Two ways to change: switch to an aim you already have (it picks up where you left off), or start
+  // a new one. Either way the current aim is set aside, not lost. The whole library is a tap away.
+  const switchBox = el("div", { class: "wp-switch" });
+  const fresh = !!(prefill || video); // "Follow this instead" or a search: they came to start something new
+  const newPart = el("div", { class: "wp-switch-new" },
+    el("div", { class: "wp-label" }, "Start a new aim"),
+    el("div", { class: "wp-field" }, icon("search"), input), recentList(input), err,
+    el("div", { class: "wp-actions wp-actions-start" }, el("button", { class: "wp-btn wp-btn-primary", onclick: confirm }, "Start this aim")));
+  openModal(el("div", { class: "wp-dialog wp-change-dialog", role: "dialog", "aria-modal": "true", "aria-label": "Change my aim" },
     el("div", { class: "wp-title" }, "Change my aim"),
-    el("div", { class: "wp-current" }, el("div", { class: "wp-label" }, "Your aim"), el("div", { class: "wp-strong" }, purpose.text)),
-    el("div", { class: "wp-field" }, icon("search"), input), recentList(input),
-    el("p", { class: "wp-muted" }, "Your current aim is set aside with its searches and videos. Pick it up again from the homepage anytime."), err,
+    el("div", { class: "wp-current" }, el("div", { class: "wp-label" }, "Your aim now"), el("div", { class: "wp-strong" }, purpose.text)),
+    fresh ? newPart : switchBox,
+    fresh ? switchBox : newPart,
+    el("p", { class: "wp-muted" }, "Your current aim is set aside with its searches and videos, so you can pick it up again anytime."),
     el("div", { class: "wp-actions" },
-      el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Cancel"),
-      el("button", { class: "wp-btn wp-btn-primary", onclick: confirm }, "Change my aim"))));
-  setTimeout(() => input.focus(), 50);
+      el("button", { class: "wp-btn wp-btn-text", style: "margin-right:auto", onclick: () => { closeModal(); send({ type: "open-targets" }); } }, icon("book"), "Open my library"),
+      el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Cancel"))));
+  fillSwitchList(switchBox);
+  setTimeout(() => (fresh ? input : switchBox.querySelector("button") || input).focus(), 50);
+}
+
+// Set-aside aims to switch to, newest first, with their books, as on the library's shelf.
+async function fillSwitchList(box) {
+  const d = await send({ type: "targets" });
+  const list = (d?.paused || []).filter(a => a.id !== purpose?.id);
+  if (!list.length) return;
+  const ago = t => { const days = Math.floor((Date.now() - (t || 0)) / 864e5); return days < 1 ? "today" : days === 1 ? "yesterday" : `${days} days ago`; };
+  box.replaceChildren(...[el("div", { class: "wp-label" }, "Switch to one you have"),
+    ...list.slice(0, 4).map(a => el("button", { class: "wp-switch-item", onclick: async () => {
+      closeModal();
+      resumeTarget(a.id); // sets the current aim aside and picks this one up where you left off
+    } }, el("span", { class: "wp-switch-book" }, cover(a, "small")),
+      el("span", { class: "wp-switch-text" }, el("span", { class: "wp-strong wp-ellipsis2" }, a.text),
+        el("span", { class: "wp-muted" }, [`Set aside ${ago(a.lastActiveAt)}`, a.videos ? `${a.videos} video${a.videos > 1 ? "s" : ""}` : null].filter(Boolean).join(" · "))),
+      icon("right"))),
+    list.length > 4 ? el("button", { class: "wp-link", onclick: () => { closeModal(); send({ type: "open-targets" }); } }, `All ${list.length} in your library`) : null].filter(Boolean));
 }
 
 // Clarifying is not pivoting: same goal, said more precisely.
