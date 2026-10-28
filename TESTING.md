@@ -394,6 +394,13 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] With set-aside aims, Change (on YouTube's menu or the popup) offers **Switch to one you have** (each with its book and when it was set aside), **Start a new aim**, and **Open my library**.
 - [ ] Switching picks the other aim up where you left off and sets this one aside; nothing is lost. From "Follow this instead", the new-aim box comes first, filled in.
 
+### 54. One look across Aim's pages (0.61)
+- [ ] Every page title (Library, an aim, Settings, References, Scenario, TeachBack, Study, Pathways, Design, Learning record, Your channels, Aim Plus, Welcome) is in the same serif; labels and controls stay in the sans.
+- [ ] Coral is only the way back to your aim (Resume, Continue on YouTube, Back to my aim); every other main button is green (Start the call, Start this aim, Upgrade to Plus, End break).
+- [ ] File pickers and drop-downs look like Aim's own controls. Cards side by side line up.
+- [ ] TeachBack, Study and Pathways without Plus or a session: an icon, what the page does, why it's empty, and a next step.
+- [ ] Aim Plus's features have drawn icons, like the rest of Aim.
+
 ## Known issues (not regressions)
 
 - The word check knows words, not meanings: synonyms ("tap" vs "faucet") get the question once; answering Yes teaches it that search.

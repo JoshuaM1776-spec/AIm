@@ -74,11 +74,13 @@ function show(s) {
 async function gate() {
   const st = await chrome.runtime.sendMessage({ type: "plus-status" }).catch(() => null);
   const signedIn = st?.signedIn;
-  render(
+  render(node("div", { className: "empty-state" }, node("div", { className: "empty-icon" }),
     node("h1", { textContent: "Test my understanding" }),
-    node("p", { className: "muted", textContent: !st?.configured ? "TeachBack isn't available in this version of Aim."
-      : !signedIn ? `Sign in to ${BRAND} Plus in Settings to use TeachBack.` : `TeachBack is part of ${BRAND} Plus.` }),
-    st?.configured ? node("div", { className: "row" }, btn("Open Settings", "", () => chrome.runtime.openOptionsPage())) : null);
+    node("p", { textContent: "Explain what you learned, the way you'd teach a friend. You see what you've shown, what to review, and a video search for each gap. Never a grade." }),
+    node("p", { className: "why", textContent: !st?.configured ? "TeachBack isn't available in this version of Aim."
+      : !signedIn ? `Sign in to ${BRAND} Plus to use it.` : `TeachBack is part of ${BRAND} Plus.` }),
+    st?.configured ? node("div", { className: "row" }, btn(signedIn ? "See Aim Plus" : "Sign in", "", () => (signedIn ? (location.href = "plus.html") : chrome.runtime.openOptionsPage())),
+      btn("What's in Plus", "tonal", () => (location.href = "plus.html"))) : null));
 }
 
 // ---------- start ----------

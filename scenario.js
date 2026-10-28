@@ -211,7 +211,7 @@ async function setup() {
     node("div", { className: "refs" }, node("b", { textContent: "From your references" }),
       list.map((r, i) => node("label", {}, checks[i], `${r.name}${r.level ? ` (${r.level})` : ""}`)), refsNote,
       node("p", {}, node("a", { href: "references.html", textContent: list.length ? "Manage your references" : "Add your references" }))),
-    node("div", { className: "row", style: "margin-top:14px" }, btn("Start the call", "accent", async e => {
+    node("div", { className: "row", style: "margin-top:14px" }, btn("Start the call", "", async e => {
       if (topic.value.trim().length < 3) return toast("Say what the scenario should be about.");
       e.target.disabled = true; e.target.textContent = FIELDS[field].start;
       s = { field, topic: topic.value.trim(), level: level.value.trim(), region: region.value.trim(), refIds: checks.filter(c => c.checked).map(c => c.value), thread: [], readings: {}, seen: {}, removed: 0 };

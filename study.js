@@ -99,8 +99,13 @@ async function render() {
   const s = await send({ type: "status" });
   const st = s?.purpose?.study;
   if (!st) {
-    screen.replaceChildren(node("div", { className: "card" }, node("h1", { textContent: "No study session" }),
-      node("p", { className: "muted", textContent: `Study sessions start from a learning aim's results on YouTube, with ${BRAND} Plus.` })));
+    screen.replaceChildren(node("div", { className: "card empty-state" }, node("div", { className: "empty-icon" }),
+      node("h1", { textContent: "No study session yet" }),
+      node("p", { textContent: "A study session turns a learning goal into a few topics in order, each with a clear video, and checks you along the way." }),
+      node("p", { className: "why", textContent: `Start one from a learning aim's search results on YouTube, with ${BRAND} Plus.` }),
+      node("div", { className: "row" },
+        Object.assign(document.createElement("a"), { className: "btn", href: "https://www.youtube.com/", textContent: "Go to YouTube" }),
+        Object.assign(document.createElement("a"), { className: "btn tonal", href: "targets.html", textContent: "Open my library" }))));
     return;
   }
   const checked = st.topics.filter(t => t.check).length;

@@ -116,7 +116,7 @@ function accountView(st) {
   const tour = node("button", { className: "btn tonal", type: "button", textContent: isPlus(st) ? "Everything in Plus" : "What's in Plus" });
   tour.onclick = () => chrome.tabs.create({ url: chrome.runtime.getURL("plus.html") });
   if (!isPlus(st) && b?.available) {
-    const up = node("button", { className: "btn accent", type: "button", textContent: "Upgrade to Plus" });
+    const up = node("button", { className: "btn", type: "button", textContent: "Upgrade to Plus" });
     up.onclick = async () => { if (await plusDo({ type: "plus-subscribe" })) plusMsg("Stripe's secure checkout opened in a new tab. When you're done, come back here."); };
     buttons.append(up);
   }

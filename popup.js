@@ -141,7 +141,7 @@ function pivotControls() {
     el("div", { class: "muted" }, "Your current aim is set aside, so you can pick it up again anytime."),
     el("div", { class: "pair" },
       el("button", { class: "btn", onclick: () => { open = null; renderCurrent(); } }, "Cancel"),
-      el("button", { class: "btn primary", onclick: go }, "Start this aim")));
+      el("button", { class: "btn green", onclick: go }, "Start this aim")));
 }
 
 function renderCurrent() {
@@ -158,7 +158,7 @@ function renderCurrent() {
           left !== null ? el("div", { class: "muted" }, `of ${dur(b.durationMin)}`) : null)),
       p ? el("div", { class: "muted" }, `Your aim is waiting: ${p.text}`) : null,
       el("div", { class: "pair" },
-        el("button", { class: "btn primary", onclick: () => act({ type: "break-end" }) }, p ? "Back to my aim" : "End break"),
+        el("button", { class: `btn ${p ? "primary" : "green"}`, onclick: () => act({ type: "break-end" }) }, p ? "Back to my aim" : "End break"),
         b.durationMin && !(st.leisureLeftMin !== null && st.leisureLeftMin < 1)
           ? el("button", { class: "btn", onclick: () => act({ type: "break-extend", minutes: 15 }) }, "+15 min") : null)));
     return;

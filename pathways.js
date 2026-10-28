@@ -58,10 +58,15 @@ async function ask(task, input, where) {
 function gate() {
   const msg = !account?.configured ? "Pathways isn't available in this version of Aim."
     : !account.signedIn ? `Sign in to ${BRAND} Plus in Settings to use Pathways.` : `Pathways is part of ${BRAND} Plus.`;
-  render(node("div", { className: "card" }, node("h1", { textContent: "Pathways" }),
-    node("p", { className: "lede", textContent: "What interests me? → What could I do with it? → What would it take to get there?" }),
-    threeQuestions(), node("p", { className: "muted", textContent: msg }),
-    account?.configured ? btn("Open Settings", "", () => chrome.runtime.openOptionsPage()) : null));
+  render(node("div", { className: "card" },
+    node("div", { className: "empty-state", style: "padding-bottom:20px" }, node("div", { className: "empty-icon" }),
+      node("h1", { textContent: "Pathways" }),
+      node("p", { textContent: "From what you're curious about to real work connected to it, and what it would take to get there." })),
+    threeQuestions(),
+    node("div", { className: "empty-state", style: "padding:20px 0 4px" },
+      node("p", { className: "why", textContent: msg }),
+      account?.configured ? node("div", { className: "row" }, btn(account.signedIn ? "See Aim Plus" : "Sign in", "", () => (account.signedIn ? (location.href = "plus.html") : chrome.runtime.openOptionsPage())),
+        btn("What's in Plus", "tonal", () => (location.href = "plus.html"))) : null)));
 }
 
 function threeQuestions() {
