@@ -401,6 +401,13 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] TeachBack, Study and Pathways without Plus or a session: an icon, what the page does, why it's empty, and a next step.
 - [ ] Aim Plus's features have drawn icons, like the rest of Aim.
 
+### 55. The inside of a book (0.62)
+- [ ] An aim's page reads like an open book: the cover and a ribbon of chapters (Overview, Learn, Understand, Practice, Notes, with counts) on the left; one paper page with a fine brass rule on the right. The ribbon follows as you scroll.
+- [ ] Under the title, three separate counts: videos watched (and minutes), ideas explained in your own words, things you tried (practice and scenarios). Watching never counts as understanding.
+- [ ] Learn, Explain and Apply each show this aim's real next step (the next part to explore, talking it through or putting it together, the practice or a scenario), with one marked "Next for this aim".
+- [ ] Chapters are divided by a rule with a small brass mark, not boxes. Notes are lined like paper. Dark mode reads well.
+- [ ] A finished book has a small gilt star on its spine, on the shelf and on its page.
+
 ## Known issues (not regressions)
 
 - The word check knows words, not meanings: synonyms ("tap" vs "faucet") get the question once; answering Yes teaches it that search.

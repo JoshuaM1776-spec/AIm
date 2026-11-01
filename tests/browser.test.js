@@ -661,14 +661,16 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   const aimText = (await all.textContent("main")).replace(/\s+/g, " ");
   step("an aim's page: its book, where it stands, its key videos (where you stopped), notes and related aims",
     aimText.includes("Study for my biology exam") && aimText.includes("Set aside") && aimText.includes("Key videos") && aimText.includes("Video bio1") &&
-    aimText.includes("Notes & ideas") && aimText.includes("Related aims") && !!(await all.$(".aim-side .book-large")) && !/undefined|null|NaN/.test(aimText), aimText.slice(0, 240));
+    aimText.includes("Your notes") && aimText.includes("Related aims") &&
+    ["videos watched", "explained in your own words", "things you tried"].every(t => aimText.includes(t)) && !!(await all.$(".aim-side .book-large")) && !/undefined|null|NaN/.test(aimText), aimText.slice(0, 240));
   if (process.env.SHOTS) await all.screenshot({ path: `${process.env.SHOTS}/aim-page.png`, fullPage: true });
   await all.fill("#notes textarea", "Exam is Friday.");
   await all.click("#notes button:text-is('Save notes')");
   await all.waitForTimeout(300);
   step("notes save from the aim's page, for an aim that's set aside", (await store()).paused.find(x => x.text === "Study for my biology exam")?.notes === "Exam is Friday.");
-  step("Ways to practice: the tools for this aim, what each is best for, one marked best",
-    (await all.$$("#ways .way")).length >= 2 && (await all.$$("#ways .way.best")).length === 1 && (await all.textContent("#ways")).includes("Talk it through"));
+  step("Learn, Explain, Apply: each with this aim's next step, one marked next; chapters in the ribbon",
+    (await all.$$("#ways .way")).length === 3 && (await all.$$("#ways .way.best")).length === 1 && ["Learn", "Explain", "Apply", "Talk it through"].every(t => aimText.includes(t)) &&
+    (await all.textContent(".ribbons")).replace(/\d/g, "").replace(/\s+/g, "") === "OverviewLearnUnderstandPracticeNotes");
 
   // ---------- Your references: protocols for scenarios ----------
   const refs = await ctx.newPage();

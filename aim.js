@@ -1,6 +1,8 @@
-// Aim — one aim's page (aim.html?id=…): its book, where you are with it (Your understanding, a question
-// to explore, Put it into practice), what you've learned and explained, its key videos, your notes,
-// its path and related aims. Doing anything goes back to YouTube, picking the aim up first.
+// Aim — one aim's page (aim.html?id=…), opened like a book: the title and where you are (what you
+// watched, what you explained, what you did, kept apart), the three things to do next (Learn, Explain,
+// Apply), then its chapters: Learn (videos and what to look at next), Understand (what it takes, what
+// you've explained, going deeper), Practice, and Notes. Doing anything goes back to YouTube, picking
+// the aim up first.
 
 const BRAND = chrome.runtime.getManifest().name;
 for (const n of document.querySelectorAll("[data-brand]")) n.textContent = BRAND;
@@ -37,12 +39,14 @@ const STATUS = { new: "Not yet explored", explored: "Explored", partial: "Gettin
 const STATE = { active: "In progress", paused: "Set aside", completed: "Completed" };
 
 let refLevel = ""; // your references' level, for going deeper at the right depth
+
+// What understanding this aim takes, part by part, with Go deeper on each.
 function understanding(a) {
   const map = a.map;
   if (!map?.parts?.length) return null;
   const solid = map.synthesis?.verdict === "solid";
-  return node("section", { className: "card", id: "understanding" },
-    node("h2", { textContent: "Your understanding so far" }),
+  return node("div", { className: "block", id: "understanding" },
+    node("h3", { textContent: "What this takes" }),
     ...map.parts.map(p => {
       const saved = (a.chains || []).find(c => c.partId === p.id);
       const holder = node("div", { className: "deeper-holder" });
@@ -54,98 +58,109 @@ function understanding(a) {
       return [node("div", { className: "part" },
         node("span", { className: `dot ${p.status}` }),
         node("span", {}, node("b", { textContent: p.title }), node("small", { textContent: `${STATUS[p.status]}${p.brief ? ` · ${p.brief}` : ""}` }),
-          saved ? node("small", { className: "muted", textContent: ` · ${saved.levels.length} level${saved.levels.length > 1 ? "s" : ""} deep` }) : null),
+          saved ? node("small", { textContent: ` · ${saved.levels.length} level${saved.levels.length > 1 ? "s" : ""} deep` }) : null),
         node("span", { className: "part-tools" },
           node("button", { className: "linkish", type: "button", textContent: "Go deeper", onclick: toggle }),
           node("button", { className: "linkish", type: "button", textContent: "Search", title: p.search, onclick: () => search(p.search) }))), holder];
     }).flat(),
     node("div", { className: "part" }, node("span", { className: `dot ${solid ? "explained" : ""}` }),
-      node("span", {}, node("b", { textContent: "How these fit together" }), node("small", { textContent: solid ? "Explained: you put it together" : "Next connection" })), null));
+      node("span", {}, node("b", { textContent: "How these fit together" }), node("small", { textContent: solid ? "Explained: you put it together" : "Put the whole answer together once you've explained most of it" })), null));
 }
 
-// The next useful step: putting it together, or the part not yet explored.
-function nextQuestion(a) {
-  const map = a.map;
-  if (!map?.parts?.length) return null;
-  if (map.synthesis?.verdict === "solid") return node("div", { className: "tile" }, node("span", { className: "label", textContent: "You put it together" }),
-    node("span", { className: "muted", textContent: "Your explanation covered the main parts. Done here, or go on to where people disagree." }));
-  if (a.understanding?.ready) return node("div", { className: "tile" }, node("span", { className: "label", textContent: "Ready to put it together" }),
-    node("span", { className: "muted", textContent: "You've explained most of what this takes. Try telling the librarian the whole answer, in a few sentences." }),
-    node("div", {}, btn("Put it together", "", () => goTo("https://www.youtube.com/#aim-put-together"))));
-  const next = map.parts.find(p => p.status === "new") || map.parts.find(p => p.status === "explored");
-  if (!next) return null;
-  return node("div", { className: "tile" }, node("span", { className: "label", textContent: "A question to explore" }),
-    node("span", { textContent: next.brief ? `${next.title}: ${next.brief}` : next.title }),
-    node("div", {}, btn("Search for it", "tonal", () => search(next.search))));
-}
-
+// Put it into practice: the one small thing the librarian suggested, and whether you tried it.
 function practice(a) {
   const pr = a.practice;
-  const box = node("section", { className: "card", id: "practice" }, node("h2", { textContent: "Put it into practice" }));
+  const box = node("div", { className: "block", id: "practice-item" });
   if (!pr) { box.append(node("p", { className: "muted", textContent: "When you talk it through, the librarian may suggest one small way to use what you've learned. It shows up here." })); return box; }
-  const draw = () => box.replaceChildren(node("h2", { textContent: pr.triedAt ? "You tried it" : "Put it into practice" }),
-    node("p", {}, node("b", { textContent: pr.title })),
+  const draw = () => box.replaceChildren(node("div", { className: "practice-item" },
+    node("span", { className: "kind", textContent: pr.triedAt ? "You tried it" : "To try" }),
+    node("b", { textContent: pr.title }),
     pr.why ? node("p", { className: "muted", textContent: pr.why }) : null,
     pr.triedAt && pr.note ? node("p", { className: "muted", textContent: `“${pr.note}”` }) : null,
     pr.triedAt ? node("div", { className: "actions" }, btn("Talk about how it went", "tonal", () => goTo("https://www.youtube.com/#aim-talk")))
       : node("div", { className: "actions" },
           btn("Find a project video", "", async () => { await send({ type: "practice-set", aimId: id, practice: pr }); search(pr.search); }),
-          btn("I tried it", "text", tried)));
+          btn("I tried it", "text", tried))));
   const tried = () => {
     const note = node("textarea", { className: "field", rows: 3, placeholder: "How did it go? What would you change? (optional)", ariaLabel: "How it went" });
-    box.replaceChildren(node("h2", { textContent: "You tried it" }), node("p", {}, node("b", { textContent: pr.title })), note,
+    box.replaceChildren(node("div", { className: "practice-item" }, node("span", { className: "kind", textContent: "You tried it" }), node("b", { textContent: pr.title }), note,
       node("div", { className: "actions", style: "margin-top:10px" },
         btn("Save", "", async () => { const r = await send({ type: "practice-set", aimId: id, tried: true, note: note.value }); if (r?.practice) Object.assign(pr, r.practice); draw(); }),
-        btn("Cancel", "text", draw)));
+        btn("Cancel", "text", draw))));
     note.focus();
   };
   draw();
   return box;
 }
 
-// Ways to practice: the tools Aim has for learning something, what each is best for, and the one
-// that fits this aim best right now. You pick.
-function ways(a, refs) {
-  const field = a.scenarioDomain; // medical, aviation, general, or null when scenarios don't fit
-  const SCENARIO_BEST = { medical: "Calls, patients and medications: work a situation as it unfolds, using your own protocols.",
-    aviation: "In-flight emergencies: fly the problem as it unfolds, using your own POH and checklists.",
-    general: "Emergencies and incidents: work a situation as it unfolds, using your own procedures." };
-  const tools = [
-    { key: "talk", title: "Talk it through", best: "Checking you understand: the librarian asks what you'd tell a friend, then what you'd ask next.",
-      go: () => goTo("https://www.youtube.com/#aim-talk"), label: "Talk it through" },
-    a.map?.parts?.length ? { key: "together", title: "Put it together", best: "Seeing how the parts connect: what's happening, why, and what counteracts it, in a few sentences of your own.",
-      go: () => goTo("https://www.youtube.com/#aim-put-together"), label: "Put it together" } : null,
-    a.study?.of ? { key: "check", title: "Check yourself", best: "Course material: short checks on each topic, so you know what's solid before a test.",
-      go: () => goTo(), label: "Continue studying" } : null,
-    { key: "practice", title: "Put it into practice", best: "Skills and projects: one small thing to try, so it sticks because you used it.",
-      go: () => document.getElementById("practice")?.scrollIntoView({ behavior: "smooth" }), label: "See practice" },
-    field ? { key: "scenario", title: "Scenario", best: `${SCENARIO_BEST[field]} Aim Plus.`,
-      go: () => (location.href = `scenario.html?aim=${encodeURIComponent(id)}`), label: "Run a scenario",
-      note: refs ? `From your ${refs} reference${refs > 1 ? "s" : ""}.` : field === "aviation" ? "Add your POH and checklists first, so it uses your airplane's numbers." : "Add your protocols or procedures first, so it uses your steps and numbers.",
-      extra: refs ? null : node("a", { href: "references.html", textContent: field === "aviation" ? "Add your POH" : "Add your references" }) } : null
-  ].filter(Boolean);
-  const pick = a.understanding?.ready && a.map?.synthesis?.verdict !== "solid" ? "together"
-    : a.practice && !a.practice.triedAt ? "practice"
-    : a.study?.of && a.study.checked < a.study.of ? "check"
-    : field ? "scenario" : "talk";
-  return node("section", { className: "card", id: "ways" }, node("h2", { textContent: "Ways to practice" }),
-    node("div", { className: "ways" }, tools.map(t => node("div", { className: `way${t.key === pick ? " best" : ""}`, title: t.title },
-      t.key === pick ? node("span", { className: "pill strong", textContent: "Best for this aim" }) : null,
-      node("b", { textContent: t.title }), node("span", { className: "muted", textContent: t.best }),
-      t.note ? node("small", { className: "muted", textContent: t.note }) : null, t.extra || null,
-      node("div", {}, btn(t.label, t.key === pick ? "" : "tonal", t.go))))));
+// Scenarios run for this aim, with what each debrief said to work on.
+function scenarios(a, field, refs) {
+  if (!field) return null;
+  const list = a.scenarios || [];
+  return node("div", { className: "block", id: "scenarios" }, node("h3", { textContent: "Scenarios" }),
+    list.length ? node("ul", { className: "learned" }, list.map(x => node("li", {}, node("span", { className: "kind", textContent: "Done" }),
+      node("span", {}, node("b", { textContent: x.title }), node("span", { className: "muted", textContent: ` · ${x.happening || "debriefed"}${x.missed?.length ? ` To work on: ${x.missed[0]}` : ""}`.replace(/\s?\[R\d{1,2}(?:\.\d{1,4})?\]/g, "") })))))
+      : node("p", { className: "muted", textContent: refs ? "Work a situation as it unfolds, from your references." : "Work a situation as it unfolds. Add your references first, so it uses your own numbers and steps." }),
+    node("div", { className: "actions", style: "margin-top:10px" }, btn("Run a scenario", "tonal", () => (location.href = `scenario.html?aim=${encodeURIComponent(id)}`)),
+      refs ? null : node("a", { href: "references.html", textContent: field === "aviation" ? "Add your POH" : "Add your references" })));
 }
 
+// Where you are: what you watched, what you explained, what you did. Never mixed into one score.
+function evidence(a) {
+  const explainedParts = (a.map?.parts || []).filter(p => p.status === "explained").length;
+  const shown = (a.study?.topics || []).reduce((n, t) => n + (t.check?.objectives || []).filter(o => o.status === "demonstrated").length, 0);
+  const explained = a.learned.length + explainedParts + shown;
+  const done = (a.practice?.triedAt ? 1 : 0) + (a.scenarios || []).length;
+  const mins = Math.round((a.usedSec || 0) / 60);
+  return { explained, done, watched: a.videos || 0, mins };
+}
+function ledger(e) {
+  const cell = (n, label) => node("div", {}, node("b", { textContent: String(n) }), node("span", { textContent: label }));
+  return node("div", { className: "ledger", ariaLabel: "Where you are" },
+    cell(e.watched, `${e.watched === 1 ? "video" : "videos"} watched${e.mins ? ` · ${e.mins} min` : ""}`),
+    cell(e.explained, `${e.explained === 1 ? "idea" : "ideas"} explained in your own words`),
+    cell(e.done, `${e.done === 1 ? "thing" : "things"} you tried: practice and scenarios`));
+}
+
+// Learn, Explain, Apply: the three things you can do with an aim, each with its next step here, and
+// the one that fits best right now marked. Not steps in order: you pick.
+function ways(a, refs) {
+  const field = a.scenarioDomain; // medical, aviation, general, or null when scenarios don't fit
+  const map = a.map, parts = map?.parts || [];
+  const nextPart = parts.find(p => p.status === "new") || parts.find(p => p.status === "explored");
+  const study = a.study?.of ? a.study : null;
+  const learn = { key: "learn", title: "Learn", what: "Find the right material and watch.",
+    next: study ? ["Your study session", `${study.checked} of ${study.of} topics checked`] : nextPart ? [nextPart.title, nextPart.brief || "Not explored yet"] : a.recent?.length ? ["Pick up where you left off", a.recent[0].title] : ["Find a first video", "Aim keeps the search on your aim"],
+    buttons: [nextPart && !study ? btn("Search for it", "", () => search(nextPart.search)) : btn(study ? "Continue studying" : "Continue on YouTube", "", () => goTo())] };
+  const ready = a.understanding?.ready && map?.synthesis?.verdict !== "solid";
+  const explain = { key: "explain", title: "Explain", what: "Teach it back, and find what you don't know yet.",
+    next: ready ? ["Put the whole answer together", "You've explained most of what this takes"] : map?.synthesis?.verdict === "solid" ? ["You put it together", "Go deeper on any part, or talk it through again"] : ["Talk it through", "The librarian asks what you'd tell a friend"],
+    buttons: [ready ? btn("Put it together", "", () => goTo("https://www.youtube.com/#aim-put-together")) : btn("Talk it through", "", () => goTo("https://www.youtube.com/#aim-talk")),
+      parts.length ? node("button", { className: "linkish", type: "button", textContent: "Go deeper", onclick: () => document.getElementById("understand")?.scrollIntoView({ behavior: "smooth" }) }) : null] };
+  const pr = a.practice;
+  const apply = { key: "apply", title: "Apply", what: "Use it: a project, an exercise or a scenario.",
+    next: field ? ["Scenario", "Work a situation as it unfolds, from your references"] : pr && !pr.triedAt ? [pr.title, "One small thing to try"] : pr ? ["You tried it", pr.title] : ["One small thing to try", "Talk it through, and the librarian may suggest one"],
+    buttons: [field ? btn("Run a scenario", "", () => (location.href = `scenario.html?aim=${encodeURIComponent(id)}`)) : null,
+      pr ? btn(field ? "See practice" : pr.triedAt ? "See practice" : "Find a project video", field ? "tonal" : "", () => (pr.triedAt || field ? document.getElementById("practice")?.scrollIntoView({ behavior: "smooth" }) : search(pr.search))) : null,
+      !field && !pr ? btn("Talk it through", "tonal", () => goTo("https://www.youtube.com/#aim-talk")) : null] };
+  const pick = ready ? "explain" : pr && !pr.triedAt ? "apply" : study && study.checked < study.of ? "learn" : field ? "apply" : !a.videos ? "learn" : "explain";
+  return node("div", { className: "ways", id: "ways" }, [learn, explain, apply].map(w => node("div", { className: `way${w.key === pick ? " best" : ""}`, title: w.title },
+    w.key === pick ? node("span", { className: "pill strong", textContent: "Next for this aim" }) : null,
+    node("h3", { textContent: w.title }), node("span", { className: "what", textContent: w.what }),
+    node("span", { className: "next", textContent: w.next[0] }, node("small", { textContent: w.next[1] })),
+    node("div", { className: "go" }, ...w.buttons.filter(Boolean)))));
+}
+
+// What you've shown, kind by kind: explained in conversation, shown in a check, worked out in a scenario.
 function learned(a) {
+  const row = (kind, b, rest) => node("li", {}, node("span", { className: "kind", textContent: kind }), node("span", {}, node("b", { textContent: b }), rest ? node("span", { className: "muted", textContent: rest }) : null));
   const items = [
-    ...a.learned.map(m => node("li", {}, node("b", { textContent: `${m.subject}: ` }), m.idea, m.understood === "shaky" ? node("span", { className: "muted", textContent: " (still working on it)" }) : null)),
-    ...(a.map?.parts || []).filter(p => p.status === "explained").map(p => node("li", {}, node("b", { textContent: p.title }), node("span", { className: "muted", textContent: " · explained in your own words" }))),
-    ...(a.scenarios || []).map(x => node("li", {}, node("b", { textContent: `Scenario: ${x.title}` }),
-      node("span", { className: "muted", textContent: ` · ${x.happening || "debriefed"}${x.missed?.length ? ` To work on: ${x.missed[0]}` : ""}`.replace(/\s?\[R\d{1,2}(?:\.\d{1,4})?\]/g, "") }))),
-    ...(a.study?.topics || []).filter(t => t.check).map(t => node("li", {}, node("b", { textContent: t.title }),
-      node("span", { className: "muted", textContent: ` · ${t.check.objectives.filter(o => o.status === "demonstrated").length} of ${t.check.objectives.length} shown in a check` })))];
-  return node("section", { className: "card", id: "learned" }, node("h2", { textContent: "What you've learned" }),
-    items.length ? node("ul", { className: "learned" }, items) : node("p", { className: "muted", textContent: "What you explain to the librarian about this aim shows up here." }));
+    ...a.learned.map(m => row("Explained", `${m.subject}: `, `${m.idea}${m.understood === "shaky" ? " (still working on it)" : ""}`)),
+    ...(a.map?.parts || []).filter(p => p.status === "explained").map(p => row("Explained", p.title, " · in your own words")),
+    ...(a.study?.topics || []).filter(t => t.check).map(t => row("Checked", t.title,
+      ` · ${t.check.objectives.filter(o => o.status === "demonstrated").length} of ${t.check.objectives.length} shown in a check`))];
+  return node("div", { className: "block", id: "learned" }, node("h3", { textContent: "What you've learned" }),
+    items.length ? node("ul", { className: "learned" }, items) : node("p", { className: "muted", textContent: "What you explain to the librarian about this aim shows up here, apart from what you watched." }));
 }
 
 function videos(a) {
@@ -156,61 +171,72 @@ function videos(a) {
     await send({ type: "purpose-allow", query: "", videos: [{ id: v.id, title: v.title, channel: v.channel }], lists: [] });
     location.href = `https://www.youtube.com/watch?v=${encodeURIComponent(v.id)}${v.t > 5 && !(v.d && v.t > v.d - 15) ? `&t=${Math.floor(v.t)}s` : ""}`;
   };
-  return node("section", { className: "card", id: "videos" }, node("h2", { textContent: "Key videos" }),
+  return node("div", { className: "block", id: "videos" }, node("h3", { textContent: "Key videos" }),
     vids.length ? node("div", { className: "vids" }, vids.map(v => {
       const th = node("span", { className: "thumb" }, v.d > 0 && v.t > 0 ? node("i", { style: `width:${Math.min(100, Math.round((v.t / v.d) * 100))}%` }) : null);
       th.style.backgroundImage = `url("https://i.ytimg.com/vi/${encodeURIComponent(v.id)}/mqdefault.jpg")`;
       return node("button", { className: "vid", type: "button", title: `Play “${v.title}”`, onclick: () => play(v) }, th,
         node("span", { className: "t", textContent: v.title }), node("span", { className: "c", textContent: v.channel }));
     })) : node("p", { className: "muted", textContent: "Videos you watch for this aim show up here." }),
-    a.trail?.length > 1 ? node("p", { className: "muted", style: "margin:12px 0 0", textContent: `Your path: ${a.trail.join(" → ")}` }) : null);
+    a.trail?.length > 1 ? node("p", { className: "muted", style: "margin:14px 0 0", textContent: `Your path: ${a.trail.join(" → ")}` }) : null);
 }
 
 function notes(a) {
-  const area = node("textarea", { value: a.notes || "", placeholder: "Questions, ideas, things to remember…", ariaLabel: "Notes" });
+  const area = node("textarea", { value: a.notes || "", placeholder: "Questions, discoveries, things to remember…", ariaLabel: "Notes" });
   const status = node("span", { className: "muted" });
-  return node("section", { className: "card notes", id: "notes" }, node("h2", { textContent: "Notes & ideas" }), area,
-    node("div", { className: "actions", style: "margin-top:10px;align-items:center" },
+  return node("div", { className: "block notes" }, area,
+    node("div", { className: "actions", style: "margin-top:10px" },
       btn("Save notes", "tonal", async () => { const r = await send({ type: "aim-notes", id, text: area.value }); status.textContent = r?.result === "applied" ? "Saved." : "Couldn't save."; }), status));
 }
 
 function related(list) {
-  return node("section", { className: "card", id: "related" }, node("h2", { textContent: "Related aims" }),
+  return node("div", { className: "block", id: "related" }, node("h3", { textContent: "Related aims" }),
     list.length ? node("div", { className: "related" }, list.map(r => node("a", { href: `aim.html?id=${encodeURIComponent(r.id)}`, title: r.text }, cover(r)))) :
       node("p", { className: "muted", textContent: "Aims about the same things show up here." }));
 }
 
+const chapter = (id, eyebrow, title, sub, ...kids) => node("section", { className: "chapter", id },
+  node("header", {}, node("span", { className: "eyebrow", textContent: eyebrow }), node("h2", { textContent: title }), sub ? node("p", { textContent: sub }) : null), ...kids);
+
 async function render() {
   const [d, refList] = await Promise.all([send({ type: "aim-get", id }), send({ type: "ref-list" })]);
   refLevel = (refList || []).find(r => r.level)?.level || "";
+  const refs = (refList || []).length;
   const page = document.getElementById("page");
   if (!d || d.result !== "applied") { page.replaceChildren(node("p", { className: "error", textContent: d?.message || "Couldn't load this aim." }), node("a", { href: "targets.html", textContent: "Back to your library" })); return; }
   const a = d.aim;
   document.title = `${a.text} · ${BRAND}`;
-  const mins = Math.round((a.usedSec || 0) / 60);
-  const main = node("div", {},
+  const e = evidence(a);
+  const folio = node("article", { className: "folio" },
     node("section", { id: "overview" },
       node("div", { className: "aim-head" },
         node("div", {},
           node("span", { className: `state${a.state === "completed" ? " done" : ""}`, textContent: a.exploring ? (a.state === "completed" ? "Explored" : "Exploring") : STATE[a.state] }),
           node("h1", { textContent: a.text }),
-          node("p", { className: "lede", textContent: a.librarianNote || [`Started ${when(a.startedAt)}`, mins ? `${mins} min` : null, a.videos ? `${a.videos} video${a.videos > 1 ? "s" : ""}` : null].filter(Boolean).join(" · ") })),
+          node("p", { className: "lede", textContent: a.librarianNote || [`Started ${when(a.startedAt)}`, a.subject?.name].filter(Boolean).join(" · ") })),
         node("div", { className: "actions" },
           btn(a.state === "active" ? "Continue on YouTube" : a.state === "paused" ? "Pick it up" : "Start again", "accent", () => goTo()))),
-      node("div", { className: "overview" },
-        node("div", {}, understanding(a) || learned(a)),
-        node("div", {}, nextQuestion(a), practice(a)))),
-    ways(a, (refList || []).length),
-    a.map?.parts?.length ? learned(a) : null,
-    videos(a), notes(a), related(d.related));
-  const side = node("aside", { className: "aim-side" },
-    node("a", { className: "back", href: "targets.html", textContent: "← Back to library" }),
-    cover(a, "large"),
-    node("nav", { className: "aim-nav", ariaLabel: "This aim" },
-      [["overview", "Overview"], ["ways", "Ways to practice"], ["learned", "What you've learned"], ["videos", "Key videos"], ["notes", "Notes & ideas"], ["practice", "Practice"], ["related", "Related aims"]]
-        .map(([k, label]) => node("a", { href: `#${k}`, textContent: label }))));
-  page.replaceChildren(node("div", { className: "aim-layout" }, side, main));
-  for (const s of main.querySelectorAll("section.card")) s.style.marginTop = "16px";
+      ledger(e),
+      ways(a, refs)),
+    chapter("learn", "Learn", "Videos and where to look next", "What you've watched for this aim, and the path you took.", videos(a)),
+    chapter("understand", "Understand", "What you can explain", "What this aim takes, what you've explained in your own words, and the why behind each part.",
+      understanding(a), learned(a)),
+    chapter("practice", "Practice", "Putting it to use", "Small things to try, so it sticks because you used it.", practice(a), scenarios(a, a.scenarioDomain, refs)),
+    chapter("notes", "Notes", "Your notes", "Your own discoveries, questions and useful references.", notes(a), related(d.related)));
+  const ribbon = (k, label, n) => node("a", { href: `#${k}` }, label, n ? node("small", { textContent: String(n) }) : null);
+  const ribbons = node("nav", { className: "ribbons", ariaLabel: "This aim" },
+    ribbon("overview", "Overview"), ribbon("learn", "Learn", e.watched), ribbon("understand", "Understand", e.explained), ribbon("practice", "Practice", e.done), ribbon("notes", "Notes"));
+  const side = node("aside", { className: "aim-side" }, node("a", { className: "back", href: "targets.html", textContent: "← Back to library" }), cover(a, "large"), ribbons);
+  page.replaceChildren(node("div", { className: "aim-layout" }, side, folio));
+  // The ribbon for the chapter you're reading.
+  const links = [...ribbons.querySelectorAll("a")];
+  const spy = () => {
+    let on = links[0];
+    for (const l of links) { const s = document.getElementById(l.hash.slice(1)); if (s && s.getBoundingClientRect().top < 160) on = l; }
+    for (const l of links) l.classList.toggle("on", l === on);
+  };
+  addEventListener("scroll", spy, { passive: true });
+  spy();
 }
 
 render();

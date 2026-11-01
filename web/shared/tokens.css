@@ -12,7 +12,9 @@
   --font-display: "Aim Inter Display", "Aim Inter", system-ui, sans-serif;
   /* Book titles and the library's headings: a classic serif from the system, nothing to download. */
   --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
-  --bg: #f7f3ec; --surface: #fffdf9; --text: #16231e; --muted: #5d6a63;
+  --bg: #f7f3ec; --surface: #fffdf9; --text: #16231e; --muted: #4f5c55;
+  /* Book details (the library and an aim's pages only): a paper page and brass rules. */
+  --paper: #fffcf5; --brass: #9c7638; --brass-soft: rgba(156, 118, 56, .28);
   --divider: rgba(25, 61, 49, .12); --card-border: rgba(25, 61, 49, .1);
   --tonal: rgba(25, 61, 49, .06); --tonal-hover: rgba(25, 61, 49, .11);
   --field: #fffdf9; --field-border: #cfd3c9; --focus: #193d31; --link: #1f6b50;
@@ -25,7 +27,8 @@
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0d1512; --surface: #15201b; --text: #eef0e9; --muted: #a2afa8;
+    --bg: #0d1512; --surface: #15201b; --text: #eef0e9; --muted: #b3bfb8;
+    --paper: #131d18; --brass: #d2b47a; --brass-soft: rgba(210, 180, 122, .3);
     --divider: rgba(238, 240, 233, .11); --card-border: rgba(238, 240, 233, .08);
     --tonal: rgba(238, 240, 233, .07); --tonal-hover: rgba(238, 240, 233, .13);
     --field: #101a16; --field-border: #33423b; --focus: #9fd3b8; --link: #8fd0b0;

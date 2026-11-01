@@ -35,7 +35,7 @@ h2 { font: 500 20px/26px var(--font-serif); margin: 0 0 4px; letter-spacing: -.1
 h3 { font-size: 15px; line-height: 22px; font-weight: 500; margin: 0 0 4px; }
 .lede { color: var(--muted); font-size: 15px; line-height: 22px; margin: 0 0 20px; }
 .muted { color: var(--muted); }
-.small { font-size: 12px; line-height: 18px; }
+.small { font-size: 13px; line-height: 19px; }
 
 /* ---------- cards ---------- */
 .card { background: var(--surface); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 20px 24px; box-shadow: var(--shadow); }
