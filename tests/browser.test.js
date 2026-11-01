@@ -181,6 +181,14 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   const text = async sel => ((await p.$(sel)) ? (await p.textContent(sel)).replace(/\s+/g, " ") : "");
 
   step("service worker started and migrated", (await store()).schemaVersion === 5);
+  // YouTube's content scripts share one scope: a name defined twice silently replaces the other.
+  {
+    const files = JSON.parse(fs.readFileSync(path.join(EXT, "manifest.json"), "utf8")).content_scripts.flatMap(c => c.js);
+    const seen = {};
+    for (const f of files) for (const m of fs.readFileSync(path.join(EXT, f), "utf8").matchAll(/^(?:async )?function (\w+)|^(?:const|let|var) (\w+)/gm)) (seen[m[1] || m[2]] ||= []).push(f);
+    const dupes = Object.entries(seen).filter(([, f]) => f.length > 1).map(([n, f]) => `${n} (${f.join(", ")})`);
+    step("no top-level name is defined twice across the content scripts", !dupes.length, dupes.join("; "));
+  }
 
   // ---------- welcome tour (opens by itself on install) ----------
   let welcome = ctx.pages().find(x => x.url().includes("/welcome.html"));
@@ -353,12 +361,29 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("going back to the purpose's video plays it", !(await p.$(".wp-player-card")));
   await p.waitForSelector("#wp-aimpanel", { timeout: 8000 });
   const aimPanel = await text("#wp-aimpanel");
-  step("the aim panel tops the sidebar: the aim, then Learn, Explain and Apply, one marked next, then Notes and Library",
-    ["Your aim", "Learn", "Explain", "Apply", "notes", "Library"].every(t => aimPanel.toLowerCase().includes(t.toLowerCase())) && (await p.$$("#wp-aimpanel .wp-ap-next")).length === 1 &&
+  step("the aim panel tops the sidebar, quiet: what you're learning, one Up next, then Explain, Try it and Notes",
+    ["You're learning", "Up next", "Explain", "Try it", "Notes"].every(t => aimPanel.includes(t)) && !(await p.$("#wp-aimpanel .wp-ap-more")) &&
     await p.evaluate(() => document.querySelector("#secondary").firstElementChild?.id === "wp-aimpanel" && !!document.querySelector("#wp-upnext")), aimPanel.slice(0, 160));
   await p.evaluate(() => document.querySelector("#movie_player video").dispatchEvent(new Event("ended")));
-  await p.waitForFunction(() => document.querySelector("#wp-aimpanel .wp-ap-next")?.textContent.includes("Explain"), null, { timeout: 4000 }).catch(() => {});
-  step("when the video ends, Explain comes forward", (await text("#wp-aimpanel .wp-ap-next")).includes("Explain") && (await text("#wp-aimpanel")).includes("You finished this video"));
+  await p.waitForSelector("#wp-aimpanel .wp-ap-prompt", { timeout: 4000 }).catch(() => {});
+  const endPrompt = await text("#wp-aimpanel .wp-ap-prompt");
+  step("when the video ends: one next action, the others as small links, and Done for now", endPrompt.includes("Video complete") &&
+    (await p.$$("#wp-aimpanel .wp-ap-prompt .wp-btn")).length === 1 && endPrompt.includes("Done for now"), endPrompt);
+  await p.click("#wp-aimpanel .wp-ap-prompt button:text-is('Done for now')");
+  await p.waitForTimeout(200);
+  step("Done for now puts the prompt away", !(await p.$("#wp-aimpanel .wp-ap-prompt")));
+  await p.click("#wp-aimpanel button[aria-label='Show more']");
+  const morePanel = await text("#wp-aimpanel .wp-ap-more");
+  // A gap from a conversation steers what's next.
+  await sw.evaluate(() => serial(async () => {
+    const { purpose } = await chrome.storage.local.get("purpose");
+    await gapsUpdate(purpose.id, { add: [{ title: "Feeding schedules", what: "You explained the starter, not how often to feed it", search: "sourdough starter feeding schedule" }] });
+  }));
+  await p.waitForFunction(() => /Feeding schedules|sourdough starter feeding schedule/.test(document.querySelector("#wp-aimpanel .wp-ap-next")?.textContent || ""), null, { timeout: 8000 }).catch(() => {});
+  step("a gap from a conversation becomes what's next: Aim looks for a video on exactly that", /Feeding schedules|sourdough starter feeding schedule/.test(await text("#wp-aimpanel .wp-ap-next")),
+    await text("#wp-aimpanel .wp-ap-next"));
+  step("More: Learn, Explain, Apply, and explored / explained / applied as counts (no progress bar)", ["Learn", "Explain", "Apply", "explored", "explained", "applied", "Library"].every(t => morePanel.includes(t)) &&
+    !(await p.$("#wp-aimpanel .wp-ap-bar")), morePanel.slice(0, 160));
 
   // ---------- the menu ----------
   await p.click("#wp-chip .wp-pill");
@@ -670,7 +695,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("an aim's page: its book, where it stands, its key videos (where you stopped), notes and related aims",
     aimText.includes("Study for my biology exam") && aimText.includes("Set aside") && aimText.includes("Key videos") && aimText.includes("Video bio1") &&
     aimText.includes("Your notes") && aimText.includes("Related aims") &&
-    ["videos watched", "explained in your own words", "things you tried"].every(t => aimText.includes(t)) && !!(await all.$(".aim-side .book-large")) && !/undefined|null|NaN/.test(aimText), aimText.slice(0, 240));
+    ["explored", "videos watched", "in your own words", "applied"].every(t => aimText.includes(t)) && !!(await all.$(".aim-side .book-large")) && !/undefined|null|NaN/.test(aimText), aimText.slice(0, 240));
   if (process.env.SHOTS) await all.screenshot({ path: `${process.env.SHOTS}/aim-page.png`, fullPage: true });
   await all.fill("#notes textarea", "Exam is Friday.");
   await all.click("#notes button:text-is('Save notes')");
@@ -678,7 +703,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("notes save from the aim's page, for an aim that's set aside", (await store()).paused.find(x => x.text === "Study for my biology exam")?.notes === "Exam is Friday.");
   step("Learn, Explain, Apply: each with this aim's next step, one marked next; chapters in the ribbon",
     (await all.$$("#ways .way")).length === 3 && (await all.$$("#ways .way.best")).length === 1 && ["Learn", "Explain", "Apply", "Talk it through"].every(t => aimText.includes(t)) &&
-    (await all.textContent(".ribbons")).replace(/\d/g, "").replace(/\s+/g, "") === "OverviewLearnUnderstandPracticeNotes");
+    (await all.textContent(".ribbons")).replace(/\d/g, "").replace(/\s+/g, "") === "OverviewLearnExplainApplyNotes");
 
   // ---------- Your references: protocols for scenarios ----------
   const refs = await ctx.newPage();
@@ -752,6 +777,19 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.waitForTimeout(800);
   st = await store();
   step("Got my answer ends the aim as found, with no questions", !st.purpose && st.history[st.history.length - 1].outcome === "yes" && !(await p.$(".wp-done-dialog")));
+  {
+    const lib = await ctx.newPage();
+    await lib.goto(`chrome-extension://${extId}/targets.html`);
+    await lib.waitForSelector("#list .slot");
+    const shelf = await lib.textContent("#list");
+    step("a quick answer stays off the shelf, listed under Quick answers with Keep in library", !shelf.includes("how do I reset my router") &&
+      (await lib.textContent("#quick")).includes("how do I reset my router") && !(await lib.$eval("#quick", n => n.hidden)));
+    await lib.click("#quick summary");
+    await lib.click("#quick .qa button:text-is('Keep in library')");
+    await lib.waitForFunction(() => document.querySelector("#list").textContent.includes("how do I reset my router"), null, { timeout: 4000 }).catch(() => {});
+    step("Keep in library puts it on the shelf", (await lib.textContent("#list")).includes("how do I reset my router"));
+    await lib.close();
+  }
 
   // ---------- Explore ----------
   await setLocal({ onboarding: { welcomed: true, tips: { home: true, chip: true, results: true }, hsTour: true }, learn: {} });

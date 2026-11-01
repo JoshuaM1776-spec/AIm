@@ -10,12 +10,13 @@ let talkPanel = null;
 function closeTalk() { talkPanel?.el.remove(); talkPanel = null; }
 
 const talkCall = (state, extra = {}) => send({ type: "librarian", task: "librarian-talk",
-  input: { mode: state.mode, session: state.session, thread: state.thread.map(({ role, text }) => ({ role, text })), memory: state.memory, connect: state.connect, focus: state.focus, ...extra } });
+  input: { mode: state.mode, session: state.session, thread: state.thread.map(({ role, text }) => ({ role, text })), memory: state.memory, connect: state.connect, focus: state.focus, followUp: state.followUp ? { title: state.followUp.title, what: state.followUp.what } : undefined, ...extra } });
 
 // Everything a conversation needs, with its opening question already asked. Null when there's
 // nothing to talk about, no account, or the AI couldn't open (the error is in .error).
 // mode "deeper" (Aim Plus) goes one "why" further into focus: { title, brief, chain }, from an aim's page.
-async function prepareTalk({ aimId = null, connect = null, source = "menu", mode = null, focus = null } = {}) {
+// followUp: a gap { id, title, what } they've since watched something about; the first question is about it.
+async function prepareTalk({ aimId = null, connect = null, source = "menu", mode = null, focus = null, followUp = null } = {}) {
   const brief = await send({ type: "plus-brief" });
   if (!brief?.account) return { error: "Sign in to talk things through with the librarian." };
   const ctx = await send({ type: "talk-session", id: aimId });
@@ -25,7 +26,7 @@ async function prepareTalk({ aimId = null, connect = null, source = "menu", mode
   const plus = brief.plus === true, remember = plus && settings.librarianMemory !== false;
   // A learning aim that's nearly there finishes by putting it together; asked for, or offered after Done.
   const synthesis = mode === "synthesis" || (source === "done" && ctx.ready);
-  const state = { aimId: ctx.id, mode: mode === "deeper" && focus?.title ? "deeper" : synthesis ? "synthesis" : ctx.mode, focus: mode === "deeper" ? focus : null,
+  const state = { aimId: ctx.id, mode: mode === "deeper" && focus?.title ? "deeper" : synthesis ? "synthesis" : ctx.mode, focus: mode === "deeper" ? focus : null, followUp,
     session: ctx.session, thread: [], connect, plus, remember, source, done: false, busy: false,
     memory: remember ? (await send({ type: "memory-for", id: ctx.id })) || [] : [] };
   // Aim Plus, with captions on: what was actually said in the videos watched longest.
@@ -170,7 +171,10 @@ function showTalk(state) {
       return draw(r?.error || "Couldn't reach the librarian. Try again.");
     }
     state.thread.push({ role: "aim", text: r.message, ...(r.videos?.length ? { videos: r.videos } : {}) });
+    // What they couldn't explain yet: kept with the aim, so the next video can address it.
+    if (r.gaps?.length && state.aimId) send({ type: "aim-gaps", aimId: state.aimId, add: r.gaps });
     if (r.done) {
+      if (state.followUp?.id && state.aimId) send({ type: "aim-gaps", aimId: state.aimId, resolve: state.followUp.id });
       state.done = true;
       if (state.remember && r.memory?.length) { await send({ type: "memory-add", items: r.memory, aimId: state.aimId }); state.kept = r.memory.map(m => m.subject); }
       if (r.marks?.length) await send({ type: "talk-marks", aimId: state.aimId, marks: r.marks });

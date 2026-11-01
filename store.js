@@ -268,7 +268,7 @@ function summary(p, state) {
   return { id: p.id, text: p.text, state, lastActiveAt: p.lastActiveAt || p.pausedAt || p.endedAt || p.startedAt,
     usedSec: Math.round(p.usedSec || 0), videos: (p.videos || []).length, searches: (p.searches || []).length,
     outcome: p.outcome || null, last: p.last || null, study: studyProgress(p), notes: p.notes || "", elsewhere: !!p.elsewhere, recent: recentVideos(p), trail: searchTrail(p),
-    exploring: !!p.learn, subject: aimSubject(p),
+    exploring: !!p.learn, subject: aimSubject(p), kind: p.librarian?.kind || p.kind || null, keep: !!p.keep,
     practice: p.practice ? { title: p.practice.title, tried: !!p.practice.triedAt } : null,
     understanding: p.map?.parts?.length ? { parts: p.map.parts.map(x => ({ title: x.title, status: x.status })), ready: mapReady(p.map), solid: p.map.synthesis?.verdict === "solid" } : null };
 }
@@ -327,7 +327,7 @@ function archive(history, record) {
 function purposeRecord(p, outcome) {
   return { type: "purpose", id: p.id, text: p.text, startedAt: p.startedAt, endedAt: Date.now(), usedSec: Math.round(p.usedSec),
     outcome: outcome || null, path: p.path, searches: p.searches, videos: p.videos, notes: p.notes || "",
-    kind: p.librarian?.kind || null, study: studySnapshot(p.study), map: p.map || null, practice: p.practice || null, scenarios: p.scenarios || [], chains: p.chains || [] };
+    kind: p.librarian?.kind || null, study: studySnapshot(p.study), map: p.map || null, practice: p.practice || null, scenarios: p.scenarios || [], chains: p.chains || [], gaps: p.gaps || [], keep: !!p.keep };
 }
 
 // What a study session showed, kept when its aim ends, for the learning record.
@@ -849,6 +849,7 @@ async function recordTick(seconds, video) {
       if (Number(video.d) > 0) v.d = Math.floor(Number(video.d));
       v.lastAt = now;
       if (activity === purpose && purpose.map && v.sec >= 60) mapExplored(purpose, v);
+      if (activity === purpose && v.sec >= 60) for (const g of purpose.gaps || []) if (g.videoId === v.id && !g.watchedAt) g.watchedAt = now;
     }
   }
 
@@ -1634,6 +1635,38 @@ async function practiceSet(aimId, { practice, tried, note } = {}) {
   return { result: "applied", practice: rec.practice || null };
 }
 
+// Gaps: what a conversation found you couldn't yet explain, kept with the aim so the next video can
+// address it and the next conversation can follow up. The last 6; a newer gap on the same idea
+// replaces the older one. A gap is watched once you've watched a minute of the video picked for it,
+// and resolved after you've talked it through again.
+async function gapsUpdate(aimId, { add = [], videoFor = null, resolve = null } = {}) {
+  const d = await chrome.storage.local.get(["purpose", "paused", "history"]);
+  const rec = [d.purpose, ...(d.paused || []), ...(d.history || [])].find(r => r?.id === aimId);
+  if (!rec) return { result: "error", message: "That aim isn't here." };
+  let gaps = rec.gaps || [];
+  for (const g of (Array.isArray(add) ? add : []).slice(0, 2)) {
+    const title = clip(g?.title, 60), search = clip(g?.search, 150);
+    if (!title || !search) continue;
+    gaps = gaps.filter(x => x.title.toLowerCase() !== title.toLowerCase());
+    gaps.push({ id: `g${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, title, what: clip(g.what, 200), search, at: Date.now() });
+  }
+  if (videoFor?.id) { const g = gaps.find(x => x.id === videoFor.id); if (g) g.videoId = clip(videoFor.videoId, 20); }
+  if (resolve) { const g = gaps.find(x => x.id === resolve); if (g) g.resolvedAt = Date.now(); }
+  rec.gaps = gaps.slice(-6);
+  await chrome.storage.local.set({ purpose: d.purpose || null, paused: d.paused || [], history: d.history || [] });
+  return { result: "applied", gaps: rec.gaps };
+}
+
+// A quick answer kept in the library by hand (quick answers don't become books on their own).
+async function aimKeep(aimId, keep = true) {
+  const d = await chrome.storage.local.get(["purpose", "paused", "history"]);
+  const rec = [d.purpose, ...(d.paused || []), ...(d.history || [])].find(r => r?.id === aimId);
+  if (!rec) return { result: "error", message: "That aim isn't here." };
+  rec.keep = !!keep;
+  await chrome.storage.local.set({ purpose: d.purpose || null, paused: d.paused || [], history: d.history || [] });
+  return { result: "applied" };
+}
+
 // A finished scenario, kept with its aim: what it was, and the debrief (what was happening, why, what
 // counteracted it, what went well and what was missed). The last 20.
 async function scenarioSave(aimId, s = {}) {
@@ -1721,7 +1754,7 @@ async function aimGet(id) {
   }).filter(([, , n]) => n > 0).sort((a, b) => b[2] - a[2]).slice(0, 4)
     .map(([o, st]) => ({ id: o.id, text: o.text, state: st, subject: aimSubject(o) }));
   return { result: "applied", aim: { ...summary(p, state), subject, kind: p.librarian?.kind || (p.learn ? "explore" : null),
-    map: p.map || null, practice: p.practice || null, scenarios: (p.scenarios || []).slice(-5).reverse(), scenarioDomain: scenarioDomain(p, subject), chains: p.chains || [], study: p.study ? studySnapshot(p.study) : null, librarianNote: p.librarian?.note || "",
+    map: p.map || null, practice: p.practice || null, scenarios: (p.scenarios || []).slice(-5).reverse(), scenarioDomain: scenarioDomain(p, subject), chains: p.chains || [], gaps: p.gaps || [], study: p.study ? studySnapshot(p.study) : null, librarianNote: p.librarian?.note || "",
     learned: (d.memory || []).filter(m => m.aim === id).map(m => ({ subject: m.subject, idea: m.idea, understood: m.understood, at: m.at })),
     startedAt: p.startedAt || null, endedAt: p.endedAt || null }, related };
 }

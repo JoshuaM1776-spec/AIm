@@ -35,8 +35,12 @@ async function render() {
   data ||= await send({ type: "targets" });
   const list = document.getElementById("list");
   if (!data) { list.replaceChildren(node("p", { className: "error", textContent: "Couldn't load your library. Reload this page." })); return; }
-  const live = [data.current, ...data.paused].filter(Boolean);
-  const groups = { all: [...live, ...data.completed], progress: live, completed: data.completed };
+  // Quick answers ("how do I change a tire") don't become books unless you keep them (docs/SPEC.md §3).
+  const book = t => t.kind !== "lookup" || t.keep;
+  const quick = [data.current, ...data.paused, ...data.completed].filter(t => t && !book(t));
+  const live = [data.current, ...data.paused].filter(t => t && book(t));
+  const completed = data.completed.filter(book);
+  const groups = { all: [...live, ...completed], progress: live, completed };
   const q = query.trim().toLowerCase();
   const shown = groups[tab].filter(t => !q || t.text.toLowerCase().includes(q) || t.subject?.name.toLowerCase().includes(q));
   list.replaceChildren(...[
@@ -49,6 +53,17 @@ async function render() {
       node("div", { className: "plank" })),
     shown.length ? null : node("p", { className: "empty-tab", textContent: q ? `Nothing in your library matches “${query}”.`
       : { all: "Your library is empty. Search on YouTube, and your search becomes your first aim.", progress: "Nothing in progress.", completed: "Finished aims show up here." }[tab] })].filter(Boolean));
+  // Quick answers, kept off the shelf: listed, with a way to put any of them in the library.
+  const qa = document.getElementById("quick");
+  qa.hidden = !quick.length || !!q;
+  qa.replaceChildren(node("summary", { textContent: `Quick answers · ${quick.length}` }),
+    node("p", { className: "muted", textContent: "Quick searches stay off the shelf. Keep any you want to come back to." }),
+    ...quick.slice(0, 20).map(t => node("div", { className: "qa" },
+      node("a", { href: `aim.html?id=${encodeURIComponent(t.id)}`, textContent: t.text }),
+      node("button", { className: "btn tonal", type: "button", textContent: "Keep in library", onclick: async () => {
+        const r = await send({ type: "aim-keep", aimId: t.id });
+        if (r?.result === "applied") { data = null; render(); }
+      } }))));
   document.getElementById("tabs").replaceChildren(...[["all", "All"], ["progress", "In progress"], ["completed", "Completed"]].map(([key, label]) =>
     node("button", { type: "button", role: "tab", ariaSelected: String(tab === key), onclick: () => { tab = key; render(); } },
       label, node("span", { className: "n", textContent: String(groups[key].length) }))));

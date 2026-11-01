@@ -117,9 +117,9 @@ function evidence(a) {
 function ledger(e) {
   const cell = (n, label) => node("div", {}, node("b", { textContent: String(n) }), node("span", { textContent: label }));
   return node("div", { className: "ledger", ariaLabel: "Where you are" },
-    cell(e.watched, `${e.watched === 1 ? "video" : "videos"} watched${e.mins ? ` · ${e.mins} min` : ""}`),
-    cell(e.explained, `${e.explained === 1 ? "idea" : "ideas"} explained in your own words`),
-    cell(e.done, `${e.done === 1 ? "thing" : "things"} you tried: practice and scenarios`));
+    cell(e.watched, `explored: ${e.watched === 1 ? "video" : "videos"} watched${e.mins ? ` · ${e.mins} min` : ""}`),
+    cell(e.explained, `explained: ${e.explained === 1 ? "idea" : "ideas"} in your own words`),
+    cell(e.done, `applied: practice and scenarios you tried`));
 }
 
 // Learn, Explain, Apply: the three things you can do with an aim, each with its next step here, and
@@ -149,6 +149,17 @@ function ways(a, refs) {
     node("h3", { textContent: w.title }), node("span", { className: "what", textContent: w.what }),
     node("span", { className: "next", textContent: w.next[0] }, node("small", { textContent: w.next[1] })),
     node("div", { className: "go" }, ...w.buttons.filter(Boolean)))));
+}
+
+// What a conversation found you couldn't yet explain, and whether you've followed up.
+function gapsBlock(a) {
+  const gaps = (a.gaps || []).slice().reverse();
+  if (!gaps.length) return null;
+  return node("div", { className: "block", id: "gaps" }, node("h3", { textContent: "Still to explain" }),
+    node("ul", { className: "learned" }, gaps.map(g => node("li", {},
+      node("span", { className: "kind", textContent: g.resolvedAt ? "Followed up" : g.watchedAt ? "Watched" : "Gap" }),
+      node("span", {}, node("b", { textContent: g.title }), g.what ? node("span", { className: "muted", textContent: ` · ${g.what}` }) : null,
+        g.resolvedAt ? null : node("button", { className: "linkish", type: "button", style: "margin-left:8px", textContent: "Find a video", onclick: () => search(g.search) }))))));
 }
 
 // What you've shown, kind by kind: explained in conversation, shown in a check, worked out in a scenario.
@@ -219,13 +230,13 @@ async function render() {
       ledger(e),
       ways(a, refs)),
     chapter("learn", "Learn", "Videos and where to look next", "What you've watched for this aim, and the path you took.", videos(a)),
-    chapter("understand", "Understand", "What you can explain", "What this aim takes, what you've explained in your own words, and the why behind each part.",
-      understanding(a), learned(a)),
-    chapter("practice", "Practice", "Putting it to use", "Small things to try, so it sticks because you used it.", practice(a), scenarios(a, a.scenarioDomain, refs)),
+    chapter("understand", "Explain", "What you can explain", "What this aim takes, what you've explained in your own words, what you couldn't yet, and the why behind each part.",
+      understanding(a), learned(a), gapsBlock(a)),
+    chapter("practice", "Apply", "Putting it to use", "Small things to try, so it sticks because you used it.", practice(a), scenarios(a, a.scenarioDomain, refs)),
     chapter("notes", "Notes", "Your notes", "Your own discoveries, questions and useful references.", notes(a), related(d.related)));
   const ribbon = (k, label, n) => node("a", { href: `#${k}` }, label, n ? node("small", { textContent: String(n) }) : null);
   const ribbons = node("nav", { className: "ribbons", ariaLabel: "This aim" },
-    ribbon("overview", "Overview"), ribbon("learn", "Learn", e.watched), ribbon("understand", "Understand", e.explained), ribbon("practice", "Practice", e.done), ribbon("notes", "Notes"));
+    ribbon("overview", "Overview"), ribbon("learn", "Learn", e.watched), ribbon("understand", "Explain", e.explained), ribbon("practice", "Apply", e.done), ribbon("notes", "Notes"));
   const side = node("aside", { className: "aim-side" }, node("a", { className: "back", href: "targets.html", textContent: "← Back to library" }), cover(a, "large"), ribbons);
   page.replaceChildren(node("div", { className: "aim-layout" }, side, folio));
   // The ribbon for the chapter you're reading.

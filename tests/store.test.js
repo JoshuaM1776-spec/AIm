@@ -888,6 +888,41 @@ test("going deeper: a chain of levels is kept with its aim, updated in place, an
   assert.strictEqual(env.local.history.at(-1).chains[0].root, "Why pressure drops");
 });
 
+test("gaps: kept with the aim, linked to a video, watched after a minute of it, resolved after following up", async () => {
+  const env = fresh();
+  await env.run(`startPurpose({ text: "Why did Rome fall" })`);
+  const id = env.local.purpose.id;
+  let r = await env.run(`gapsUpdate(${JSON.stringify(id)}, { add: [{ title: "Why the East survived", what: "You explained the West, not the East", search: "eastern roman empire survival" }, { title: "", search: "x" }] })`);
+  assert.strictEqual(r.gaps.length, 1, "a gap needs a title and a search");
+  const g = r.gaps[0];
+  await env.run(`gapsUpdate(${JSON.stringify(id)}, { add: [{ title: "why the east survived", what: "Still not", search: "byzantium" }] })`);
+  assert.strictEqual(env.local.purpose.gaps.length, 1, "the same idea again replaces it");
+  const g2 = env.local.purpose.gaps[0];
+  await env.run(`gapsUpdate(${JSON.stringify(id)}, { videoFor: { id: ${JSON.stringify(g2.id)}, videoId: "east1234567" } })`);
+  await env.ticks(3, 10, { id: "east1234567", title: "Why Byzantium lasted", channel: "C" });
+  assert.ok(!env.local.purpose.gaps[0].watchedAt, "not after half a minute");
+  await env.ticks(4, 10, { id: "east1234567", title: "Why Byzantium lasted", channel: "C" });
+  assert.ok(env.local.purpose.gaps[0].watchedAt, "watched after a minute of the video picked for it");
+  await env.run(`gapsUpdate(${JSON.stringify(id)}, { resolve: ${JSON.stringify(g2.id)} })`);
+  assert.ok(env.local.purpose.gaps[0].resolvedAt);
+  assert.strictEqual((await env.run(`aimGet(${JSON.stringify(id)})`)).aim.gaps.length, 1);
+  assert.ok(g.id);
+});
+
+test("quick answers carry their kind, and can be kept in the library by hand", async () => {
+  const env = fresh();
+  await env.run(`startPurpose({ text: "how do I reset my router" })`);
+  const p = env.local.purpose; p.librarian = { kind: "lookup" };
+  await env.run(`finishPurpose("yes")`);
+  env.local.history.at(-1).kind = "lookup";
+  let t = await env.run(`readAll().then(resumable)`);
+  assert.strictEqual(t.completed[0].kind, "lookup");
+  assert.strictEqual(t.completed[0].keep, false);
+  await env.run(`aimKeep(${JSON.stringify(t.completed[0].id)})`);
+  t = await env.run(`readAll().then(resumable)`);
+  assert.strictEqual(t.completed[0].keep, true);
+});
+
 test("subjects: EMS and medications read as health", async () => {
   const env = fresh();
   assert.strictEqual((await env.run(`aimSubject({ text: "EMT medications for my cert exam" })`)).id, "health");

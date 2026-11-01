@@ -414,6 +414,14 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] When the video ends, a line says now is when explaining sticks, and Explain is marked Next. The arrow at the top opens the aim's page; Change changes the aim.
 - [ ] Not shown on a break, or for a Homeschool student's plan.
 
+### 57. The learning loop (0.64, docs/SPEC.md)
+- [ ] The panel on a video is quiet: "You're learning" and the aim, one **Up next** video with why it was chosen ("Next part of your aim: …", "Builds on …", "Addresses what you couldn't yet explain: …") and where it came from (YouTube's top result for a search, or the librarian's pick with Plus), **Play next**, then Explain · Try it · Notes. No progress bar. More (the arrow) shows Learn / Explain / Apply, explored / explained / applied counts, Library, Save, a break, Change aim.
+- [ ] Nothing good found: "Nothing convincing came up for …" with Search it yourself, never a weak pick.
+- [ ] When a video ends: "Video complete" with one action chosen by context (Explain what you learned; Keep learning on the first video of a big topic or when exploring; Try it when there's a practice; Got my answer for a quick answer; Explain it now after a gap's video), the rest as small links, and Done for now.
+- [ ] In a conversation, say "I don't know": it's treated as useful. Something you couldn't explain becomes a gap: the panel's Up next looks for a video on exactly that; after watching a minute of it, Explain says "Follow up", and the next conversation opens on that gap. The aim's page lists gaps under Explain → Still to explain.
+- [ ] A quick answer ("how do I reset my router") stays off the library's shelf, under Quick answers, with Keep in library.
+- [ ] The aim's page chapters read Learn, Explain, Apply, Notes; its counts read explored, explained, applied.
+
 ## Known issues (not regressions)
 
 - The word check knows words, not meanings: synonyms ("tap" vs "faucet") get the question once; answering Yes teaches it that search.

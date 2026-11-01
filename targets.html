@@ -39,6 +39,10 @@
   .new-book b { font: 500 19px var(--font-serif); color: #f1dfae; }
   .empty-tab { color: rgba(241, 223, 190, .8); padding: 8px 12px; grid-column: 1 / -1; }
   @media (prefers-reduced-motion: reduce) { .slot > button { transition: none; } }
+  .quick { margin-top: 20px; }
+  .quick summary { cursor: pointer; font-weight: 500; color: var(--muted); }
+  .quick .qa { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--divider); }
+  .quick .qa a { color: var(--text); }
 </style>
 </head>
 <body>
@@ -57,6 +61,7 @@
   </div>
   <div class="tabs" role="tablist" id="tabs"></div>
   <div class="shelf" id="list" aria-live="polite"></div>
+  <details class="quick" id="quick" hidden></details>
 </main>
 <div id="toast" role="status"></div>
 <script src="covers.js"></script>

@@ -99,6 +99,13 @@ Put it into practice (only in your closing message, never in Explore): sometimes
 
 Another video (any message after they've replied, at most 2, often none): suggest one only when another explanation would genuinely help: they're unsure or partly wrong about something (a "visual" or "simpler" explanation of exactly that), or reasonable people disagree (a "perspective" from the other side), or they're ready for more depth ("deeper"). Each: kind, a YouTube search that finds exactly that kind of video, and why in one short sentence (under 100 characters) tied to what they said. Aim finds the video; never say you'll draw, show or make anything yourself.
 
+Answers and gaps:
+- "I don't know" is a good answer: it tells you where they are. Never treat it as failing. Give the idea in one or two plain sentences, then move on or ask about the piece underneath.
+- A correct answer can still be shallow. Sometimes, when an answer is right but thin, ask the follow-up that tests the reasoning underneath ("Right, but why would that matter more for Rome than for Persia?"). Not every time.
+- Gaps (any message after they've replied, at most 2, often none): something they tried to explain but couldn't, or said they don't know, or got wrong. Each: title (the idea, a few words), what (one plain sentence on what they couldn't yet explain, as you'd tell them: "You explained the West's military problems, but not why the East survived"), and search (a YouTube search for a clear explanation of exactly that). Only from their replies; never a gap they didn't show.
+
+Following up (when FOLLOW UP ON is in the request): they've since watched something about a gap they had. Open by asking about exactly that, in a friend's words, so they can try explaining it now.
+
 Marks (only when study topics or understanding parts are listed): for each listed topic this conversation actually covered, "demonstrated", "partial" or "needs_review" from their replies. Leave out topics you didn't discuss.`;
 
 const TALK_SCHEMA = {
@@ -135,9 +142,17 @@ const TALK_SCHEMA = {
         properties: { topic: { type: "string" }, status: { type: "string", enum: ["demonstrated", "partial", "needs_review"] } },
         required: ["topic", "status"], additionalProperties: false
       }
+    },
+    gaps: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { title: { type: "string" }, what: { type: "string" }, search: { type: "string" } },
+        required: ["title", "what", "search"], additionalProperties: false
+      }
     }
   },
-  required: ["message", "done", "memory", "marks", "verdict", "practice", "videos"],
+  required: ["message", "done", "memory", "marks", "verdict", "practice", "videos", "gaps"],
   additionalProperties: false
 };
 
@@ -203,6 +218,8 @@ export async function talk(ctx: TaskCtx & { plan?: string; usage?: TalkUsage }) 
   }).filter(Boolean).slice(0, TALK_LIMITS.memory);
   const connect = free ? null : tObject(input.connect);
   const connectLine = connect?.idea ? `${tClean(connect.subject, 60)}: ${tClean(connect.idea, 160)}` : "";
+  const follow = tObject(input.followUp);
+  const followLine = tClean(follow.title, 60) ? `${tClean(follow.title, 60)}${tClean(follow.what, 200) ? ` (${tClean(follow.what, 200)})` : ""}` : "";
 
   const kind = ["learn", "project", "lookup"].includes(s.kind as string) ? s.kind as string : "";
   const tried = tObject(s.practice);
@@ -214,7 +231,7 @@ export async function talk(ctx: TaskCtx & { plan?: string; usage?: TalkUsage }) 
   const prompt = `MODE: ${mode === "explore" ? "Explore. They were following their curiosity, not studying for anything. Light touch." : mode === "synthesis" ? "Synthesis. They've explored most of what this aim takes; now they put the whole answer together." : mode === "deeper" ? "Deeper. They chose to go deeper into one thing." : "Focus. They're working toward a specific aim. A bit more intentional."}${deeperOn ? `\nGO DEEPER ON: ${deeperOn}${tClean(focus.brief, 200) ? ` (${tClean(focus.brief, 200)})` : ""}${deeperChain.length ? `\nTHE CHAIN SO FAR: ${deeperChain.join(" → ")}` : ""}` : ""}
 THEIR AIM: ${aim}${kind ? `\nAIM KIND: ${kind}` : ""}${triedLine ? `\n${triedLine}` : ""}
 TIME: about ${tNum(s.minutes, 1440)} minutes
-${searches.length ? `SEARCHES, IN ORDER: ${searches.join(" → ")}\n` : ""}${videos.length ? `VIDEOS (${withCaptions ? "with caption excerpts where shown" : "titles only; you haven't seen them"}):\n${videos.join("\n")}\n` : ""}${notes ? `THEIR NOTES: ${notes}\n` : ""}${studyTopics.length ? `STUDY TOPICS: ${studyTopics.join(" | ")}\n` : ""}${parts.length ? `YOUR UNDERSTANDING (what this aim takes, and how far they've got):\n${parts.map(x => `- ${x.title}: ${x.status}`).join("\n")}\n` : ""}${memory.length ? `THINGS THEY TOLD YOU BEFORE:\n${memory.join("\n")}\n` : ""}${connectLine ? `OPEN WITH THIS CONNECTION if it genuinely fits the session: ${connectLine}\n` : ""}
+${searches.length ? `SEARCHES, IN ORDER: ${searches.join(" → ")}\n` : ""}${videos.length ? `VIDEOS (${withCaptions ? "with caption excerpts where shown" : "titles only; you haven't seen them"}):\n${videos.join("\n")}\n` : ""}${notes ? `THEIR NOTES: ${notes}\n` : ""}${studyTopics.length ? `STUDY TOPICS: ${studyTopics.join(" | ")}\n` : ""}${parts.length ? `YOUR UNDERSTANDING (what this aim takes, and how far they've got):\n${parts.map(x => `- ${x.title}: ${x.status}`).join("\n")}\n` : ""}${memory.length ? `THINGS THEY TOLD YOU BEFORE:\n${memory.join("\n")}\n` : ""}${connectLine ? `OPEN WITH THIS CONNECTION if it genuinely fits the session: ${connectLine}\n` : ""}${followLine ? `FOLLOW UP ON: ${followLine}\n` : ""}
 LIMITS: at most ${max} question${max > 1 ? "s" : ""} in this conversation. You've asked ${asked}. ${mustEnd ? "This message must be a closing remark, not a question. Set done to true." : opening ? "Open with one specific question. Set done to false." : "Ask another question only if it would really help; otherwise close with a remark and set done to true."}
 ${thread.length ? `\nCONVERSATION SO FAR:\n${thread.map(m => `${m.role === "person" ? "THEM" : "YOU"}: ${m.text}`).join("\n")}\n` : ""}
 ${free ? "Return memory as an empty list." : "Return memory from their replies so far."} ${topics.length ? "Return marks for the study topics or understanding parts you've covered." : "Return marks as an empty list."} ${mode === "synthesis" ? "Return a verdict once they've answered; until then, none." : "Return verdict none."}`;
@@ -244,6 +261,11 @@ ${free ? "Return memory as an empty list." : "Return memory from their replies s
       const pr = tObject(r.practice), title = tClean(pr.title, 80), search = tClean(pr.search, 150);
       return done && (mode === "focus" || mode === "synthesis") && title && search ? { title, why: tClean(pr.why, 160), search } : null;
     })(),
+    // What they couldn't yet explain: Aim recommends something for each, then follows up.
+    gaps: opening ? [] : tList(r.gaps).map(g => {
+      const o = tObject(g), title = tClean(o.title, 60), search = tClean(o.search, 150);
+      return title && search ? { title, what: tClean(o.what, 200), search } : null;
+    }).filter(Boolean).slice(0, 2),
     verdict: mode === "synthesis" && done && ["solid", "getting_there"].includes(r.verdict as string) ? r.verdict : null,
     marks: tList(r.marks).map(m => {
       const o = tObject(m), topic = tClean(o.topic, 120);

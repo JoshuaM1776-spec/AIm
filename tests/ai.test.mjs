@@ -1136,6 +1136,18 @@ test("talk: going deeper is Aim Plus, asks the next why about exactly that, and 
   assert.strictEqual((await call(d, { task: "librarian-talk", input: { mode: "deeper", opening: true, session: SESSION } })).status, 400, "deeper into what?");
 });
 
+test("talk: gaps it found come back with a search, never on the opening; a follow-up opens on that gap", async () => {
+  const gap = { title: "Why the East survived", what: "You explained the West's army, not why the East lasted", search: "why did the eastern roman empire survive" };
+  const d = talkDeps("plus", () => talkReply({ gaps: [gap, { title: "", what: "", search: "" }] }));
+  const open = await call(d, { task: "librarian-talk", input: { mode: "focus", opening: true, session: SESSION, followUp: { title: "Why the East survived", what: "You hadn't explained it" } } });
+  assert.deepStrictEqual(open.body.gaps, [], "no gaps before they've said anything");
+  assert.match(d.calls[0].prompt, /FOLLOW UP ON: Why the East survived \(You hadn't explained it\)/);
+  assert.match(d.calls[0].system, /"I don't know" is a good answer/);
+  assert.match(d.calls[0].system, /A correct answer can still be shallow/);
+  const r = await call(d, { task: "librarian-talk", input: { mode: "focus", session: SESSION, thread: [{ role: "aim", text: "q" }, { role: "person", text: "I don't know" }] } });
+  assert.deepStrictEqual(r.body.gaps, [gap]);
+});
+
 // ---------- scenarios ----------
 const REFS = [{ cite: "R1", name: "County EMS Protocols", level: "EMT", region: "Region 5" }];
 const PASSAGES = [{ cite: "R1.4", heading: "ANAPHYLAXIS", text: "Epinephrine auto-injector 0.3 mg IM for adults, 0.15 mg for children under 30 kg.\nOxygen 15 L/min by non-rebreather." },
