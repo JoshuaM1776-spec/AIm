@@ -29,6 +29,8 @@ const DEFAULT_SETTINGS = {
   myTopics: [],
   // The librarian remembers what you explained to it (Aim Plus; kept in this browser).
   librarianMemory: true,
+  // Spaced review: about a week after you explain something, one quick check on YouTube's homepage.
+  spacedReview: true,
   // The librarian may read captions when it talks a session through (Aim Plus). A preview, off by
   // default until the legal review (docs/ROADMAP.md → Decisions).
   captions: false
@@ -52,6 +54,7 @@ const SETTING_RULES = {
   learnRow: v => typeof v === "boolean",
   myTopics: v => Array.isArray(v) && v.length <= 30 && v.every(x => typeof x === "string" && x.trim().length >= 1 && x.length <= 40),
   librarianMemory: v => typeof v === "boolean",
+  spacedReview: v => typeof v === "boolean",
   captions: v => typeof v === "boolean"
 };
 
@@ -1549,6 +1552,67 @@ async function memoryOffered(id) {
   if (m) m.offeredAt = Date.now();
   await chrome.storage.local.set({ memory, talk: { ...talk, connectAt: Date.now() } });
   return { result: "applied" };
+}
+
+// ---------- Spaced review (docs/SPEC.md §10) ----------
+// About a week after you explained something (a part of an aim's map, or an idea the librarian
+// remembered), the homepage asks once: still remember? One question, a minute. Remembered, the next
+// check is about three times further off; partly, the same again; forgotten, in a few days. At most
+// one offer a day; "Not now" waits a few days, "Don't ask about this" stops it for that idea.
+const REVIEW = { firstDays: 7, grow: 3, maxDays: 120, forgotDays: 3, laterDays: 3, gapMs: 20 * 3600e3, keep: 400 };
+async function reviewItems() {
+  const d = await chrome.storage.local.get(["purpose", "paused", "history", "memory", "reviews"]);
+  const items = [];
+  for (const p of [d.purpose, ...(d.paused || []), ...(d.history || [])]) {
+    for (const part of p?.map?.parts || []) {
+      if (part.status !== "explained" || !part.at) continue;
+      items.push({ key: `p:${p.id}:${part.id || part.title}`, subject: part.title, idea: part.brief || part.title, aimId: p.id, aimText: p.text, at: part.at });
+    }
+  }
+  for (const m of d.memory || []) {
+    if (m.understood !== "solid" || !m.at) continue;
+    items.push({ key: `m:${m.id}`, subject: m.subject, idea: m.idea, aimId: m.aim || null, aimText: "", at: m.at });
+  }
+  return { items, reviews: d.reviews || {} };
+}
+async function reviewDue() {
+  if ((await getSettings()).spacedReview === false) return null;
+  const { items, reviews } = await reviewItems();
+  const now = Date.now();
+  if (now - (reviews._offeredAt || 0) < REVIEW.gapMs) return null;
+  const due = items.map(it => {
+    const r = reviews[it.key] || {};
+    return r.off ? null : { ...it, due: r.next || it.at + REVIEW.firstDays * 864e5, since: r.last || it.at };
+  }).filter(it => it && it.due <= now).sort((a, b) => a.due - b.due)[0];
+  if (!due) return null;
+  const aimText = due.aimText || (due.aimId ? (await findAim(due.aimId))?.text || "" : "");
+  return { key: due.key, subject: due.subject, idea: due.idea, aimId: due.aimId, aimText, daysAgo: Math.max(1, Math.round((now - due.since) / 864e5)) };
+}
+async function reviewOffered() {
+  const { reviews = {} } = await chrome.storage.local.get("reviews");
+  await chrome.storage.local.set({ reviews: { ...reviews, _offeredAt: Date.now() } });
+  return { result: "applied" };
+}
+// outcome: yes | partly | no (from the conversation), later, never.
+async function reviewResult(key, outcome) {
+  key = clip(key, 200);
+  if (!key || key.startsWith("_") || !["yes", "partly", "no", "later", "never"].includes(outcome)) return { result: "invalid" };
+  const { reviews = {} } = await chrome.storage.local.get("reviews");
+  const now = Date.now(), r = { ...(reviews[key] || {}) };
+  const interval = r.interval || REVIEW.firstDays;
+  if (outcome === "never") r.off = true;
+  else if (outcome === "later") r.next = now + REVIEW.laterDays * 864e5;
+  else {
+    r.interval = outcome === "yes" ? Math.min(REVIEW.maxDays, interval * REVIEW.grow) : outcome === "partly" ? interval : REVIEW.forgotDays;
+    r.next = now + r.interval * 864e5;
+    r.last = now;
+    r.outcome = outcome;
+  }
+  const out = { ...reviews, [key]: r };
+  const keys = Object.keys(out).filter(k => !k.startsWith("_"));
+  for (const k of keys.slice(0, Math.max(0, keys.length - REVIEW.keep))) delete out[k];
+  await chrome.storage.local.set({ reviews: out });
+  return { result: "applied", next: r.next || null };
 }
 
 // When an Explore session may be invited to talk: three videos or half an hour into it, back on the

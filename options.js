@@ -133,6 +133,7 @@ async function renderMemory(S) {
   const list = Array.isArray(items) ? items : [];
   $("memoryCard").hidden = !brief?.plus && !list.length;
   $("librarianMemory").checked = S.librarianMemory !== false;
+  $("spacedReview").checked = S.spacedReview !== false;
   $("forgetRow").hidden = !list.length;
   const day = ts => new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric" });
   $("memoryList").replaceChildren(...(list.length ? list.map(m => {
@@ -146,6 +147,7 @@ async function renderMemory(S) {
   }) : [Object.assign(document.createElement("div"), { className: "empty", textContent: "Nothing yet. Talk a session through, and what you explain shows up here." })]));
 }
 $("librarianMemory").onchange = () => setSetting("librarianMemory", $("librarianMemory").checked);
+$("spacedReview").onchange = () => setSetting("spacedReview", $("spacedReview").checked);
 $("captions").onchange = () => setSetting("captions", $("captions").checked);
 $("forgetAll").onclick = async () => {
   if (!confirm("Forget everything the librarian remembers? This can't be undone.")) return;

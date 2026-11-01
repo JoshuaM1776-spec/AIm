@@ -783,6 +783,32 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 .wp-end-talk { min-width: 0; }
 .wp-talk-offer { flex-direction: column; gap: 0; }
 
+/* TeachBack, one student (0.66): the medallion and role, the question as the focus, Answer aloud. */
+.wp-medal { flex: none; color: #9a7638; }
+html[dark] .wp-medal { color: #d2b277; }
+.wp-talk-name { font: 500 15px/20px var(--font-serif); }
+.wp-talk-progress { padding: 8px 14px 0; font-size: 12px; line-height: 16px; color: var(--wp-muted); letter-spacing: .02em; }
+.wp-talk-question { font: 400 19px/27px var(--font-serif); color: var(--wp-text); padding: 4px 2px 8px; overflow-wrap: anywhere; }
+.wp-talk-closing { font-size: 16px; line-height: 24px; }
+.wp-talk-earlier { font-size: 13px; }
+.wp-talk-earlier > summary { cursor: pointer; color: var(--wp-muted); font-size: 12px; padding: 2px 0 6px; }
+.wp-talk-earlier-list { display: flex; flex-direction: column; gap: 8px; padding-bottom: 8px; }
+.wp-talk-answer { display: flex; flex-direction: column; gap: 8px; }
+.wp-talk-main { display: flex; gap: 8px; }
+.wp-talk-main .wp-btn { flex: 1; justify-content: center; }
+.wp-talk-main .wp-btn[hidden], .wp-talk-links .wp-btn[hidden], .wp-talk-input[hidden] { display: none; }
+.wp .wp-talk-voice { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; }
+.wp .wp-talk-voice.on { background: var(--wp-accent, #d93b2b); color: #fff; }
+.wp-talk-links { display: flex; flex-wrap: wrap; gap: 2px 4px; margin: 0 -8px; }
+.wp-talk-links .wp-talk-enough { margin-left: auto; }
+.wp-talk-feedback { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--wp-tonal); font-size: 13px; line-height: 19px; }
+.wp-fb ul { margin: 4px 0 0; padding-left: 18px; }
+.wp-fb li + li { margin-top: 2px; }
+.wp-fb-warn .wp-label { color: var(--wp-accent, #b3261e); }
+.wp-talk-recalled { font: 500 14px/20px var(--font-serif); }
+.wp-talk-invite-who { display: flex; align-items: center; gap: 8px; }
+.wp-review-offer { flex-direction: column; gap: 8px; }
+
 /* Your understanding: the parts of what a learning aim takes, and how far you've got. */
 .wp-map { display: flex; flex-direction: column; gap: 2px; margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: var(--wp-tonal); }
 .wp-map .wp-row-between { margin-bottom: 4px; }

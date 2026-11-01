@@ -117,6 +117,14 @@
       </div>
       <div class="settings-group" id="librarian">
         <h2 class="group-title">The librarian</h2>
+  <section class="card" id="reviewCard">
+    <h2>Spaced review</h2>
+    <p class="muted">About a week after you explain something, YouTube's homepage asks once whether you still remember it: one question, about a minute. Remembered, the next check is weeks away; forgotten, a few days. Never more than one a day, and "Not now" always works.</p>
+    <div class="setting">
+      <div class="what"><b>Ask me now and then</b><span>Off: no reviews. What you explained stays in your library.</span></div>
+      <label class="switch"><input type="checkbox" id="spacedReview" aria-label="Spaced review"><i></i></label>
+    </div>
+  </section>
   <section class="card" id="captionsCard" hidden>
     <h2>Video understanding <span class="pill">Preview</span></h2>
     <p class="muted">When the librarian talks a session through, or looks at a video for "In this video", it can read the captions of the videos you watched longest (the creator's, or YouTube's automatic ones). Then its questions can be about what was actually said, with links to the moment. It reads them only then, keeps nothing, and never captures audio. Without captions, it goes by titles as before.</p>
@@ -151,6 +159,7 @@
   </div>
 </main>
 <div id="toast" role="status"></div>
+<script src="nav.js"></script>
 <script src="content/topics.js"></script>
 <script src="options.js"></script>
 <script src="options-plus.js"></script>

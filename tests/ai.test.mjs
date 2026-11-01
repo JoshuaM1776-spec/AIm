@@ -547,6 +547,31 @@ test("talk: it sees what the aim takes and aims at the gaps; putting it together
   assert.strictEqual(focus.body.verdict, null, "only putting it together gives a verdict");
 });
 
+test("talk: one student asks in its own way; review is one question with what they recalled; feedback only at the close", async () => {
+  const d = talkDeps("free", () => talkReply({ message: "You still have the ash part. What you've lost is why seawater matters.", done: true, recalled: "partly",
+    feedback: { explained: ["Ash makes it stronger", "x".repeat(300)], uncertain: [], misconceptions: ["Thought it dried faster"] } }));
+  const review = { subject: "Roman concrete", idea: "Volcanic ash reacts with seawater and keeps strengthening", daysAgo: 8 };
+  const open = await call(d, { task: "librarian-talk", input: { mode: "review", opening: true, student: "skeptic", studentName: "Reese", review, session: { aim: "Roman engineering" } } });
+  assert.strictEqual(open.status, 200, JSON.stringify(open.body));
+  assert.match(d.calls[0].prompt, /^STUDENT: Reese, The Skeptic/);
+  assert.match(d.calls[0].prompt, /REMEMBER: Roman concrete: Volcanic ash reacts with seawater and keeps strengthening \(explained 8 days ago\)/);
+  assert.match(d.calls[0].prompt, /MODE: Review/);
+  assert.strictEqual(open.body.done, false, "the opening is the question");
+  assert.strictEqual(open.body.feedback, null, "no feedback before they've answered");
+  assert.strictEqual(d.rows[0].task, "review-open", "reviews are counted apart from conversations");
+  const r = await call(d, { task: "librarian-talk", input: { mode: "review", review, session: { aim: "Roman engineering" },
+    thread: [{ role: "aim", text: "How does that work again?" }, { role: "person", text: "The ash makes it stronger somehow." }] } });
+  assert.strictEqual(r.body.done, true, "one question, then it closes");
+  assert.strictEqual(r.body.recalled, "partly");
+  assert.deepStrictEqual(r.body.feedback.misconceptions, ["Thought it dried faster"]);
+  assert.ok(r.body.feedback.explained[1].length <= 100, "feedback lines are short");
+  await call(d, { task: "librarian-talk", input: { mode: "review", opening: true, review, session: { aim: "Roman engineering" } } });
+  assert.strictEqual((await call(d, { task: "librarian-talk", input: { mode: "review", opening: true, review, session: { aim: "Roman engineering" } } })).status, 403, "two reviews a day on a free account");
+  assert.strictEqual((await call(d, { task: "librarian-talk", input: { mode: "review", opening: true, review: {}, session: { aim: "x" } } })).status, 400, "a review needs the idea");
+  const focus = await call(talkDeps("plus", () => talkReply({ recalled: "yes" })), { task: "librarian-talk", input: { mode: "focus", opening: true, student: "nobody", session: SESSION } });
+  assert.strictEqual(focus.body.recalled, null, "recalled is only for reviews");
+});
+
 test("talk: with caption excerpts (Plus), questions can be grounded in what was said, citing only captioned videos", async () => {
   const d = talkDeps("plus", () => talkReply({ message: "OverSimplified pins it on the army [V1 0:45], Historia Civilis on the Gracchi [V2 3:10]. Which do you buy?" }));
   const session = { ...SESSION, videos: [{ ...SESSION.videos[0], transcript: "[0:00] Welcome back\n[0:45] the Marian reforms made soldiers loyal to generals", captions: "creator" }, SESSION.videos[1]] };

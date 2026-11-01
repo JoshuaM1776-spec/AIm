@@ -1331,10 +1331,18 @@ export const TALK_LIMITS = {
   thread: 8,
   reply: 1200,
   message: 420,
-  questions: { explore: 1, focus: 3, synthesis: 1, deeper: 3 } as Record<string, number>,
+  questions: { explore: 1, focus: 3, synthesis: 1, deeper: 3, review: 1 } as Record<string, number>,
   // Free accounts, per rolling 24 hours: a few openings (each is an AI call even if nobody answers),
   // one conversation (counted at the first reply) and its replies.
-  free: { openings: 3, conversations: 1, replies: 3 }
+  free: { openings: 3, conversations: 1, replies: 3, reviews: 2 }
+};
+
+// The one student in a TeachBack conversation (docs/SPEC.md §7). Each asks in its own way; the rules
+// for good questions stay the same.
+const TALK_STUDENTS: Record<string, string> = {
+  skeptic: "The Skeptic: politely unconvinced. Asks how they know, what the evidence is, and why not the obvious alternative. Pushes on a correct answer that skips its reason.",
+  curious: "The Curious One: wants examples and what-ifs. Asks what would happen if one thing changed, and for a concrete case.",
+  beginner: "The Beginner: knows nothing about this yet. Asks them to explain it simply, and sometimes repeats it back slightly wrong so they have to correct it."
 };
 
 const tObject = (x: unknown): Record<string, unknown> => (x && typeof x === "object" && !Array.isArray(x) ? x as Record<string, unknown> : {});
@@ -1405,6 +1413,12 @@ Answers and gaps:
 
 Following up (when FOLLOW UP ON is in the request): they've since watched something about a gap they had. Open by asking about exactly that, in a friend's words, so they can try explaining it now.
 
+A student (when STUDENT is in the request): in this conversation you speak as that student, the person explaining to you is the teacher. Ask in that student's way, in first person ("I don't get why…"), still one short specific question at a time, still following every rule above. Never pretend to be a real person; you're a practice student.
+
+Remembering (MODE: Review, with REMEMBER): weeks ago they explained the idea listed. Open with one short, specific question that makes them explain it again from memory, without giving the answer away ("A while back you explained why ash made Roman concrete last. How does that work again?"). After their reply, close in one or two sentences: what they still have, and the piece they've lost (if any) in plain words. Set done to true, and set recalled: "yes" if they explained the core of it, "partly" if some of it, "no" if they couldn't. Otherwise recalled is "none".
+
+Feedback (only in your closing message, when they've replied at least once): short phrases (under 90 characters each, at most 3 per list, often fewer), only from their replies. explained: ideas they explained convincingly. uncertain: ideas they were unsure or vague about. misconceptions: something they said that's likely wrong, with the right idea ("Thought ash made it lighter; it makes it chemically stronger"). Empty lists are fine. Never a score.
+
 Marks (only when study topics or understanding parts are listed): for each listed topic this conversation actually covered, "demonstrated", "partial" or "needs_review" from their replies. Leave out topics you didn't discuss.`;
 
 const TALK_SCHEMA = {
@@ -1449,9 +1463,19 @@ const TALK_SCHEMA = {
         properties: { title: { type: "string" }, what: { type: "string" }, search: { type: "string" } },
         required: ["title", "what", "search"], additionalProperties: false
       }
+    },
+    recalled: { type: "string", enum: ["yes", "partly", "no", "none"] },
+    feedback: {
+      type: "object",
+      properties: {
+        explained: { type: "array", items: { type: "string" } },
+        uncertain: { type: "array", items: { type: "string" } },
+        misconceptions: { type: "array", items: { type: "string" } }
+      },
+      required: ["explained", "uncertain", "misconceptions"], additionalProperties: false
     }
   },
-  required: ["message", "done", "memory", "marks", "verdict", "practice", "videos", "gaps"],
+  required: ["message", "done", "memory", "marks", "verdict", "practice", "videos", "gaps", "recalled", "feedback"],
   additionalProperties: false
 };
 
@@ -1462,7 +1486,7 @@ export interface TalkUsage { countSince(task: string, since: Date): Promise<numb
 
 export async function talk(ctx: TaskCtx & { plan?: string; usage?: TalkUsage }) {
   const input = tObject(ctx.input);
-  const mode = input.mode === "explore" ? "explore" : input.mode === "synthesis" ? "synthesis" : input.mode === "deeper" ? "deeper" : "focus";
+  const mode = ["explore", "synthesis", "deeper", "review"].includes(input.mode as string) ? input.mode as string : "focus";
   const opening = input.opening === true;
   const free = ctx.plan === "free";
   if (mode === "deeper" && free) throw new TaskError(403, "plan", "Going deeper is part of Aim Plus.");
@@ -1470,6 +1494,11 @@ export async function talk(ctx: TaskCtx & { plan?: string; usage?: TalkUsage }) 
   const deeperOn = mode === "deeper" ? tClean(focus.title, 120) : "";
   if (mode === "deeper" && !deeperOn) throw new TaskError(400, "input", "Go deeper into what?");
   const deeperChain = mode === "deeper" ? tList(focus.chain).map(x => tClean(x, 200)).filter(Boolean).slice(0, 8) : [];
+  const review = tObject(input.review);
+  const reviewLine = mode === "review" ? `${tClean(review.subject, 60)}: ${tClean(review.idea, 200)}` : "";
+  if (mode === "review" && !tClean(review.idea, 200)) throw new TaskError(400, "input", "Remember what?");
+  const studentKey = Object.hasOwn(TALK_STUDENTS, input.student as string) ? input.student as string : "";
+  const studentName = tClean(input.studentName, 20);
   const s = tObject(input.session);
   const aim = tClean(s.aim, TALK_LIMITS.aim);
   if (!aim) throw new TaskError(400, "input", "There's nothing to talk about yet.");
@@ -1485,9 +1514,14 @@ export async function talk(ctx: TaskCtx & { plan?: string; usage?: TalkUsage }) 
     const since = new Date(ctx.now.getTime() - 24 * 3600 * 1000);
     const replies = thread.filter(m => m.role === "person").length;
     const used = async (t: string) => ctx.usage!.countSince(t, since);
-    if (opening && await used("talk-open") >= TALK_LIMITS.free.openings) throw new TaskError(403, "plan", "That's today's conversation. With Aim Plus, talk things through any time.");
-    if (!opening && replies === 1 && await used("talk-first-reply") >= TALK_LIMITS.free.conversations) throw new TaskError(403, "plan", "That's today's conversation. With Aim Plus, talk things through any time.");
-    if (!opening && await used("talk-reply") + await used("talk-first-reply") >= TALK_LIMITS.free.replies) throw new TaskError(403, "plan", "That's today's conversation. With Aim Plus, talk things through any time.");
+    if (mode === "review") {
+      if (opening && await used("review-open") >= TALK_LIMITS.free.reviews) throw new TaskError(403, "plan", "That's today's review. Another tomorrow.");
+    } else {
+      const no = "That's today's conversation. With Aim Plus, talk things through any time.";
+      if (opening && await used("talk-open") >= TALK_LIMITS.free.openings) throw new TaskError(403, "plan", no);
+      if (!opening && replies === 1 && await used("talk-first-reply") >= TALK_LIMITS.free.conversations) throw new TaskError(403, "plan", no);
+      if (!opening && await used("talk-reply") + await used("talk-first-reply") >= TALK_LIMITS.free.replies) throw new TaskError(403, "plan", no);
+    }
   }
 
   const searches = tList(s.searches).map(x => tClean(x, 150)).filter(Boolean).slice(-TALK_LIMITS.searches);
@@ -1527,15 +1561,15 @@ export async function talk(ctx: TaskCtx & { plan?: string; usage?: TalkUsage }) 
   const max = TALK_LIMITS.questions[mode];
   const mustEnd = !opening && asked >= max;
 
-  const prompt = `MODE: ${mode === "explore" ? "Explore. They were following their curiosity, not studying for anything. Light touch." : mode === "synthesis" ? "Synthesis. They've explored most of what this aim takes; now they put the whole answer together." : mode === "deeper" ? "Deeper. They chose to go deeper into one thing." : "Focus. They're working toward a specific aim. A bit more intentional."}${deeperOn ? `\nGO DEEPER ON: ${deeperOn}${tClean(focus.brief, 200) ? ` (${tClean(focus.brief, 200)})` : ""}${deeperChain.length ? `\nTHE CHAIN SO FAR: ${deeperChain.join(" → ")}` : ""}` : ""}
+  const prompt = `${studentKey ? `STUDENT: ${studentName || "A student"}, ${TALK_STUDENTS[studentKey]}\n` : ""}${reviewLine ? `REMEMBER: ${reviewLine} (explained ${tNum(review.daysAgo, 3650)} days ago)\n` : ""}MODE: ${mode === "review" ? "Review. A one-question check that they still remember something they explained before. Quick." : mode === "explore" ? "Explore. They were following their curiosity, not studying for anything. Light touch." : mode === "synthesis" ? "Synthesis. They've explored most of what this aim takes; now they put the whole answer together." : mode === "deeper" ? "Deeper. They chose to go deeper into one thing." : "Focus. They're working toward a specific aim. A bit more intentional."}${deeperOn ? `\nGO DEEPER ON: ${deeperOn}${tClean(focus.brief, 200) ? ` (${tClean(focus.brief, 200)})` : ""}${deeperChain.length ? `\nTHE CHAIN SO FAR: ${deeperChain.join(" → ")}` : ""}` : ""}
 THEIR AIM: ${aim}${kind ? `\nAIM KIND: ${kind}` : ""}${triedLine ? `\n${triedLine}` : ""}
 TIME: about ${tNum(s.minutes, 1440)} minutes
 ${searches.length ? `SEARCHES, IN ORDER: ${searches.join(" → ")}\n` : ""}${videos.length ? `VIDEOS (${withCaptions ? "with caption excerpts where shown" : "titles only; you haven't seen them"}):\n${videos.join("\n")}\n` : ""}${notes ? `THEIR NOTES: ${notes}\n` : ""}${studyTopics.length ? `STUDY TOPICS: ${studyTopics.join(" | ")}\n` : ""}${parts.length ? `YOUR UNDERSTANDING (what this aim takes, and how far they've got):\n${parts.map(x => `- ${x.title}: ${x.status}`).join("\n")}\n` : ""}${memory.length ? `THINGS THEY TOLD YOU BEFORE:\n${memory.join("\n")}\n` : ""}${connectLine ? `OPEN WITH THIS CONNECTION if it genuinely fits the session: ${connectLine}\n` : ""}${followLine ? `FOLLOW UP ON: ${followLine}\n` : ""}
 LIMITS: at most ${max} question${max > 1 ? "s" : ""} in this conversation. You've asked ${asked}. ${mustEnd ? "This message must be a closing remark, not a question. Set done to true." : opening ? "Open with one specific question. Set done to false." : "Ask another question only if it would really help; otherwise close with a remark and set done to true."}
 ${thread.length ? `\nCONVERSATION SO FAR:\n${thread.map(m => `${m.role === "person" ? "THEM" : "YOU"}: ${m.text}`).join("\n")}\n` : ""}
-${free ? "Return memory as an empty list." : "Return memory from their replies so far."} ${topics.length ? "Return marks for the study topics or understanding parts you've covered." : "Return marks as an empty list."} ${mode === "synthesis" ? "Return a verdict once they've answered; until then, none." : "Return verdict none."}`;
+${free ? "Return memory as an empty list." : "Return memory from their replies so far."} ${topics.length ? "Return marks for the study topics or understanding parts you've covered." : "Return marks as an empty list."} ${mode === "synthesis" ? "Return a verdict once they've answered; until then, none." : "Return verdict none."} ${mode === "review" ? "Return recalled once they've answered; until then, none." : "Return recalled none."} Return feedback lists only in a closing message after they've replied; otherwise empty lists.`;
 
-  const label = opening ? "talk-open" : thread.filter(m => m.role === "person").length === 1 ? "talk-first-reply" : "talk-reply";
+  const label = mode === "review" ? (opening ? "review-open" : "review-reply") : opening ? "talk-open" : thread.filter(m => m.role === "person").length === 1 ? "talk-first-reply" : "talk-reply";
   const r = tParse(await ctx.ai(label, { tier: "fast", maxTokens: 2000, schema: TALK_SCHEMA, system: TALK_SYSTEM, prompt }));
   // A citation must point at a video it had captions for; any other is dropped, never shown as a link.
   let message = tClean(r.message, TALK_LIMITS.message + 80).replace(FILLER, "")
@@ -1565,6 +1599,11 @@ ${free ? "Return memory as an empty list." : "Return memory from their replies s
       const o = tObject(g), title = tClean(o.title, 60), search = tClean(o.search, 150);
       return title && search ? { title, what: tClean(o.what, 200), search } : null;
     }).filter(Boolean).slice(0, 2),
+    recalled: mode === "review" && done && ["yes", "partly", "no"].includes(r.recalled as string) ? r.recalled : null,
+    feedback: done && thread.some(m => m.role === "person") ? (() => {
+      const f = tObject(r.feedback), l = (x: unknown) => tList(x).map(t => tClean(t, 100)).filter(Boolean).slice(0, 3);
+      return { explained: l(f.explained), uncertain: l(f.uncertain), misconceptions: l(f.misconceptions) };
+    })() : null,
     verdict: mode === "synthesis" && done && ["solid", "getting_there"].includes(r.verdict as string) ? r.verdict : null,
     marks: tList(r.marks).map(m => {
       const o = tObject(m), topic = tClean(o.topic, 120);

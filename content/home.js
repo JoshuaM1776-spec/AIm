@@ -119,6 +119,7 @@ async function renderHome() {
   host.prepend(card);
   showTips();
   maybeOfferTalk(card);
+  maybeOfferReview(card);
 }
 
 // "Last active yesterday"

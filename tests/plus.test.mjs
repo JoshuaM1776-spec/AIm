@@ -611,14 +611,22 @@ await yt.waitForTimeout(600);
 relaxState = await sw.evaluate(() => chrome.storage.local.get(["brk", "history"]));
 step("back on your aim: the themed break is over and recorded with its theme", !relaxState.brk && relaxState.history.some(h => h.type === "break" && h.theme === "Fun biology"));
 
-// ---------- talking it through with the librarian ----------
+// ---------- talking it through: TeachBack with one student ----------
+// Answer aloud leads; where Chrome offers speech, the box shows after "Type instead".
+const answerBox = async () => {
+  await yt.waitForSelector(".wp-talk .wp-talk-input", { state: "attached" });
+  if (!(await yt.isVisible(".wp-talk .wp-talk-input"))) await yt.click(".wp-talk button:text-is('Type instead')");
+  await yt.waitForSelector(".wp-talk .wp-talk-input");
+};
 await sw.evaluate(() => serial(() => setSetting("captions", true)));
 srv.talk.push(
   { message: "You watched two different takes on why the Republic fell. OverSimplified puts it on the army [V1 0:45]. If you had to bet on one cause, which would it be?", done: false, memory: [], marks: [] },
   { message: "The generals, then. Why would a soldier back his general over the Senate?", done: false, memory: [], marks: [],
     videos: [{ kind: "visual", search: "marian reforms explained animated", why: "To see how the army changed." }] },
   { message: "That's the Marian reforms in a nutshell, as I understand it: the army became a career, and the general was the one paying.", done: true,
-    memory: [{ subject: "Marian reforms", idea: "Soldiers backed the generals who paid and settled them, not the Senate", understood: "solid" }], marks: [] });
+    memory: [{ subject: "Marian reforms", idea: "Soldiers backed the generals who paid and settled them, not the Senate", understood: "solid" }], marks: [],
+    feedback: { explained: ["Why soldiers backed their generals"], uncertain: [], misconceptions: ["Thought the Senate paid the legions"] },
+    gaps: [{ title: "The Gracchi", what: "You haven't yet said how the Gracchi fit in", search: "gracchi brothers explained" }] });
 await sw.evaluate(() => serial(async () => {
   await startPurpose({ text: "Why did the Roman Republic fall" });
   const { purpose } = await chrome.storage.local.get("purpose");
@@ -643,10 +651,21 @@ step("a moment it points to is a link to that time in that video", (await yt.get
   (await yt.textContent(".wp-home-end .wp-talk-q")).includes("on the army 0:45."));
 if (process.env.SHOTS) { await yt.setViewportSize({ width: 1100, height: 760 }); await yt.screenshot({ path: `${process.env.SHOTS}/talk-after-done.png` }); }
 await yt.click(".wp-home-end button:text-is('Reply')");
-await yt.waitForSelector(".wp-talk .wp-talk-input");
+await yt.waitForSelector(".wp-talk .wp-talk-question");
+const tbHead = (await yt.textContent(".wp-talk")).replace(/\s+/g, " ");
+step("TeachBack: one student with a role and an engraved medallion, the question as the focus, small progress",
+  /(Reese · The Skeptic|Mara · The Curious One|Theo · The Beginner)/.test(tbHead) && !!(await yt.$(".wp-talk .wp-talk-head svg.wp-medal")) &&
+  (await yt.textContent(".wp-talk .wp-talk-question")).includes("bet on one cause") && tbHead.includes("Question 1 of 3") && srv.talkPrompts[0].startsWith("STUDENT: "), tbHead.slice(0, 200));
+const hasSpeech = await yt.evaluate(() => !!(window.SpeechRecognition || window.webkitSpeechRecognition));
+step("voice first: Answer aloud leads (typing a click away), and \"I don't know\" is an answer",
+  (hasSpeech ? (await yt.isVisible(".wp-talk .wp-talk-voice")) && !(await yt.isVisible(".wp-talk .wp-talk-input")) : true) && !!(await yt.$(".wp-talk button:text-is(\"I don't know\")")));
+if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/teachback-question.png` });
+await answerBox();
 await yt.fill(".wp-talk-input", "Probably the generals. The armies ended up loyal to them, not to Rome.");
 await yt.press(".wp-talk-input", "Enter");
-await yt.waitForFunction(() => document.querySelectorAll(".wp-talk .wp-talk-aim").length === 2);
+await yt.waitForFunction(() => document.querySelector(".wp-talk .wp-talk-question")?.textContent.includes("Why would a soldier"));
+step("the next question takes the focus; earlier turns fold away", (await yt.textContent(".wp-talk .wp-talk-progress")).includes("Question 2 of 3") &&
+  (await yt.textContent(".wp-talk .wp-talk-earlier summary")).includes("Earlier in this conversation (2)"));
 await yt.waitForSelector(".wp-talk .wp-talk-video:not(.wp-talk-video-loading)");
 const vidCard = (await yt.textContent(".wp-talk .wp-talk-video")).replace(/\s+/g, " ");
 step("a suggested video is a real one: YouTube's top result for the librarian's search, with what kind it is and why",
@@ -661,12 +680,50 @@ step("a conversation: it follows up on what you said, then ends on a remark and 
   !(await yt.$(".wp-talk .wp-talk-input")) && srv.talkPrompts[2].includes("THEM: Because after Marius"), talkText.slice(0, 240));
 await yt.bringToFront(); // a background tab pauses animations
 await yt.waitForTimeout(400);
+const fb = (await yt.textContent(".wp-talk .wp-talk-feedback")).replace(/\s+/g, " ");
+step("feedback keeps explained, misconceptions and what to revisit apart, never a score; each gap has Study this gap",
+  fb.includes("Explained convincingly") && fb.includes("Why soldiers backed their generals") && fb.includes("Possible misconceptions") && fb.includes("Thought the Senate paid") &&
+  fb.includes("To revisit") && fb.includes("how the Gracchi fit in") && !!(await yt.$(".wp-talk button:text-is('Study this gap')")) && !/\d+%|score/i.test(fb), fb);
+step("the gap goes with the aim, for the gap loop", ((await sw.evaluate(() => chrome.storage.local.get("history"))).history.filter(h => h.type === "purpose").at(-1).gaps || []).some(g => g.title === "The Gracchi"));
 step("the panel is fully opaque once it's in", await yt.$eval(".wp-talk", n => getComputedStyle(n).opacity === "1"));
 if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/talk-panel.png` });
 const mem = (await sw.evaluate(() => chrome.storage.local.get("memory"))).memory || [];
 step("what you explained is remembered in this browser", mem.length === 1 && mem[0].subject === "Marian reforms" && mem[0].understood === "solid");
 await yt.click(".wp-talk button:text-is('Close')");
 step("Close puts the panel away", !(await yt.$(".wp-talk")));
+// ---------- spaced review: about a week later, once, on the homepage ----------
+await sw.evaluate(() => serial(async () => {
+  const { memory } = await chrome.storage.local.get("memory");
+  memory[0].at = Date.now() - 8 * 864e5;
+  await chrome.storage.local.set({ memory, reviews: {} });
+}));
+srv.talk.push({ message: "A while back you explained why Roman soldiers backed their generals. Why was that again?", done: false, memory: [], marks: [] },
+  { message: "You still have it: the general paid them and settled them on land.", done: true, memory: [], marks: [], recalled: "yes",
+    feedback: { explained: ["Generals paid and settled their soldiers"], uncertain: [], misconceptions: [] } });
+await yt.goto("https://www.youtube.com/");
+await yt.waitForSelector("#wp-home .wp-review-offer", { timeout: 10000 });
+const offer = (await yt.textContent(".wp-review-offer")).replace(/\s+/g, " ");
+step("a week after you explained it: \"Still remember?\", once, with Not now and Don't ask about this",
+  offer.includes("Last week you explained Marian reforms") && offer.includes("Try it · 1 minute") && offer.includes("Not now") && offer.includes("Don't ask about this"), offer);
+if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/review-offer.png` });
+await yt.click(".wp-review-offer button:text-is('Try it · 1 minute')");
+await yt.waitForSelector(".wp-talk .wp-talk-question");
+step("a review is one question about that idea, nothing to set up", (await yt.textContent(".wp-talk .wp-talk-progress")).includes("One question") &&
+  srv.talkPrompts.at(-1).includes("MODE: Review") && srv.talkPrompts.at(-1).includes("REMEMBER: Marian reforms: Soldiers backed the generals"));
+await answerBox();
+await yt.fill(".wp-talk-input", "The generals paid them and gave them land, so they were loyal to the general.");
+await yt.press(".wp-talk-input", "Enter");
+await yt.waitForSelector(".wp-talk .wp-talk-recalled");
+const rev = (await sw.evaluate(() => chrome.storage.local.get("reviews"))).reviews;
+const revKey = Object.keys(rev).find(k => k.startsWith("m:"));
+step("remembered: the next check is weeks away", (await yt.textContent(".wp-talk .wp-talk-recalled")).includes("Still there") &&
+  Math.round((rev[revKey].next - Date.now()) / 864e5) === 21);
+if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/review-done.png` });
+await yt.click(".wp-talk button:text-is('Close')");
+await yt.reload();
+await yt.waitForSelector("#wp-home .wp-home-input");
+await yt.waitForTimeout(800);
+step("never more than one review offer a day", !(await yt.$(".wp-review-offer")));
 await opt.reload();
 await opt.waitForSelector("#memoryCard:not([hidden]) #memoryList .setting");
 step("Settings lists what the librarian remembers, each with Forget", (await opt.textContent("#memoryList")).includes("Marian reforms"));
@@ -705,7 +762,7 @@ srv.talk.push({ message: "So, in a few sentences: why did the Western Roman Empi
   { message: "You connect the army and the money well. What it leaves out is why the East held on when the West didn't, which historians still argue about.", done: true,
     memory: [], marks: [{ topic: "Economic pressures", status: "demonstrated" }], verdict: "solid" });
 await yt.click(".wp-map button:text-is('Put it together')");
-await yt.waitForSelector(".wp-talk .wp-talk-input");
+await answerBox();
 step("putting it together: the librarian asks for the whole answer, knowing what you've explained", (await yt.textContent(".wp-talk")).includes("in a few sentences") &&
   srv.talkPrompts.at(-1).includes("MODE: Synthesis") && srv.talkPrompts.at(-1).includes("- Political instability: explained it"));
 await yt.fill(".wp-talk-input", "The armies backed generals over Rome, the money ran out, and the frontier couldn't hold.");
@@ -737,7 +794,7 @@ await yt.bringToFront();
 await yt.waitForSelector("#wp-home .wp-home-current");
 await yt.click("#wp-chip .wp-pill");
 await yt.click(".wp-dropdown button:has-text('Talk it through')");
-await yt.waitForSelector(".wp-talk .wp-talk-input");
+await answerBox();
 await yt.fill(".wp-talk-input", "Recut them. Or shim the joint, I guess.");
 await yt.press(".wp-talk-input", "Enter");
 await yt.waitForSelector(".wp-talk .wp-practice");
@@ -758,7 +815,7 @@ await yt.waitForSelector(".wp-practice-home :text('You tried it')");
 step("I tried it: your word for it, with a note", ((await sw.evaluate(() => chrome.storage.local.get("purpose"))).purpose.practice || {}).note === "The rails were short; I measured from the wrong edge.");
 srv.talk.push({ message: "How did the miniature door come out? You said the rails were short.", done: false, memory: [], marks: [], verdict: "none" });
 await yt.click(".wp-practice-home button:text-is('Talk about how it went')");
-await yt.waitForSelector(".wp-talk .wp-talk-input");
+await answerBox();
 step("the next conversation asks how it went, with your note", srv.talkPrompts.at(-1).includes("THEY TRIED: Build a miniature frame-and-panel door. What they said about it: The rails were short"));
 await yt.click(".wp-talk [aria-label='Close']");
 await sw.evaluate(() => serial(() => finishPurpose("yes")));
@@ -1008,7 +1065,7 @@ step("Go deeper on a part of the map: a level marked general background, kept wi
 if (process.env.SHOTS) { await sc.setViewportSize({ width: 1200, height: 900 }); await sc.screenshot({ path: `${process.env.SHOTS}/aim-deeper.png`, fullPage: true }); }
 srv.talk.push({ message: "Okay, but why would leaky vessels make her pressure drop that fast?", done: false, memory: [], marks: [] });
 await sc.click("#understanding .ladder button:text-is('Explain it yourself')");
-await sc.waitForSelector(".wp-talk .wp-talk-input", { timeout: 15000 });
+await sc.waitForSelector(".wp-talk .wp-talk-question", { timeout: 15000 });
 step("Explain it yourself: the librarian asks the next why about exactly that part", (await sc.textContent(".wp-talk")).includes("why would leaky vessels") &&
   /MODE: Deeper/.test(srv.talkPrompts.at(-1)) && /GO DEEPER ON: Why pressure drops \(Leaky, widened vessels lose volume\)\nTHE CHAIN SO FAR: Her pressure falls because fluid leaves the vessels\./.test(srv.talkPrompts.at(-1)), srv.talkPrompts.at(-1)?.slice(0, 300));
 // An in-flight emergency: the instrument panel instead of a vitals monitor.

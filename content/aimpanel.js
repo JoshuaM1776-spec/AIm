@@ -175,7 +175,7 @@ function renderAimPanel() {
     el("div", { class: "wp-ap-counts" },
       el("span", {}, el("b", {}, String(c.explored)), " explored"), el("span", {}, el("b", {}, String(c.explained)), " explained"), el("span", {}, el("b", {}, String(c.applied)), " applied")),
     row("book", "Learn", step ? step.title : "Up next from your search", () => (found?.status === "ready" ? playNext(step, found.video) : $("#wp-upnext")?.scrollIntoView({ behavior: "smooth", block: "nearest" }))),
-    row("talk", "Explain", account.on ? (followUp ? `Follow up: ${followUp.title}` : ready ? "Put the whole answer together" : "Teach it back to the librarian") : "Sign in to talk it through", account.on ? explainIt : signIn),
+    row("talk", "Explain", account.on ? (followUp ? `Follow up: ${followUp.title}` : ready ? "Put the whole answer together" : "Teach it back to a practice student") : "Sign in to teach it back", account.on ? explainIt : signIn),
     pr && !pr.triedAt ? row("tool", "Apply", pr.title, () => send({ type: "open-aim", id: p.id }))
       : field ? row("tool", "Apply", "Run a scenario", () => send({ type: "open-scenario", aimId: p.id }))
       : row("tool", "Apply", pr ? `You tried: ${pr.title}` : "Projects and practice", () => send({ type: "open-aim", id: p.id })),

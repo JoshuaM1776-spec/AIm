@@ -63,7 +63,7 @@ On the server, `supabase/functions/ai/homeschool.ts` holds every rule (approval,
 | `study.html/js` | A study session's overview and summary |
 | `content/understanding.js` | Your understanding: a learning aim's map (parts and how far you've got), what's worth exploring next, Put it together (the finish line), and Put it into practice (the librarian's suggestion, Find a project video, I tried it) |
 | `content/captions.js` | Aim Plus, preview: a video's captions, read in the browser only when the librarian needs them, and the excerpt sent with a conversation or "In this video" |
-| `content/talk.js` | Talking a session through with the librarian: the question in the card after Done, the Explore invitation, "This connects to…" while watching, Talk it through in the menu, and the small conversation panel |
+| `content/talk.js` | TeachBack on YouTube: one practice student asking one question at a time (Answer aloud, Type instead, "I don't know"), with feedback kept apart at the end; the question in the card after Done, the Explore invitation, "This connects to…", Talk it through in the menu, and the spaced review offer on the homepage |
 | `content/main.js` | Timer ticks, sync with other tabs, navigation, startup. Loads last. |
 | `content/content.css` | Styles for all of the above |
 | `popup.html/js` | Toolbar popup |
@@ -90,6 +90,7 @@ On the server, `supabase/functions/ai/homeschool.ts` holds every rule (approval,
 | `signin.html/js` | Where the link in the sign-in email lands. It hands the session to the worker, which accepts it only for a sign-in this browser started. |
 | `pathways.html/js` | Pathways (Aim Plus): themes from what you've explored, work connected to an interest, and a path's four steps (See it, Try it, Meet it, Prepare for it) with reflections |
 | `pathways-ui.js` | "Want more of this?" and "Where could this take me?" for Aim's own pages (TeachBack, study sessions) |
+| `nav.js` | The four places in every Aim page's header (YouTube, Library, Pathways, Settings), and the Library's tabs (Your aims, Learning record) |
 | `teachback.html/js` | TeachBack, Aim Plus's conversational check of what you can explain |
 | `supabase/` | The Aim Plus server: database tables and the AI endpoint. Not part of the extension package. |
 | `tests/` | Automated tests (see TESTING.md) |
@@ -126,7 +127,7 @@ YouTube helps you find something to watch. Aim helps you find what you need. Aim
 - **Shapes:** 16px-radius dialogs and cards with a centered brand line and a close button when dismissible, full-width buttons for the main decision, segmented choices (Take a Break) and a green check for Done with this aim.
 - **Placement:** the Aim button sits beside YouTube's search box on wide windows (1200px+) and beside the Create button otherwise.
 - **Behavior:** Escape or a click outside closes menus and dialogs, except prompts that are holding a video for your decision.
-- **Aim's own pages** (Settings, aims, TeachBack, study sessions, Pathways, the welcome tour, sign-in) all use `aim.css`, and its fonts and colors come from `tokens.css` (the popup uses `tokens.css` too). The look follows the mark: warm parchment pages with cream cards, green-black text, forest-green main buttons and switches, coral only for getting back to your aim, and a learning green for Homeschool and Pathways details; in dark mode, deep green-black with cream buttons. Type is Inter, with Inter Display for headings and the name; `fonts/` holds Latin subsets (SIL Open Font License, `fonts/OFL.txt`), and `InterDisplay-Bold` is web-accessible so YouTube pages can use it for headlines. Every page has the same header (mark, "Aim", the page's name). A page adds only what's truly its own in a small `<style>`.
+- **Aim's own pages** (Settings, aims, TeachBack, study sessions, Pathways, the welcome tour, sign-in) all use `aim.css`, and its fonts and colors come from `tokens.css` (the popup uses `tokens.css` too). The look follows the mark: warm parchment pages with cream cards, green-black text, forest-green main buttons and switches, coral only for getting back to your aim, and a learning green for Homeschool and Pathways details; in dark mode, deep green-black with cream buttons. Type is Inter, with Inter Display for headings and the name; `fonts/` holds Latin subsets (SIL Open Font License, `fonts/OFL.txt`), and `InterDisplay-Bold` is web-accessible so YouTube pages can use it for headlines. Every page has the same header (mark, "Aim", the page's name, and the four places from `nav.js`). A page adds only what's truly its own in a small `<style>`.
 - **Never** use YouTube's logo, icons, artwork or code. Aim's name and mark appear on every card, so nothing reads as YouTube's own feature.
 
 ## Rebranding

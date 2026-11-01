@@ -29,6 +29,18 @@ ul, ol { margin: 0 0 12px; padding-left: 20px; } li { margin: 4px 0; }
 .page-head .crumb { color: var(--muted); }
 .page-head .crumb::before { content: "·"; margin: 0 8px 0 2px; }
 .page-head .end { margin-left: auto; }
+/* The four places (nav.js): YouTube, Library, Pathways, Settings. */
+.page-head { flex-wrap: wrap; height: auto; min-height: 40px; row-gap: 6px; }
+.places { margin-left: auto; display: flex; gap: 2px; }
+.places a { padding: 6px 12px; border-radius: 18px; color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; }
+.places a:hover { background: var(--tonal); color: var(--text); }
+.places a[aria-current="page"] { background: var(--tonal); color: var(--text); }
+.page-sub { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; justify-content: flex-end; margin: -10px 0 16px; font-size: 14px; }
+.lib-tabs { display: flex; gap: 24px; margin: 0 0 20px; border-bottom: 1px solid var(--divider); }
+.lib-tabs a { padding: 8px 0 10px; color: var(--muted); text-decoration: none; font-weight: 500; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.lib-tabs a[aria-current="page"] { color: var(--text); border-bottom-color: var(--primary); }
+@media (max-width: 600px) { .places { margin-left: 0; width: 100%; } .places a { padding: 6px 10px; } }
+@media print { .no-print { display: none !important; } }
 /* Titles are set in the serif, like the books on the library's shelf; labels and controls stay in the sans. */
 h1 { font: 500 34px/40px var(--font-serif); margin: 0 0 6px; letter-spacing: -.4px; text-wrap: balance; }
 h2 { font: 500 20px/26px var(--font-serif); margin: 0 0 4px; letter-spacing: -.1px; }

@@ -31,7 +31,7 @@ function makeEnv(initial = {}) {
 const VIDEO = { id: "abc123", title: "Feeding a sourdough starter", channel: "Bread Co" };
 const fresh = () => makeEnv({ schemaVersion: 5 });
 const DEFAULTS = { homeCard: true, leisureMin: 60, graceMin: 15, totalMin: 0, purposeLimitMin: 0,
-  hideShorts: true, hideRecs: true, hideFeeds: true, noAutoplay: true, strict: false, learnTopics: [], learnOff: [], learnShorts: false, learnRow: true, librarianMemory: true, captions: false, myTopics: [] };
+  hideShorts: true, hideRecs: true, hideFeeds: true, noAutoplay: true, strict: false, learnTopics: [], learnOff: [], learnShorts: false, learnRow: true, librarianMemory: true, spacedReview: true, captions: false, myTopics: [] };
 
 const tests = [];
 const test = (name, fn) => tests.push([name, fn]);
@@ -952,6 +952,38 @@ test("personalizing: first aims become books, one current, all kept in the libra
   assert.ok(env.local.purpose.keep && env.local.purpose.librarian.kind === "learn");
   const paused = env.local.paused.map(p => p.text);
   assert.ok(paused.includes("Understand how airplane stalls work") && paused.includes("Something I was doing"), "the other new aim and the one you were on wait on the shelf");
+});
+
+test("spaced review: a week after explaining, once a day at most; remembered waits longer, forgotten comes back soon", async () => {
+  const env = fresh();
+  await env.run(`startPurpose({ text: "Roman engineering" })`);
+  const now = await env.run("Date.now()");
+  await env.run(`memoryAdd([{ subject: "Roman concrete", idea: "Volcanic ash reacts with seawater and keeps strengthening", understood: "solid" }], ${JSON.stringify(env.local.purpose.id)})`);
+  await env.run(`memoryAdd([{ subject: "Aqueducts", idea: "Gravity and a tiny slope", understood: "shaky" }])`);
+  assert.strictEqual(await env.run(`reviewDue()`), null, "nothing until about a week has passed");
+  for (const m of env.local.memory) m.at = now - 8 * 864e5;
+  const due = await env.run(`reviewDue()`);
+  assert.strictEqual(due?.subject, "Roman concrete", "only ideas explained well come back for review");
+  assert.ok(due.daysAgo >= 7 && due.aimText === "Roman engineering");
+  await env.run(`reviewOffered()`);
+  assert.strictEqual(await env.run(`reviewDue()`), null, "at most one offer a day");
+  env.local.reviews._offeredAt = now - 864e5;
+  const yes = await env.run(`reviewResult(${JSON.stringify(due.key)}, "yes")`);
+  assert.strictEqual(Math.round((yes.next - now) / 864e5), 21, "remembered: about three weeks");
+  assert.strictEqual(await env.run(`reviewDue()`), null);
+  env.local.reviews[due.key].next = now - 1;
+  const no = await env.run(`reviewResult(${JSON.stringify(due.key)}, "no")`);
+  assert.strictEqual(Math.round((no.next - now) / 864e5), 3, "forgotten: a few days");
+  env.local.reviews[due.key].next = now - 1;
+  await env.run(`reviewResult(${JSON.stringify(due.key)}, "never")`);
+  assert.strictEqual(await env.run(`reviewDue()`), null, "Don't ask about this");
+  assert.strictEqual((await env.run(`reviewResult("_offeredAt", "yes")`)).result, "invalid");
+  // A part of an aim's map explained a week ago comes back too; and the setting turns it all off.
+  env.local.purpose.map = { parts: [{ id: "p1", title: "Arches", brief: "Why a round arch carries weight", status: "explained", at: now - 9 * 864e5 }] };
+  const part = await env.run(`reviewDue()`);
+  assert.strictEqual(part?.idea, "Why a round arch carries weight");
+  await env.run(`setSetting("spacedReview", false)`);
+  assert.strictEqual(await env.run(`reviewDue()`), null);
 });
 
 test("subjects: EMS and medications read as health", async () => {

@@ -429,6 +429,16 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] Step 3: two or three specific aims (the AI's, or yours), one marked Start with this. **Create aims**: they're books in the library (kept), the chosen one is current; the aim you had waits on the shelf. "Your library is ready" offers Start on YouTube.
 - [ ] Afterwards: preferred channels lead the librarian's picks and the panel's Up next ("From …, one of your preferred channels"); excluded ones are never suggested; on search results with picks from your channels, filter **All worthwhile sources / My preferred channels / Other perspectives**. Your YouTube subscriptions themselves never change.
 
+### 59. TeachBack with one student, spaced review, four places (0.66)
+Needs a signed-in account and the server redeployed.
+- [ ] Talk it through (any way in): the panel is one practice student with an engraved medallion and a role, the same one for an aim each time (Reese · The Skeptic, Mara · The Curious One, Theo · The Beginner). The question is the large text; "Question 1 of 3" above it (or "One question"). Earlier turns fold into "Earlier in this conversation".
+- [ ] **Answer aloud** leads (Chrome asks once for the microphone on YouTube); your words fill the box as you speak, then **Send**. **Type instead** shows the box. **I don't know** sends that as your answer and the student explains the idea and moves on.
+- [ ] The Skeptic pushes on reasons ("how do you know?"), the Curious One asks what-ifs, the Beginner asks for it simply and sometimes repeats it back slightly wrong.
+- [ ] At the end: the student's closing remark, then what the conversation showed, kept apart: **Explained convincingly**, **Still uncertain**, **Possible misconceptions**, **To revisit** (each with **Study this gap**, which searches for it). No score anywhere.
+- [ ] Spaced review: about a week after you explained something (a part of an aim's map, or, with Plus, something the librarian remembered), YouTube's homepage shows once: "Last week you explained … Could you still explain it?" with **Try it · 1 minute**, **Not now**, **Don't ask about this**. At most one offer a day.
+- [ ] Try it: one question about that idea, a short closing remark, and "Still there" (next check in about three weeks), "Partly there" (about a week) or "Worth another look" (a few days). Free accounts get two reviews a day. Settings → The librarian → **Spaced review** turns it off.
+- [ ] Every Aim page has the same four places in its header: **YouTube, Library, Pathways, Settings**, the one you're in highlighted. The Library has two tabs: **Your aims** and **Learning record**. Pages inside the Library (an aim, References, Personalize, Your subscriptions, TeachBack, study sessions, scenarios) show Library. On a phone-width window the places wrap under the name.
+
 ## Known issues (not regressions)
 
 - The word check knows words, not meanings: synonyms ("tap" vs "faucet") get the question once; answering Yes teaches it that search.

@@ -734,6 +734,17 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   const recText = await rec.textContent("#record");
   step("Learning record: totals and the aims you worked on, with their videos", recText.includes("Aims completed") && recText.includes("Study for my biology exam") &&
     recText.includes("Video bio1") && (await rec.$$("#record .entry")).length >= 2 && !/undefined|null|NaN/.test(recText), recText.slice(0, 200));
+  const places = async pg => pg.$$eval(".page-head .places a", as => as.map(a => (a.getAttribute("aria-current") ? "*" : "") + a.textContent));
+  step("four places on every page: YouTube, Library, Pathways, Settings; the learning record is a tab of the Library",
+    (await places(rec)).join() === "YouTube,*Library,Pathways,Settings" && (await places(all)).join() === "YouTube,*Library,Pathways,Settings" &&
+    (await rec.$$eval(".lib-tabs a", as => as.map(a => (a.getAttribute("aria-current") ? "*" : "") + a.textContent))).join() === "Your aims,*Learning record" &&
+    !!(await all.$(".lib-tabs a[href='record.html']")) && !!(await rec.$(".page-sub #print")));
+  const optPage = await ctx.newPage();
+  await optPage.goto(`chrome-extension://${extId}/options.html`);
+  await optPage.waitForSelector(".page-head .places");
+  step("Settings is one of the four places, and has the spaced review switch", (await places(optPage)).join() === "YouTube,Library,Pathways,*Settings" &&
+    await optPage.isChecked("#spacedReview"));
+  await optPage.close();
   await rec.close();
   await all.click(".slot:has-text(\"Fix my truck's AC\") button");
   await all.waitForSelector(".aim-head h1");
