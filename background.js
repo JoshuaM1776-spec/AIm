@@ -159,6 +159,7 @@ const reads = {
     return chrome.tabs.create({ url: chrome.runtime.getURL("pathways.html" + (q.size ? "?" + q : "")) }).then(() => ({ result: "applied" }));
   },
   "open-targets": () => chrome.tabs.create({ url: chrome.runtime.getURL("targets.html") }).then(() => ({ result: "applied" })),
+  "open-scenario": m => chrome.tabs.create({ url: chrome.runtime.getURL(`scenario.html?aim=${encodeURIComponent(String(m.aimId || ""))}`) }).then(() => ({ result: "applied" })),
   "open-references": () => chrome.tabs.create({ url: chrome.runtime.getURL("references.html") }).then(() => ({ result: "applied" })),
   "open-aim": m => chrome.tabs.create({ url: chrome.runtime.getURL(`aim.html?id=${encodeURIComponent(String(m.id || ""))}`) }).then(() => ({ result: "applied" })),
   "open-record": () => chrome.tabs.create({ url: chrome.runtime.getURL("record.html") }).then(() => ({ result: "applied" })),

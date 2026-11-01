@@ -895,3 +895,34 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 .wp-switch-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .wp-ellipsis2 { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .wp-switch .wp-link { align-self: flex-start; }
+
+/* ---------- the aim panel at the top of YouTube's sidebar (aimpanel.js) ---------- */
+.wp-aimpanel { display: flex; flex-direction: column; gap: 10px; padding: 12px; margin: 0 0 16px; border-radius: 16px; border: 1px solid var(--wp-card-border); background: var(--wp-raised); }
+.wp-ap-head { display: flex; align-items: center; gap: 8px; }
+.wp-ap-head b { font: 700 16px var(--wp-display); flex: 1; }
+.wp-ap-aim { display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-radius: 12px; background: var(--wp-tonal); }
+.wp-ap-target { color: var(--wp-primary); flex: none; margin-top: 2px; }
+html[dark] .wp-ap-target { color: var(--wp-text); }
+.wp-ap-aimtext { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.wp-ap-label { font-size: 12px; line-height: 16px; color: var(--wp-muted); }
+.wp-ap-aimtext b { font: 600 15px/20px "Roboto", "Arial", sans-serif; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.wp-ap-bar { height: 6px; border-radius: 3px; background: var(--wp-tonal-hover); overflow: hidden; margin-top: 4px; }
+.wp-ap-bar i { display: block; height: 100%; background: var(--wp-primary); border-radius: 3px; }
+.wp-ap-prog { font-size: 12px; line-height: 16px; color: var(--wp-muted); }
+.wp-ap-moment { font-size: 13px; line-height: 18px; padding: 8px 12px; border-radius: 10px; background: var(--wp-accent-soft); }
+.wp-ap-rows { display: flex; flex-direction: column; gap: 6px; }
+.wp-ap-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--wp-card-border); background: none;
+  color: var(--wp-text); text-align: left; cursor: pointer; font: inherit; }
+.wp-ap-row:hover { background: var(--wp-tonal); }
+.wp-ap-row.wp-ap-next { border-color: var(--wp-primary); box-shadow: inset 0 0 0 1px var(--wp-primary); }
+html[dark] .wp-ap-row.wp-ap-next { border-color: var(--wp-text); box-shadow: inset 0 0 0 1px var(--wp-text); }
+.wp-ap-ico { width: 36px; height: 36px; border-radius: 10px; background: var(--wp-tonal); display: grid; place-items: center; flex: none; }
+.wp-ap-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.wp-ap-text b { font-size: 15px; line-height: 20px; font-weight: 500; }
+.wp-ap-text span { font-size: 12px; line-height: 16px; color: var(--wp-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wp-ap-tag { font-size: 11px; line-height: 18px; padding: 0 8px; border-radius: 9px; background: var(--wp-primary); color: var(--wp-on-primary); flex: none; }
+.wp-ap-foot { display: flex; gap: 6px; }
+.wp-ap-chip { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--wp-card-border); background: none;
+  color: var(--wp-text); font: 500 13px "Roboto", "Arial", sans-serif; cursor: pointer; }
+.wp-ap-chip:hover { background: var(--wp-tonal); }
+.wp-ap-save { margin-left: auto; padding: 0 9px; }

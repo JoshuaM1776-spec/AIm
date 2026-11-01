@@ -351,6 +351,14 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.evaluate(() => ytNav("/watch?v=bbb"));
   await p.waitForTimeout(1500);
   step("going back to the purpose's video plays it", !(await p.$(".wp-player-card")));
+  await p.waitForSelector("#wp-aimpanel", { timeout: 8000 });
+  const aimPanel = await text("#wp-aimpanel");
+  step("the aim panel tops the sidebar: the aim, then Learn, Explain and Apply, one marked next, then Notes and Library",
+    ["Your aim", "Learn", "Explain", "Apply", "notes", "Library"].every(t => aimPanel.toLowerCase().includes(t.toLowerCase())) && (await p.$$("#wp-aimpanel .wp-ap-next")).length === 1 &&
+    await p.evaluate(() => document.querySelector("#secondary").firstElementChild?.id === "wp-aimpanel" && !!document.querySelector("#wp-upnext")), aimPanel.slice(0, 160));
+  await p.evaluate(() => document.querySelector("#movie_player video").dispatchEvent(new Event("ended")));
+  await p.waitForFunction(() => document.querySelector("#wp-aimpanel .wp-ap-next")?.textContent.includes("Explain"), null, { timeout: 4000 }).catch(() => {});
+  step("when the video ends, Explain comes forward", (await text("#wp-aimpanel .wp-ap-next")).includes("Explain") && (await text("#wp-aimpanel")).includes("You finished this video"));
 
   // ---------- the menu ----------
   await p.click("#wp-chip .wp-pill");

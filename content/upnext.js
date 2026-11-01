@@ -11,6 +11,11 @@ function upNextItems(p) {
 }
 
 function renderUpNext() {
+  renderUpNextList();
+  renderAimPanel(); // above it: the aim, and Learn / Explain / Apply (aimpanel.js)
+}
+
+function renderUpNextList() {
   renderThemePanel();
   const existing = $("#wp-upnext");
   const p = activePurpose();

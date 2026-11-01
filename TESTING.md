@@ -408,6 +408,12 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] Chapters are divided by a rule with a small brass mark, not boxes. Notes are lined like paper. Dark mode reads well.
 - [ ] A finished book has a small gilt star on its spine, on the shelf and on its page.
 
+### 56. The aim panel on YouTube (0.63)
+- [ ] Watching a video for an aim: the top of YouTube's sidebar shows Aim's panel: your aim with how far you've got (parts explained, or study topics checked; otherwise how many videos you've watched, never a progress bar for watching), then Learn, Explain and Apply, one marked Next, then Notes, Library and Save. Up next from your search follows under it.
+- [ ] Learn goes to the next part to explore (a search), or to Up next. Explain opens the librarian (or Put it together when you're ready; signed out: sign in). Apply opens the practice, or a scenario for medical, flight and emergency aims.
+- [ ] When the video ends, a line says now is when explaining sticks, and Explain is marked Next. The arrow at the top opens the aim's page; Change changes the aim.
+- [ ] Not shown on a break, or for a Homeschool student's plan.
+
 ## Known issues (not regressions)
 
 - The word check knows words, not meanings: synonyms ("tap" vs "faucet") get the question once; answering Yes teaches it that search.

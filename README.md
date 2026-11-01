@@ -74,6 +74,7 @@ On the server, `supabase/functions/ai/homeschool.ts` holds every rule (approval,
 | `scenario.html/js` | Scenarios (Aim Plus): medical, aviation or another emergency, as it unfolds from your references, with a drawn monitor, instrument panel or situation board, citations that open the passage, and a debrief (what was happening, why, what counteracts it); doses not in your references are removed on the server (`supabase/functions/ai/scenario.ts`) |
 | `deeper.js` | Go deeper (Aim Plus): a ladder of why, one level at a time, under a map part or a scenario debrief; kept with the aim (`supabase/functions/ai/deeper.ts`) |
 | `references.html/js` | Your references: protocols and course texts (uploaded or pasted, read in the browser), with level and region, kept in passages for scenarios; search shows what a scenario would read |
+| `content/aimpanel.js` | The aim panel at the top of YouTube's sidebar: the aim and how far you've got, Learn / Explain / Apply with this aim's next step in each (Explain comes forward when a video ends), Notes, Library and Save |
 | `covers.js` | Book covers for aims: the subject's color and icon, the name in a serif, a progress line (subjects guessed in store.js, no AI) |
 | `aim.css` | The shared look for all of Aim's own pages (see Design) |
 | `tokens.css` | Aim's fonts and colors, from the mark (used by `aim.css` and the popup) |
