@@ -271,7 +271,7 @@ function summary(p, state) {
   return { id: p.id, text: p.text, state, lastActiveAt: p.lastActiveAt || p.pausedAt || p.endedAt || p.startedAt,
     usedSec: Math.round(p.usedSec || 0), videos: (p.videos || []).length, searches: (p.searches || []).length,
     outcome: p.outcome || null, last: p.last || null, study: studyProgress(p), notes: p.notes || "", elsewhere: !!p.elsewhere, recent: recentVideos(p), trail: searchTrail(p),
-    exploring: !!p.learn, subject: aimSubject(p), kind: p.librarian?.kind || p.kind || null, keep: !!p.keep,
+    exploring: !!p.learn, subject: aimSubject(p), kind: p.librarian?.kind || p.kind || null, keep: !!p.keep, goal: isAim(p), suggestion: isAim(p) ? null : suggestGoal(p.text),
     practice: p.practice ? { title: p.practice.title, tried: !!p.practice.triedAt } : null,
     understanding: p.map?.parts?.length ? { parts: p.map.parts.map(x => ({ title: x.title, status: x.status })), ready: mapReady(p.map), solid: p.map.synthesis?.verdict === "solid" } : null };
 }
@@ -330,7 +330,8 @@ function archive(history, record) {
 function purposeRecord(p, outcome) {
   return { type: "purpose", id: p.id, text: p.text, startedAt: p.startedAt, endedAt: Date.now(), usedSec: Math.round(p.usedSec),
     outcome: outcome || null, path: p.path, searches: p.searches, videos: p.videos, notes: p.notes || "",
-    kind: p.librarian?.kind || null, study: studySnapshot(p.study), map: p.map || null, practice: p.practice || null, scenarios: p.scenarios || [], chains: p.chains || [], gaps: p.gaps || [], keep: !!p.keep };
+    kind: p.librarian?.kind || null, study: studySnapshot(p.study), map: p.map || null, practice: p.practice || null, scenarios: p.scenarios || [], chains: p.chains || [], gaps: p.gaps || [], keep: !!p.keep,
+    ...(p.goal !== undefined ? { goal: !!p.goal } : {}), ...(p.learn ? { learn: p.learn } : {}) };
 }
 
 // What a study session showed, kept when its aim ends, for the learning record.
@@ -379,8 +380,79 @@ function newPurpose(text, search, limitMin) {
     id: uid(), text, vague: isVague(text), startedAt: now, limitMin: limitMin > 0 ? limitMin : null,
     usedSec: 0, lastCountAt: 0, timeUp: false, suspended: false, lastActiveAt: now, last: null,
     searches: search ? [{ q: clip(search, 200), at: now }] : [], path: [{ text, at: now }], pivots: 0, videos: [],
-    allowed: [], allowedLists: []
+    allowed: [], allowedLists: [], goal: goalShaped(text), days: [todayKey()]
   };
+}
+
+// ---------- An aim is a goal (0.67) ----------
+// Every visit has something it's for (a session: "Searching: roman empire"), but only a goal becomes
+// a book in the library: something you're working toward ("Understand why the Western Roman Empire
+// fell", "Learn to sharpen my chisels", "Fix my truck's AC"). A session becomes an aim when its words
+// state a goal, when the librarian reads it as learning or a project, when you make it one, or (the
+// gentle part) when what you do shows it: three videos, or coming back to it another day, and Aim
+// offers "Make this an aim?" with a suggested goal you can edit. Never required to search.
+const GOAL_WORDS = /\b(learn(ing)?|understand(ing)?|master(ing)?|get (better|good|started) at|improve|improving|practi[cs]e|practi[cs]ing|stud(y|ying) for|prepar(e|ing) for|pass(ing)? (my|the|an?)|train(ing)? for|teach (myself|my)|become|build(ing)?|mak(e|ing) (a|an|my)|fix(ing)? my|repair(ing)?|restor(e|ing)|renovat(e|ing)|install(ing)? (a|an|my)|replac(e|ing) (a|an|my|the)|figure out how|work(ing)? on my|plan(ning)? (a|an|my)|start(ing)? (a|an|my)|grow(ing)? (a|an|my)|design(ing)? (a|an|my)|writ(e|ing) (a|an|my))\b/i;
+const GOAL_LEADS = /^(i (want|need|would like|'d like|hope|plan|am trying|'m trying) to|i'?m (learning|studying|preparing|building|working)|my goal|help me|goal:)/i;
+function goalShaped(text) {
+  const t = String(text || "").trim();
+  if (t.split(/\s+/).length < 3) return false;
+  // "How do I change a tire?": a quick answer, not a goal (docs/SPEC.md §3), unless it says learn.
+  if (/^(how (to|do|can|does|did)|what|why|when|where|who|which|is|are|does|can)\b/i.test(t) && !/\b(learn|understand|master)\b/i.test(t)) return false;
+  return GOAL_LEADS.test(t) || GOAL_WORDS.test(t);
+}
+// Aims from before 0.67 have no goal flag: a book if it was named as one, or if real work shows.
+function isAim(p) {
+  if (!p) return false;
+  if (p.keep === true || p.goal === true) return true;
+  if (p.goal === false || p.keep === false) return false;
+  const kind = p.librarian?.kind || p.kind;
+  if (kind === "learn" || kind === "project") return true;
+  if (kind === "lookup" || kind === "relax" || p.learn) return false;
+  return goalShaped(p.text) || !!(p.map?.parts?.length || p.study?.topics?.length || p.practice || (p.notes || "").trim()) ||
+    (p.videos || []).length >= 3 || (p.usedSec || 0) >= 20 * 60;
+}
+// A suggested goal for a session, for you to edit: "how to cut dovetails" → "Learn to cut dovetails".
+function suggestGoal(text) {
+  let t = String(text || "").trim().replace(/[?.!]+$/, "");
+  let m;
+  if ((m = t.match(/^how (?:to|do i|can i|do you)\s+(.+)/i))) return clip(`Learn to ${m[1]}`, 120);
+  if ((m = t.match(/^(why|how) (.+)/i))) return clip(`Understand ${m[1].toLowerCase()} ${m[2]}`, 120);
+  if ((m = t.match(/^what (?:is|are) (.+)/i))) return clip(`Understand ${m[1]}`, 120);
+  return clip(`Understand ${t}`, 120);
+}
+// The gentle offer: for the session you're on, once it shows a goal (three videos, or a second day).
+// "Not now" waits two days; "No" never asks for this session again.
+async function goalOffer() {
+  const { purpose: p } = await chrome.storage.local.get("purpose");
+  if (!p || isAim(p) || p.goalAsk === "no" || Date.now() - (p.goalAskAt || 0) < 2 * 864e5) return null;
+  const watched = (p.videos || []).filter(v => (v.sec || 0) >= 60).length;
+  const days = (p.days || []).length;
+  if (watched < 3 && days < 2) return null;
+  return { aimId: p.id, text: p.text, suggestion: suggestGoal(p.text), why: days >= 2 ? "days" : "videos" };
+}
+async function goalAnswer(aimId, answer) {
+  const { purpose } = await chrome.storage.local.get("purpose");
+  if (!purpose || purpose.id !== aimId || !["later", "no"].includes(answer)) return { result: "invalid" };
+  purpose.goalAsk = answer;
+  purpose.goalAskAt = Date.now();
+  await chrome.storage.local.set({ purpose });
+  return { result: "applied" };
+}
+// Make it an aim (with the goal's words, if you edited them), or take it off the shelf.
+async function aimGoal(aimId, on = true, text = "") {
+  const d = await chrome.storage.local.get(["purpose", "paused", "history"]);
+  const rec = [d.purpose, ...(d.paused || []), ...(d.history || [])].find(r => r?.id === aimId);
+  if (!rec) return { result: "error", message: "That aim isn't here." };
+  text = clip(text, 300);
+  if (on && text.length >= 3 && text !== rec.text) {
+    rec.text = text;
+    if (Array.isArray(rec.path)) rec.path = [...rec.path, { text, at: Date.now() }].slice(-20);
+    if ("vague" in rec) rec.vague = isVague(text);
+  }
+  rec.goal = !!on;
+  rec.keep = !!on;
+  await chrome.storage.local.set({ purpose: d.purpose || null, paused: d.paused || [], history: d.history || [] });
+  return { result: "applied", text: rec.text };
 }
 
 // Starting an aim ends any break (the break is what you were doing instead), and sets aside
@@ -626,6 +698,8 @@ async function applyLibrarian({ request, answer, newTarget }) {
   const p = s.purpose;
   // A learning goal's map of what understanding it takes, the first time the librarian gives one.
   if (!p.map && Array.isArray(a.parts) && a.parts.length >= 2) p.map = newMap(a.parts);
+  // Learning or a project is a goal; a quick answer or something to relax with stays a session.
+  if (p.goal !== true && (["learn", "project"].includes(a.kind) || goalShaped(request))) p.goal = true;
   const prev = p.librarian || { thread: [], picks: {} };
   p.librarian = {
     kind: ["lookup", "learn", "project"].includes(a.kind) ? a.kind : "lookup",
@@ -831,6 +905,7 @@ async function recordTick(seconds, video) {
     activity.usedSec += credit(activity.lastCountAt, now, seconds);
     activity.lastCountAt = now;
     activity.lastActiveAt = now;
+    if (activity === purpose && !(purpose.days ||= []).includes(s.day)) purpose.days = [...purpose.days, s.day].slice(-10);
     // Where you are in the video, so resuming the aim can return to it.
     if (activity === purpose && video?.id) purpose.last = { id: clip(video.id, 20), title: clip(video.title, 300), t: Math.max(0, Number(video.t) || 0), at: now };
     // In a study session, a topic's video counts as watched once it has played a little.
@@ -1234,7 +1309,7 @@ async function aimsCreate(texts, activeIndex = 0) {
   if (!list.length) return { result: "error", message: "Write at least one aim." };
   const s = await readAll();
   const active = Math.min(Math.max(0, Number(activeIndex) || 0), list.length - 1);
-  const made = list.map((t, i) => ({ ...newPurpose(t, null, 0), keep: true, librarian: { kind: "learn" }, ...(i === active ? {} : { pausedAt: Date.now() }) }));
+  const made = list.map((t, i) => ({ ...newPurpose(t, null, 0), keep: true, goal: true, librarian: { kind: "learn" }, ...(i === active ? {} : { pausedAt: Date.now() }) }));
   if (s.purpose) park(s, s.purpose);
   const parked = made.filter((_, i) => i !== active);
   s.paused = [...parked, ...s.paused].slice(0, MAX_PAUSED);

@@ -195,3 +195,6 @@ screen per feature, automatic career judgments from viewing history.
 2. TeachBack is a quick one-student conversation; the classroom lives in study sessions.
 3. Substantial learning goals become books automatically; quick searches and casual exploration don't,
    unless saved.
+4. An aim is a goal (0.67). A plain search is a session, never a book. A session becomes an aim when it's
+   stated as a goal, read as learning or a project, made one by hand, or, gently, offered once what the
+   person does shows a goal (three videos, or a second day). Nothing is required before searching.

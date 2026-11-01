@@ -180,7 +180,7 @@ function renderCurrent() {
     // The aim's book, as on the library's shelf (its subject comes with the aim's summary).
     send({ type: "aim-get", id: p.id }).then(d => { if (d?.aim) book.replaceChildren(cover(d.aim, "small")); });
     box.append(el("div", { class: "card" },
-      el("div", { class: "label" }, p.learn ? "Exploring" : "Your aim"),
+      el("div", { class: "label" }, p.learn ? "Exploring" : st.aimIsGoal ? "Your aim" : "Searching"),
       open === "pivot" ? el("div", {}, el("div", { class: "strong big cur-text" }, p.text), pivotControls()) : el("div", {},
         el("div", { class: "aimrow" },
           book,

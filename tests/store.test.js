@@ -986,6 +986,53 @@ test("spaced review: a week after explaining, once a day at most; remembered wai
   assert.strictEqual(await env.run(`reviewDue()`), null);
 });
 
+test("an aim is a goal: searches stay sessions, goals become books, and a session can become an aim", async () => {
+  const env = fresh();
+  const shaped = async t => env.run(`goalShaped(${JSON.stringify(t)})`);
+  for (const t of ["I want to learn automotive maintenance", "Understand why the Western Roman Empire fell", "Fix my truck's AC", "Learn to sharpen woodworking hand tools", "Study for my biology exam", "I'm preparing for my private pilot checkride"])
+    assert.strictEqual(await shaped(t), true, t);
+  for (const t of ["roman empire", "how do I change a tire", "why is the sky blue", "funny cat videos", "best budget headphones 2026", "tacoma"])
+    assert.strictEqual(await shaped(t), false, t);
+  assert.strictEqual(await env.run(`suggestGoal("how to cut dovetails")`), "Learn to cut dovetails");
+  assert.strictEqual(await env.run(`suggestGoal("Why is the sky blue?")`), "Understand why is the sky blue");
+  assert.strictEqual(await env.run(`suggestGoal("roman empire")`), "Understand roman empire");
+
+  await env.run(`startPurpose({ text: "roman empire", search: "roman empire" })`);
+  const id = env.local.purpose.id;
+  let lib = await env.run(`readAll().then(resumable)`);
+  assert.strictEqual(lib.current.goal, false, "a bare search is a session, not a book");
+  assert.strictEqual(lib.current.suggestion, "Understand roman empire");
+  assert.strictEqual(await env.run(`goalOffer()`), null, "nothing to offer yet");
+  env.local.purpose.videos = [1, 2, 3].map(i => ({ id: `v${i}`, title: `Rome ${i}`, sec: 120, at: 1 }));
+  const offer = await env.run(`goalOffer()`);
+  assert.strictEqual(offer?.suggestion, "Understand roman empire", "three videos in: Make this an aim?");
+  await env.run(`goalAnswer(${JSON.stringify(id)}, "later")`);
+  assert.strictEqual(await env.run(`goalOffer()`), null, "Not now waits");
+  env.local.purpose.goalAskAt -= 3 * 864e5;
+  assert.ok(await env.run(`goalOffer()`), "and asks again a couple of days later");
+  await env.run(`goalAnswer(${JSON.stringify(id)}, "no")`);
+  env.local.purpose.goalAskAt -= 30 * 864e5;
+  assert.strictEqual(await env.run(`goalOffer()`), null, "Just searching: never again for this session");
+  const r = await env.run(`aimGoal(${JSON.stringify(id)}, true, "Understand why the Roman Empire fell")`);
+  assert.strictEqual(r.text, "Understand why the Roman Empire fell");
+  lib = await env.run(`readAll().then(resumable)`);
+  assert.ok(lib.current.goal && env.local.purpose.keep, "made an aim: a book, with the goal's words");
+  await env.run(`aimGoal(${JSON.stringify(id)}, false)`);
+  assert.strictEqual((await env.run(`readAll().then(resumable)`)).current.goal, false, "and can be taken off the shelf again");
+
+  // A second day on the same session also counts; a stated goal is an aim from the start.
+  await env.run(`startPurpose({ text: "dovetail joints" })`);
+  env.local.purpose.days = ["2026-10-15", "2026-10-16"];
+  assert.strictEqual((await env.run(`goalOffer()`))?.why, "days");
+  await env.run(`startPurpose({ text: "I want to learn to fly gliders" })`);
+  assert.strictEqual((await env.run(`readAll().then(resumable)`)).current.goal, true);
+  // Aims from before: named as learning, or with real work behind them, stay on the shelf.
+  assert.strictEqual(await env.run(`isAim({ text: "tacoma alternator", librarian: { kind: "project" } })`), true);
+  assert.strictEqual(await env.run(`isAim({ text: "tacoma alternator", videos: [{}, {}, {}] })`), true);
+  assert.strictEqual(await env.run(`isAim({ text: "tacoma alternator", videos: [{}] })`), false);
+  assert.strictEqual(await env.run(`isAim({ text: "how to change a tire", librarian: { kind: "lookup" } })`), false);
+});
+
 test("subjects: EMS and medications read as health", async () => {
   const env = fresh();
   assert.strictEqual((await env.run(`aimSubject({ text: "EMT medications for my cert exam" })`)).id, "health");

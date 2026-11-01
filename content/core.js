@@ -199,7 +199,9 @@ function applyStatus(r) {
     saved: "saved" in r ? r.saved : status.saved || [], savedCount: r.savedCount ?? status.savedCount ?? 0,
     homeschool: "homeschool" in r ? r.homeschool : status.homeschool || null,
     onboarding: "onboarding" in r ? r.onboarding : status.onboarding || null,
-    pathways: "pathways" in r ? r.pathways : status.pathways || null };
+    pathways: "pathways" in r ? r.pathways : status.pathways || null,
+    // A goal (an aim, on the shelf) or a session (0.67), and a goal to suggest for a session.
+    aimIsGoal: "aimIsGoal" in r ? !!r.aimIsGoal : !!status.aimIsGoal, goalSuggestion: "goalSuggestion" in r ? r.goalSuggestion : status.goalSuggestion || null };
   if (r.settings) settings = { ...settings, ...r.settings };
   breakEndsAt = brk?.durationMin ? Date.now() + breakLeft(brk) * 1000 : 0;
 }

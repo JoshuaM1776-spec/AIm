@@ -209,6 +209,28 @@ function related(list) {
 const chapter = (id, eyebrow, title, sub, ...kids) => node("section", { className: "chapter", id },
   node("header", {}, node("span", { className: "eyebrow", textContent: eyebrow }), node("h2", { textContent: title }), sub ? node("p", { textContent: sub }) : null), ...kids);
 
+// A search isn't an aim until it's a goal (0.67): say so, with Make it an aim. An aim that was
+// shelved automatically can be taken off the shelf.
+function goalNote(a) {
+  if (a.goal) return node("p", { className: "goal-note muted" }, "Not really a goal? ",
+    node("button", { className: "linkish", type: "button", textContent: "Take it off the shelf", onclick: async () => {
+      const r = await send({ type: "aim-goal", aimId: a.id, on: false });
+      if (r?.result === "applied") { toast("Off the shelf. It's under Searches in your library."); render(); }
+    } }));
+  const input = node("input", { type: "text", value: a.suggestion || a.text, maxLength: 120, ariaLabel: "Your goal" });
+  const save = async () => {
+    const text = input.value.trim();
+    if (text.length < 3) return input.focus();
+    const r = await send({ type: "aim-goal", aimId: a.id, text });
+    if (r?.result === "applied") { toast(`Now an aim: ${r.text}`); render(); }
+  };
+  input.addEventListener("keydown", e => { if (e.key === "Enter") save(); });
+  return node("div", { className: "goal-box" },
+    node("b", { textContent: "This is a search, not an aim yet" }),
+    node("p", { className: "muted", textContent: "Searches stay off your library's shelf. If you're working toward something, say it as a goal and it becomes a book." }),
+    node("div", { className: "goal-row" }, input, btn("Make it an aim", "", save)));
+}
+
 async function render() {
   const [d, refList] = await Promise.all([send({ type: "aim-get", id }), send({ type: "ref-list" })]);
   refLevel = (refList || []).find(r => r.level)?.level || "";
@@ -227,6 +249,7 @@ async function render() {
           node("p", { className: "lede", textContent: a.librarianNote || [`Started ${when(a.startedAt)}`, a.subject?.name].filter(Boolean).join(" · ") })),
         node("div", { className: "actions" },
           btn(a.state === "active" ? "Continue on YouTube" : a.state === "paused" ? "Pick it up" : "Start again", "accent", () => goTo()))),
+      goalNote(a),
       ledger(e),
       ways(a, refs)),
     chapter("learn", "Learn", "Videos and where to look next", "What you've watched for this aim, and the path you took.", videos(a)),

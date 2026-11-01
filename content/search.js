@@ -119,9 +119,11 @@ function purposeBar(p, lib) {
   bar.append(...[
     el("div", { class: "wp-rb-purpose" },
       el("span", { class: "wp-rb-mark" }, icon("logo")),
-      el("span", { class: "wp-rb-label" }, p.plan ? "Today's plan" : "Your aim"),
+      el("span", { class: "wp-rb-label" }, aimWord(p)),
       el("span", { class: "wp-strong wp-ellipsis wp-rb-text", title: p.text }, p.text),
-      el("button", { class: "wp-link wp-rb-change", onclick: () => openPivotDialog() }, "Change")),
+      el("button", { class: "wp-link wp-rb-change", onclick: () => openPivotDialog() }, "Change"),
+      // A search isn't an aim until it's a goal; making it one is a click, never required.
+      !p.plan && !p.learn && !purposeIsGoal() ? el("button", { class: "wp-link wp-rb-goal", title: "Working toward something? Make it an aim", onclick: openGoalDialog }, "Make it an aim") : null),
     left !== null ? el("span", { class: "wp-muted wp-rb-left" }, `${fmtMin(left)} left`) : null,
     el("button", { class: `wp-rb-icon${p.notes ? " has" : ""}`, "aria-label": p.notes ? "Notes" : "Add notes", title: p.notes ? "Notes" : "Add notes", onclick: openNotesDialog }, icon("book")),
     el("button", { class: "wp-rb-icon", "aria-label": doneLabel(p), title: doneLabel(p), onclick: doneAction(p) }, icon("check2")),

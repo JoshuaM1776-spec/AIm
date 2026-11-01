@@ -125,7 +125,8 @@ function renderAimPanel() {
   const pr = p.practice, field = panelAim(p)?.scenarioDomain || null;
   const ended = panelEnded === currentId && panelPromptGone !== currentId;
   const c = panelCounts(p);
-  const key = [p.id, p.text, kind, step?.search || "", found?.status || "", found?.video?.id || "", followUp?.id || "", ready, pr?.title || "", pr?.triedAt || "", field || "",
+  const goalBlock = goalOfferBlock(p, renderAimPanel);
+  const key = [!!goalBlock, purposeIsGoal(), p.id, p.text, kind, step?.search || "", found?.status || "", found?.video?.id || "", followUp?.id || "", ready, pr?.title || "", pr?.triedAt || "", field || "",
     ended, panelOpen, account.on, account.plus, currentId, c.explored, c.explained, c.applied, !!currentInfo].join("|");
   if (existing && existing.parentElement === host && host.firstElementChild === existing && existing.dataset.key === key) return;
   existing?.remove();
@@ -194,9 +195,10 @@ function renderAimPanel() {
     el("div", { class: "wp-ap-aim" },
       el("span", { class: "wp-ap-target" }, icon("target")),
       el("div", { class: "wp-ap-aimtext" },
-        el("span", { class: "wp-ap-label" }, quick ? "Looking for" : kind === "explore" ? "Exploring" : "You're learning"),
+        el("span", { class: "wp-ap-label" }, quick ? "Looking for" : kind === "explore" ? "Exploring" : purposeIsGoal() ? "You're learning" : "Searching for"),
         el("b", {}, p.learn ? p.learn : p.text)),
       el("button", { class: "wp-link", onclick: () => openPivotDialog() }, "Change")),
+    goalBlock,
     prompt,
     quick && !ended ? el("button", { class: "wp-btn wp-btn-tonal wp-btn-block", onclick: doneAction(p) }, doneLabel(p)) : null,
     ended ? null : upNext,

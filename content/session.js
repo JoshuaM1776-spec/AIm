@@ -124,12 +124,13 @@ function purposeMenu() {
   const parts = p.map?.parts || [];
   const sub = parts.length ? `${parts.filter(x => x.status === "explained").length} of ${parts.length} explained` : `${menuDur(Math.max(1, menuMin(p.usedSec)))} so far`;
   const card = el("div", { class: "wp-dd-card" },
-    el("div", { class: "wp-dd-label" }, p.learn ? "Exploring" : "Your aim"),
+    el("div", { class: "wp-dd-label" }, aimWord(p)),
     el("div", { class: "wp-dd-aimrow" },
       menuBook(p),
       el("button", { class: "wp-dd-aimlink", title: "Open this aim's page", onclick: menuAct(() => send({ type: "open-aim", id: p.id })) },
         el("span", { class: "wp-dd-title" }, p.learn ? `Exploring: ${p.learn}` : p.text), el("span", { class: "wp-muted" }, sub)),
       el("button", { class: "wp-dd-change", title: "Change my aim", onclick: menuAct(() => openPivotDialog()) }, "Change", icon("right"))),
+    !p.plan && !p.learn && !purposeIsGoal() ? el("button", { class: "wp-link wp-dd-goal", onclick: menuAct(openGoalDialog) }, "Working toward something? Make it an aim") : null,
     el("div", { class: "wp-dd-actions" },
       el("button", { class: "wp-btn wp-btn-primary", onclick: menuAct(doneAction(p)) }, icon("check2"), doneLabel(p) === "Done with this aim" ? "Done" : doneLabel(p)),
       el("button", { class: "wp-btn wp-btn-tonal", onclick: menuAct(setAsideTarget) }, icon("pause"), "Set aside")),

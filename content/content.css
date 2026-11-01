@@ -983,3 +983,13 @@ html[dark] .wp-ap-row.wp-ap-next { border-color: var(--wp-text); box-shadow: ins
 /* The source filter on the librarian's picks (librarian.js). */
 .wp-picks-sources { display: flex; gap: 6px; flex-wrap: wrap; }
 .wp-picks-sources .wp-chip-on { background: var(--wp-primary); color: var(--wp-on-primary); }
+
+/* When a session becomes an aim (0.67): the offer in the panel, the menu link, the dialog. */
+.wp-goal { display: flex; flex-direction: column; gap: 8px; }
+.wp-goal-lead { font: 500 15px/21px var(--font-serif); color: var(--wp-text); }
+.wp-goal .wp-label { display: flex; flex-direction: column; gap: 6px; }
+.wp-goal-input { width: 100%; box-sizing: border-box; }
+.wp-goal-actions { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.wp-ap-goal { margin: 10px 0 4px; padding: 12px 14px; border-radius: 12px; background: var(--wp-tonal); }
+.wp .wp-dd-goal { display: block; margin: 8px 0 0; font-size: 13px; }
+.wp .wp-rb-goal { margin-left: 8px; white-space: nowrap; }

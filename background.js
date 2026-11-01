@@ -29,7 +29,8 @@ async function fullState() {
   const d = await chrome.storage.local.get(["saved", "history", "avoid", "usage", "reasons"]);
   const status = await getStatus(), history = d.history || [];
   return { ...status, saved: d.saved || [], history, avoid: d.avoid || {}, reasons: (d.reasons || []).slice(-10).reverse(),
-    week: weekSummary(d.usage || {}, history), recent: recentPurposes(history, status.purpose?.text) };
+    week: weekSummary(d.usage || {}, history), recent: recentPurposes(history, status.purpose?.text),
+    aimIsGoal: isAim(status.purpose), goalSuggestion: status.purpose && !isAim(status.purpose) ? suggestGoal(status.purpose.text) : null };
 }
 
 // What a YouTube tab needs to know.
@@ -37,6 +38,8 @@ async function tabState() {
   const { avoid = {}, history = [], paused = [], saved = [] } = await chrome.storage.local.get(["avoid", "history", "paused", "saved"]);
   const status = await getStatus();
   return { ...status, settings: { ...status.settings, avoid }, recent: recentPurposes(history, status.purpose?.text),
+    // A goal or a session (0.67): what to call it, and a goal to suggest for a session.
+    aimIsGoal: isAim(status.purpose), goalSuggestion: status.purpose && !isAim(status.purpose) ? suggestGoal(status.purpose.text) : null,
     // The homepage shows at most two set-aside aims; the aims page shows everything.
     paused: paused.slice(0, 2).map(p => summary(p, "paused")), pausedCount: paused.length,
     currentVideos: status.purpose ? recentVideos(status.purpose) : [],
@@ -70,6 +73,8 @@ const writes = {
   "memory-forget": m => memoryForget(m.id),
   "memory-offered": m => memoryOffered(m.id),
   "review-offered": () => reviewOffered(),
+  "goal-answer": m => goalAnswer(m.aimId, m.answer),
+  "aim-goal": m => aimGoal(String(m.aimId || ""), m.on !== false, m.text || ""),
   "review-result": m => reviewResult(m.key, m.outcome),
   "talk-offered": m => talkOffered({ aimId: m.aimId, answer: m.answer }),
   "talk-marks": m => talkMarks(m.aimId, m.marks),
@@ -144,6 +149,7 @@ const reads = {
   "memory-for": m => memoryFor(m.id || null),
   "memory-match": m => memoryMatch(m.title),
   "review-due": () => reviewDue(),
+  "goal-offer": () => goalOffer(),
   "memory-list": () => memoryList(),
   "captions-stats": () => captionsStats(),
   "aim-get": m => aimGet(String(m.id || "")),

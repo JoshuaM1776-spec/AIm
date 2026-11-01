@@ -29,14 +29,38 @@ function where(t) {
   return `${lead} · ${extra}`;
 }
 
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.style.display = "block";
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => (t.style.display = "none"), 3000);
+}
+
+// Make a search an aim: the goal in your words, starting from Aim's suggestion.
+function goalRow(t) {
+  const input = node("input", { type: "text", value: t.suggestion || t.text, maxLength: 120, ariaLabel: "Your goal" });
+  const save = async () => {
+    const text = input.value.trim();
+    if (text.length < 3) return input.focus();
+    const r = await send({ type: "aim-goal", aimId: t.id, text });
+    if (r?.result === "applied") { toast(`Now an aim: ${r.text}`); data = null; render(); }
+    else toast(r?.message || "Couldn't make it an aim. Try again.");
+  };
+  input.addEventListener("keydown", e => { if (e.key === "Enter") save(); });
+  setTimeout(() => input.select(), 0);
+  return node("div", { className: "qa qa-goal" }, input, node("button", { className: "btn", type: "button", textContent: "Make it an aim", onclick: save }));
+}
+
 let tab = "all", query = "";
 let data = null;
 async function render() {
   data ||= await send({ type: "targets" });
   const list = document.getElementById("list");
   if (!data) { list.replaceChildren(node("p", { className: "error", textContent: "Couldn't load your library. Reload this page." })); return; }
-  // Quick answers ("how do I change a tire") don't become books unless you keep them (docs/SPEC.md §3).
-  const book = t => t.kind !== "lookup" || t.keep;
+  // Only goals become books (0.67): searches and quick answers ("how do I change a tire", "roman
+  // empire") stay off the shelf until you make one an aim (docs/SPEC.md §3; isAim in store.js).
+  const book = t => t.goal;
   const quick = [data.current, ...data.paused, ...data.completed].filter(t => t && !book(t));
   const live = [data.current, ...data.paused].filter(t => t && book(t));
   const completed = data.completed.filter(book);
@@ -56,14 +80,14 @@ async function render() {
   // Quick answers, kept off the shelf: listed, with a way to put any of them in the library.
   const qa = document.getElementById("quick");
   qa.hidden = !quick.length || !!q;
-  qa.replaceChildren(node("summary", { textContent: `Quick answers · ${quick.length}` }),
-    node("p", { className: "muted", textContent: "Quick searches stay off the shelf. Keep any you want to come back to." }),
-    ...quick.slice(0, 20).map(t => node("div", { className: "qa" },
-      node("a", { href: `aim.html?id=${encodeURIComponent(t.id)}`, textContent: t.text }),
-      node("button", { className: "btn tonal", type: "button", textContent: "Keep in library", onclick: async () => {
-        const r = await send({ type: "aim-keep", aimId: t.id });
-        if (r?.result === "applied") { data = null; render(); }
-      } }))));
+  qa.replaceChildren(node("summary", { textContent: `Searches and quick answers · ${quick.length}` }),
+    node("p", { className: "muted", textContent: "What you searched for without a goal stays off the shelf. Working toward one of them? Make it an aim: it becomes a book." }),
+    ...quick.slice(0, 20).map(t => {
+      const row = node("div", { className: "qa" },
+        node("a", { href: `aim.html?id=${encodeURIComponent(t.id)}`, textContent: t.text }),
+        node("button", { className: "btn tonal", type: "button", textContent: "Make it an aim", onclick: () => row.replaceWith(goalRow(t)) }));
+      return row;
+    }));
   document.getElementById("tabs").replaceChildren(...[["all", "All"], ["progress", "In progress"], ["completed", "Completed"]].map(([key, label]) =>
     node("button", { type: "button", role: "tab", ariaSelected: String(tab === key), onclick: () => { tab = key; render(); } },
       label, node("span", { className: "n", textContent: String(groups[key].length) }))));

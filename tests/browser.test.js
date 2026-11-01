@@ -793,12 +793,16 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     await lib.goto(`chrome-extension://${extId}/targets.html`);
     await lib.waitForSelector("#list .slot");
     const shelf = await lib.textContent("#list");
-    step("a quick answer stays off the shelf, listed under Quick answers with Keep in library", !shelf.includes("how do I reset my router") &&
+    step("a quick answer stays off the shelf, listed under Searches and quick answers with Make it an aim", !shelf.includes("how do I reset my router") &&
       (await lib.textContent("#quick")).includes("how do I reset my router") && !(await lib.$eval("#quick", n => n.hidden)));
     await lib.click("#quick summary");
-    await lib.click("#quick .qa button:text-is('Keep in library')");
-    await lib.waitForFunction(() => document.querySelector("#list").textContent.includes("how do I reset my router"), null, { timeout: 4000 }).catch(() => {});
-    step("Keep in library puts it on the shelf", (await lib.textContent("#list")).includes("how do I reset my router"));
+    await lib.click("#quick .qa:has-text('how do I reset my router') button:text-is('Make it an aim')");
+    await lib.waitForSelector("#quick .qa-goal input");
+    step("Make it an aim suggests a goal in words you can edit", (await lib.inputValue("#quick .qa-goal input")) === "Learn to reset my router");
+    await lib.fill("#quick .qa-goal input", "Set up my home network properly");
+    await lib.click("#quick .qa-goal button");
+    await lib.waitForFunction(() => document.querySelector("#list").textContent.includes("Set up my home network properly"), null, { timeout: 4000 }).catch(() => {});
+    step("then it's a book on the shelf, named as the goal", (await lib.textContent("#list")).includes("Set up my home network properly"));
     await lib.close();
   }
 
@@ -1087,6 +1091,29 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await sw.evaluate(() => serial(() => setSetting("hideShorts", false)));
   await p.waitForTimeout(500);
   step("turning a distraction switch off applies to open tabs", !(await p.evaluate(() => document.documentElement.classList.contains("wp-hide-shorts"))));
+
+  // ---------- An aim is a goal (0.67): a search is a session until it shows a goal ----------
+  await sw.evaluate(() => serial(async () => {
+    await startPurpose({ text: "roman empire", search: "roman empire" });
+    const { purpose } = await chrome.storage.local.get("purpose");
+    purpose.videos = ["romaaaaaaa1", "romaaaaaaa2", "romaaaaaaa3"].map((id, i) => ({ id, title: `Rome part ${i + 1}`, channel: "History", sec: 120, at: Date.now() }));
+    allow(purpose, [{ id: "romaaaaaaa4", title: "Video romaaaaaaa4", channel: "Chan romaaaaaaa4" }], [], "roman empire");
+    await chrome.storage.local.set({ purpose });
+  }));
+  await p.goto("https://www.youtube.com/watch?v=romaaaaaaa4");
+  await p.waitForSelector("#wp-aimpanel .wp-ap-goal", { timeout: 8000 }).catch(() => {});
+  const goalPanel = (await text("#wp-aimpanel")).replace(/\s+/g, " ");
+  step("a search is a session (\"Searching for\"); three videos in, the panel offers to make it an aim with a goal to edit",
+    goalPanel.includes("Searching for") && goalPanel.includes("Make it an aim?") && (await p.inputValue("#wp-aimpanel .wp-goal-input")) === "Understand roman empire" &&
+    goalPanel.includes("Just searching"), goalPanel.slice(0, 200));
+  if (process.env.SHOTS) await p.screenshot({ path: `${process.env.SHOTS}/goal-offer.png` });
+  await p.fill("#wp-aimpanel .wp-goal-input", "Understand why the Roman Empire fell");
+  await p.click("#wp-aimpanel .wp-goal button:text-is('Make it an aim')");
+  await p.waitForFunction(() => document.querySelector("#wp-aimpanel")?.textContent.includes("You're learning"), null, { timeout: 5000 }).catch(() => {});
+  const made = (await sw.evaluate(() => chrome.storage.local.get("purpose"))).purpose;
+  step("made an aim: named as the goal, a book in the library, and the offer goes away",
+    made.text === "Understand why the Roman Empire fell" && made.goal === true && !(await p.$("#wp-aimpanel .wp-ap-goal")) &&
+    (await text("#wp-aimpanel")).includes("You're learning"), JSON.stringify({ t: made.text, g: made.goal, offer: !!(await p.$("#wp-aimpanel .wp-ap-goal")), panel: (await text("#wp-aimpanel")).slice(0, 120) }));
 
   // Extension reload: the orphaned tab must go quiet instead of throwing.
   const before = errors.length;

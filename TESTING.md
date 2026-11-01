@@ -439,6 +439,15 @@ Needs a signed-in account and the server redeployed.
 - [ ] Try it: one question about that idea, a short closing remark, and "Still there" (next check in about three weeks), "Partly there" (about a week) or "Worth another look" (a few days). Free accounts get two reviews a day. Settings → The librarian → **Spaced review** turns it off.
 - [ ] Every Aim page has the same four places in its header: **YouTube, Library, Pathways, Settings**, the one you're in highlighted. The Library has two tabs: **Your aims** and **Learning record**. Pages inside the Library (an aim, References, Personalize, Your subscriptions, TeachBack, study sessions, scenarios) show Library. On a phone-width window the places wrap under the name.
 
+### 60. An aim is a goal (0.67)
+The librarian part needs the server redeployed.
+- [ ] Search YouTube for a bare topic ("roman empire", "tacoma alternator"): it works as before (Aim keeps you on it), but it's called a search: "Searching: roman empire" on the pill, "Searching" in the menu and popup, "Searching for" in the panel. It does **not** appear on the library's shelf; it's under **Searches and quick answers** below it.
+- [ ] Say a goal on the homepage ("I want to learn automotive maintenance", "Fix my truck's AC", "Study for my biology exam", "Learn to sharpen my chisels"): it's an aim from the start, a book on the shelf. Signed in, the librarian names learning and projects as goals ("Understand why the Western Roman Empire fell"); a single question ("why is the sky blue?") or a bare topic stays a search.
+- [ ] Watch three videos on a search, or come back to it another day: the panel asks "Make it an aim?" with a goal to edit ("Understand roman empire", "Learn to cut dovetails"). **Make it an aim** puts it on the shelf under that name; **Not now** waits two days; **Just searching** doesn't ask again for that search. Typing in the box survives the panel redrawing.
+- [ ] Any time: the menu's "Working toward something? Make it an aim", **Make it an aim** next to the search on results pages, the library's Searches list, or the aim page's "This is a search, not an aim yet".
+- [ ] An aim's page has "Not really a goal? Take it off the shelf"; it moves to Searches.
+- [ ] Aims from before 0.67 stay on the shelf if they were learning or a project, or have real work behind them (three videos, 20 minutes, a map, notes, practice); bare searches with little behind them move to Searches. Nothing is deleted.
+
 ## Known issues (not regressions)
 
 - The word check knows words, not meanings: synonyms ("tap" vs "faucet") get the question once; answering Yes teaches it that search.
