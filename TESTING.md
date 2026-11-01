@@ -448,6 +448,15 @@ The librarian part needs the server redeployed.
 - [ ] An aim's page has "Not really a goal? Take it off the shelf"; it moves to Searches.
 - [ ] Aims from before 0.67 stay on the shelf if they were learning or a project, or have real work behind them (three videos, 20 minutes, a map, notes, practice); bare searches with little behind them move to Searches. Nothing is deleted.
 
+### 61. Getting started is one conversation (0.68)
+- [ ] Install Aim: the welcome page is a conversation. Aim's lines on the left (serif), yours on the right. It asks one thing at a time, and answers what you said before the next question. No step counter; **Skip** (top right) ends it with what's next and Open YouTube.
+- [ ] Why you use YouTube: chips (pick several, then That's it) or your own words ("to relax at night" counts as unwinding). Aim's reply fits the answer ("Good mix…").
+- [ ] Distractions: Sounds good / Let me choose (the four switches and a daily limit, saved as you change them, and Design it with a preview) / Leave YouTube as it is (all four off).
+- [ ] Your subscriptions: "Want me to look at the channels you already follow?" Sure opens YouTube's channel list in a tab; when it's read, the conversation carries on by itself. Then the groups as tappable chips (tap to leave one out), Looks good / Suggest better groups (signed in) / Skip this. Saved as before (preferred sources, Unwinding for breaks).
+- [ ] What you're working toward: type it. A goal ("I want to learn to sharpen my chisels") is named cleanly ("Learn to sharpen my chisels"); a topic ("airplane stalls") gets a suggested goal ("Understand airplane stalls"). Make it an aim / Change the wording / Never mind; up to three; the first is where you start. "Nothing specific yet" is fine.
+- [ ] Without an account (where accounts exist): one optional offer of a free account. Then the wrap-up: the Aim button, the pin, Open YouTube, See my library.
+- [ ] The library's **Personalize** (and old personalize.html links) open the same conversation without the welcome and the distraction question.
+
 ## Known issues (not regressions)
 
 - The word check knows words, not meanings: synonyms ("tap" vs "faucet") get the question once; answering Yes teaches it that search.

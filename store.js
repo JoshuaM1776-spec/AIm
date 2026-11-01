@@ -400,6 +400,12 @@ function goalShaped(text) {
   if (/^(how (to|do|can|does|did)|what|why|when|where|who|which|is|are|does|can)\b/i.test(t) && !/\b(learn|understand|master)\b/i.test(t)) return false;
   return GOAL_LEADS.test(t) || GOAL_WORDS.test(t);
 }
+// A goal's name for its book: "I want to learn to sharpen my chisels" → "Learn to sharpen my chisels".
+function goalName(text) {
+  const t = String(text || "").trim().replace(/[.!]+$/, "")
+    .replace(/^(i (really )?(want|need|would like|'d like|hope|plan|am trying|'m trying) to|my goal is to|help me( to)?|goal:)\s+/i, "");
+  return clip(t ? t[0].toUpperCase() + t.slice(1) : "", 120);
+}
 // Aims from before 0.67 have no goal flag: a book if it was named as one, or if real work shows.
 function isAim(p) {
   if (!p) return false;
@@ -1300,6 +1306,13 @@ async function organizeApply({ reasons, groups, channels } = {}) {
     groups: names, organizedAt: Date.now() } });
   if (myTopics.length !== (settings.myTopics || []).length) await setSetting("myTopics", myTopics);
   return { result: "applied", placed };
+}
+
+// Why you use YouTube, on its own (the welcome conversation, when you skip your subscriptions).
+async function personalReasons(reasons) {
+  const { personal = {} } = await chrome.storage.local.get("personal");
+  await chrome.storage.local.set({ personal: { ...personal, reasons: (Array.isArray(reasons) ? reasons : []).filter(r => USE_REASONS.includes(r)) } });
+  return { result: "applied" };
 }
 
 // Your first aims, as books: the first one you picked becomes the current aim, the rest wait on the

@@ -74,7 +74,7 @@ On the server, `supabase/functions/ai/homeschool.ts` holds every rule (approval,
 | `aim.html/js` | One aim, opened like a book: the title, where you are (videos watched, ideas explained, things tried, kept apart), Learn / Explain / Apply with this aim's next step in each, then the chapters Learn, Understand (what it takes, Go deeper, what you've learned), Practice and Notes, with a ribbon of chapters beside the cover |
 | `scenario.html/js` | Scenarios (Aim Plus): medical, aviation or another emergency, as it unfolds from your references, with a drawn monitor, instrument panel or situation board, citations that open the passage, and a debrief (what was happening, why, what counteracts it); doses not in your references are removed on the server (`supabase/functions/ai/scenario.ts`) |
 | `deeper.js` | Go deeper (Aim Plus): a ladder of why, one level at a time, under a map part or a scenario debrief; kept with the aim (`supabase/functions/ai/deeper.ts`) |
-| `personalize.html/js` | Personalize your YouTube: why you use it, your subscriptions in groups (suggested in the browser, or by Aim's AI from channel names when you ask; `supabase/functions/ai/organize.ts`), with a source preference per channel, and your first aims as books |
+| `personalize.html/js` | Forwards to the getting-started conversation (`welcome.html?again=1`), for old links |
 | `references.html/js` | Your references: protocols and course texts (uploaded or pasted, read in the browser), with level and region, kept in passages for scenarios; search shows what a scenario would read |
 | `content/aimpanel.js` | The aim panel at the top of YouTube's sidebar: the aim and how far you've got, Learn / Explain / Apply with this aim's next step in each (Explain comes forward when a video ends), Notes, Library and Save |
 | `covers.js` | Book covers for aims: the subject's color and icon, the name in a serif, a progress line (subjects guessed in store.js, no AI) |
@@ -83,7 +83,6 @@ On the server, `supabase/functions/ai/homeschool.ts` holds every rule (approval,
 | `fonts/` | Inter and Inter Display, Latin subsets (SIL Open Font License) |
 | `design.html/js` | Design your YouTube: three stages (Home, Shorts, Watching) with a live preview drawn from your own topics' videos, click the preview to change that part, then a before-and-after and one Apply. The welcome tour invites you here; Settings links to each stage. |
 | `options.html/js` | Settings page (everything, including the finer details the designer leaves out) |
-| `welcome.html/js` | The welcome tour: opens once on install (what Aim is, how it works, a few choices, pin it), and from Settings → "Show the welcome tour again" |
 | `config.js`, `plus.js` | Aim Plus in the service worker: where the server is (empty = Free only), sign-in with an emailed code, calling Aim's AI endpoint. Only Aim's own pages can use it, never YouTube tabs. |
 | `plus.html`, `plus-home.js` | The Aim Plus page: what each Plus feature does, with a button to use it once you have Plus; the welcome page after subscribing |
 | `sync.js` | Aim Plus sync across devices, in the service worker: sends what changed in this browser, merges what changed in others (off until turned on in Settings) |
@@ -91,6 +90,7 @@ On the server, `supabase/functions/ai/homeschool.ts` holds every rule (approval,
 | `signin.html/js` | Where the link in the sign-in email lands. It hands the session to the worker, which accepts it only for a sign-in this browser started. |
 | `pathways.html/js` | Pathways (Aim Plus): themes from what you've explored, work connected to an interest, and a path's four steps (See it, Try it, Meet it, Prepare for it) with reflections |
 | `pathways-ui.js` | "Want more of this?" and "Where could this take me?" for Aim's own pages (TeachBack, study sessions) |
+| `welcome.html/js` | Getting started, as one conversation: why you use YouTube, distractions, your subscriptions in groups, your first aims, an optional account (also the library's Personalize, `?again=1`; `personalize.html` forwards here) |
 | `nav.js` | The four places in every Aim page's header (YouTube, Library, Pathways, Settings), and the Library's tabs (Your aims, Learning record) |
 | `teachback.html/js` | TeachBack, Aim Plus's conversational check of what you can explain |
 | `supabase/` | The Aim Plus server: database tables and the AI endpoint. Not part of the extension package. |

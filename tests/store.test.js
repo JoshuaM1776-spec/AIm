@@ -996,6 +996,8 @@ test("an aim is a goal: searches stay sessions, goals become books, and a sessio
   assert.strictEqual(await env.run(`suggestGoal("how to cut dovetails")`), "Learn to cut dovetails");
   assert.strictEqual(await env.run(`suggestGoal("Why is the sky blue?")`), "Understand why is the sky blue");
   assert.strictEqual(await env.run(`suggestGoal("roman empire")`), "Understand roman empire");
+  assert.strictEqual(await env.run(`goalName("I want to learn to sharpen my chisels.")`), "Learn to sharpen my chisels");
+  assert.strictEqual(await env.run(`goalName("help me pass my checkride")`), "Pass my checkride");
 
   await env.run(`startPurpose({ text: "roman empire", search: "roman empire" })`);
   const id = env.local.purpose.id;

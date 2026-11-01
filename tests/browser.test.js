@@ -196,11 +196,18 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("a new install opens the welcome tour", !!welcome);
   if (welcome) {
     welcome.on("pageerror", e => errors.push("welcome: " + e.message));
-    await welcome.waitForSelector("h1");
-    const howText = await welcome.textContent("main");
-    step("welcome: Aim's line and how it works on one screen", howText.includes("Make YouTube work for you.") && (await welcome.textContent("#next")) === "Let's go" &&
-      ["Say what you're here for", "keeps YouTube on your aim", "Take a break whenever you like"].every(t => howText.includes(t)));
-    await welcome.click("#next");
+    await welcome.waitForSelector("#composer .chip");
+    const hello = await welcome.textContent("#thread");
+    step("welcome: a conversation, one question at a time, with chips and a box to type in", hello.includes("I help you use YouTube on purpose") &&
+      hello.includes("What do you mostly come to YouTube for?") && (await welcome.$$("#composer .chip")).length === 5 && !!(await welcome.$("#composer input.say")), hello.slice(0, 200));
+    await welcome.click("#composer .chip:text-is('Learning skills')");
+    await welcome.fill("#composer input.say", "and to relax at night");
+    await welcome.click("#composer .btn:text-is(\"That's it\")");
+    await welcome.waitForSelector("#composer .chip:text-is('Let me choose')");
+    step("it answers what you said (chips or your own words) before asking the next thing", (await welcome.textContent("#thread")).includes("Good mix") &&
+      (await store()).personal?.reasons?.join() === "skills,unwinding" && (await welcome.textContent("#thread .msg.you")).includes("and to relax at night"));
+    await welcome.click("#composer .chip:text-is('Let me choose')");
+    await welcome.waitForSelector(".quick-row");
     step("what would you like to change: four already on, a daily limit off", (await welcome.$$eval(".quick-row input", b => b.length === 5 && b.slice(0, 4).every(x => x.checked) && !b[4].checked)));
     if (process.env.SHOTS) { await welcome.waitForTimeout(500); await welcome.screenshot({ path: `${process.env.SHOTS}/welcome-setup.png`, fullPage: true }); }
     await welcome.click(".quick-row:has-text('Stop autoplay')");
@@ -255,9 +262,14 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     step("Undo puts it back", !(await design.$(".applybar")));
     await design.close();
     await sw.evaluate(() => serial(async () => { await setSetting("learnTopics", []); await setSetting("learnShorts", false); }));
+    await welcome.click("#composer .chip:text-is('Done')");
+    await welcome.waitForSelector("#composer .chip:text-is('Not now')");
+    step("then it offers to look at the channels you follow, names only", (await welcome.textContent("#thread")).includes("look at the channels you already follow"));
     await welcome.click("#skip");
-    step("Skip goes to the last screen, Open YouTube", (await welcome.textContent("main")).includes("Keep Aim one click away") && (await welcome.textContent("#next")) === "Open YouTube");
-    await welcome.click("#next");
+    await welcome.waitForSelector("#composer #open");
+    step("Skip ends it kindly: what's next, how to pin Aim, Open YouTube", (await welcome.textContent("#thread")).includes("Keep me one click away") &&
+      !(await welcome.$("#composer .chip")) && !(await welcome.isVisible("#skip")));
+    await welcome.click("#open");
     await welcome.waitForURL("https://www.youtube.com/");
     await welcome.close();
     step("finishing marks the welcome done, with tips still to show", (await store()).onboarding?.welcomed === true && !(await store()).onboarding.tips.home);
@@ -916,20 +928,37 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
       { key: "/@paulsellers", name: "Paul Sellers Woodworking" }, { key: "/@mrbeastgaming", name: "MrBeast Gaming" }], true)));
     const pz = await ctx.newPage();
     await pz.goto(`chrome-extension://${extId}/personalize.html`);
-    await pz.waitForSelector(".choice");
-    await pz.click(".choice:has-text('Learning skills')");
-    await pz.click("button:text-is('Continue')");
-    await pz.waitForSelector(".groups .group");
-    const names = await pz.$$eval(".groups .group input.gname", ns => ns.map(n => n.value));
-    step("Personalize: your subscriptions in suggested groups, with Unwinding for breaks, before any AI", names.includes("Aviation") && names.includes("Woodworking") && names.includes("Unwinding"), names.join());
-    await pz.click("button:text-is('Keep these and continue')");
-    await pz.waitForSelector(".aim-row");
-    await pz.fill(".aim-row input[type=text] >> nth=0", "Understand how airplane stalls work");
-    await pz.click("button:text-is('Create aims')");
-    await pz.waitForSelector(".empty-state h1");
+    await pz.waitForURL(/welcome\.html\?again=1/);
+    const pzChip = async t => { await pz.waitForSelector(`#composer button:text-is("${t}")`, { timeout: 8000 }); await pz.click(`#composer button:text-is("${t}")`); };
+    await pzChip("Learning skills");
+    await pzChip("That's it");
+    await pz.waitForSelector("#thread .groups .group-chip", { timeout: 8000 });
+    const names = await pz.$$eval("#thread .group-chip b", ns => ns.map(n => n.textContent));
+    step("Personalize is the same conversation: your subscriptions in suggested groups, with Unwinding for breaks, before any AI",
+      names.includes("Aviation") && names.includes("Woodworking") && names.includes("Unwinding") && !(await pz.textContent("#thread")).includes("Sound right?"), names.join());
+    await pzChip("Looks good");
+    await pz.waitForSelector("#composer input.say", { timeout: 8000 });
+    await pz.fill("#composer input.say", "airplane stalls");
+    await pz.press("#composer input.say", "Enter");
+    await pz.waitForSelector("#thread .goal");
+    step("a topic gets a goal suggested, to use or reword", (await pz.textContent("#thread .goal")) === "Understand airplane stalls");
+    await pzChip("Change the wording");
+    await pz.waitForSelector("#composer input.say");
+    await pz.fill("#composer input.say", "Understand how airplane stalls work");
+    await pz.press("#composer input.say", "Enter");
+    await pz.waitForSelector("#composer input.say[placeholder='Something else…']", { timeout: 8000 });
+    await pz.fill("#composer input.say", "I want to learn to sharpen my chisels");
+    await pz.press("#composer input.say", "Enter");
+    await pz.waitForFunction(() => document.querySelectorAll("#thread .goal").length === 2);
+    step("a goal said in passing is named cleanly for its book", (await pz.$$eval("#thread .goal", g => g[1].textContent)) === "Learn to sharpen my chisels");
+    await pzChip("Make it an aim");
+    await pzChip("That's it");
+    await pz.waitForSelector("#composer #open", { timeout: 8000 });
+    if (process.env.SHOTS) await pz.screenshot({ path: `${process.env.SHOTS}/welcome-conversation.png`, fullPage: true });
     const after = await store();
-    step("Personalize: channels sorted by group (no change to YouTube itself), and the first aim is a book and current",
+    step("Personalize: channels sorted by group (no change to YouTube itself), and the first aim is a book and current, the second on the shelf",
       after.avoid["/@mzeroa"]?.topics?.includes("Aviation") && after.avoid["/@mrbeastgaming"]?.action === "break" && after.purpose?.text === "Understand how airplane stalls work" && after.purpose.keep === true &&
+      after.paused?.some(x => x.text === "Learn to sharpen my chisels") &&
       after.personal?.reasons?.includes("skills"), JSON.stringify(after.avoid["/@mzeroa"]));
     await pz.close();
     await sw.evaluate(() => serial(() => finishPurpose("yes")));

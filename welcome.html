@@ -7,80 +7,71 @@
 <title>Welcome to Aim</title>
 <link rel="stylesheet" href="aim.css">
 <style>
-  /* The welcome tour: one centered card on Aim's page background (tokens and controls: aim.css). */
-  html, body { height: 100%; }
-  body { font-size: 15px; line-height: 22px; display: flex; align-items: flex-start; justify-content: center; padding: max(24px, 8vh) 16px 24px; }
-  main.card { width: min(640px, 100%); padding: 32px 40px 28px; position: relative; }
-  @media (max-width: 560px) { main.card { padding: 24px 20px 20px; } }
-  .top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; min-height: 24px; }
+  /* Getting started, as a conversation: Aim's lines on the left in the book serif, yours on the right,
+     and the answer box (chips, and a line to type in) under the last question. */
+  body { font-size: 15px; line-height: 22px; padding: max(24px, 6vh) 16px 40px; }
+  main { width: min(640px, 100%); margin: 0 auto; }
+  .top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
   .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; }
   .brand img { width: 28px; height: 28px; }
-  .dots { display: flex; gap: 6px; }
-  .dots i { width: 8px; height: 8px; border-radius: 4px; background: var(--tonal-hover); transition: width .2s, background .2s; }
-  .dots i.on { width: 20px; background: var(--primary); }
-  .lede { color: var(--muted); margin: 0 0 20px; }
-  .hero { text-align: center; padding: 8px 0 4px; }
-  .hero img.mark { width: 72px; height: 72px; margin-bottom: 16px; }
-  .hero .tag { font-size: 18px; line-height: 26px; margin: 4px auto 8px; max-width: 460px; }
-  .hero .tag b { font-weight: 500; }
-  .steps { display: flex; flex-direction: column; gap: 14px; margin: 4px 0 8px; }
-  .how { display: grid; grid-template-columns: 32px 1fr; gap: 4px 14px; align-items: start; }
-  .num { width: 28px; height: 28px; border-radius: 50%; background: var(--tonal); display: grid; place-items: center; font-weight: 500; font-size: 14px; margin-top: 2px; }
-  .how b { display: block; font-weight: 500; font-size: 16px; }
-  .how p { margin: 2px 0 8px; color: var(--muted); font-size: 14px; line-height: 20px; }
-  /* Small drawings of what you'll see on YouTube. */
-  .mock { grid-column: 2; background: var(--tonal); border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 18px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .mock .field { flex: 1; min-width: 180px; height: 34px; border-radius: 17px; background: var(--surface); border: 1px solid var(--card-border); display: flex; align-items: center; padding: 0 6px 0 14px; color: var(--text); }
-  .mock .field > span:first-child { flex: 1; }
-  .mock .go { width: 24px; height: 24px; border-radius: 50%; background: var(--primary); color: var(--on-primary); display: grid; place-items: center; font-size: 13px; }
-  .mock .bar { flex: 1; height: 34px; border-radius: 17px; border: 1px solid var(--card-border); background: var(--surface); display: flex; align-items: center; gap: 8px; padding: 0 12px; }
-  .mock .muted { color: var(--muted); } .mock .lnk { color: var(--link); font-weight: 500; }
-  .mock .pill { height: 28px; padding: 0 12px; border-radius: 8px; background: var(--surface); border: 1px solid var(--card-border); display: inline-flex; align-items: center; }
-  .mock svg { flex: none; }
-  .grow { flex: 1; }
-  /* Choices */
-  .opt-label { font-weight: 500; margin: 4px 0 8px; }
-  .seg { margin-bottom: 4px; }
-  .setting { border-top: 1px solid var(--divider); }
-  .hint { color: var(--muted); font-size: 13px; line-height: 18px; margin: 4px 0 16px; }
-  .callout { background: var(--tonal); border-radius: 12px; padding: 14px 16px; font-size: 14px; line-height: 20px; margin: 4px 0 8px; }
-  .callout q { font-style: italic; }
-  .quick { display: flex; flex-direction: column; margin: 4px 0 16px; }
-  .quick-row { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-top: 1px solid var(--divider); cursor: pointer; font-size: 14px; line-height: 20px; }
-  .quick-row:last-child { border-bottom: 1px solid var(--divider); }
+  #thread { display: flex; flex-direction: column; gap: 12px; }
+  .msg { max-width: 88%; animation: in .25s ease; }
+  .msg.aim { align-self: flex-start; font: 400 19px/28px var(--font-serif); color: var(--text); }
+  .msg.aim p { margin: 0 0 8px; }
+  .msg.aim p:last-child { margin-bottom: 0; }
+  .msg.aim + .msg.aim { margin-top: -4px; }
+  .msg.you { align-self: flex-end; background: var(--primary); color: var(--on-primary); padding: 8px 14px; border-radius: 18px 18px 4px 18px; font-size: 15px; line-height: 22px; margin: 4px 0 8px; }
+  .typing { display: inline-flex; gap: 5px; padding: 10px 0; }
+  .typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); animation: dot 1s infinite ease-in-out; }
+  .typing i:nth-child(2) { animation-delay: .15s; } .typing i:nth-child(3) { animation-delay: .3s; }
+  @keyframes dot { 0%, 80%, 100% { opacity: .3; } 40% { opacity: 1; } }
+  .goal { font-weight: 600; color: var(--text); border-left: 3px solid var(--brass); padding-left: 12px; }
+  #composer { margin-top: 18px; display: flex; flex-direction: column; gap: 10px; }
+  #composer:empty { display: none; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { height: 38px; padding: 0 16px; border-radius: 19px; border: 1px solid var(--card-border); background: var(--surface); color: var(--text); font: 500 14px/1 var(--font); cursor: pointer; }
+  .chip:hover { background: var(--tonal); }
+  .chip.primary { background: var(--primary); color: var(--on-primary); border-color: transparent; }
+  .chip[aria-pressed="true"] { border-color: var(--primary); box-shadow: inset 0 0 0 1.5px var(--primary); background: var(--tonal); }
+  .type { display: flex; gap: 8px; }
+  .type input { flex: 1; min-width: 0; height: 42px; border-radius: 21px; padding: 0 16px; }
+  /* What Aim shows inside a message: switches, groups, the pin. */
+  .msg .quick, .msg .groups, .msg .pin, .msg .done-list, .msg > .btn { font: 400 14px/20px var(--font); }
+  .quick { display: flex; flex-direction: column; margin: 8px 0 10px; background: var(--surface); border: 1px solid var(--card-border); border-radius: 12px; padding: 0 14px; }
+  .quick-row { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-top: 1px solid var(--divider); cursor: pointer; }
+  .quick-row:first-child { border-top: 0; }
   .quick-row input { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--primary); flex: none; }
   .quick-row > span { display: flex; flex-direction: column; }
-  .quick-row .hint { margin: 0; }
+  .hint { color: var(--muted); font-size: 13px; line-height: 18px; }
   .quick-limit { margin-top: 8px; width: max-content; }
-  .quick-more { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-  .pin { display: flex; align-items: center; gap: 12px; background: var(--tonal); border-radius: 12px; padding: 14px 16px; margin: 8px 0 4px; font-size: 14px; line-height: 20px; }
+  .groups { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 2px; }
+  .group-chip { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 14px; border-radius: 12px; border: 1px solid var(--card-border); background: var(--surface); color: var(--text); cursor: pointer; text-align: left; font: inherit; }
+  .group-chip b { font: 500 16px/20px var(--font-serif); }
+  .group-chip span { color: var(--muted); font-size: 12px; line-height: 16px; }
+  .group-chip[aria-pressed="false"] { opacity: .45; text-decoration: line-through; }
+  .pin { display: flex; align-items: center; gap: 12px; background: var(--tonal); border-radius: 12px; padding: 12px 14px; margin: 10px 0 0; }
   .pin .tb { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 18px; background: var(--surface); border: 1px solid var(--card-border); flex: none; }
   .pin .tb img { width: 18px; height: 18px; }
   .pin .tb .muted { color: var(--muted); }
-  .done-list { margin: 0 0 8px; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+  .done-list { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
   .done-list li { display: flex; gap: 10px; align-items: flex-start; }
   .done-list li::before { content: ""; width: 18px; height: 18px; flex: none; margin-top: 1px; border-radius: 50%; background: #2ba640 no-repeat center / 12px
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
-  .nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 24px; }
-  .nav .right { display: flex; gap: 8px; margin-left: auto; }
-  .nav .btn.text { color: var(--muted); } .nav .btn.text:hover { color: var(--text); }
-  .screen { animation: in .25s ease; }
   @keyframes in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-  @media (prefers-reduced-motion: reduce) { .screen { animation: none; } .dots i { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .msg { animation: none; } .typing i { animation: none; } }
+  @media (max-width: 560px) { .msg { max-width: 100%; } .msg.aim { font-size: 17px; line-height: 25px; } }
 </style>
 </head>
 <body>
-<main class="card">
+<main>
   <div class="top">
     <div class="brand"><img class="for-light" src="icons/48.png" alt=""><img class="for-dark" src="icons/light/48.png" alt=""><span data-brand>Aim</span></div>
-    <div class="dots" id="dots" aria-hidden="true"></div>
+    <button class="btn text" id="skip" type="button">Skip</button>
   </div>
-  <div id="screen" aria-live="polite"></div>
-  <div class="nav">
-    <button class="btn text lg" id="back" type="button">Back</button>
-    <div class="right"><button class="btn text lg" id="skip" type="button">Skip</button><button class="btn lg" id="next" type="button">Next</button></div>
-  </div>
+  <div id="thread" aria-live="polite"></div>
+  <div id="composer"></div>
 </main>
+<script src="content/topics.js"></script>
 <script src="welcome.js"></script>
 </body>
 </html>
