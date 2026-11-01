@@ -13,7 +13,7 @@ Aim keeps the following in your browser's extension storage (`chrome.storage.loc
 - **Videos you watched** during a purpose or a break: the video ID, title, channel and how long you watched.
 - **Time spent on YouTube** per day (on purpose, on breaks, in total), for the last 14 days.
 - **Your settings,** **saved-for-later videos,** and **how you sorted channels** (Learn from, with your own topics; For breaks; Keep out).
-- **Your YouTube subscriptions,** only if you ask Aim to read them (Your channels → Get my subscriptions): each channel's name, address and picture, read from YouTube's own subscriptions page in your YouTube tab.
+- **Your YouTube subscriptions,** only if you ask Aim to read them (Your subscriptions → Get my subscriptions, or Personalize your YouTube): each channel's name, address and picture, read from YouTube's own subscriptions page in your YouTube tab. The groups you sort them into, the source preference you give each, and why you said you use YouTube are kept here too. Nothing about your actual YouTube subscriptions changes.
 - **History** of your last 200 purposes and breaks.
 - **Your references,** only if you add them (Library → References): the text of protocols or course documents you upload or paste, with the name, level and region you give them. Files are read in your browser; the file itself isn't kept, only its text.
 
@@ -22,6 +22,8 @@ This data never leaves your computer. Aim does not sell, share or transfer it, a
 ## Network requests
 
 Aim itself makes one kind of request: when you open a video, it asks YouTube's public "oEmbed" address on youtube.com for that video's title and channel, so it can tell which video is on screen. This request goes to YouTube, the site you're already on, and contains only the video's address.
+
+**Suggest better groups** (Personalize your YouTube, signed in): sends only the names of the channels you subscribe to, and the reasons you picked for using YouTube, to Aim's server and the AI, which suggests groups and a few first aims. Nothing of it is stored there beyond usage. Without it, groups are suggested in your browser from channel names, with no AI.
 
 Your references stay in this browser. When a scenario runs (Aim Plus), each turn sends the scenario's topic, your level and region, the names of the references you chose, the passages it needs (cited by document and passage, at most about 16,000 characters), and the scenario so far to Aim's server and the AI. Nothing of it is stored there beyond usage. The scenario in progress is kept in that browser tab; when it ends, its debrief is kept with the aim in your browser. **Go deeper** (Aim Plus) works the same way: the aim's name, the thing you're going deeper into, the levels so far and, for medical and flying aims, related passages from your references go to Aim's server for each new level; the chain is kept with the aim in your browser.
 

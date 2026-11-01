@@ -70,7 +70,10 @@ async function findNext(p, step) {
     if (v) { video = v; source = "From your search"; }
   }
   if (!video) {
-    const found = (await searchCandidates(step.search)).filter(v => !watched.has(v.id) && v.title);
+    // Your sources: channels you excluded from learning never come up; your preferred ones come first.
+    const excluded = excludedNames(), preferred = new Set(preferredNames().map(n => n.toLowerCase()));
+    const found = (await searchCandidates(step.search)).filter(v => !watched.has(v.id) && v.title && !excluded.has(v.channel.toLowerCase()))
+      .sort((a, b) => preferred.has(b.channel.toLowerCase()) - preferred.has(a.channel.toLowerCase()));
     if (found.length && account.plus) {
       const r = await send({ type: "librarian", task: "librarian-rank", input: { target: `${step.title}, as part of: ${p.text}`, query: step.search, preferred: preferredNames(),
         results: found.slice(0, 12).map(v => ({ id: v.id, title: v.title, channel: v.channel, length: v.length })) } });
@@ -78,7 +81,10 @@ async function findNext(p, step) {
       const v = pick && found.find(x => x.id === pick.id);
       if (v) { video = v; source = pick.reason ? `The librarian's pick: ${pick.reason}` : "The librarian's pick"; }
     }
-    if (!video && found[0]) { video = found[0]; source = `YouTube's top result for “${step.search}”`; }
+    if (!video && found[0]) {
+      video = found[0];
+      source = preferred.has(video.channel.toLowerCase()) ? `From ${video.channel}, one of your preferred channels` : `YouTube's top result for “${step.search}”`;
+    }
   }
   panelNext.set(step.search, video ? { status: "ready", video, source } : { status: "none" });
   renderAimPanel();

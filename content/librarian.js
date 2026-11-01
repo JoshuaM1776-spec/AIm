@@ -145,12 +145,25 @@ async function librarianPicks() {
 
 function removePicks() { $("#wp-picks")?.remove(); }
 
+// Which sources the picks show: all worthwhile ones, your preferred channels, or everyone else's (other
+// perspectives). A filter, not a mode: it's only shown when some picks are from your preferred channels.
+let picksSource = "all";
 function renderPicks(groups) {
   const bar = $("#wp-results-bar");
   if (!bar || !groups?.length) return;
+  const preferred = new Set(preferredNames().map(n => n.toLowerCase()));
+  const excluded = excludedNames();
+  const mine = v => preferred.has((v.channel || "").toLowerCase());
+  const anyMine = groups.some(g => g.videos.some(mine));
+  const keep = v => !excluded.has((v.channel || "").toLowerCase()) && (picksSource === "all" || !anyMine || (picksSource === "mine" ? mine(v) : !mine(v)));
+  const shown = groups.map(g => ({ ...g, videos: g.videos.filter(keep) })).filter(g => g.videos.length);
+  const chip = (k, label) => el("button", { class: `wp-chip${picksSource === k ? " wp-chip-on" : ""}`, "aria-pressed": String(picksSource === k),
+    onclick: () => { picksSource = k; renderPicks(groups); } }, label);
   const section = el("div", { id: "wp-picks", class: "wp wp-picks" },
-    el("div", { class: "wp-label" }, `${BRAND}'s picks from these results`),
-    ...groups.map(g => el("div", { class: "wp-picks-group" },
+    el("div", { class: "wp-row-between" }, el("div", { class: "wp-label" }, `${BRAND}'s picks from these results`),
+      anyMine ? el("div", { class: "wp-picks-sources" }, chip("all", "All worthwhile sources"), chip("mine", "My preferred channels"), chip("other", "Other perspectives")) : null),
+    shown.length ? null : el("div", { class: "wp-muted" }, picksSource === "mine" ? "None of these are from your preferred channels." : "All of these are from your preferred channels."),
+    ...shown.map(g => el("div", { class: "wp-picks-group" },
       el("div", { class: "wp-strong" }, g.label),
       el("div", { class: "wp-picks-row" }, ...g.videos.map(v => el("a", { class: "wp-pick", href: `/watch?v=${encodeURIComponent(v.id)}` },
         el("div", { class: "wp-pick-thumb", style: `background-image:url("https://i.ytimg.com/vi/${encodeURIComponent(v.id)}/mqdefault.jpg")` }),

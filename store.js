@@ -1183,10 +1183,60 @@ async function setAvoid(key, name, action, topic) {
   if (CHANNEL_ACTIONS.includes(action)) {
     const was = avoid[key];
     const t = action === "prefer" ? clip(topic === undefined ? was?.topic : topic, 40) : "";
-    avoid[key] = { name: clip(name, 200) || was?.name || key, action, ...(t ? { topic: t } : {}) };
+    // Groups and the source preference stay when only the topic or name changes.
+    const keep = action === "prefer" && was?.action === "prefer" ? { ...(was.topics ? { topics: [...new Set([t, ...was.topics].filter(Boolean))] } : {}), ...(was.source ? { source: was.source } : {}) } : {};
+    avoid[key] = { name: clip(name, 200) || was?.name || key, action, ...(t ? { topic: t } : {}), ...keep };
   } else delete avoid[key];
   await chrome.storage.local.set({ avoid });
   return { result: "applied", avoid };
+}
+
+// ---------- personalizing: why you use YouTube, your subscriptions in groups, your first aims ----------
+// A group is an interest (Aviation), not an aim (Pass my instrument rating): a "Learn from" topic of
+// yours, or Unwinding (For breaks). A channel can be in more than one group. Its source preference:
+// preferred (first in the librarian's picks, a "Your channel" badge), normal (one source among others),
+// or exclude (never suggested for learning). Nothing here changes your actual YouTube subscriptions.
+const USE_REASONS = ["skills", "interests", "problems", "study", "unwinding"];
+const SOURCES = ["preferred", "normal", "exclude"];
+async function organizeApply({ reasons, groups, channels } = {}) {
+  const { avoid = {}, personal = {} } = await chrome.storage.local.get(["avoid", "personal"]);
+  const settings = await getSettings();
+  const names = (Array.isArray(groups) ? groups : []).map(g => clip(g?.name, 40)).filter(Boolean);
+  const learnGroups = (Array.isArray(groups) ? groups : []).filter(g => g?.kind !== "unwind").map(g => clip(g.name, 40)).filter(Boolean);
+  const myTopics = [...new Set([...(settings.myTopics || []), ...learnGroups])].slice(0, 30);
+  let placed = 0;
+  for (const c of (Array.isArray(channels) ? channels : []).slice(0, 3000)) {
+    const key = channelPath(c?.key);
+    if (!/^\/(@|channel\/)/.test(key)) continue;
+    const inGroups = (Array.isArray(c.groups) ? c.groups : []).map(x => clip(x, 40)).filter(x => names.includes(x));
+    const unwind = (Array.isArray(groups) ? groups : []).some(g => g?.kind === "unwind" && inGroups.includes(clip(g.name, 40)));
+    const topics = inGroups.filter(x => learnGroups.includes(x));
+    const was = avoid[key];
+    if (was?.family || was?.action === "hide" || was?.action === "warn") continue; // a family's or your Keep out stays as it is
+    if (topics.length) {
+      avoid[key] = { name: clip(c.name, 200) || was?.name || key, action: "prefer", topic: topics[0], topics, source: SOURCES.includes(c.source) ? c.source : "preferred" };
+      placed++;
+    } else if (unwind) { avoid[key] = { name: clip(c.name, 200) || was?.name || key, action: "break" }; placed++; }
+  }
+  await chrome.storage.local.set({ avoid, personal: { ...personal, reasons: (Array.isArray(reasons) ? reasons : personal.reasons || []).filter(r => USE_REASONS.includes(r)),
+    groups: names, organizedAt: Date.now() } });
+  if (myTopics.length !== (settings.myTopics || []).length) await setSetting("myTopics", myTopics);
+  return { result: "applied", placed };
+}
+
+// Your first aims, as books: the first one you picked becomes the current aim, the rest wait on the
+// shelf. Each is kept in the library (they're goals, not quick searches).
+async function aimsCreate(texts, activeIndex = 0) {
+  const list = (Array.isArray(texts) ? texts : []).map(t => clip(String(t || "").replace(/\s+/g, " ").trim(), 300)).filter(t => t.length >= 3).slice(0, 5);
+  if (!list.length) return { result: "error", message: "Write at least one aim." };
+  const s = await readAll();
+  const active = Math.min(Math.max(0, Number(activeIndex) || 0), list.length - 1);
+  const made = list.map((t, i) => ({ ...newPurpose(t, null, 0), keep: true, librarian: { kind: "learn" }, ...(i === active ? {} : { pausedAt: Date.now() }) }));
+  if (s.purpose) park(s, s.purpose);
+  const parked = made.filter((_, i) => i !== active);
+  s.paused = [...parked, ...s.paused].slice(0, MAX_PAUSED);
+  await chrome.storage.local.set({ purpose: made[active], paused: s.paused, history: s.history, brk: null });
+  return { result: "applied", purpose: made[active], created: made.length };
 }
 
 // Your YouTube subscriptions, as read from youtube.com/feed/channels (content/subs.js), for the
@@ -1208,13 +1258,13 @@ async function saveSubs(channels, complete) {
 // What the Your channels page needs: subscriptions, your rules, your topics, and which channels
 // you've watched for aims (to suggest Learn from).
 async function channelsPage() {
-  const { subs = {}, avoid = {}, history = [], paused = [], purpose = null } = await chrome.storage.local.get(["subs", "avoid", "history", "paused", "purpose"]);
+  const { subs = {}, avoid = {}, history = [], paused = [], purpose = null, personal = {} } = await chrome.storage.local.get(["subs", "avoid", "history", "paused", "purpose", "personal"]);
   const watched = {};
   for (const p of [purpose, ...paused, ...history.filter(h => h.type === "purpose")]) {
     const seen = new Set();
     for (const v of p?.videos || []) if (v.channel && !seen.has(v.channel)) { seen.add(v.channel); watched[v.channel] = (watched[v.channel] || 0) + 1; }
   }
-  return { subs, avoid, watched, settings: await getSettings() };
+  return { subs, avoid, watched, personal, settings: await getSettings() };
 }
 
 // ---------- strict mode: the reasons you gave ----------

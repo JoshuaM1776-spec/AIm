@@ -894,6 +894,33 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await sw.evaluate(() => serial(async () => { await finishPurpose("yes"); await setSetting("learnTopics", []); await setSetting("learnOff", []); }));
 
 
+  // ---------- Personalize your YouTube: why, what you follow, first aims ----------
+  {
+    const before = await sw.evaluate(() => chrome.storage.local.get(["avoid", "subs", "settings"]));
+    await sw.evaluate(() => serial(() => saveSubs([{ key: "/@flighttrainingnetwork", name: "Flight Training Network" }, { key: "/@mzeroa", name: "MzeroA Flight Training" },
+      { key: "/@paulsellers", name: "Paul Sellers Woodworking" }, { key: "/@mrbeastgaming", name: "MrBeast Gaming" }], true)));
+    const pz = await ctx.newPage();
+    await pz.goto(`chrome-extension://${extId}/personalize.html`);
+    await pz.waitForSelector(".choice");
+    await pz.click(".choice:has-text('Learning skills')");
+    await pz.click("button:text-is('Continue')");
+    await pz.waitForSelector(".groups .group");
+    const names = await pz.$$eval(".groups .group input.gname", ns => ns.map(n => n.value));
+    step("Personalize: your subscriptions in suggested groups, with Unwinding for breaks, before any AI", names.includes("Aviation") && names.includes("Woodworking") && names.includes("Unwinding"), names.join());
+    await pz.click("button:text-is('Keep these and continue')");
+    await pz.waitForSelector(".aim-row");
+    await pz.fill(".aim-row input[type=text] >> nth=0", "Understand how airplane stalls work");
+    await pz.click("button:text-is('Create aims')");
+    await pz.waitForSelector(".empty-state h1");
+    const after = await store();
+    step("Personalize: channels sorted by group (no change to YouTube itself), and the first aim is a book and current",
+      after.avoid["/@mzeroa"]?.topics?.includes("Aviation") && after.avoid["/@mrbeastgaming"]?.action === "break" && after.purpose?.text === "Understand how airplane stalls work" && after.purpose.keep === true &&
+      after.personal?.reasons?.includes("skills"), JSON.stringify(after.avoid["/@mzeroa"]));
+    await pz.close();
+    await sw.evaluate(() => serial(() => finishPurpose("yes")));
+    await sw.evaluate(b => chrome.storage.local.set({ avoid: b.avoid || {}, subs: b.subs || {}, settings: b.settings }), before);
+  }
+
   // ---------- Your channels: subscriptions, sorted ----------
   await setLocal({ avoid: { "/@hideme": { name: "Hide Me", action: "hide" } } });
   await sw.evaluate(() => serial(async () => { await startPurpose({ text: "Turn a bowl on a lathe" }); await addSearch("lathe bowl turning");

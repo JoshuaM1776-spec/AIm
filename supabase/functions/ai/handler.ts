@@ -12,6 +12,7 @@ import { videoConcepts } from "./video.ts";
 import { talk } from "./talk.ts";
 import { scenarioTurn } from "./scenario.ts";
 import { deeperStep } from "./deeper.ts";
+import { channelsOrganize } from "./organize.ts";
 import { type SyncStore, SyncError, readSyncInput } from "./sync.ts";
 import { type HsDb, HS_TASKS } from "./homeschool.ts";
 
@@ -107,12 +108,14 @@ export const TASKS: Record<string, Task> = {
   // Scenarios: a situation as it unfolds, from the person's own references. See scenario.ts.
   "scenario-turn": { plan: "plus", run: scenarioTurn },
   // Going deeper: one more level of why. See deeper.ts.
-  "deeper-step": { plan: "plus", run: deeperStep }
+  "deeper-step": { plan: "plus", run: deeperStep },
+  // Personalizing: groups for your subscriptions and first aims. Any signed-in account. See organize.ts.
+  "channels-organize": { run: channelsOrganize }
 };
 
 // Requests that may carry more than a few pages: up to maxSyncBytes.
 const BIG_TASKS = new Set(["sync", "hs-upload-add", "hs-curriculum-build", "hs-curriculum-save", "hs-week-save",
-  "librarian-talk", "video-concepts", "scenario-turn", "deeper-step", "pathways-themes"]); // caption excerpts or reference passages (Plus); each task trims them to its own limits
+  "librarian-talk", "video-concepts", "scenario-turn", "deeper-step", "pathways-themes", "channels-organize"]); // caption excerpts or reference passages (Plus); each task trims them to its own limits
 
 // Handled directly in handle(), without AI.
 const ACCOUNT_TASKS = new Set(["status", "account-export", "account-delete", "billing-checkout", "billing-portal", "sync", "sync-erase"]);

@@ -120,7 +120,14 @@ function ready() {
     node("div", { className: "opt-label", style: "margin-top:16px", textContent: "Keep Aim one click away" }),
     node("div", { className: "pin" },
       node("span", { className: "tb", ariaHidden: "true" }, svg(PUZZLE), node("span", { className: "muted", textContent: "→" }), svg(PIN), MARK()),
-      node("span", { textContent: `Click the puzzle piece in Chrome's toolbar, then the pin next to ${BRAND}.` })));
+      node("span", { textContent: `Click the puzzle piece in Chrome's toolbar, then the pin next to ${BRAND}.` })),
+    // Optional: start from what you already follow (personalize.html), instead of an empty library.
+    node("div", { className: "opt-label", style: "margin-top:16px", textContent: "Start from what you already follow" }),
+    node("p", { className: "muted", style: "margin:0 0 8px", textContent: "Three short steps: why you use YouTube, your subscriptions in groups, and your first aims. Optional, and you can change it all later." }),
+    node("button", { className: "btn tonal", type: "button", id: "personalize", textContent: "Personalize your YouTube", onclick: async () => {
+      await send({ type: "onboarding", welcomed: true });
+      location.href = "personalize.html";
+    } }));
 }
 
 // ---------- moving through ----------

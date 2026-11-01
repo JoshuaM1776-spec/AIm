@@ -923,6 +923,37 @@ test("quick answers carry their kind, and can be kept in the library by hand", a
   assert.strictEqual(t.completed[0].keep, true);
 });
 
+test("personalizing: groups put channels in one or more topics with a source preference; unwinding means breaks", async () => {
+  const env = fresh();
+  env.local.avoid = { "/@hidden": { name: "Hidden", action: "hide" } };
+  const r = await env.run(`organizeApply({ reasons: ["skills", "bogus"], groups: [{ name: "Aviation", kind: "learn" }, { name: "Engineering", kind: "learn" }, { name: "Unwinding", kind: "unwind" }],
+    channels: [{ key: "/@builder", name: "Experimental Builds", groups: ["Aviation", "Engineering"], source: "normal" },
+      { key: "/@pilot", name: "Pilot Training", groups: ["Aviation"] }, { key: "/@games", name: "Games", groups: ["Unwinding"] },
+      { key: "/@hidden", name: "Hidden", groups: ["Aviation"] }, { key: "not a channel", name: "x", groups: ["Aviation"] }] })`);
+  assert.strictEqual(r.result, "applied");
+  assert.deepStrictEqual(env.local.avoid["/@builder"], { name: "Experimental Builds", action: "prefer", topic: "Aviation", topics: ["Aviation", "Engineering"], source: "normal" });
+  assert.strictEqual(env.local.avoid["/@pilot"].source, "preferred", "preferred unless you say otherwise");
+  assert.strictEqual(env.local.avoid["/@games"].action, "break");
+  assert.strictEqual(env.local.avoid["/@hidden"].action, "hide", "your Keep out stays as it is");
+  assert.deepStrictEqual(env.local.settings.myTopics, ["Aviation", "Engineering"], "learn groups become your topics");
+  assert.deepStrictEqual(env.local.personal.reasons, ["skills"]);
+  await env.run(`setAvoid("/@builder", "Experimental Builds", "prefer", "Aviation")`);
+  assert.deepStrictEqual(env.local.avoid["/@builder"].topics, ["Aviation", "Engineering"], "changing one topic from YouTube's menu keeps the others");
+  assert.strictEqual(env.local.avoid["/@builder"].source, "normal");
+});
+
+test("personalizing: first aims become books, one current, all kept in the library", async () => {
+  const env = fresh();
+  await env.run(`startPurpose({ text: "Something I was doing" })`);
+  assert.strictEqual((await env.run(`aimsCreate([" ", "x"])`)).result, "error");
+  const r = await env.run(`aimsCreate(["Understand how airplane stalls work", "Learn to sharpen woodworking hand tools"], 1)`);
+  assert.strictEqual(r.created, 2);
+  assert.strictEqual(env.local.purpose.text, "Learn to sharpen woodworking hand tools");
+  assert.ok(env.local.purpose.keep && env.local.purpose.librarian.kind === "learn");
+  const paused = env.local.paused.map(p => p.text);
+  assert.ok(paused.includes("Understand how airplane stalls work") && paused.includes("Something I was doing"), "the other new aim and the one you were on wait on the shelf");
+});
+
 test("subjects: EMS and medications read as health", async () => {
   const env = fresh();
   assert.strictEqual((await env.run(`aimSubject({ text: "EMT medications for my cert exam" })`)).id, "health");

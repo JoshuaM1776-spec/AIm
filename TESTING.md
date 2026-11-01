@@ -422,6 +422,13 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] A quick answer ("how do I reset my router") stays off the library's shelf, under Quick answers, with Keep in library.
 - [ ] The aim's page chapters read Learn, Explain, Apply, Notes; its counts read explored, explained, applied.
 
+### 58. Personalize your YouTube (0.65)
+- [ ] The welcome tour's last screen offers **Personalize your YouTube**; the library's header links Personalize and Your subscriptions. Every step can be skipped ("Skip for now" goes to YouTube).
+- [ ] Step 1: pick reasons (learning skills, exploring, solving problems, study, unwinding); several at once.
+- [ ] Step 2 without subscriptions: **Read my subscriptions** opens YouTube's channel list, reads it, and the page refreshes with them. With them: groups suggested at once in your browser (Aviation, Woodworking, History… and Unwinding for breaks), as cards with a name you can edit, a count, Learning or For breaks, and Keep. Open a card: tick channels in or out (a channel can be in two groups) and set each one Preferred, Normal or Exclude from learning. **+ New group**. Signed in: **Suggest better groups** (sends only channel names to Aim's AI) replaces them with the AI's groups and suggests first aims.
+- [ ] Step 3: two or three specific aims (the AI's, or yours), one marked Start with this. **Create aims**: they're books in the library (kept), the chosen one is current; the aim you had waits on the shelf. "Your library is ready" offers Start on YouTube.
+- [ ] Afterwards: preferred channels lead the librarian's picks and the panel's Up next ("From …, one of your preferred channels"); excluded ones are never suggested; on search results with picks from your channels, filter **All worthwhile sources / My preferred channels / Other perspectives**. Your YouTube subscriptions themselves never change.
+
 ## Known issues (not regressions)
 
 - The word check knows words, not meanings: synonyms ("tap" vs "faucet") get the question once; answering Yes teaches it that search.

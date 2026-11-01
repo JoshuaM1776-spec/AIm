@@ -51,14 +51,17 @@ function openAvoidDialog() {
 
 // Channels you prefer, by path, and their names (for the librarian).
 const channelsBy = action => Object.entries(settings.avoid || {}).filter(([, c]) => c.action === action);
-const preferredNames = () => channelsBy("prefer").map(([k, c]) => c.name || k).slice(0, 30);
+// Learn from channels you set to "normal" are one source among others; "exclude" ones aren't suggested.
+const preferredOnly = () => channelsBy("prefer").filter(([, c]) => !c.source || c.source === "preferred");
+const preferredNames = () => preferredOnly().map(([k, c]) => c.name || k).slice(0, 30);
+const excludedNames = () => new Set(channelsBy("prefer").filter(([, c]) => c.source === "exclude").map(([k, c]) => (c.name || k).toLowerCase()));
 
 // ---------------- hidden channels ----------------
 // Like YouTube's "Don't recommend channel": their videos drop out of feeds, results and the sidebar.
 function hiddenKeys() {
   return new Set(channelsBy("hide").map(([k]) => channelPath(k)));
 }
-const preferredKeys = () => new Set(channelsBy("prefer").map(([k]) => channelPath(k)));
+const preferredKeys = () => new Set(preferredOnly().map(([k]) => channelPath(k)));
 
 // Hidden channels drop out; preferred ones get a "Your channel" badge.
 function applyHidden() {

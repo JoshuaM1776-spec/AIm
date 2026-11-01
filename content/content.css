@@ -953,3 +953,7 @@ html[dark] .wp-ap-row.wp-ap-next { border-color: var(--wp-text); box-shadow: ins
 .wp-ap-more { display: flex; flex-direction: column; gap: 6px; padding-top: 6px; border-top: 1px solid var(--wp-divider); }
 .wp-ap-counts { display: flex; gap: 14px; font-size: 13px; color: var(--wp-muted); padding: 2px 2px 4px; }
 .wp-ap-counts b { color: var(--wp-text); font-weight: 600; }
+
+/* The source filter on the librarian's picks (librarian.js). */
+.wp-picks-sources { display: flex; gap: 6px; flex-wrap: wrap; }
+.wp-picks-sources .wp-chip-on { background: var(--wp-primary); color: var(--wp-on-primary); }
