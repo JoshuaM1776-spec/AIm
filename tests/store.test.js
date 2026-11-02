@@ -1037,6 +1037,8 @@ test("an aim is a goal: searches stay sessions, goals become books, and a sessio
 
 test("subjects: EMS and medications read as health", async () => {
   const env = fresh();
+  assert.strictEqual((await env.run(`aimSubject({ text: "Understand how airplane stalls work" })`)).id, "aviation", "airplane is aviation, not just plane");
+  assert.strictEqual((await env.run(`aimSubject({ text: "Fly a glider solo" })`)).id, "aviation");
   assert.strictEqual((await env.run(`aimSubject({ text: "EMT medications for my cert exam" })`)).id, "health");
   assert.strictEqual((await env.run(`aimSubject({ text: "How nitroglycerin works for cardiac chest pain" })`)).id, "health");
 });

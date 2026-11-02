@@ -1892,7 +1892,7 @@ const SUBJECTS = [
   ["science", "Science", /\b(science|physics|chemistry|biology|cells?\b|cellular|photosynthesis|atom|molecule|evolution|respiration|genetics|quantum|climate|weather)/],
   ["math", "Math", /\b(math|algebra|calculus|geometry|statistics|equation|derivative|integral|probability|trigonometry|fraction)/],
   ["space", "Space", /\b(space|planet|nasa|rocket|astronomy|galaxy|orbit|stars?\b|moon\b|mars|telescope)/],
-  ["aviation", "Aviation", /\b(aviation|pilot|plane|aircraft|flight|airline|checkride|faa\b)/],
+  ["aviation", "Aviation", /\b(aviation|pilot|(air|aero)?planes?|aircraft|flight|airline|checkride|faa\b|helicopter|glider|cessna|cockpit|aerodynamic)/],
   ["engineering", "Engineering", /\b(engineer|engine|bridge|mechanical|electrical|circuit|battery|batteries|motor|robot|electronics)/],
   ["craft", "Craft", /\b(wood|joinery|joints?\b|cabinet|carpentry|chisel|sharpen|weld|sew\b|sewing|knit|pottery|furniture|faucet|plumbing|repair|fix\b|fixing|alternator|truck|car\b|cars\b)/],
   ["coding", "Technology", /\b(code|coding|program|python|javascript|software|computer|web\b|apps?\b|ai\b|data\b)/],
