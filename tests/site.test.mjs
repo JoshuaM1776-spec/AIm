@@ -53,8 +53,11 @@ try {
       await p.route("**/config.js", r => r.fulfill({ contentType: "text/javascript", body: 'window.AIM_SITE = { storeUrl: "https://chromewebstore.google.com/detail/aim/abc", plusPrice: "$6 a month", contactEmail: "hi@example.com" };' }));
       await p.reload();
       await p.waitForTimeout(200);
+      step("Homeschool is teased as coming later, parent-approved, never as a complete curriculum", (await p.textContent("#homeschool")).includes("Coming later") &&
+        (await p.textContent("#homeschool")).includes("until you approve the week") && !/complete curriculum|full curriculum/i.test(await p.textContent("#homeschool")));
       step("with a listing: buttons go to the Chrome Web Store, the price and contact show", (await p.getAttribute("a.btn.big", "href")).startsWith("https://chromewebstore.google.com/") &&
-        (await p.textContent("[data-plus-price]")) === "$6 a month" && (await p.getAttribute("[data-contact]", "href")) === "mailto:hi@example.com");
+        (await p.textContent("[data-plus-price]")) === "$6 a month" && (await p.getAttribute("[data-contact]", "href")) === "mailto:hi@example.com" &&
+        (await p.getAttribute("[data-early]", "href")).startsWith("mailto:hi@example.com?subject="));
     }
     await p.close();
   }

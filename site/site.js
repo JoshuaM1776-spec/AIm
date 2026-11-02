@@ -14,6 +14,12 @@
   if (price && C.plusPrice) price.textContent = C.plusPrice;
   const contact = document.querySelector("[data-contact]");
   if (contact && C.contactEmail) { contact.href = `mailto:${C.contactEmail}`; contact.hidden = false; }
+  // Homeschool early access: an email, once there's an address to write to.
+  const early = document.querySelector("[data-early]");
+  if (early && C.contactEmail) {
+    early.href = `mailto:${C.contactEmail}?subject=${encodeURIComponent("Aim Homeschool early access")}`;
+    early.hidden = false;
+  }
 
   // The shelf: four goals as Aim draws them.
   const shelf = document.getElementById("shelf");
