@@ -91,6 +91,7 @@ On the server, `supabase/functions/ai/homeschool.ts` holds every rule (approval,
 | `pathways.html/js` | Pathways (Aim Plus): themes from what you've explored, work connected to an interest, and a path's four steps (See it, Try it, Meet it, Prepare for it) with reflections |
 | `pathways-ui.js` | "Want more of this?" and "Where could this take me?" for Aim's own pages (TeachBack, study sessions) |
 | `welcome.html/js` | Getting started, as one conversation: why you use YouTube, distractions, your subscriptions in groups, your first aims, an optional account (also the library's Personalize, `?again=1`; `personalize.html` forwards here) |
+| `site/` | The public website people download Aim from: home page, privacy policy (from PRIVACY.md) and preview install guide. `node tools/build-site.mjs`; see site/README.md |
 | `nav.js` | The four places in every Aim page's header (YouTube, Library, Pathways, Settings), and the Library's tabs (Your aims, Learning record) |
 | `teachback.html/js` | TeachBack, Aim Plus's conversational check of what you can explain |
 | `supabase/` | The Aim Plus server: database tables and the AI endpoint. Not part of the extension package. |

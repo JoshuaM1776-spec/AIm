@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Install the preview · Aim</title>
+<meta name="description" content="How to install the preview of Aim, the Chrome extension for using YouTube on purpose, before it's on the Chrome Web Store.">
+<link rel="icon" href="assets/icon.png">
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="site.css">
+</head>
+<body class="doc">
+<header class="top"><div class="wrap">
+  <a class="brand" href="./"><img src="assets/mark.svg" alt="" width="28" height="28"><span>Aim</span></a>
+  <nav aria-label="Main"><a href="./#how">How it works</a><a href="./#learn">Learning</a><a href="./#pricing">Pricing</a><a href="privacy.html">Privacy</a></nav>
+</div></header>
+<main class="wrap prose">
+  <p class="eyebrow">Preview</p>
+  <h1>Install the preview</h1>
+  <div id="store" hidden>
+    <p>Aim is on the Chrome Web Store. Install it from there to get updates automatically.</p>
+    <p><a class="btn big" data-get href="./">Add to Chrome, free</a></p>
+  </div>
+  <div id="preview">
+    <p>Aim is coming to the Chrome Web Store. Until then, you can install the preview by hand. It takes about a minute, on a computer, in Chrome, Edge or Brave.</p>
+    <ol class="steps-list">
+      <li><b>Download the preview.</b> <a href="download/aim-preview.zip" download>aim-preview.zip</a></li>
+      <li><b>Unzip it into a folder you'll keep</b>, such as Documents/Aim. Chrome runs Aim from that folder, so don't delete it.</li>
+      <li><b>Open your browser's extensions page.</b> Type <code>chrome://extensions</code> into the address bar (in Edge, <code>edge://extensions</code>; in Brave, <code>brave://extensions</code>).</li>
+      <li><b>Turn on Developer mode</b> (a switch at the top right, or bottom left in Edge).</li>
+      <li><b>Click Load unpacked</b> and choose the unzipped folder, the one with <code>manifest.json</code> inside.</li>
+      <li><b>Aim opens and says hello.</b> Pin it: the puzzle piece in the toolbar, then the pin next to Aim.</li>
+    </ol>
+    <p class="note">Updating: download the new preview, replace the folder's contents, and click the reload arrow on Aim's card in the extensions page. Your aims and settings stay. Chrome may remind you that a developer-mode extension is on; that's expected for a preview.</p>
+    <p id="ask" hidden>Questions or problems? <a data-contact href="#">Write to us</a>.</p>
+  </div>
+</main>
+<footer class="foot"><div class="wrap"><span>Aim is not affiliated with YouTube or Google.</span><a href="./">Home</a></div></footer>
+<script src="config.js"></script>
+<script src="site.js"></script>
+<script src="install.js"></script>
+</body>
+</html>

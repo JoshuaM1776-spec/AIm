@@ -64,7 +64,7 @@ Don't show YouTube's logo prominently in screenshots or promos, and don't make t
 
 **When Aim Plus ships** (a build with `config.js` filled in), the answers change: tick **Personally identifiable information** (email address, for sign-in) and **Authentication information** (the sign-in session), keep the three certifications, mention the account in the description, and update "Private by design" to say Aim Free needs no account. Also add the Supabase project's host to the single-purpose and permission notes if Chrome asks.
 
-**Privacy policy URL:** **TODO.** Publish `PRIVACY.md` at a public URL, for example the GitHub repo once it's connected, or a simple web page, and fill in the contact email first.
+**Privacy policy URL:** `https://<your domain>/privacy.html` once the website (`site/`, see site/README.md) is published. It's generated from `PRIVACY.md`; fill in the contact email first.
 
 ## Before submitting
 
@@ -74,5 +74,5 @@ Don't show YouTube's logo prominently in screenshots or promos, and don't make t
 - [x] Logo chosen (October 2026): the forward triangle with a road and a coral arrowhead; deep forest green and coral. Tagline idea: "Learn forward." See README → Rebranding.
 - [ ] Before launch, a trademark search for "Aim" in software and education (USPTO classes 9 and 41), since other products use the word.
 - [ ] Fill in the contact email in `PRIVACY.md` and publish it.
-- [ ] Build the zip without `tests/`: `git archive --format=zip -o aim.zip HEAD ':!tests' ':!supabase' ':!docs' ':!tools'`.
+- [ ] Build the zip without `tests/`: `git archive --format=zip -o aim.zip HEAD ':!tests' ':!supabase' ':!docs' ':!tools' ':!web' ':!site'`.
 - [ ] Developer account: one-time $5 registration fee, and verify a contact email.

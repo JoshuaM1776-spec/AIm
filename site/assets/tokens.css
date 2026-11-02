@@ -1,0 +1,40 @@
+/* Aim's fonts and colors, from the Aim mark: warm parchment, green-black ink, deep forest green and
+   coral; dark mode is deep green-black with cream. Shared by aim.css (Aim's pages) and the popup.
+   Type: Inter for text, Inter Display for headings and the name (fonts/, Latin subsets, OFL). */
+
+@font-face { font-family: "Aim Inter"; font-weight: 400; font-display: swap; src: url("fonts/Inter-Regular.woff2") format("woff2"); }
+@font-face { font-family: "Aim Inter"; font-weight: 500; font-display: swap; src: url("fonts/Inter-Medium.woff2") format("woff2"); }
+@font-face { font-family: "Aim Inter Display"; font-weight: 600; font-display: swap; src: url("fonts/InterDisplay-SemiBold.woff2") format("woff2"); }
+@font-face { font-family: "Aim Inter Display"; font-weight: 700; font-display: swap; src: url("fonts/InterDisplay-Bold.woff2") format("woff2"); }
+
+:root {
+  --font: "Aim Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-display: "Aim Inter Display", "Aim Inter", system-ui, sans-serif;
+  /* Book titles and the library's headings: a classic serif from the system, nothing to download. */
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --bg: #f7f3ec; --surface: #fffdf9; --text: #16231e; --muted: #4f5c55;
+  /* Book details (the library and an aim's pages only): a paper page and brass rules. */
+  --paper: #fffcf5; --brass: #9c7638; --brass-soft: rgba(156, 118, 56, .28);
+  --divider: rgba(25, 61, 49, .12); --card-border: rgba(25, 61, 49, .1);
+  --tonal: rgba(25, 61, 49, .06); --tonal-hover: rgba(25, 61, 49, .11);
+  --field: #fffdf9; --field-border: #cfd3c9; --focus: #193d31; --link: #1f6b50;
+  --primary: #193d31; --primary-hover: #10291f; --on-primary: #fffdf9;
+  --accent: #d93b2b; --accent-hover: #c03222; --learn: #2b6e52; --learn-soft: rgba(43, 110, 82, .1);
+  --ok: #2b7d47; --ok-soft: rgba(43, 125, 71, .12); --danger: #b42318;
+  --toggle-track: rgba(25, 61, 49, .25);
+  --shadow: 0 1px 2px rgba(25, 61, 49, .05), 0 6px 20px rgba(25, 61, 49, .06);
+  --radius: 16px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1512; --surface: #15201b; --text: #eef0e9; --muted: #b3bfb8;
+    --paper: #131d18; --brass: #d2b47a; --brass-soft: rgba(210, 180, 122, .3);
+    --divider: rgba(238, 240, 233, .11); --card-border: rgba(238, 240, 233, .08);
+    --tonal: rgba(238, 240, 233, .07); --tonal-hover: rgba(238, 240, 233, .13);
+    --field: #101a16; --field-border: #33423b; --focus: #9fd3b8; --link: #8fd0b0;
+    --primary: #ece5d4; --primary-hover: #fffaf0; --on-primary: #12201a;
+    --learn: #8fcaa9; --learn-soft: rgba(143, 202, 169, .13); --ok: #74d18f; --ok-soft: rgba(116, 209, 143, .14); --danger: #ff6b5c;
+    --toggle-track: rgba(238, 240, 233, .3);
+    --shadow: none;
+  }
+}
