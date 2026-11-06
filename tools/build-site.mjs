@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 export const ASSETS = [["tokens.css", "tokens.css"], ["covers.css", "covers.css"], ["covers.js", "covers.js"],
   ["fonts/Inter-Regular.woff2", "fonts/Inter-Regular.woff2"], ["fonts/Inter-Medium.woff2", "fonts/Inter-Medium.woff2"],
-  ["fonts/InterDisplay-SemiBold.woff2", "fonts/InterDisplay-SemiBold.woff2"], ["fonts/InterDisplay-Bold.woff2", "fonts/InterDisplay-Bold.woff2"], ["fonts/OFL.txt", "fonts/OFL.txt"],
+  ["fonts/InterDisplay-SemiBold.woff2", "fonts/InterDisplay-SemiBold.woff2"], ["fonts/InterDisplay-Bold.woff2", "fonts/InterDisplay-Bold.woff2"], ["fonts/OFL.txt", "fonts/OFL.txt"], ["fonts/Newsreader-Regular.woff2", "fonts/Newsreader-Regular.woff2"], ["fonts/Newsreader-Medium.woff2", "fonts/Newsreader-Medium.woff2"], ["fonts/Newsreader-Italic.woff2", "fonts/Newsreader-Italic.woff2"], ["fonts/OFL-Newsreader.txt", "fonts/OFL-Newsreader.txt"],
   ["icons/mark.svg", "mark.svg"], ["icons/128.png", "icon.png"], ["icons/48.png", "icon-48.png"]];
 
 const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

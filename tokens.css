@@ -1,38 +1,44 @@
-/* Aim's fonts and colors, from the Aim mark: warm parchment, green-black ink, deep forest green and
-   coral; dark mode is deep green-black with cream. Shared by aim.css (Aim's pages) and the popup.
-   Type: Inter for text, Inter Display for headings and the name (fonts/, Latin subsets, OFL). */
+/* Aim's fonts and colors: Modern Explorer (docs/SPEC.md §21). A warm light canvas, navy ink and
+   buttons, copper for accents and the way back to your challenge; dark mode is deep navy with cream.
+   Shared by aim.css (Aim's pages), the popup, the parent website and the public site.
+   Type: Newsreader, an editorial serif, for questions, challenges and headings; Inter for text and
+   controls; Inter Display for the name (fonts/, Latin subsets, OFL). */
 
 @font-face { font-family: "Aim Inter"; font-weight: 400; font-display: swap; src: url("fonts/Inter-Regular.woff2") format("woff2"); }
 @font-face { font-family: "Aim Inter"; font-weight: 500; font-display: swap; src: url("fonts/Inter-Medium.woff2") format("woff2"); }
 @font-face { font-family: "Aim Inter Display"; font-weight: 600; font-display: swap; src: url("fonts/InterDisplay-SemiBold.woff2") format("woff2"); }
 @font-face { font-family: "Aim Inter Display"; font-weight: 700; font-display: swap; src: url("fonts/InterDisplay-Bold.woff2") format("woff2"); }
+@font-face { font-family: "Aim Serif"; font-weight: 400; font-display: swap; src: url("fonts/Newsreader-Regular.woff2") format("woff2"); }
+@font-face { font-family: "Aim Serif"; font-weight: 500 700; font-display: swap; src: url("fonts/Newsreader-Medium.woff2") format("woff2"); }
+@font-face { font-family: "Aim Serif"; font-style: italic; font-weight: 400 700; font-display: swap; src: url("fonts/Newsreader-Italic.woff2") format("woff2"); }
 
 :root {
   --font: "Aim Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   --font-display: "Aim Inter Display", "Aim Inter", system-ui, sans-serif;
-  /* Book titles and the library's headings: a classic serif from the system, nothing to download. */
-  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
-  --bg: #f7f3ec; --surface: #fffdf9; --text: #16231e; --muted: #4f5c55;
-  /* Book details (the library and an aim's pages only): a paper page and brass rules. */
-  --paper: #fffcf5; --brass: #9c7638; --brass-soft: rgba(156, 118, 56, .28);
-  --divider: rgba(25, 61, 49, .12); --card-border: rgba(25, 61, 49, .1);
-  --tonal: rgba(25, 61, 49, .06); --tonal-hover: rgba(25, 61, 49, .11);
-  --field: #fffdf9; --field-border: #cfd3c9; --focus: #193d31; --link: #1f6b50;
-  --primary: #193d31; --primary-hover: #10291f; --on-primary: #fffdf9;
-  --accent: #d93b2b; --accent-hover: #c03222; --learn: #2b6e52; --learn-soft: rgba(43, 110, 82, .1);
+  /* Questions, challenges, subjects and headings: the editorial serif. */
+  --font-serif: "Aim Serif", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --bg: #f6f0e7; --surface: #fffbf5; --text: #1a2433; --muted: #535c6b;
+  /* Discovery details (the library and challenge pages): a paper page and copper rules. */
+  --paper: #fdf8f0; --brass: #975326; --brass-soft: rgba(151, 83, 38, .26);
+  --divider: rgba(26, 46, 77, .12); --card-border: rgba(26, 46, 77, .1);
+  --tonal: rgba(26, 46, 77, .06); --tonal-hover: rgba(26, 46, 77, .11);
+  --field: #fffbf5; --field-border: #cdd1d8; --focus: #1c3a5e; --link: #22558a;
+  --primary: #1c3a5e; --primary-hover: #132a46; --on-primary: #fffbf5;
+  --accent: #a5552a; --accent-hover: #8c4621; --on-accent: #ffffff; --learn: #2b6e52; --learn-soft: rgba(43, 110, 82, .1);
   --ok: #2b7d47; --ok-soft: rgba(43, 125, 71, .12); --danger: #b42318;
-  --toggle-track: rgba(25, 61, 49, .25);
-  --shadow: 0 1px 2px rgba(25, 61, 49, .05), 0 6px 20px rgba(25, 61, 49, .06);
+  --toggle-track: rgba(26, 46, 77, .25);
+  --shadow: 0 1px 2px rgba(26, 46, 77, .05), 0 6px 20px rgba(26, 46, 77, .07);
   --radius: 16px;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0d1512; --surface: #15201b; --text: #eef0e9; --muted: #b3bfb8;
-    --paper: #131d18; --brass: #d2b47a; --brass-soft: rgba(210, 180, 122, .3);
-    --divider: rgba(238, 240, 233, .11); --card-border: rgba(238, 240, 233, .08);
-    --tonal: rgba(238, 240, 233, .07); --tonal-hover: rgba(238, 240, 233, .13);
-    --field: #101a16; --field-border: #33423b; --focus: #9fd3b8; --link: #8fd0b0;
-    --primary: #ece5d4; --primary-hover: #fffaf0; --on-primary: #12201a;
+    --bg: #0d131c; --surface: #151d29; --text: #eef1f5; --muted: #b2bac7;
+    --paper: #121a25; --brass: #d9a06c; --brass-soft: rgba(217, 160, 108, .3);
+    --divider: rgba(238, 241, 245, .11); --card-border: rgba(238, 241, 245, .08);
+    --tonal: rgba(238, 241, 245, .07); --tonal-hover: rgba(238, 241, 245, .13);
+    --field: #101722; --field-border: #34404f; --focus: #a9c8ea; --link: #9cc3ec;
+    --primary: #ede2cf; --primary-hover: #fffaf0; --on-primary: #142033;
+    --accent: #d98550; --accent-hover: #e69a68; --on-accent: #142033;
     --learn: #8fcaa9; --learn-soft: rgba(143, 202, 169, .13); --ok: #74d18f; --ok-soft: rgba(116, 209, 143, .14); --danger: #ff6b5c;
     --toggle-track: rgba(238, 240, 233, .3);
     --shadow: none;

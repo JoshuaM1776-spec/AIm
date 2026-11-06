@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 export const SHARED = [["tokens.css", "tokens.css"], ["fonts/Inter-Regular.woff2", "fonts/Inter-Regular.woff2"], ["fonts/Inter-Medium.woff2", "fonts/Inter-Medium.woff2"],
-  ["fonts/InterDisplay-SemiBold.woff2", "fonts/InterDisplay-SemiBold.woff2"], ["fonts/InterDisplay-Bold.woff2", "fonts/InterDisplay-Bold.woff2"], ["fonts/OFL.txt", "fonts/OFL.txt"],
+  ["fonts/InterDisplay-SemiBold.woff2", "fonts/InterDisplay-SemiBold.woff2"], ["fonts/InterDisplay-Bold.woff2", "fonts/InterDisplay-Bold.woff2"], ["fonts/OFL.txt", "fonts/OFL.txt"], ["fonts/Newsreader-Regular.woff2", "fonts/Newsreader-Regular.woff2"], ["fonts/Newsreader-Medium.woff2", "fonts/Newsreader-Medium.woff2"], ["fonts/Newsreader-Italic.woff2", "fonts/Newsreader-Italic.woff2"], ["fonts/OFL-Newsreader.txt", "fonts/OFL-Newsreader.txt"],
   ["icons/mark.svg", "mark.svg"], ["icons/128.png", "icon.png"], ["content/topics.js", "topics.js"], ["content/filetext.js", "filetext.js"]];
 export const stale = () => SHARED.filter(([from, to]) => { try { return !readFileSync(root + from).equals(readFileSync(root + "web/shared/" + to)); } catch { return true; } }).map(([, to]) => to);
 

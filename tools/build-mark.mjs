@@ -13,7 +13,7 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-export const COLORS = { forest: "#193d31", coral: "#ff5446", light: "#f1f1f1" };
+export const COLORS = { forest: "#1c3a5e", coral: "#d0712f", light: "#ede2cf" }; // navy, copper, cream (Modern Explorer)
 
 const f = n => +n.toFixed(2);
 const traced = readFileSync(root + "icons/mark-traced.svg", "utf8");

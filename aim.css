@@ -83,7 +83,7 @@ details.card[open] > summary::before { transform: rotate(90deg); }
 .btn.tonal { background: var(--tonal); color: var(--text); } .btn.tonal:hover { background: var(--tonal-hover); opacity: 1; }
 .btn.outline { background: none; color: var(--text); border: 1px solid var(--divider); } .btn.outline:hover { background: var(--tonal); opacity: 1; }
 .btn.text { background: none; color: var(--text); padding: 0 12px; } .btn.text:hover { background: var(--tonal); opacity: 1; }
-.btn.accent { background: var(--accent); color: #fff; } .btn.accent:hover { background: var(--accent-hover); opacity: 1; }
+.btn.accent { background: var(--accent); color: var(--on-accent); } .btn.accent:hover { background: var(--accent-hover); opacity: 1; }
 .btn.danger { color: var(--danger); }
 .btn.lg { height: 40px; padding: 0 20px; border-radius: 20px; }
 .btn:disabled { opacity: .45; cursor: default; }

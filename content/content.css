@@ -8,6 +8,10 @@
    a little rounder and roomier than YouTube's menus, so Aim's moments of decision read as calm and
    deliberate. */
 
+@font-face { font-family: "Aim Serif"; font-weight: 400; font-display: swap;
+  src: url("chrome-extension://__MSG_@@extension_id__/fonts/Newsreader-Regular.woff2") format("woff2"); }
+@font-face { font-family: "Aim Serif"; font-weight: 500 700; font-display: swap;
+  src: url("chrome-extension://__MSG_@@extension_id__/fonts/Newsreader-Medium.woff2") format("woff2"); }
 @font-face { font-family: "Aim Inter Display"; font-weight: 700; font-display: swap;
   src: url("chrome-extension://__MSG_@@extension_id__/fonts/InterDisplay-Bold.woff2") format("woff2"); }
 
@@ -28,18 +32,18 @@
   --wp-search-button: var(--ytd-searchbox-legacy-button-color, #f8f8f8);
   --wp-search-focus: #1c62b9;
   --wp-shadow: 0 4px 32px 0 rgba(0, 0, 0, 0.1);
-  --wp-accent: #d93b2b;
-  --wp-accent-hover: #c03222;
-  --wp-accent-soft: rgba(217, 59, 43, 0.08);
+  --wp-accent: #a5552a;
+  --wp-accent-hover: #8c4621;
+  --wp-accent-soft: rgba(165, 85, 42, 0.09);
   --wp-on-accent: #ffffff;
-  --wp-primary: #193d31; --wp-primary-hover: #10291f; --wp-on-primary: #fffdf9;
+  --wp-primary: #1c3a5e; --wp-primary-hover: #132a46; --wp-on-primary: #fffbf5;
   --wp-display: "Aim Inter Display", "Roboto", "Arial", sans-serif;
-  --wp-mark: #193d31; /* the Aim mark: forest green, light in the dark theme */
+  --wp-mark: #1c3a5e; /* the Aim mark: navy, light in the dark theme */
   --wp-success: #2ba640;
   --wp-card-border: rgba(0, 0, 0, 0.08);
   /* For the book covers (covers.css), as on Aim's own pages. */
   --font: "Roboto", "Arial", sans-serif;
-  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --font-serif: "Aim Serif", "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
   font-family: "Roboto", "Arial", sans-serif;
   color: var(--wp-text);
   -webkit-font-smoothing: antialiased;
@@ -61,9 +65,10 @@ html[dark] .wp {
   --wp-search-button: var(--ytd-searchbox-legacy-button-color, #222222);
   --wp-search-focus: #1c62b9;
   --wp-shadow: 0 4px 32px 0 rgba(0, 0, 0, 0.5);
-  --wp-accent-soft: rgba(217, 59, 43, 0.18);
+  --wp-accent-soft: rgba(217, 133, 80, 0.18);
+  --wp-accent: #d98550; --wp-accent-hover: #e69a68; --wp-on-accent: #142033;
   --wp-mark: #f1f1f1;
-  --wp-primary: #ece5d4; --wp-primary-hover: #fffaf0; --wp-on-primary: #12201a;
+  --wp-primary: #ede2cf; --wp-primary-hover: #fffaf0; --wp-on-primary: #142033;
   --wp-card-border: rgba(255, 255, 255, 0.1);
 }
 
@@ -661,7 +666,7 @@ html[dark] .wp-coach { background: var(--wp-menu); }
   border-radius: 8px; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--wp-link); }
 .wp .wp-concept-ask:hover { background: var(--wp-tonal); }
 .wp-concept-ask .wp-icon svg { width: 16px; height: 16px; }
-.wp-point-here { outline: 3px solid #ff5446 !important; outline-offset: 3px; border-radius: 18px; transition: outline-color .3s; }
+.wp-point-here { outline: 3px solid #d0712f !important; outline-offset: 3px; border-radius: 18px; transition: outline-color .3s; }
 
 /* "Saved for later" on the homepage and at the start of a break: small thumbnails with a remove ×. */
 .wp-home-saved { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
@@ -684,7 +689,7 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 /* A channel you prefer: a small "Your channel" badge on its videos. */
 [data-wp-preferred] { position: relative; }
 [data-wp-preferred]::before { content: "Your channel"; position: absolute; z-index: 2; top: 6px; left: 6px; padding: 0 6px; border-radius: 4px;
-  background: var(--wp-primary, #193d31); color: var(--wp-on-primary, #fffdf9); font: 500 11px/18px Roboto, Arial, sans-serif; pointer-events: none; }
+  background: var(--wp-primary, #1c3a5e); color: var(--wp-on-primary, #fffbf5); font: 500 11px/18px Roboto, Arial, sans-serif; pointer-events: none; }
 
 /* Strict mode's reason prompt. */
 .wp .wp-reason-input { width: 100%; min-height: 64px; resize: vertical; padding: 10px 12px; line-height: 20px; }
@@ -798,7 +803,7 @@ html[dark] .wp-medal { color: #d2b277; }
 .wp-talk-main .wp-btn { flex: 1; justify-content: center; }
 .wp-talk-main .wp-btn[hidden], .wp-talk-links .wp-btn[hidden], .wp-talk-input[hidden] { display: none; }
 .wp .wp-talk-voice { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; }
-.wp .wp-talk-voice.on { background: var(--wp-accent, #d93b2b); color: #fff; }
+.wp .wp-talk-voice.on { background: var(--wp-accent, #a5552a); color: var(--wp-on-accent, #fff); }
 .wp-talk-links { display: flex; flex-wrap: wrap; gap: 2px 4px; margin: 0 -8px; }
 .wp-talk-links .wp-talk-enough { margin-left: auto; }
 .wp-talk-feedback { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--wp-tonal); font-size: 13px; line-height: 19px; }
@@ -832,7 +837,7 @@ html[dark] .wp-medal { color: #d2b277; }
 .wp-explore-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 2px; }
 .wp-explore-chips .wp-chip { border-radius: 16px; }
 .wp .wp-explore-chips .wp-chip-on { background: var(--wp-primary); color: var(--wp-on-primary); box-shadow: none; }
-.wp-talk-mic.on { background: var(--wp-accent, #d93b2b); color: #fff; }
+.wp-talk-mic.on { background: var(--wp-accent, #a5552a); color: var(--wp-on-accent, #fff); }
 .wp-talk-actions .wp-row { display: flex; align-items: center; gap: 6px; }
 
 /* "Staying on track": a brief pill on the player when a video plays for your aim. */
@@ -865,7 +870,7 @@ html[dark] .wp-medal { color: #d2b277; }
 .wp-talk-video-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 12px; line-height: 16px; }
 .wp-talk-video-text b { font-size: 12px; }
 .wp-talk-video-text span:nth-child(2) { font-size: 13px; line-height: 17px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.wp-ontrack-text { display: flex; flex-direction: column; text-align: left; min-width: 0; padding-left: 10px; border-left: 1px solid rgba(25, 61, 49, .15); }
+.wp-ontrack-text { display: flex; flex-direction: column; text-align: left; min-width: 0; padding-left: 10px; border-left: 1px solid rgba(26, 46, 77, .15); }
 .wp-ontrack-aim { font-size: 12px; line-height: 16px; color: #5d6a63; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wp-ontrack b { font-size: 16px; }
 
