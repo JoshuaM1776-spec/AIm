@@ -126,13 +126,16 @@ function renderAimPanel() {
   const ended = panelEnded === currentId && panelPromptGone !== currentId;
   const c = panelCounts(p);
   const goalBlock = goalOfferBlock(p, renderAimPanel);
-  const key = [!!goalBlock, purposeIsGoal(), p.id, p.text, kind, step?.search || "", found?.status || "", found?.video?.id || "", followUp?.id || "", ready, pr?.title || "", pr?.triedAt || "", field || "",
+  const key = [!!goalBlock, purposeIsGoal(), p.challenge?.status || "", p.id, p.text, kind, step?.search || "", found?.status || "", found?.video?.id || "", followUp?.id || "", ready, pr?.title || "", pr?.triedAt || "", field || "",
     ended, panelOpen, account.on, account.plus, currentId, c.explored, c.explained, c.applied, !!currentInfo].join("|");
   if (existing && existing.parentElement === host && host.firstElementChild === existing && existing.dataset.key === key) return;
   existing?.remove();
 
+  // A challenge (0.70): its last step is the Final Challenge, judged against its success condition.
+  const ch = p.challenge?.status === "active" ? p.challenge : null;
+  const attempt = () => openTalk({ mode: "synthesis" });
   const explainIt = () => (followUp ? openTalk({ followUp }) : ready ? openTalk({ mode: "synthesis" }) : openTalk());
-  const explainLabel = followUp ? `Follow up: ${followUp.title}` : ready ? "Put it together" : "Explain it";
+  const explainLabel = followUp ? `Follow up: ${followUp.title}` : ready ? (ch ? "Attempt the challenge" : "Put it together") : "Explain it";
   const signIn = () => send({ type: "open-options", section: "account" });
 
   // When the video ends: one next step, chosen by context (SPEC §5). Others stay as small links.
@@ -140,6 +143,7 @@ function renderAimPanel() {
   if (ended) {
     const keepLearning = found?.status === "ready" ? () => playNext(step, found.video) : () => $("#wp-upnext")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     const primary = quick ? { text: "Got what you needed?", label: doneLabel(p), go: doneAction(p) }
+      : ch && ready && account.on ? { text: "You've worked through the plan. Ready for the final challenge?", label: "Attempt the challenge", go: attempt }
       : followUp && account.on ? { text: `You watched something about ${followUp.title}. Try explaining it now.`, label: "Explain it now", go: () => openTalk({ followUp }) }
       : pr && !pr.triedAt ? { text: "You've seen how. The best next step is doing it.", label: `Try it: ${pr.title}`, go: () => send({ type: "open-aim", id: p.id }) }
       : kind === "explore" || (parts.length && (p.videos || []).length <= 1) || !account.on ? { text: "Keep going while you're in it.", label: "Keep learning", go: keepLearning }
@@ -176,6 +180,7 @@ function renderAimPanel() {
     el("div", { class: "wp-ap-counts" },
       el("span", {}, el("b", {}, String(c.explored)), " explored"), el("span", {}, el("b", {}, String(c.explained)), " explained"), el("span", {}, el("b", {}, String(c.applied)), " applied")),
     row("book", "Learn", step ? step.title : "Up next from your search", () => (found?.status === "ready" ? playNext(step, found.video) : $("#wp-upnext")?.scrollIntoView({ behavior: "smooth", block: "nearest" }))),
+    ch ? row("target", "Final challenge", ch.success, account.on ? attempt : signIn) : null,
     row("talk", "Explain", account.on ? (followUp ? `Follow up: ${followUp.title}` : ready ? "Put the whole answer together" : "Teach it back to a practice student") : "Sign in to teach it back", account.on ? explainIt : signIn),
     pr && !pr.triedAt ? row("tool", "Apply", pr.title, () => send({ type: "open-aim", id: p.id }))
       : field ? row("tool", "Apply", "Run a scenario", () => send({ type: "open-scenario", aimId: p.id }))
@@ -195,7 +200,7 @@ function renderAimPanel() {
     el("div", { class: "wp-ap-aim" },
       el("span", { class: "wp-ap-target" }, icon("target")),
       el("div", { class: "wp-ap-aimtext" },
-        el("span", { class: "wp-ap-label" }, quick ? "Looking for" : kind === "explore" ? "Exploring" : purposeIsGoal() ? "You're learning" : "Searching for"),
+        el("span", { class: "wp-ap-label" }, p.challenge ? (p.challenge.status === "completed" ? "Challenge complete" : "Your challenge") : quick ? "Looking for" : kind === "explore" ? "Exploring" : purposeIsGoal() ? "You're learning" : "Searching for"),
         el("b", {}, p.learn ? p.learn : p.text)),
       el("button", { class: "wp-link", onclick: () => openPivotDialog() }, "Change")),
     goalBlock,

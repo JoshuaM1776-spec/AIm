@@ -316,7 +316,7 @@ async function plusBrief() {
 // The librarian, for YouTube tabs: only its tasks (planning a study session, and "Where could this
 // take me?", which uses nothing about the student), only when signed in. Errors come back as
 // { error, code } so the tab can fall back to a plain YouTube search.
-const LIBRARIAN_TASKS = new Set(["librarian-ask", "librarian-rank", "study-plan", "pathways-where", "video-concepts", "librarian-questions", "librarian-talk"]);
+const LIBRARIAN_TASKS = new Set(["librarian-ask", "librarian-rank", "study-plan", "pathways-where", "video-concepts", "librarian-questions", "librarian-talk", "challenges-suggest"]);
 async function plusLibrarian(task, input) {
   if (!LIBRARIAN_TASKS.has(task) || !plusConfigured()) return { error: "Unavailable.", code: "unavailable" };
   try { return await plusCall(task, input); }
@@ -325,7 +325,7 @@ async function plusLibrarian(task, input) {
 
 // Aim Plus features Aim's pages may call. Each is a task on Aim's server, which builds the prompts.
 const PLUS_TASKS = new Set(["teachback-start", "teachback-turn", "teachback-finish", "teachback-get",
-  "pathways-themes", "pathways-careers", "pathways-step", "study-apply", "scenario-turn", "deeper-step", "channels-organize"]);
+  "pathways-themes", "pathways-careers", "pathways-step", "study-apply", "scenario-turn", "deeper-step", "channels-organize", "challenges-suggest"]);
 
 // Messages from Aim's own pages (Settings, TeachBack). Network calls don't go through serial(), so a slow
 // server never holds up the timer.

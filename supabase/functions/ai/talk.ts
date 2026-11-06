@@ -116,6 +116,8 @@ Following up (when FOLLOW UP ON is in the request): they've since watched someth
 
 A student (when STUDENT is in the request): in this conversation you speak as that student, the person explaining to you is the teacher. Ask in that student's way, in first person ("I don't get why…"), still one short specific question at a time, still following every rule above. Never pretend to be a real person; you're a practice student.
 
+The Final Challenge (MODE: Synthesis with THE CHALLENGE in the request): this is the finish line of a challenge they chose, judged only against its SUCCESS CONDITION, decided before they started. Open by inviting them to do exactly that, in its terms ("Okay, the challenge: explain how an airplane can keep making lift upside down, including what the angle of attack has to do with it."). For a build challenge, ask them to describe what they made, how they did it and how it turned out (they can't send a photo here yet), and judge only what their description can show; never claim to verify what you can't observe. For a language challenge, have the exchange itself, in that language, and judge what they wrote or said (you can't hear pronunciation). After their reply, close in 2 to 4 sentences: what they demonstrated, then the most important thing still missing, if anything. Verdict: "solid" if their answer meets the success condition, "getting_there" if it meets part of it (say which part is missing), "not_enough" if the answer is too short, off the point or about something you can't judge, so there isn't enough evidence to tell. Never a grade, never "you've mastered".
+
 Remembering (MODE: Review, with REMEMBER): weeks ago they explained the idea listed. Open with one short, specific question that makes them explain it again from memory, without giving the answer away ("A while back you explained why ash made Roman concrete last. How does that work again?"). After their reply, close in one or two sentences: what they still have, and the piece they've lost (if any) in plain words. Set done to true, and set recalled: "yes" if they explained the core of it, "partly" if some of it, "no" if they couldn't. Otherwise recalled is "none".
 
 Feedback (only in your closing message, when they've replied at least once): short phrases (under 90 characters each, at most 3 per list, often fewer), only from their replies. explained: ideas they explained convincingly. uncertain: ideas they were unsure or vague about. misconceptions: something they said that's likely wrong, with the right idea ("Thought ash made it lighter; it makes it chemically stronger"). Empty lists are fine. Never a score.
@@ -135,7 +137,7 @@ const TALK_SCHEMA = {
         required: ["subject", "idea", "understood"], additionalProperties: false
       }
     },
-    verdict: { type: "string", enum: ["solid", "getting_there", "none"] },
+    verdict: { type: "string", enum: ["solid", "getting_there", "not_enough", "none"] },
     videos: {
       type: "array",
       items: {
@@ -256,6 +258,9 @@ export async function talk(ctx: TaskCtx & { plan?: string; usage?: TalkUsage }) 
   const followLine = tClean(follow.title, 60) ? `${tClean(follow.title, 60)}${tClean(follow.what, 200) ? ` (${tClean(follow.what, 200)})` : ""}` : "";
 
   const kind = ["learn", "project", "lookup"].includes(s.kind as string) ? s.kind as string : "";
+  const challenge = tObject(s.challenge);
+  const challengeLine = tClean(challenge.title, 120) && tClean(challenge.success, 220)
+    ? `THE CHALLENGE: ${tClean(challenge.title, 120)} (${["understand", "build", "investigate"].includes(challenge.kind as string) ? challenge.kind : "understand"})\nSUCCESS CONDITION: ${tClean(challenge.success, 220)}` : "";
   const tried = tObject(s.practice);
   const triedLine = tried.title && tried.tried ? `THEY TRIED: ${tClean(tried.title, 80)}${tried.note ? `. What they said about it: ${tClean(tried.note, 300)}` : " (no notes)"}` : "";
   const asked = thread.filter(m => m.role === "aim").length;
@@ -263,7 +268,7 @@ export async function talk(ctx: TaskCtx & { plan?: string; usage?: TalkUsage }) 
   const mustEnd = !opening && asked >= max;
 
   const prompt = `${studentKey ? `STUDENT: ${studentName || "A student"}, ${TALK_STUDENTS[studentKey]}\n` : ""}${reviewLine ? `REMEMBER: ${reviewLine} (explained ${tNum(review.daysAgo, 3650)} days ago)\n` : ""}MODE: ${mode === "review" ? "Review. A one-question check that they still remember something they explained before. Quick." : mode === "explore" ? "Explore. They were following their curiosity, not studying for anything. Light touch." : mode === "synthesis" ? "Synthesis. They've explored most of what this aim takes; now they put the whole answer together." : mode === "deeper" ? "Deeper. They chose to go deeper into one thing." : "Focus. They're working toward a specific aim. A bit more intentional."}${deeperOn ? `\nGO DEEPER ON: ${deeperOn}${tClean(focus.brief, 200) ? ` (${tClean(focus.brief, 200)})` : ""}${deeperChain.length ? `\nTHE CHAIN SO FAR: ${deeperChain.join(" → ")}` : ""}` : ""}
-THEIR AIM: ${aim}${kind ? `\nAIM KIND: ${kind}` : ""}${triedLine ? `\n${triedLine}` : ""}
+THEIR AIM: ${aim}${kind ? `\nAIM KIND: ${kind}` : ""}${challengeLine ? `\n${challengeLine}` : ""}${triedLine ? `\n${triedLine}` : ""}
 TIME: about ${tNum(s.minutes, 1440)} minutes
 ${searches.length ? `SEARCHES, IN ORDER: ${searches.join(" → ")}\n` : ""}${videos.length ? `VIDEOS (${withCaptions ? "with caption excerpts where shown" : "titles only; you haven't seen them"}):\n${videos.join("\n")}\n` : ""}${notes ? `THEIR NOTES: ${notes}\n` : ""}${studyTopics.length ? `STUDY TOPICS: ${studyTopics.join(" | ")}\n` : ""}${parts.length ? `YOUR UNDERSTANDING (what this aim takes, and how far they've got):\n${parts.map(x => `- ${x.title}: ${x.status}`).join("\n")}\n` : ""}${memory.length ? `THINGS THEY TOLD YOU BEFORE:\n${memory.join("\n")}\n` : ""}${connectLine ? `OPEN WITH THIS CONNECTION if it genuinely fits the session: ${connectLine}\n` : ""}${followLine ? `FOLLOW UP ON: ${followLine}\n` : ""}
 LIMITS: at most ${max} question${max > 1 ? "s" : ""} in this conversation. You've asked ${asked}. ${mustEnd ? "This message must be a closing remark, not a question. Set done to true." : opening ? "Open with one specific question. Set done to false." : "Ask another question only if it would really help; otherwise close with a remark and set done to true."}
@@ -305,7 +310,7 @@ ${free ? "Return memory as an empty list." : "Return memory from their replies s
       const f = tObject(r.feedback), l = (x: unknown) => tList(x).map(t => tClean(t, 100)).filter(Boolean).slice(0, 3);
       return { explained: l(f.explained), uncertain: l(f.uncertain), misconceptions: l(f.misconceptions) };
     })() : null,
-    verdict: mode === "synthesis" && done && ["solid", "getting_there"].includes(r.verdict as string) ? r.verdict : null,
+    verdict: mode === "synthesis" && done && (["solid", "getting_there"].includes(r.verdict as string) || (challengeLine && r.verdict === "not_enough")) ? r.verdict : null,
     marks: tList(r.marks).map(m => {
       const o = tObject(m), topic = tClean(o.topic, 120);
       const match = topics.find(t => t.toLowerCase() === topic.toLowerCase());

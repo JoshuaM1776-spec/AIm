@@ -63,6 +63,7 @@ On the server, `supabase/functions/ai/homeschool.ts` holds every rule (approval,
 | `study.html/js` | A study session's overview and summary |
 | `content/understanding.js` | Your understanding: a learning aim's map (parts and how far you've got), what's worth exploring next, Put it together (the finish line), and Put it into practice (the librarian's suggestion, Find a project video, I tried it) |
 | `content/captions.js` | Aim Plus, preview: a video's captions, read in the browser only when the librarian needs them, and the excerpt sent with a conversation or "In this video" |
+| `content/challenge.js` | Challenges on YouTube's homepage: Find a challenge for a subject and the time you have, a challenge's success condition and plan, Begin; and recording the Final Challenge's outcome with its evidence (`supabase/functions/ai/challenge.ts`) |
 | `content/goal.js` | When a search becomes an aim: "Searching" vs "Your aim", Make it an aim (menu, results bar), and the gentle offer in the panel |
 | `content/talk.js` | TeachBack on YouTube: one practice student asking one question at a time (Answer aloud, Type instead, "I don't know"), with feedback kept apart at the end; the question in the card after Done, the Explore invitation, "This connects to…", Talk it through in the menu, and the spaced review offer on the homepage |
 | `content/main.js` | Timer ticks, sync with other tabs, navigation, startup. Loads last. |

@@ -45,8 +45,8 @@ function understandingBlock(p) {
     ...map.parts.map(row),
     el("div", { class: `wp-map-part wp-map-links wp-map-${solid ? "explained" : "new"}` },
       el("span", { class: "wp-map-dot", "aria-hidden": "true" }),
-      el("span", { class: "wp-map-title" }, "How these fit together"),
-      el("span", { class: "wp-map-status" }, solid ? "Explained" : "Next connection")),
+      el("span", { class: "wp-map-title" }, p.challenge ? "The final challenge" : "How these fit together"),
+      el("span", { class: "wp-map-status" }, p.challenge ? (p.challenge.status === "completed" ? "Completed" : "To attempt") : solid ? "Explained" : "Next connection")),
     foot);
 }
 

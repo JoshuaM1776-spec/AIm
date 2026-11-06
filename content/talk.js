@@ -288,7 +288,20 @@ function showTalk(state) {
     if (state.done && state.practice && !state.practiceCard) state.practiceCard = practiceCard(state.aimId, state.practice);
     if (state.practiceCard) log.append(state.practiceCard);
     log.scrollTop = state.done ? 0 : log.scrollHeight;
-    if (state.done && state.verdict === "solid") {
+    if (state.done && state.challengeOutcome) {
+      // The Final Challenge: restrained. What you demonstrated, then what's next (docs/SPEC.md §15).
+      const live = activePurpose()?.id === state.aimId;
+      const ch = state.session.challenge || activePurpose()?.challenge || {};
+      const won = state.challengeOutcome === "demonstrated";
+      log.prepend(el("div", { class: `wp-ch-outcome${won ? " won" : ""}` },
+        el("b", {}, won ? "Challenge complete" : state.challengeOutcome === "partly" ? "Partly there" : "Not enough to tell yet"),
+        el("span", {}, won ? `You demonstrated: ${ch.title || state.session.aim}` : state.challengeOutcome === "partly" ? "The feedback below says what's still missing. Learn it, then try again." : "Say a bit more, in your own words, and try again.")));
+      foot.replaceChildren(el("div", { class: "wp-talk-actions" }, ...(won ? [
+        el("button", { class: "wp-btn wp-btn-text", onclick: () => { closeTalk(); location.href = `/#aim-challenge=${encodeURIComponent(ch.interest || activePurpose()?.challenge?.interest || ch.title || "")}`; } }, "Find the next challenge"),
+        el("button", { class: "wp-btn wp-btn-primary", onclick: () => { closeTalk(); if (live) finishPurpose("yes"); } }, live ? "Call it done" : "Close")] : [
+        el("button", { class: "wp-btn wp-btn-text", onclick: closeTalk }, "Keep learning"),
+        el("button", { class: "wp-btn wp-btn-primary", onclick: () => { closeTalk(); openTalk({ mode: "synthesis", aimId: state.aimId }); } }, "Try again")])));
+    } else if (state.done && state.verdict === "solid") {
       // The finish line: done here, or on to where people disagree.
       const live = activePurpose()?.id === state.aimId;
       foot.replaceChildren(el("div", { class: "wp-talk-actions" },
@@ -330,7 +343,11 @@ function showTalk(state) {
       if (state.mode === "review" && r.recalled && state.reviewKey) { state.recalled = r.recalled; send({ type: "review-result", key: state.reviewKey, outcome: r.recalled }); }
       if (state.remember && r.memory?.length) { await send({ type: "memory-add", items: r.memory, aimId: state.aimId }); state.kept = r.memory.map(m => m.subject); }
       if (r.marks?.length) await send({ type: "talk-marks", aimId: state.aimId, marks: r.marks });
-      if (r.verdict) { state.verdict = r.verdict; await send({ type: "talk-verdict", aimId: state.aimId, verdict: r.verdict }); }
+      if (r.verdict) {
+        state.verdict = r.verdict;
+        await send({ type: "talk-verdict", aimId: state.aimId, verdict: r.verdict });
+        state.challengeOutcome = recordChallenge(state, r.verdict); // the Final Challenge, with its evidence
+      }
       if (r.practice) state.practice = r.practice;
     }
     draw();

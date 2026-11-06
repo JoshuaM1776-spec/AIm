@@ -1035,6 +1035,33 @@ test("an aim is a goal: searches stay sessions, goals become books, and a sessio
   assert.strictEqual(await env.run(`isAim({ text: "how to change a tire", librarian: { kind: "lookup" } })`), false);
 });
 
+test("challenges: a challenge becomes a goal whose plan is the map; the Final Challenge keeps its evidence", async () => {
+  const env = fresh();
+  assert.strictEqual((await env.run(`challengeStart({ title: "x" })`)).result, "error", "a challenge needs its goal and plan");
+  const ch = { title: "How can an airplane fly upside down?", kind: "investigate", minutes: 30, difficulty: "intro", interest: "aviation",
+    success: "Explain how a wing makes lift upside down, including angle of attack.",
+    plan: [{ title: "What lift is", look: "How a wing turns air down", minutes: 8, search: "how wings make lift" },
+      { title: "Inverted flight", look: "The angle, upside down", minutes: 12, search: "how planes fly upside down" },
+      { title: "Attempt the challenge", look: "", minutes: 10, search: "" }] };
+  const r = await env.run(`challengeStart(${JSON.stringify(ch)})`);
+  assert.strictEqual(r.result, "applied");
+  assert.strictEqual(r.url, "https://www.youtube.com/results?search_query=how%20wings%20make%20lift", "it starts with the first step's search");
+  const p = env.local.purpose;
+  assert.ok(p.goal && p.keep && p.challenge.status === "active", "a challenge is an aim, on the shelf");
+  assert.deepStrictEqual(p.map.parts.map(x => x.title), ["What lift is", "Inverted flight"], "the learning steps are the map; the last step is the challenge itself");
+  assert.strictEqual(p.librarian.kind, "learn");
+  assert.strictEqual((await env.run(`talkSession(null)`)).session.challenge.success, ch.success, "conversations know the success condition");
+  await env.run(`challengeResult(${JSON.stringify(p.id)}, { outcome: "partly", answer: "The angle." })`);
+  assert.strictEqual(env.local.purpose.challenge.status, "active", "partly: still going");
+  await env.run(`challengeResult(${JSON.stringify(p.id)}, { outcome: "demonstrated", answer: "Upside down, the pilot holds the nose up so the wing meets the air at a positive angle.", shown: ["Angle of attack makes lift either way up"] })`);
+  const done = env.local.purpose.challenge;
+  assert.ok(done.status === "completed" && done.attempts.length === 2 && done.attempts[1].answer.startsWith("Upside down"), "completed, with the answer kept as evidence");
+  assert.strictEqual((await env.run(`challengeResult(${JSON.stringify(p.id)}, { outcome: "mastered" })`)).result, "error", "no other outcomes");
+  assert.ok((await env.run(`challengeKnown("aviation")`)).includes("Completed: How can an airplane fly upside down?"), "new challenges can build on it");
+  await env.run(`finishPurpose("yes")`);
+  assert.strictEqual(env.local.history.at(-1).challenge.status, "completed", "it goes into history with the aim");
+});
+
 test("subjects: EMS and medications read as health", async () => {
   const env = fresh();
   assert.strictEqual((await env.run(`aimSubject({ text: "Understand how airplane stalls work" })`)).id, "aviation", "airplane is aviation, not just plane");

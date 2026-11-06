@@ -271,7 +271,7 @@ function summary(p, state) {
   return { id: p.id, text: p.text, state, lastActiveAt: p.lastActiveAt || p.pausedAt || p.endedAt || p.startedAt,
     usedSec: Math.round(p.usedSec || 0), videos: (p.videos || []).length, searches: (p.searches || []).length,
     outcome: p.outcome || null, last: p.last || null, study: studyProgress(p), notes: p.notes || "", elsewhere: !!p.elsewhere, recent: recentVideos(p), trail: searchTrail(p),
-    exploring: !!p.learn, subject: aimSubject(p), kind: p.librarian?.kind || p.kind || null, keep: !!p.keep, goal: isAim(p), suggestion: isAim(p) ? null : suggestGoal(p.text),
+    exploring: !!p.learn, subject: aimSubject(p), kind: p.librarian?.kind || p.kind || null, keep: !!p.keep, goal: isAim(p), challenge: p.challenge ? { title: p.challenge.title, kind: p.challenge.kind, status: p.challenge.status, minutes: p.challenge.minutes } : null, suggestion: isAim(p) ? null : suggestGoal(p.text),
     practice: p.practice ? { title: p.practice.title, tried: !!p.practice.triedAt } : null,
     understanding: p.map?.parts?.length ? { parts: p.map.parts.map(x => ({ title: x.title, status: x.status })), ready: mapReady(p.map), solid: p.map.synthesis?.verdict === "solid" } : null };
 }
@@ -330,7 +330,7 @@ function archive(history, record) {
 function purposeRecord(p, outcome) {
   return { type: "purpose", id: p.id, text: p.text, startedAt: p.startedAt, endedAt: Date.now(), usedSec: Math.round(p.usedSec),
     outcome: outcome || null, path: p.path, searches: p.searches, videos: p.videos, notes: p.notes || "",
-    kind: p.librarian?.kind || null, study: studySnapshot(p.study), map: p.map || null, practice: p.practice || null, scenarios: p.scenarios || [], chains: p.chains || [], gaps: p.gaps || [], keep: !!p.keep,
+    kind: p.librarian?.kind || null, study: studySnapshot(p.study), map: p.map || null, practice: p.practice || null, scenarios: p.scenarios || [], chains: p.chains || [], gaps: p.gaps || [], keep: !!p.keep, ...(p.challenge ? { challenge: p.challenge } : {}),
     ...(p.goal !== undefined ? { goal: !!p.goal } : {}), ...(p.learn ? { learn: p.learn } : {}) };
 }
 
@@ -382,6 +382,65 @@ function newPurpose(text, search, limitMin) {
     searches: search ? [{ q: clip(search, 200), at: now }] : [], path: [{ text, at: now }], pivots: 0, videos: [],
     allowed: [], allowedLists: [], goal: goalShaped(text), days: [todayKey()]
   };
+}
+
+// ---------- Challenges (0.70, docs/SPEC.md §3–§9, §15) ----------
+// A session challenge lives on an aim: a specific outcome, a success condition decided before
+// starting, and a short plan whose steps become the aim's map, so Up next, the panel and the
+// conversations follow it. The last step is the Final Challenge, judged against the condition:
+// demonstrated, partly, or not enough evidence to tell. Evidence only: no scores, no badges.
+const CHALLENGE_KINDS = ["understand", "build", "investigate"];
+function tidyChallengeIn(c) {
+  const plan = (Array.isArray(c?.plan) ? c.plan : []).slice(0, 4).map(s => ({ title: clip(s?.title, 60), look: clip(s?.look, 160),
+    minutes: Math.max(1, Math.min(60, Math.round(Number(s?.minutes) || 5))), search: clip(s?.search, 150) })).filter(s => s.title);
+  const title = clip(c?.title, 100), success = clip(c?.success, 220);
+  if (title.length < 6 || success.length < 10 || plan.length < 2) return null;
+  return { title, success, plan, kind: CHALLENGE_KINDS.includes(c.kind) ? c.kind : "understand",
+    minutes: Math.max(5, Math.min(120, Math.round(Number(c.minutes) || 30))), difficulty: ["intro", "intermediate", "advanced"].includes(c.difficulty) ? c.difficulty : "intro",
+    why: clip(c.why, 160), safety: clip(c.safety, 200), interest: clip(c.interest, 60),
+    materials: (Array.isArray(c.materials) ? c.materials : []).slice(0, 6).map(m => ({ item: clip(m?.item, 80), required: m?.required !== false })).filter(m => m.item) };
+}
+async function challengeStart(c) {
+  const ch = tidyChallengeIn(c);
+  if (!ch) return { result: "error", message: "That challenge is missing its goal or plan." };
+  const first = ch.plan.find(s => s.search)?.search || ch.title;
+  const r = await startPurpose({ text: ch.title, search: first });
+  if (r.result !== "applied") return r;
+  const { purpose } = await chrome.storage.local.get("purpose");
+  purpose.goal = true;
+  purpose.keep = true;
+  purpose.librarian = { ...(purpose.librarian || {}), kind: ch.kind === "build" ? "project" : "learn", thread: [], picks: {} };
+  purpose.challenge = { ...ch, startedAt: Date.now(), status: "active", attempts: [] };
+  // The plan's learning steps are the map's parts; the last step is the Final Challenge itself.
+  const steps = ch.plan.filter(s => s.search);
+  if (steps.length >= 1) purpose.map = newMap(steps.map(s => ({ title: s.title, brief: s.look, search: s.search })));
+  await chrome.storage.local.set({ purpose });
+  return { result: "applied", purpose, url: `https://www.youtube.com/results?search_query=${encodeURIComponent(first)}`, setAside: r.setAside };
+}
+// The Final Challenge's outcome, with the evidence (their answer, and what it showed).
+async function challengeResult(aimId, { outcome, answer, shown } = {}) {
+  if (!["demonstrated", "partly", "not_enough"].includes(outcome)) return { result: "error", message: "Unknown outcome." };
+  const d = await chrome.storage.local.get(["purpose", "paused", "history"]);
+  const rec = [d.purpose, ...(d.paused || []), ...(d.history || [])].find(r => r?.id === aimId && r.challenge);
+  if (!rec) return { result: "error", message: "No challenge on that aim." };
+  const at = Date.now();
+  rec.challenge.attempts = [...(rec.challenge.attempts || []), { at, outcome, answer: clip(answer, 1200), shown: (Array.isArray(shown) ? shown : []).map(x => clip(x, 120)).slice(0, 4) }].slice(-5);
+  if (outcome === "demonstrated") { rec.challenge.status = "completed"; rec.challenge.completedAt = at; }
+  await chrome.storage.local.set({ purpose: d.purpose || null, paused: d.paused || [], history: d.history || [] });
+  return { result: "applied", status: rec.challenge.status };
+}
+// What they've done before, for new challenges to build on: completed challenges and parts explained.
+async function challengeKnown(interest = "") {
+  const d = await chrome.storage.local.get(["purpose", "paused", "history"]);
+  const words = new Set(meaningfulWords(interest));
+  const out = [];
+  for (const r of [d.purpose, ...(d.paused || []), ...(d.history || [])].filter(Boolean)) {
+    const related = !words.size || meaningfulWords(`${r.text} ${r.challenge?.interest || ""}`).some(w => words.has(w));
+    if (!related) continue;
+    if (r.challenge?.status === "completed") out.push(`Completed: ${r.challenge.title}`);
+    for (const part of r.map?.parts || []) if (part.status === "explained") out.push(`Explained: ${part.title}`);
+  }
+  return [...new Set(out)].slice(0, 8);
 }
 
 // ---------- An aim is a goal (0.67) ----------
@@ -1582,7 +1641,8 @@ async function talkSession(id) {
   return { result: "applied", id: p.id, mode: p.learn ? "explore" : "focus", plan: !!p.plan, ready: mapReady(p.map),
     session: { aim: p.learn ? `Exploring ${p.learn}` : p.text, minutes: Math.round((p.usedSec || 0) / 60), searches: (p.searches || []).map(x => x.q).slice(-12),
       videos, notes: p.notes || "", kind: p.librarian?.kind || "", ...(topics.length ? { study: { topics } } : {}), ...(map ? { map } : {}),
-      ...(practice ? { practice } : {}) } };
+      ...(practice ? { practice } : {}),
+      ...(p.challenge ? { challenge: { title: p.challenge.title, success: p.challenge.success, kind: p.challenge.kind } } : {}) } };
 }
 
 // The librarian's memory: ideas you explained in your own words, with what they were about. In this
@@ -1798,7 +1858,8 @@ async function mapRemove(partId) {
 }
 // What putting it together showed. "solid" is a finish line: the aim can end, or go on to the debates.
 async function talkVerdict(aimId, verdict) {
-  if (!["solid", "getting_there"].includes(verdict)) return { result: "error", message: "Unknown verdict." };
+  if (!["solid", "getting_there", "not_enough"].includes(verdict)) return { result: "error", message: "Unknown verdict." };
+  if (verdict === "not_enough") return { result: "applied" }; // nothing to record on the map
   const d = await chrome.storage.local.get(["purpose", "paused", "history"]);
   const rec = [d.purpose, ...(d.paused || []), ...(d.history || [])].find(r => r?.id === aimId && r.map);
   if (!rec) return { result: "error", message: "No map for that aim." };
@@ -1955,7 +2016,7 @@ async function aimGet(id) {
     return [o, st, shared + (aimSubject(o).id === subject.id && subject.id !== "general" ? 1 : 0)];
   }).filter(([, , n]) => n > 0).sort((a, b) => b[2] - a[2]).slice(0, 4)
     .map(([o, st]) => ({ id: o.id, text: o.text, state: st, subject: aimSubject(o) }));
-  return { result: "applied", aim: { ...summary(p, state), subject, kind: p.librarian?.kind || (p.learn ? "explore" : null),
+  return { result: "applied", aim: { ...summary(p, state), challengeFull: p.challenge || null, subject, kind: p.librarian?.kind || (p.learn ? "explore" : null),
     map: p.map || null, practice: p.practice || null, scenarios: (p.scenarios || []).slice(-5).reverse(), scenarioDomain: scenarioDomain(p, subject), chains: p.chains || [], gaps: p.gaps || [], study: p.study ? studySnapshot(p.study) : null, librarianNote: p.librarian?.note || "",
     learned: (d.memory || []).filter(m => m.aim === id).map(m => ({ subject: m.subject, idea: m.idea, understood: m.understood, at: m.at })),
     startedAt: p.startedAt || null, endedAt: p.endedAt || null }, related };

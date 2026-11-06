@@ -572,6 +572,43 @@ test("talk: one student asks in its own way; review is one question with what th
   assert.strictEqual(focus.body.recalled, null, "recalled is only for reviews");
 });
 
+// ---------- challenges (0.70) ----------
+const CH = (o = {}) => ({ title: "How can an airplane fly upside down?", kind: "investigate", minutes: 30, difficulty: "intro", why: "Lift isn't only about wing shape.",
+  success: "Explain how a wing makes lift upside down, including angle of attack.", materials: [{ item: "Paper", required: true }], safety: "",
+  plan: [{ title: "What lift is", look: "How a wing turns air down", minutes: 8, search: "how wings make lift" }, { title: "Inverted flight", look: "The angle, upside down", minutes: 12, search: "how planes fly upside down" },
+    { title: "Attempt the challenge", look: "", minutes: 10, search: "" }], ...o });
+test("challenges: three from an interest and the time, tidied; one from your own words; free accounts a few a day", async () => {
+  const d = talkDeps("free", () => ({ ok: true, model: "m", inputTokens: 30, outputTokens: 20, text: JSON.stringify({ challenges: [CH(), CH({ title: "Cut your first dovetail", kind: "build", minutes: 300 }),
+    CH({ title: "x", success: "?" }), CH({ title: "Why did Rome fall, really?", kind: "investigate", plan: [{ title: "only one", look: "", minutes: 5, search: "a" }] }), CH({ title: "Why do planes stall at any speed?", kind: "understand" })] }) }));
+  const r = await call(d, { task: "challenges-suggest", input: { interest: "aviation", minutes: 30, known: ["Explained: What lift is"], avoid: ["Old one"] } });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.deepStrictEqual(r.body.challenges.map(c => c.title), ["How can an airplane fly upside down?", "Cut your first dovetail", "Why do planes stall at any speed?"], "unusable ones are dropped; three at most");
+  assert.strictEqual(r.body.challenges[0].materials.length, 0, "materials only for hands-on ones");
+  assert.strictEqual(r.body.challenges[1].minutes, 30, "never more than the time they have");
+  assert.match(d.calls[0].prompt, /INTEREST: aviation\nOffer exactly three challenges\.\nTIME: 30 minutes/);
+  assert.match(d.calls[0].prompt, /DONE BEFORE:\n- Explained: What lift is/);
+  assert.match(d.calls[0].prompt, /ALREADY OFFERED \(offer different ones\): Old one/);
+  assert.match(d.calls[0].system, /success condition says exactly what the person will be able to show/);
+  const own = await call(d, { task: "challenges-suggest", input: { custom: "learn to say hello in polish", minutes: 15 } });
+  assert.strictEqual(own.body.challenges.length, 1, "your own challenge comes back as one");
+  assert.match(d.calls[1].prompt, /THEIR OWN CHALLENGE/);
+  assert.strictEqual((await call(d, { task: "challenges-suggest", input: { minutes: 15 } })).status, 400, "something to be curious about");
+  for (let i = 0; i < 4; i++) await call(d, { task: "challenges-suggest", input: { interest: "aviation" } });
+  assert.strictEqual((await call(d, { task: "challenges-suggest", input: { interest: "aviation" } })).status, 429, "free accounts: six a day");
+});
+
+test("the Final Challenge: judged against the success condition; not enough evidence is its own outcome", async () => {
+  const d = talkDeps("plus", () => talkReply({ message: "You covered the angle well. Missing: why the pilot pushes forward.", done: true, verdict: "not_enough" }));
+  const session = { ...SESSION, challenge: { title: "How can an airplane fly upside down?", success: "Explain inverted lift, including angle of attack.", kind: "investigate" } };
+  const thread = [{ role: "aim", text: "Okay, the challenge." }, { role: "person", text: "Angle." }];
+  const r = await call(d, { task: "librarian-talk", input: { mode: "synthesis", session, thread } });
+  assert.strictEqual(r.body.verdict, "not_enough");
+  assert.match(d.calls[0].prompt, /THE CHALLENGE: How can an airplane fly upside down\? \(investigate\)\nSUCCESS CONDITION: Explain inverted lift/);
+  assert.match(d.calls[0].system, /judged only against its SUCCESS CONDITION/);
+  const plain = await call(d, { task: "librarian-talk", input: { mode: "synthesis", session: SESSION, thread } });
+  assert.strictEqual(plain.body.verdict, null, "without a challenge, there's no 'not enough' outcome");
+});
+
 test("talk: with caption excerpts (Plus), questions can be grounded in what was said, citing only captioned videos", async () => {
   const d = talkDeps("plus", () => talkReply({ message: "OverSimplified pins it on the army [V1 0:45], Historia Civilis on the Gracchi [V2 3:10]. Which do you buy?" }));
   const session = { ...SESSION, videos: [{ ...SESSION.videos[0], transcript: "[0:00] Welcome back\n[0:45] the Marian reforms made soldiers loyal to generals", captions: "creator" }, SESSION.videos[1]] };

@@ -457,6 +457,16 @@ The librarian part needs the server redeployed.
 - [ ] Without an account (where accounts exist): one optional offer of a free account. Then the wrap-up: the Aim button, the pin, Open YouTube, See my library.
 - [ ] The library's **Personalize** (and old personalize.html links) open the same conversation without the welcome and the distraction question.
 
+### 62. Challenges (0.70, docs/SPEC.md Phase 1)
+Needs a signed-in account and the server redeployed.
+- [ ] YouTube's homepage, below "What brings you here?": "Curious, with some time?" with 15 / 30 / 60 min and **Find a challenge**. Type a subject ("aviation", "Polish", "woodworking"), pick a time, Find: three challenges, each with its kind (Understand, Build & do, Investigate), time, level, why it's interesting, and for hands-on ones what it needs. Typing a specific need and pressing the arrow still searches as before.
+- [ ] Different ones (new ones, not repeats), Write my own (type your own challenge in the box, then Write my own again: it comes back tidied, with a success condition), Close.
+- [ ] Open one: "You'll have done it when…" (the success condition), a short plan with rough times, materials and a safety note where relevant. **Begin challenge**: it's your aim (a book in the library), its plan steps are the map, and YouTube searches the first step.
+- [ ] While watching: the panel says "Your challenge", More has **Final challenge** with the success condition; once the plan's steps are explained, the end of a video offers "Attempt the challenge".
+- [ ] The Final Challenge asks for exactly the success condition. A good answer: **Challenge complete**, what you demonstrated, the evidence (your answer) kept with the aim, **Find the next challenge** and **Call it done**. A partial one: "Partly there" with what's missing and **Try again**. A thin one: "Not enough to tell yet". No scores or badges anywhere.
+- [ ] Free accounts: six challenge suggestions a day. Signed out: "Sign in for challenges".
+- [ ] Try the three test challenges from the spec: an aviation explanation, a Polish introduction, a woodworking task. Do they feel different, or like one template?
+
 ## Known issues (not regressions)
 
 - The word check knows words, not meanings: synonyms ("tap" vs "faucet") get the question once; answering Yes teaches it that search.

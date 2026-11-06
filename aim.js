@@ -64,7 +64,9 @@ function understanding(a) {
           node("button", { className: "linkish", type: "button", textContent: "Search", title: p.search, onclick: () => search(p.search) }))), holder];
     }).flat(),
     node("div", { className: "part" }, node("span", { className: `dot ${solid ? "explained" : ""}` }),
-      node("span", {}, node("b", { textContent: "How these fit together" }), node("small", { textContent: solid ? "Explained: you put it together" : "Put the whole answer together once you've explained most of it" })), null));
+      node("span", {}, node("b", { textContent: a.challengeFull ? "The final challenge" : "How these fit together" }),
+        node("small", { textContent: a.challengeFull ? (a.challengeFull.status === "completed" ? `Completed: ${a.challengeFull.success}` : a.challengeFull.success)
+          : solid ? "Explained: you put it together" : "Put the whole answer together once you've explained most of it" })), null));
 }
 
 // Put it into practice: the one small thing the librarian suggested, and whether you tried it.

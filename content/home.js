@@ -32,6 +32,13 @@ async function renderHome() {
     if (focus?.title) setTimeout(() => openTalk({ mode: "deeper", focus: { title: String(focus.title).slice(0, 120), brief: String(focus.brief || "").slice(0, 200),
       chain: (Array.isArray(focus.chain) ? focus.chain : []).map(String).slice(0, 8) } }), 300);
   }
+  // "Find the next challenge", from a completed one: the subject, ready to find challenges for.
+  if (location.hash.startsWith("#aim-challenge=")) {
+    let subject = "";
+    try { subject = decodeURIComponent(location.hash.slice("#aim-challenge=".length)).slice(0, 120); } catch {}
+    history.replaceState(null, "", "/");
+    if (subject) setTimeout(() => findChallenges(subject), 300);
+  }
   if (location.hash === "#aim-talk" || location.hash === "#aim-put-together") {
     const mode = location.hash === "#aim-put-together" ? "synthesis" : null;
     history.replaceState(null, "", "/");
@@ -50,12 +57,13 @@ async function renderHome() {
   const key = status.totalReached ? "total" : exploreOpen ? "explore"
     : [p ? `p|${p.id}|${p.text}|${(p.map?.parts || []).map(x => x.id + x.status).join(".")}${p.map?.synthesis?.verdict || ""}${p.practice ? `${p.practice.title}${p.practice.triedAt || ""}` : ""}|${(status.currentVideos || []).map(v => v.id).join(",")}|${p.study ? `${p.study.current}:${p.study.topics.map(t => t.check?.at || 0).join(".")}:${p.study.apply?.doneAt || 0}` : ""}` : "idle", leisureUsedUp(),
       others.map(x => `${x.id}:${x.recent?.[0]?.id || ""}`).join(","), (status.saved || []).map(v => v.id).join(","),
-      account.on, status.pathways?.offer?.name || "", (settings.learnTopics || []).join("+"), (settings.learnOff || []).length].join("|");
+      account.on, status.pathways?.offer?.name || "", `${chFind.view}:${chFind.busy}:${chFind.list.length}:${chFind.picked?.title || ""}:${chFind.minutes}:${chFind.error}`, (settings.learnTopics || []).join("+"), (settings.learnOff || []).length].join("|");
   if ($("#wp-home")?.dataset.key === key) return; // don't rebuild while someone is typing
   $("#wp-home")?.remove();
 
   const input = el("input", { class: "wp-home-input", type: "text", "aria-label": "Tell me what you're looking for",
     placeholder: "Tell me what you're looking for…" });
+  if (chFind.interest) input.value = chFind.interest; // what you typed survives the card redrawing
   // One rounded field with a small arrow inside it; Enter does the same.
   const findBtn = el("button", { class: "wp-home-go", "aria-label": "Go", title: "Go" }, icon("right"));
   const card = el("div", { id: "wp-home", class: "wp wp-home-card", "data-key": key });
@@ -112,6 +120,7 @@ async function renderHome() {
       el("span", { class: "wp-muted" }, "Try"), ...EXAMPLES.map(t =>
         el("button", { class: "wp-home-example", onclick: () => { input.value = t; input.focus(); } }, `“${t}”`))) : null,
     exploreLine(p),
+    challengeBlock(input),
     resumeBlock,
     savedBlock(),
     el("div", { class: "wp-label wp-home-break-label" }, p ? "Or take a break" : "Just browsing? Take a break"),

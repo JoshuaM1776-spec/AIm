@@ -13,6 +13,7 @@ import { talk } from "./talk.ts";
 import { scenarioTurn } from "./scenario.ts";
 import { deeperStep } from "./deeper.ts";
 import { channelsOrganize } from "./organize.ts";
+import { challengesSuggest } from "./challenge.ts";
 import { type SyncStore, SyncError, readSyncInput } from "./sync.ts";
 import { type HsDb, HS_TASKS } from "./homeschool.ts";
 
@@ -110,7 +111,10 @@ export const TASKS: Record<string, Task> = {
   // Going deeper: one more level of why. See deeper.ts.
   "deeper-step": { plan: "plus", run: deeperStep },
   // Personalizing: groups for your subscriptions and first aims. Any signed-in account. See organize.ts.
-  "channels-organize": { run: channelsOrganize }
+  "channels-organize": { run: channelsOrganize },
+  // Challenges: a few session challenges from an interest and the time, or one written by the
+  // person, each with a success condition. Any signed-in account. See challenge.ts.
+  "challenges-suggest": { run: challengesSuggest }
 };
 
 // Requests that may carry more than a few pages: up to maxSyncBytes.

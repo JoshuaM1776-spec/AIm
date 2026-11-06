@@ -65,6 +65,16 @@ const deps = {
     const props = Object.keys(req.schema?.properties || {});
     const reply = !req.schema ? "ready" : JSON.stringify(
       props.includes("marks") ? (srv.talkPrompts.push(req.prompt), srv.talk.shift())
+      : props.includes("challenges") ? (srv.challengePrompts = [...(srv.challengePrompts || []), req.prompt], { challenges: [
+          { title: "How can an airplane fly upside down?", kind: "investigate", minutes: 15, difficulty: "intro", why: "Lift isn't only about the wing's shape.",
+            success: "Explain how a wing makes lift upside down, including the angle of attack.", materials: [], safety: "",
+            plan: [{ title: "What lift is", look: "How a wing turns air down", minutes: 5, search: "how wings make lift" }, { title: "Inverted flight", look: "Watch the angle", minutes: 6, search: "how planes fly upside down" },
+              { title: "Attempt the challenge", look: "Explain it", minutes: 4, search: "" }] },
+          { title: "Why can a plane stall at any speed?", kind: "understand", minutes: 15, difficulty: "intro", why: "It's the angle, not the speed.", success: "Explain why a stall depends on angle of attack.", materials: [], safety: "",
+            plan: [{ title: "Angle of attack", look: "", minutes: 8, search: "angle of attack" }, { title: "Attempt", look: "", minutes: 7, search: "" }] },
+          { title: "Fold a paper wing and find its stall", kind: "build", minutes: 15, difficulty: "intro", why: "See the stall happen on your desk.", success: "Show the angle where your paper wing stops lifting, and explain why.",
+            materials: [{ item: "Paper", required: true }, { item: "A fan", required: false }], safety: "",
+            plan: [{ title: "Make the wing", look: "", minutes: 7, search: "paper wing experiment" }, { title: "Test it", look: "", minutes: 8, search: "" }] }] })
       : props.includes("first_question") ? { type: "concepts", first_question: "What does a plant actually make during photosynthesis?",
           objectives: ["Explain what photosynthesis produces", "Explain the role of light", "Explain where it happens in the cell"] }
       : props.includes("shows") ? (srv.applyPrompt = req.prompt, { title: "Trace a sugar cube", task: "Follow one glucose molecule from breakfast to ATP and draw where each step happens.",
@@ -732,6 +742,49 @@ await opt.waitForTimeout(400);
 step("Forget removes it", ((await sw.evaluate(() => chrome.storage.local.get("memory"))).memory || []).length === 0);
 await sw.evaluate(() => serial(() => setSetting("captions", false)));
 const fetchesBefore = srv.captionFetches;
+// ---------- Challenges (0.70): find, choose, begin, attempt, complete ----------
+await yt.goto("https://www.youtube.com/");
+await yt.bringToFront();
+await yt.waitForSelector("#wp-home .wp-ch");
+await yt.fill(".wp-home-input", "aviation");
+await yt.click(".wp-ch-times button:text-is('15 min')");
+await yt.click(".wp-ch button:has-text('Find a challenge')");
+await yt.waitForFunction(() => document.querySelectorAll("#wp-home .wp-ch-card").length === 3, null, { timeout: 10000 });
+const chCards = (await yt.textContent(".wp-ch-list")).replace(/\s+/g, " ");
+step("beside What brings you here: three challenges for an interest and the time you have, each with its kind and why",
+  chCards.includes("How can an airplane fly upside down?") && chCards.includes("Investigate · 15 min · Intro") && chCards.includes("Needs: Paper") &&
+  srv.challengePrompts.at(-1).includes("INTEREST: aviation") && srv.challengePrompts.at(-1).includes("TIME: 15 minutes"), chCards.slice(0, 200));
+if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/challenges.png`, fullPage: true });
+await yt.click(".wp-ch-card:has-text('upside down')");
+await yt.waitForSelector(".wp-ch-detail");
+const chDetail = (await yt.textContent(".wp-ch-detail")).replace(/\s+/g, " ");
+step("a challenge's details: the success condition decided up front, and a short plan", chDetail.includes("You'll have done it when") &&
+  chDetail.includes("including the angle of attack") && chDetail.includes("What lift is") && chDetail.includes("~5 min"), chDetail.slice(0, 200));
+if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/challenge-detail.png`, fullPage: true });
+await yt.click(".wp-ch-detail button:text-is('Begin challenge')");
+await yt.waitForURL(/search_query=how%20wings%20make%20lift/);
+const chAim = (await sw.evaluate(() => chrome.storage.local.get("purpose"))).purpose;
+step("beginning it makes it your aim: on the shelf, its plan as the map, starting with the first step's search",
+  chAim.text === "How can an airplane fly upside down?" && chAim.goal === true && chAim.challenge.status === "active" && chAim.map.parts.length === 2);
+srv.talk.push({ message: "Okay, the challenge: explain how a wing can make lift upside down, and what the angle of attack has to do with it.", done: false, memory: [], marks: [] },
+  { message: "That's it: the pilot holds the nose up so the wing meets the air at a positive angle, upside down too.", done: true, memory: [], marks: [], verdict: "solid",
+    feedback: { explained: ["Lift comes from the angle of attack, either way up"], uncertain: [], misconceptions: [] } });
+await yt.goto("https://www.youtube.com/#aim-put-together");
+await answerBox();
+step("the Final Challenge asks for exactly the success condition", srv.talkPrompts.at(-1).includes("THE CHALLENGE: How can an airplane fly upside down?") &&
+  srv.talkPrompts.at(-1).includes("SUCCESS CONDITION: Explain how a wing makes lift upside down"));
+await yt.fill(".wp-talk-input", "Upside down the pilot pushes the nose up so the wing still meets the air at a positive angle of attack, so it still turns the air down.");
+await yt.press(".wp-talk-input", "Enter");
+await yt.waitForSelector(".wp-talk .wp-ch-outcome");
+const outcome = (await yt.textContent(".wp-talk")).replace(/\s+/g, " ");
+const doneAim = (await sw.evaluate(() => chrome.storage.local.get("purpose"))).purpose;
+step("Challenge complete: restrained, what you demonstrated, kept with your answer as evidence, and what's next",
+  outcome.includes("Challenge complete") && outcome.includes("You demonstrated: How can an airplane fly upside down?") && !!(await yt.$(".wp-talk button:text-is('Find the next challenge')")) &&
+  doneAim.challenge.status === "completed" && doneAim.challenge.attempts.at(-1).answer.startsWith("Upside down") && !/score|badge|%/i.test(outcome), outcome.slice(0, 200));
+if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/challenge-complete.png` });
+await yt.click(".wp-talk button:text-is('Call it done')");
+await yt.waitForTimeout(600);
+
 // ---------- Your understanding: a learning aim's map, and its finish line ----------
 srv.ask.push({ target: "Why the Western Roman Empire fell", kind: "learn", note: "Several causes worked together.", searches: ["fall of rome"], question: "", options: [], same_target: false,
   parts: [{ title: "Political instability", brief: "Civil wars and short reigns.", search: "roman political instability" },
