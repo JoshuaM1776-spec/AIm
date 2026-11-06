@@ -2034,6 +2034,8 @@ For each: title (under 90 characters), kind, minutes (the time they gave, or les
 
 Safety: hands-on challenges stay beginner-safe (hand tools, low voltage, no mains electricity, no dangerous chemicals). Medical or flying topics are about understanding, never procedures, doses or numbers to act on.
 
+Every challenge is written for this person, now: their interest, the time they have, and their LEVEL (intro: new to it; intermediate: they've explained or completed several things in it; advanced: they've done harder challenges in it). Pitch the challenge at that level; set difficulty to it unless one of the three is deliberately a step easier or harder.
+
 If they've done things before (DONE BEFORE), build on them where it helps ("You understand angle of attack; now…"), and don't repeat them.`;
 
 const STEP = { type: "object", properties: { title: { type: "string" }, look: { type: "string" }, minutes: { type: "integer" }, search: { type: "string" } },

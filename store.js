@@ -429,18 +429,28 @@ async function challengeResult(aimId, { outcome, answer, shown } = {}) {
   await chrome.storage.local.set({ purpose: d.purpose || null, paused: d.paused || [], history: d.history || [] });
   return { result: "applied", status: rec.challenge.status };
 }
-// What they've done before, for new challenges to build on: completed challenges and parts explained.
+// What they've done before in this subject, for new challenges to build on, and the level that
+// evidence suggests (docs/SPEC.md §8: challenges fit the learner's ability). Evidence only: completed
+// challenges and parts explained, never minutes watched. Intro until there's evidence otherwise.
 async function challengeKnown(interest = "") {
   const d = await chrome.storage.local.get(["purpose", "paused", "history"]);
   const words = new Set(meaningfulWords(interest));
   const out = [];
+  let completed = 0, advancedDone = 0, explained = 0, struggled = 0;
   for (const r of [d.purpose, ...(d.paused || []), ...(d.history || [])].filter(Boolean)) {
     const related = !words.size || meaningfulWords(`${r.text} ${r.challenge?.interest || ""}`).some(w => words.has(w));
     if (!related) continue;
-    if (r.challenge?.status === "completed") out.push(`Completed: ${r.challenge.title}`);
-    for (const part of r.map?.parts || []) if (part.status === "explained") out.push(`Explained: ${part.title}`);
+    if (r.challenge?.status === "completed") {
+      out.push(`Completed: ${r.challenge.title}`);
+      completed++;
+      if (r.challenge.difficulty !== "intro") advancedDone++;
+    }
+    const last = r.challenge?.attempts?.at(-1);
+    if (last && last.outcome !== "demonstrated" && r.challenge.status !== "completed") struggled++;
+    for (const part of r.map?.parts || []) if (part.status === "explained") { out.push(`Explained: ${part.title}`); explained++; }
   }
-  return [...new Set(out)].slice(0, 8);
+  const level = advancedDone >= 3 && !struggled ? "advanced" : (completed >= 2 || explained >= 4) && struggled < 2 ? "intermediate" : "intro";
+  return { known: [...new Set(out)].slice(0, 8), level };
 }
 
 // ---------- An aim is a goal (0.67) ----------

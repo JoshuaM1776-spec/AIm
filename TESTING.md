@@ -464,6 +464,7 @@ Needs a signed-in account and the server redeployed.
 - [ ] Open one: "You'll have done it when…" (the success condition), a short plan with rough times, materials and a safety note where relevant. **Begin challenge**: it's your aim (a book in the library), its plan steps are the map, and YouTube searches the first step.
 - [ ] While watching: the panel says "Your challenge", More has **Final challenge** with the success condition; once the plan's steps are explained, the end of a video offers "Attempt the challenge".
 - [ ] The Final Challenge asks for exactly the success condition. A good answer: **Challenge complete**, what you demonstrated, the evidence (your answer) kept with the aim, **Find the next challenge** and **Call it done**. A partial one: "Partly there" with what's missing and **Try again**. A thin one: "Not enough to tell yet". No scores or badges anywhere.
+- [ ] Challenges are written for you each time (nothing is from a fixed list): new to a subject, they're intro; after a couple of completed challenges or several parts explained in it, intermediate. **Easier** / **Harder** under the cards ask again a level down or up. A new subject starts from its own level.
 - [ ] Free accounts: six challenge suggestions a day. Signed out: "Sign in for challenges".
 - [ ] Try the three test challenges from the spec: an aviation explanation, a Polish introduction, a woodworking task. Do they feel different, or like one template?
 

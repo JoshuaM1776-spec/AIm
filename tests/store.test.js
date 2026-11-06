@@ -1057,9 +1057,16 @@ test("challenges: a challenge becomes a goal whose plan is the map; the Final Ch
   const done = env.local.purpose.challenge;
   assert.ok(done.status === "completed" && done.attempts.length === 2 && done.attempts[1].answer.startsWith("Upside down"), "completed, with the answer kept as evidence");
   assert.strictEqual((await env.run(`challengeResult(${JSON.stringify(p.id)}, { outcome: "mastered" })`)).result, "error", "no other outcomes");
-  assert.ok((await env.run(`challengeKnown("aviation")`)).includes("Completed: How can an airplane fly upside down?"), "new challenges can build on it");
+  const k = await env.run(`challengeKnown("aviation")`);
+  assert.ok(k.known.includes("Completed: How can an airplane fly upside down?"), "new challenges can build on it");
+  assert.strictEqual(k.level, "intro", "one completed challenge: still intro");
+  assert.strictEqual((await env.run(`challengeKnown("woodworking")`)).known.length, 0, "only the same subject counts");
   await env.run(`finishPurpose("yes")`);
   assert.strictEqual(env.local.history.at(-1).challenge.status, "completed", "it goes into history with the aim");
+  // Ability from evidence: a second completed challenge in the subject suggests intermediate.
+  const r2 = await env.run(`challengeStart(${JSON.stringify({ ...ch, title: "Why can a plane stall at any speed?" })})`);
+  await env.run(`challengeResult(${JSON.stringify(r2.purpose.id)}, { outcome: "demonstrated", answer: "It's the angle of attack." })`);
+  assert.strictEqual((await env.run(`challengeKnown("aviation")`)).level, "intermediate", "ability follows what they've demonstrated");
 });
 
 test("subjects: EMS and medications read as health", async () => {

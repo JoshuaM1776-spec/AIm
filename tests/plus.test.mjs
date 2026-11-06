@@ -753,7 +753,12 @@ await yt.waitForFunction(() => document.querySelectorAll("#wp-home .wp-ch-card")
 const chCards = (await yt.textContent(".wp-ch-list")).replace(/\s+/g, " ");
 step("beside What brings you here: three challenges for an interest and the time you have, each with its kind and why",
   chCards.includes("How can an airplane fly upside down?") && chCards.includes("Investigate · 15 min · Intro") && chCards.includes("Needs: Paper") &&
-  srv.challengePrompts.at(-1).includes("INTEREST: aviation") && srv.challengePrompts.at(-1).includes("TIME: 15 minutes"), chCards.slice(0, 200));
+  srv.challengePrompts.at(-1).includes("INTEREST: aviation") && srv.challengePrompts.at(-1).includes("TIME: 15 minutes") && srv.challengePrompts.at(-1).includes("LEVEL: intro"), chCards.slice(0, 200));
+await yt.click(".wp-ch-more button:text-is('Harder')");
+await yt.waitForFunction(n => window.__chPrompts === undefined && document.querySelectorAll("#wp-home .wp-ch-card").length === 3, null, { timeout: 10000 });
+await yt.waitForTimeout(400);
+step("written for this person: Harder asks again a level up, with different challenges", srv.challengePrompts.at(-1).includes("LEVEL: intermediate") &&
+  srv.challengePrompts.at(-1).includes("ALREADY OFFERED") && !!(await yt.$(".wp-ch-more button:text-is('Easier')")));
 if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/challenges.png`, fullPage: true });
 await yt.click(".wp-ch-card:has-text('upside down')");
 await yt.waitForSelector(".wp-ch-detail");

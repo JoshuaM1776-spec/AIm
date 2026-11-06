@@ -8,15 +8,21 @@
 const CH_KIND = { understand: "Understand", build: "Build & do", investigate: "Investigate" };
 const CH_LEVEL = { intro: "Intro", intermediate: "Intermediate", advanced: "Advanced" };
 // What's on screen, kept across the homepage card's redraws.
-let chFind = { minutes: 30, view: "closed", interest: "", list: [], picked: null, busy: false, error: "", offered: [] };
+// level: what the evidence suggests (from the background); shift: Easier or Harder, chosen here.
+let chFind = { minutes: 30, view: "closed", interest: "", list: [], picked: null, busy: false, error: "", offered: [], level: "intro", shift: 0 };
+const CH_LEVELS = ["intro", "intermediate", "advanced"];
+const chLevel = () => CH_LEVELS[Math.max(0, Math.min(2, CH_LEVELS.indexOf(chFind.level) + chFind.shift))];
 
 async function findChallenges(interest, { custom = "" } = {}) {
   interest = String(interest || "").trim();
   if (!interest && !custom) { chFind = { ...chFind, view: "ask", error: "Type a subject first, like aviation, Polish or woodworking." }; return renderHome(); }
+  // A new subject starts fresh: nothing offered yet, and the level its own evidence suggests.
+  if (interest && interest.toLowerCase() !== chFind.interest.toLowerCase()) chFind = { ...chFind, offered: [], shift: 0 };
   chFind = { ...chFind, busy: true, error: "", interest: interest || chFind.interest, view: chFind.view === "closed" ? "list" : chFind.view };
   renderHome();
-  const known = (await send({ type: "challenge-known", interest: interest || custom })) || [];
-  const r = await send({ type: "librarian", task: "challenges-suggest", input: { interest, custom, minutes: chFind.minutes, known, avoid: custom ? [] : chFind.offered } });
+  const k = (await send({ type: "challenge-known", interest: interest || custom })) || {};
+  chFind.level = CH_LEVELS.includes(k.level) ? k.level : "intro";
+  const r = await send({ type: "librarian", task: "challenges-suggest", input: { interest, custom, minutes: chFind.minutes, level: chLevel(), known: k.known || [], avoid: custom ? [] : chFind.offered } });
   chFind.busy = false;
   if (!r || r.error) { chFind.error = r?.error || "Couldn't find challenges just now. Try again."; return renderHome(); }
   const list = (r.challenges || []).map(c => ({ ...c, interest: interest || chFind.interest }));
@@ -29,7 +35,7 @@ async function beginChallenge(c) {
   const r = await send({ type: "challenge-start", challenge: c });
   chFind.busy = false;
   if (!r || r.result !== "applied") { chFind.error = r?.message || "Couldn't start that. Try again."; return renderHome(); }
-  chFind = { minutes: chFind.minutes, view: "closed", interest: "", list: [], picked: null, busy: false, error: "", offered: [] };
+  chFind = { minutes: chFind.minutes, view: "closed", interest: "", list: [], picked: null, busy: false, error: "", offered: [], level: "intro", shift: 0 };
   location.href = r.url;
 }
 
@@ -58,6 +64,9 @@ function challengeBlock(input) {
         c.materials?.length ? el("span", { class: "wp-ch-mat" }, `Needs: ${c.materials.filter(m => m.required).map(m => m.item).join(", ") || c.materials[0].item}`) : null))),
       el("div", { class: "wp-row wp-ch-more" },
         el("button", { class: "wp-link", disabled: chFind.busy, onclick: () => findChallenges(chFind.interest) }, "Different ones"),
+        // Ability: what the evidence suggests, adjustable in the moment (docs/SPEC.md §8).
+        chLevel() !== "intro" ? el("button", { class: "wp-link", disabled: chFind.busy, onclick: () => { chFind.shift--; findChallenges(chFind.interest); } }, "Easier") : null,
+        chLevel() !== "advanced" ? el("button", { class: "wp-link", disabled: chFind.busy, onclick: () => { chFind.shift++; findChallenges(chFind.interest); } }, "Harder") : null,
         el("button", { class: "wp-link", onclick: () => {
           const own = input.value.trim();
           if (own && own.toLowerCase() !== chFind.interest.toLowerCase()) return findChallenges(chFind.interest, { custom: own });

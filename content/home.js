@@ -57,7 +57,7 @@ async function renderHome() {
   const key = status.totalReached ? "total" : exploreOpen ? "explore"
     : [p ? `p|${p.id}|${p.text}|${(p.map?.parts || []).map(x => x.id + x.status).join(".")}${p.map?.synthesis?.verdict || ""}${p.practice ? `${p.practice.title}${p.practice.triedAt || ""}` : ""}|${(status.currentVideos || []).map(v => v.id).join(",")}|${p.study ? `${p.study.current}:${p.study.topics.map(t => t.check?.at || 0).join(".")}:${p.study.apply?.doneAt || 0}` : ""}` : "idle", leisureUsedUp(),
       others.map(x => `${x.id}:${x.recent?.[0]?.id || ""}`).join(","), (status.saved || []).map(v => v.id).join(","),
-      account.on, status.pathways?.offer?.name || "", `${chFind.view}:${chFind.busy}:${chFind.list.length}:${chFind.picked?.title || ""}:${chFind.minutes}:${chFind.error}`, (settings.learnTopics || []).join("+"), (settings.learnOff || []).length].join("|");
+      account.on, status.pathways?.offer?.name || "", `${chFind.view}:${chFind.busy}:${chFind.list.length}:${chFind.picked?.title || ""}:${chFind.minutes}:${chFind.error}:${chFind.shift}`, (settings.learnTopics || []).join("+"), (settings.learnOff || []).length].join("|");
   if ($("#wp-home")?.dataset.key === key) return; // don't rebuild while someone is typing
   $("#wp-home")?.remove();
 
