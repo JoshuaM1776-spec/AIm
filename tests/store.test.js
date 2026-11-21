@@ -2,7 +2,8 @@
 // so the races a real browser can produce actually happen here.
 // Run: node tests/store.test.js
 const fs = require("fs"), path = require("path"), vm = require("vm"), assert = require("assert");
-const SRC = fs.readFileSync(path.join(__dirname, "..", "store.js"), "utf8");
+// The shared pure helpers come first, as in background.js.
+const SRC = fs.readFileSync(path.join(__dirname, "..", "content", "guess-shared.js"), "utf8") + "\n" + fs.readFileSync(path.join(__dirname, "..", "store.js"), "utf8");
 const MIN = 60 * 1000;
 
 function makeEnv(initial = {}) {
@@ -31,7 +32,7 @@ function makeEnv(initial = {}) {
 const VIDEO = { id: "abc123", title: "Feeding a sourdough starter", channel: "Bread Co" };
 const fresh = () => makeEnv({ schemaVersion: 5 });
 const DEFAULTS = { homeCard: true, leisureMin: 60, graceMin: 15, totalMin: 0, purposeLimitMin: 0,
-  hideShorts: true, hideRecs: true, hideFeeds: true, noAutoplay: true, strict: false, learnTopics: [], learnOff: [], learnShorts: false, learnRow: true, librarianMemory: true, spacedReview: true, captions: false, myTopics: [] };
+  hideShorts: true, hideRecs: true, hideFeeds: true, noAutoplay: true, strict: false, learnTopics: [], learnOff: [], learnShorts: false, learnRow: true, librarianMemory: true, spacedReview: true, guessFirst: true, captions: false, myTopics: [] };
 
 const tests = [];
 const test = (name, fn) => tests.push([name, fn]);
@@ -1067,6 +1068,38 @@ test("challenges: a challenge becomes a goal whose plan is the map; the Final Ch
   const r2 = await env.run(`challengeStart(${JSON.stringify({ ...ch, title: "Why can a plane stall at any speed?" })})`);
   await env.run(`challengeResult(${JSON.stringify(r2.purpose.id)}, { outcome: "demonstrated", answer: "It's the angle of attack." })`);
   assert.strictEqual((await env.run(`challengeKnown("aviation")`)).level, "intermediate", "ability follows what they've demonstrated");
+});
+
+test("guess first, explain after: a question before a part's video, the guess kept, the close leaves an open question for next time", async () => {
+  const env = fresh();
+  const ch = { title: "How can an airplane fly upside down?", kind: "investigate", minutes: 30, success: "Explain inverted lift, including angle of attack.",
+    plan: [{ title: "What lift is", look: "", minutes: 8, search: "how wings make lift", guess: "What do you think a wing does to the air?" },
+      { title: "Inverted flight", look: "", minutes: 12, search: "how planes fly upside down", guess: "How could a wing lift upside down?" },
+      { title: "Attempt the challenge", look: "", minutes: 10, search: "" }] };
+  const { purpose } = await env.run(`challengeStart(${JSON.stringify(ch)})`);
+  let p = env.local.purpose;
+  let pre = await env.run(`preQuestion(${JSON.stringify(p)})`);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(pre)), { partId: "p1", q: "What do you think a wing does to the air?", title: "What lift is" }, "the first part's question");
+  assert.strictEqual(await env.run(`preQuestion(${JSON.stringify(p)}, false)`), null, "off in Settings: no question");
+  await env.run(`guessSave(${JSON.stringify(purpose.id)}, { partId: "p1", text: "It pushes air down?" })`);
+  p = env.local.purpose;
+  assert.strictEqual((await env.run(`preQuestion(${JSON.stringify(p)})`)).partId, "p2", "a guessed part isn't asked again");
+  const ct = await env.run(`closeTarget(${JSON.stringify(p)})`);
+  assert.ok(ct.partId === "p1" && ct.guess === "It pushes air down?", "the close brings the guess back");
+  assert.strictEqual((await env.run(`talkSession(null)`)).close.guess, "It pushes air down?", "Done ends with the close when a guess waits");
+  await env.run(`guessSave(${JSON.stringify(purpose.id)}, { partId: "p2", skip: true })`);
+  p = env.local.purpose;
+  assert.strictEqual(await env.run(`preQuestion(${JSON.stringify(p)})`), null, "skipped: not asked again for a while");
+  await env.run(`closeSave(${JSON.stringify(purpose.id)}, { partId: "p1", next: "So why does pushing the nose down fix a stall?" })`);
+  p = env.local.purpose;
+  assert.ok(p.map.parts[0].closedAt && p.openQuestion.q.startsWith("So why"), "closed, with an open question kept");
+  pre = await env.run(`preQuestion(${JSON.stringify(p)})`);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(pre)), { partId: "open", q: "So why does pushing the nose down fix a stall?", open: true }, "next session starts with last time's open question");
+  await env.run(`guessSave(${JSON.stringify(purpose.id)}, { partId: "open", text: "It lowers the angle." })`);
+  assert.strictEqual((await env.run(`closeTarget(${JSON.stringify(env.local.purpose)})`)).partId, "open", "the newest guess is what the close is about");
+  assert.strictEqual((await env.run(`guessSave(${JSON.stringify(purpose.id)}, { partId: "p1", text: "" })`)).result, "error", "a guess needs words, or a skip");
+  await env.run(`finishPurpose("yes")`);
+  assert.ok(env.local.history.at(-1).openQuestion.q, "the open question goes into history with the aim");
 });
 
 test("subjects: EMS and medications read as health", async () => {

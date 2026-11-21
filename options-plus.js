@@ -18,9 +18,10 @@ async function plusDo(msg) {
   plusMsg("");
   const r = await send(msg);
   plus.busy = false;
+  // Whatever happened, the buttons work again (a redraw after success may replace them anyway).
+  for (const b of $("plusBody").querySelectorAll("button, input")) b.disabled = false;
   if (!r || r.error) {
     plusMsg(r?.error || "Something went wrong. Try again.");
-    for (const b of $("plusBody").querySelectorAll("button, input")) b.disabled = false;
     return null;
   }
   return r;

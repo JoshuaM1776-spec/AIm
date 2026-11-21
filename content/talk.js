@@ -12,13 +12,14 @@ function closeTalk() { talkPanel?.el.remove(); talkPanel = null; }
 
 const talkCall = (state, extra = {}) => send({ type: "librarian", task: "librarian-talk",
   input: { mode: state.mode, session: state.session, thread: state.thread.map(({ role, text }) => ({ role, text })), memory: state.memory, connect: state.connect, focus: state.focus, followUp: state.followUp ? { title: state.followUp.title, what: state.followUp.what } : undefined,
-    student: state.student?.key, studentName: state.student?.name, review: state.review || undefined, ...extra } });
+    student: state.student?.key, studentName: state.student?.name, review: state.review || undefined,
+    ...(state.close ? { part: { title: state.close.title, brief: state.close.brief }, guess: state.close.guess || undefined, guessQuestion: state.close.question || undefined } : {}), ...extra } });
 
 // Everything a conversation needs, with its opening question already asked. Null when there's
 // nothing to talk about, no account, or the AI couldn't open (the error is in .error).
 // mode "deeper" (Aim Plus) goes one "why" further into focus: { title, brief, chain }, from an aim's page.
 // followUp: a gap { id, title, what } they've since watched something about; the first question is about it.
-async function prepareTalk({ aimId = null, connect = null, source = "menu", mode = null, focus = null, followUp = null, review = null } = {}) {
+async function prepareTalk({ aimId = null, connect = null, source = "menu", mode = null, focus = null, followUp = null, review = null, close = null } = {}) {
   const brief = await send({ type: "plus-brief" });
   if (!brief?.account) return { error: "Sign in to talk things through with the librarian." };
   // Spaced review: one question about something explained weeks ago; no session needed.
@@ -39,7 +40,10 @@ async function prepareTalk({ aimId = null, connect = null, source = "menu", mode
   const plus = brief.plus === true, remember = plus && settings.librarianMemory !== false;
   // A learning aim that's nearly there finishes by putting it together; asked for, or offered after Done.
   const synthesis = mode === "synthesis" || (source === "done" && ctx.ready);
-  const state = { aimId: ctx.id, mode: mode === "deeper" && focus?.title ? "deeper" : synthesis ? "synthesis" : ctx.mode, focus: mode === "deeper" ? focus : null, followUp,
+  // Done with a guess not yet explained: end with the one-minute close about it (0.71).
+  if (source === "done" && !synthesis && !mode && ctx.close) { mode = "close"; close = ctx.close; }
+  const state = { aimId: ctx.id, mode: mode === "close" && close?.title ? "close" : mode === "deeper" && focus?.title ? "deeper" : synthesis ? "synthesis" : ctx.mode, focus: mode === "deeper" ? focus : null, followUp,
+    close: mode === "close" ? close : null,
     session: ctx.session, thread: [], connect, plus, remember, source, done: false, busy: false, student: studentFor(ctx.id),
     memory: remember ? (await send({ type: "memory-for", id: ctx.id })) || [] : [] };
   // Aim Plus, with captions on: what was actually said in the videos watched longest.
@@ -155,7 +159,7 @@ function medallion(st, size = 40) {
   add("text", { x: 20, y: 25.5, "text-anchor": "middle", "font-size": "15", "font-family": "Georgia, 'Times New Roman', serif", fill: "currentColor" }, st.name[0]);
   return svg;
 }
-const TALK_QUESTIONS = { explore: 1, focus: 3, synthesis: 1, deeper: 3, review: 1 };
+const TALK_QUESTIONS = { explore: 1, focus: 3, synthesis: 1, deeper: 3, review: 1, close: 1 };
 const RECALL = {
   yes: "Still there. Aim will check again in a few weeks.",
   partly: "Partly there. Aim will check again in about a week.",
@@ -175,7 +179,8 @@ function talkFeedback(state) {
     list("Explained convincingly", f.explained, "wp-fb-ok"),
     list("Still uncertain", f.uncertain, ""),
     list("Possible misconceptions", f.misconceptions, "wp-fb-warn"),
-    gaps.length ? el("div", { class: "wp-fb" }, el("div", { class: "wp-label" }, "To revisit"), el("ul", {}, ...gaps)) : null
+    gaps.length ? el("div", { class: "wp-fb" }, el("div", { class: "wp-label" }, "To revisit"), el("ul", {}, ...gaps)) : null,
+    state.next ? el("div", { class: "wp-fb wp-fb-next" }, el("div", { class: "wp-label" }, "Next time"), el("div", { class: "wp-fb-nextq" }, state.next)) : null
   ].filter(Boolean);
   return parts.length ? el("div", { class: "wp-talk-feedback" }, ...parts) : null;
 }
@@ -266,7 +271,7 @@ function showTalk(state) {
   const draw = (note = null) => {
     const asked = state.thread.filter(m => m.role === "aim").length;
     progress.textContent = state.done ? "" : max > 1 ? `Question ${Math.max(1, Math.min(asked, max))} of ${max}`
-      : state.mode === "review" ? "One question · about a minute" : "One question";
+      : state.mode === "review" || state.mode === "close" ? "One question · about a minute" : "One question";
     progress.hidden = !progress.textContent;
     const last = state.thread[state.thread.length - 1];
     const current = !state.busy && last?.role === "aim" ? last : null;
@@ -338,6 +343,12 @@ function showTalk(state) {
     }
     if (r.done) {
       if (state.followUp?.id && state.aimId) send({ type: "aim-gaps", aimId: state.aimId, resolve: state.followUp.id });
+      // The one-minute close: that part is done, and the open question waits for next time.
+      if (state.mode === "close" && state.aimId) {
+        state.next = r.next || "";
+        await send({ type: "close-save", aimId: state.aimId, partId: state.close?.partId, next: state.next });
+        applyStatus(await send({ type: "status" }));
+      }
       state.done = true;
       state.feedback = r.feedback || null;
       if (state.mode === "review" && r.recalled && state.reviewKey) { state.recalled = r.recalled; send({ type: "review-result", key: state.reviewKey, outcome: r.recalled }); }

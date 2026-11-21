@@ -126,7 +126,9 @@ function renderAimPanel() {
   const ended = panelEnded === currentId && panelPromptGone !== currentId;
   const c = panelCounts(p);
   const goalBlock = goalOfferBlock(p, renderAimPanel);
-  const key = [!!goalBlock, purposeIsGoal(), p.challenge?.status || "", p.id, p.text, kind, step?.search || "", found?.status || "", found?.video?.id || "", followUp?.id || "", ready, pr?.title || "", pr?.triedAt || "", field || "",
+  const preBlock = goalBlock ? null : preQuestionBlock(p, renderAimPanel);
+  const ct = closeTarget(p); // what the one-minute close would be about
+  const key = [!!goalBlock, preBlock ? (preCard.done ? "pre-done" : "pre") : "", ct?.partId || "", ct?.guess ? 1 : 0, purposeIsGoal(), p.challenge?.status || "", p.id, p.text, kind, step?.search || "", found?.status || "", found?.video?.id || "", followUp?.id || "", ready, pr?.title || "", pr?.triedAt || "", field || "",
     ended, panelOpen, account.on, account.plus, currentId, c.explored, c.explained, c.applied, !!currentInfo].join("|");
   if (existing && existing.parentElement === host && host.firstElementChild === existing && existing.dataset.key === key) return;
   existing?.remove();
@@ -146,6 +148,8 @@ function renderAimPanel() {
       : ch && ready && account.on ? { text: "You've worked through the plan. Ready for the final challenge?", label: "Attempt the challenge", go: attempt }
       : followUp && account.on ? { text: `You watched something about ${followUp.title}. Try explaining it now.`, label: "Explain it now", go: () => openTalk({ followUp }) }
       : pr && !pr.triedAt ? { text: "You've seen how. The best next step is doing it.", label: `Try it: ${pr.title}`, go: () => send({ type: "open-aim", id: p.id }) }
+      : parts.length && ct && account.on ? { text: ct.guess ? `Before it, you guessed: “${shorten(ct.guess, 90)}”. Now explain it, in a minute.` : "Explaining it now, in a minute, is when it sticks.",
+          label: "Explain it in a minute", go: () => openTalk({ mode: "close", close: ct }) }
       : kind === "explore" || (parts.length && (p.videos || []).length <= 1) || !account.on ? { text: "Keep going while you're in it.", label: "Keep learning", go: keepLearning }
       : { text: "You've finished watching. Explaining it now is when it sticks.", label: "Explain what you learned", go: explainIt };
     prompt = el("div", { class: "wp-ap-prompt", role: "region", "aria-label": "Video complete" },
@@ -204,6 +208,7 @@ function renderAimPanel() {
         el("b", {}, p.learn ? p.learn : p.text)),
       el("button", { class: "wp-link", onclick: () => openPivotDialog() }, "Change")),
     goalBlock,
+    preBlock,
     prompt,
     quick && !ended ? el("button", { class: "wp-btn wp-btn-tonal wp-btn-block", onclick: doneAction(p) }, doneLabel(p)) : null,
     ended ? null : upNext,

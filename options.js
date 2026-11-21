@@ -134,6 +134,7 @@ async function renderMemory(S) {
   $("memoryCard").hidden = !brief?.plus && !list.length;
   $("librarianMemory").checked = S.librarianMemory !== false;
   $("spacedReview").checked = S.spacedReview !== false;
+  $("guessFirst").checked = S.guessFirst !== false;
   $("forgetRow").hidden = !list.length;
   const day = ts => new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric" });
   $("memoryList").replaceChildren(...(list.length ? list.map(m => {
@@ -148,6 +149,7 @@ async function renderMemory(S) {
 }
 $("librarianMemory").onchange = () => setSetting("librarianMemory", $("librarianMemory").checked);
 $("spacedReview").onchange = () => setSetting("spacedReview", $("spacedReview").checked);
+$("guessFirst").onchange = () => setSetting("guessFirst", $("guessFirst").checked);
 $("captions").onchange = () => setSetting("captions", $("captions").checked);
 $("forgetAll").onclick = async () => {
   if (!confirm("Forget everything the librarian remembers? This can't be undone.")) return;

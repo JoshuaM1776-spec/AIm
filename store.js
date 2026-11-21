@@ -31,6 +31,8 @@ const DEFAULT_SETTINGS = {
   librarianMemory: true,
   // Spaced review: about a week after you explain something, one quick check on YouTube's homepage.
   spacedReview: true,
+  // Guess first: before a video for a part of your aim, a question to take a guess at (0.71).
+  guessFirst: true,
   // The librarian may read captions when it talks a session through (Aim Plus). A preview, off by
   // default until the legal review (docs/ROADMAP.md → Decisions).
   captions: false
@@ -55,6 +57,7 @@ const SETTING_RULES = {
   myTopics: v => Array.isArray(v) && v.length <= 30 && v.every(x => typeof x === "string" && x.trim().length >= 1 && x.length <= 40),
   librarianMemory: v => typeof v === "boolean",
   spacedReview: v => typeof v === "boolean",
+  guessFirst: v => typeof v === "boolean",
   captions: v => typeof v === "boolean"
 };
 
@@ -330,7 +333,7 @@ function archive(history, record) {
 function purposeRecord(p, outcome) {
   return { type: "purpose", id: p.id, text: p.text, startedAt: p.startedAt, endedAt: Date.now(), usedSec: Math.round(p.usedSec),
     outcome: outcome || null, path: p.path, searches: p.searches, videos: p.videos, notes: p.notes || "",
-    kind: p.librarian?.kind || null, study: studySnapshot(p.study), map: p.map || null, practice: p.practice || null, scenarios: p.scenarios || [], chains: p.chains || [], gaps: p.gaps || [], keep: !!p.keep, ...(p.challenge ? { challenge: p.challenge } : {}),
+    kind: p.librarian?.kind || null, study: studySnapshot(p.study), map: p.map || null, practice: p.practice || null, scenarios: p.scenarios || [], chains: p.chains || [], gaps: p.gaps || [], keep: !!p.keep, ...(p.challenge ? { challenge: p.challenge } : {}), ...(p.openQuestion ? { openQuestion: p.openQuestion } : {}),
     ...(p.goal !== undefined ? { goal: !!p.goal } : {}), ...(p.learn ? { learn: p.learn } : {}) };
 }
 
@@ -392,7 +395,7 @@ function newPurpose(text, search, limitMin) {
 const CHALLENGE_KINDS = ["understand", "build", "investigate"];
 function tidyChallengeIn(c) {
   const plan = (Array.isArray(c?.plan) ? c.plan : []).slice(0, 4).map(s => ({ title: clip(s?.title, 60), look: clip(s?.look, 160),
-    minutes: Math.max(1, Math.min(60, Math.round(Number(s?.minutes) || 5))), search: clip(s?.search, 150) })).filter(s => s.title);
+    minutes: Math.max(1, Math.min(60, Math.round(Number(s?.minutes) || 5))), search: clip(s?.search, 150), guess: clip(s?.guess, 140) })).filter(s => s.title);
   const title = clip(c?.title, 100), success = clip(c?.success, 220);
   if (title.length < 6 || success.length < 10 || plan.length < 2) return null;
   return { title, success, plan, kind: CHALLENGE_KINDS.includes(c.kind) ? c.kind : "understand",
@@ -413,7 +416,7 @@ async function challengeStart(c) {
   purpose.challenge = { ...ch, startedAt: Date.now(), status: "active", attempts: [] };
   // The plan's learning steps are the map's parts; the last step is the Final Challenge itself.
   const steps = ch.plan.filter(s => s.search);
-  if (steps.length >= 1) purpose.map = newMap(steps.map(s => ({ title: s.title, brief: s.look, search: s.search })));
+  if (steps.length >= 1) purpose.map = newMap(steps.map(s => ({ title: s.title, brief: s.look, search: s.search, guess: s.guess })));
   await chrome.storage.local.set({ purpose });
   return { result: "applied", purpose, url: `https://www.youtube.com/results?search_query=${encodeURIComponent(first)}`, setAside: r.setAside };
 }
@@ -452,6 +455,39 @@ async function challengeKnown(interest = "") {
   const level = advancedDone >= 3 && !struggled ? "advanced" : (completed >= 2 || explained >= 4) && struggled < 2 ? "intermediate" : "intro";
   return { known: [...new Set(out)].slice(0, 8), level };
 }
+
+// ---------- Guess first, explain after (0.71) ----------
+// Before a video for a part of your aim: a question to take a real guess at (answering before being
+// taught helps you take in what follows). After it: a one-minute explanation that brings the guess
+// back, and an open question for next time, which becomes the next session's question to guess at.
+async function guessSave(aimId, { partId = "", text = "", skip = false } = {}) {
+  const { purpose: p } = await chrome.storage.local.get("purpose");
+  if (!p || p.id !== aimId) return { result: "error", message: "That aim isn't the current one." };
+  const entry = skip ? { skipped: true, at: Date.now() } : { text: clip(text, 400), at: Date.now() };
+  if (!skip && !entry.text) return { result: "error", message: "Write your guess, or skip." };
+  if (partId === "open" && p.openQuestion) p.openQuestion.guessed = entry;
+  else {
+    const part = p.map?.parts?.find(x => x.id === partId);
+    if (!part) return { result: "error", message: "That part isn't on this aim." };
+    part.guessed = entry;
+  }
+  await chrome.storage.local.set({ purpose: p });
+  return { result: "applied" };
+}
+// After the one-minute close: the part (or open question) is done, and the next open question kept.
+async function closeSave(aimId, { partId = "", next = "" } = {}) {
+  const d = await chrome.storage.local.get(["purpose", "paused", "history"]);
+  const rec = [d.purpose, ...(d.paused || []), ...(d.history || [])].find(r => r?.id === aimId);
+  if (!rec) return { result: "error", message: "That aim isn't here." };
+  const now = Date.now();
+  const part = rec.map?.parts?.find(x => x.id === partId);
+  if (part) part.closedAt = now;
+  if (partId === "open" && rec.openQuestion) rec.openQuestion.closedAt = now;
+  if (clip(next, 140)) rec.openQuestion = { q: clip(next, 140), at: now };
+  await chrome.storage.local.set({ purpose: d.purpose || null, paused: d.paused || [], history: d.history || [] });
+  return { result: "applied" };
+}
+// preQuestion and closeTarget: content/guess-shared.js (loaded here and on YouTube).
 
 // ---------- An aim is a goal (0.67) ----------
 // Every visit has something it's for (a session: "Searching: roman empire"), but only a goal becomes
@@ -1648,7 +1684,8 @@ async function talkSession(id) {
   const topics = (p.study?.topics || []).map(t => ({ title: t.title }));
   const map = p.map?.parts?.length ? { parts: p.map.parts.map(x => ({ title: x.title, status: x.status })) } : null;
   const practice = p.practice ? { title: p.practice.title, tried: !!p.practice.triedAt, note: p.practice.note || "" } : null;
-  return { result: "applied", id: p.id, mode: p.learn ? "explore" : "focus", plan: !!p.plan, ready: mapReady(p.map),
+  const ct = closeTarget(p);
+  return { result: "applied", id: p.id, mode: p.learn ? "explore" : "focus", plan: !!p.plan, ready: mapReady(p.map), close: ct?.guess ? ct : null,
     session: { aim: p.learn ? `Exploring ${p.learn}` : p.text, minutes: Math.round((p.usedSec || 0) / 60), searches: (p.searches || []).map(x => x.q).slice(-12),
       videos, notes: p.notes || "", kind: p.librarian?.kind || "", ...(topics.length ? { study: { topics } } : {}), ...(map ? { map } : {}),
       ...(practice ? { practice } : {}),
@@ -1834,7 +1871,8 @@ const MAP_RANK = { new: 0, explored: 1, partial: 2, explained: 3 };
 function newMap(parts) {
   const now = Date.now();
   return { createdAt: now, links: "new", synthesis: null, removed: [],
-    parts: parts.slice(0, 6).map((x, i) => ({ id: `p${i + 1}`, title: clip(x.title, 60), brief: clip(x.brief, 160), search: clip(x.search, 150), status: "new" }))
+    parts: parts.slice(0, 6).map((x, i) => ({ id: `p${i + 1}`, title: clip(x.title, 60), brief: clip(x.brief, 160), search: clip(x.search, 150), status: "new",
+      ...(clip(x.guess, 140) ? { ask: clip(x.guess, 140) } : {}) }))
       .filter(x => x.title && x.search) };
 }
 // A video watched for a minute or more counts toward a part it's plainly about: found by that part's

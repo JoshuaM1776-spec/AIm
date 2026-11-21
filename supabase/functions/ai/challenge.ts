@@ -25,7 +25,7 @@ Every challenge must:
 
 Kinds: "understand" (answer a question or explain how something works), "build" (make, repair, practice or perform something, including speaking a language), "investigate" (weigh evidence or explanations and defend a conclusion). When offering three, make them different kinds where the interest allows, and different angles.
 
-For each: title (under 90 characters), kind, minutes (the time they gave, or less), difficulty (intro, intermediate or advanced; most people start at intro), why (one sentence on what makes it interesting, under 140 characters), success (the success condition, under 200 characters), plan (3 or 4 steps that fit the minutes: each a short title, a one-sentence what-to-look-for, minutes, and one YouTube search that finds a good video for exactly that step; the last step is always attempting the challenge itself, with no search), materials (build only: up to 6 items, each required or optional; otherwise empty), safety (one sentence for anything with tools, heat, electricity, chemicals or height; otherwise empty).
+For each: title (under 90 characters), kind, minutes (the time they gave, or less), difficulty (intro, intermediate or advanced; most people start at intro), why (one sentence on what makes it interesting, under 140 characters), success (the success condition, under 200 characters), plan (3 or 4 steps that fit the minutes: each a short title, a one-sentence what-to-look-for, minutes, one YouTube search that finds a good video for exactly that step, and a question to guess at before watching (guess: under 110 characters, the question the step answers, asked so they can take a real guess; never a definition or a quiz); the last step is always attempting the challenge itself, with no search), materials (build only: up to 6 items, each required or optional; otherwise empty), safety (one sentence for anything with tools, heat, electricity, chemicals or height; otherwise empty).
 
 Safety: hands-on challenges stay beginner-safe (hand tools, low voltage, no mains electricity, no dangerous chemicals). Medical or flying topics are about understanding, never procedures, doses or numbers to act on.
 
@@ -33,8 +33,8 @@ Every challenge is written for this person, now: their interest, the time they h
 
 If they've done things before (DONE BEFORE), build on them where it helps ("You understand angle of attack; now…"), and don't repeat them.`;
 
-const STEP = { type: "object", properties: { title: { type: "string" }, look: { type: "string" }, minutes: { type: "integer" }, search: { type: "string" } },
-  required: ["title", "look", "minutes", "search"], additionalProperties: false };
+const STEP = { type: "object", properties: { title: { type: "string" }, look: { type: "string" }, minutes: { type: "integer" }, search: { type: "string" }, guess: { type: "string" } },
+  required: ["title", "look", "minutes", "search", "guess"], additionalProperties: false };
 const ONE = {
   type: "object",
   properties: {
@@ -55,7 +55,7 @@ export function tidyChallenge(x: unknown, minutes: number) {
   const kind = cOne(o.kind, CH_KINDS, "understand");
   const plan = cList(o.plan).map(s => {
     const st = cObject(s);
-    return { title: cText(st.title, 60), look: cText(st.look, 160), minutes: Math.max(1, Math.min(60, Math.round(Number(st.minutes) || 5))), search: cText(st.search, 150) };
+    return { title: cText(st.title, 60), look: cText(st.look, 160), minutes: Math.max(1, Math.min(60, Math.round(Number(st.minutes) || 5))), search: cText(st.search, 150), guess: cText(st.guess, 140) };
   }).filter(s => s.title).slice(0, 4);
   if (plan.length < 2) return null;
   return {

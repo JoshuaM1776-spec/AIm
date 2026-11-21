@@ -38,7 +38,7 @@ Do:
 - Write a note of one or two short sentences (under 220 characters) that orients the person, for example the order to learn things in, or what matters for finding the right repair video.
 - Ask at most one clarifying question, and only when the right videos genuinely differ by the answer (an engine variant, a software version, beginner or advanced). Give 2 to 4 short options. Otherwise leave the question empty and the options empty.
 - Name the aim: the person's objective in a few words, in their own terms (under 80 characters). For "learn" and "project", phrase it as the goal ("Understand why the Western Roman Empire fell", "Replace the alternator on my 2014 Tacoma"), not a topic.
-- For "learn" only: map what understanding it takes. List 3 to 6 parts of a good answer or skill, the way a thoughtful friend would break it down (for "why did the Western Roman Empire fall": political instability, economic pressures, military challenges, migration and outside pressure). Each part: a title in plain words (under 50 characters), one sentence on what it covers (under 140 characters), and one YouTube search for it. Not a curriculum: no order, no "Introduction", no "Conclusion", no part that is just "how these fit together" (Aim adds that). Where reasonable people disagree, name the debate as a part rather than picking a side. When the goal is how something works or why something happens (a body, a drug, a machine, an illness, an event), cover the chain in plain words: what is happening, why it happens, and what counteracts or fixes it (for "how does epinephrine work in anaphylaxis": what anaphylaxis does to the body, why airways swell and blood pressure drops, how epinephrine reverses it, when and how it is given). For anything about medications or treatment, parts are about understanding, never doses or instructions. For every other kind, parts is empty.
+- For "learn" only: map what understanding it takes. List 3 to 6 parts of a good answer or skill, the way a thoughtful friend would break it down (for "why did the Western Roman Empire fall": political instability, economic pressures, military challenges, migration and outside pressure). Each part: a title in plain words (under 50 characters), one sentence on what it covers (under 140 characters), one YouTube search for it, and a question to guess at before watching (guess: under 110 characters, the question the part answers, asked so a newcomer can take a real guess: "What do you think happens to the air over a wing tilted too steeply?"; never a definition or a quiz). Not a curriculum: no order, no "Introduction", no "Conclusion", no part that is just "how these fit together" (Aim adds that). Where reasonable people disagree, name the debate as a part rather than picking a side. When the goal is how something works or why something happens (a body, a drug, a machine, an illness, an event), cover the chain in plain words: what is happening, why it happens, and what counteracts or fixes it (for "how does epinephrine work in anaphylaxis": what anaphylaxis does to the body, why airways swell and blood pressure drops, how epinephrine reverses it, when and how it is given). For anything about medications or treatment, parts are about understanding, never doses or instructions. For every other kind, parts is empty.
 - Classify the goal: "lookup" (a quick answer or one task, including researching a company, product or person; a single factual question like "why is the sky blue?"; or a bare topic with no goal stated, like "roman empire"), "learn" (a real goal of understanding a subject or studying, stated as one: "I want to understand atmospheric physics", "why did the Western Roman Empire fall"), "project" (a multi-step build, repair or skill they're taking on), or "relax" (they want to unwind and enjoy videos, not accomplish something: "I just want to enjoy…", "something fun to watch").
 - For "relax": the aim is the theme in a few words ("Aviation engineering"); the searches find enjoyable, well-made videos on it (documentaries, builds, stories), not lessons; the note is one light sentence. If the request is vague ("engineering videos", "something interesting") and their recent aims are listed, lean the theme toward those and say so ("Picked with your flight review prep in mind.").
 
@@ -61,8 +61,8 @@ const ASK_SCHEMA = {
       type: "array",
       items: {
         type: "object",
-        properties: { title: { type: "string" }, brief: { type: "string" }, search: { type: "string" } },
-        required: ["title", "brief", "search"], additionalProperties: false
+        properties: { title: { type: "string" }, brief: { type: "string" }, search: { type: "string" }, guess: { type: "string" } },
+        required: ["title", "brief", "search", "guess"], additionalProperties: false
       }
     }
   },
@@ -106,10 +106,12 @@ ${target ? `Set same_target to true if this continues the current aim (a follow-
     // Relaxing is never the same aim: it's a break, and the aim waits.
     sameTarget: r.kind === "relax" ? false : target ? r.same_target !== false : true,
     // What understanding a learning aim takes (Your understanding, in the extension).
-    parts: r.kind === "learn" ? [...new Map(list(r.parts).map(x => {
+    // Each part once: the first time it's named wins.
+    parts: r.kind === "learn" ? list(r.parts).map(x => {
       const o = asObject(x);
-      return [clean(o.title, 60).toLowerCase(), { title: clean(o.title, 60), brief: clean(o.brief, 160), search: clean(o.search, 150) }];
-    }).filter(([k, v]) => k && v.search && !/^(introduction|conclusion|overview|how (these|they) fit together)$/i.test(v.title))).values()].slice(0, 6) : []
+      return { title: clean(o.title, 60), brief: clean(o.brief, 160), search: clean(o.search, 150), guess: clean(o.guess, 140) };
+    }).filter((v, i, all) => v.title && v.search && !/^(introduction|conclusion|overview|how (these|they) fit together)$/i.test(v.title) &&
+      all.findIndex(w => w.title.toLowerCase() === v.title.toLowerCase()) === i).slice(0, 6) : []
   };
 }
 

@@ -381,7 +381,7 @@ test("librarian: any signed-in account can ask, within its plan's allowance", as
 });
 
 test("librarian: a learning goal comes with the parts of what understanding it takes; other kinds don't", async () => {
-  const parts = [{ title: "Political instability", brief: "Emperors came and went; civil wars drained the state.", search: "roman empire political instability third century" },
+  const parts = [{ title: "Political instability", brief: "Emperors came and went; civil wars drained the state.", search: "roman empire political instability third century", guess: "What do you think happens when emperors keep being overthrown?" },
     { title: "Economic pressures", brief: "Debased coins, taxes and trade.", search: "roman economy decline explained" },
     { title: "Political instability", brief: "dup", search: "x" },
     { title: "How these fit together", brief: "", search: "y" },
@@ -391,6 +391,8 @@ test("librarian: a learning goal comes with the parts of what understanding it t
   const r = await call(deps, { task: "librarian-ask", input: { request: "why did rome fall" } });
   assert.deepStrictEqual(r.body.parts.map(p => p.title), ["Political instability", "Economic pressures", "Migration and outside pressure"], "deduplicated; Aim adds the 'fit together' part itself");
   assert.match(deps.calls[0].system, /no order, no "Introduction"/);
+  assert.strictEqual(r.body.parts[0].guess, "What do you think happens when emperors keep being overthrown?", "each part brings a question to guess at before watching");
+  assert.strictEqual(r.body.parts[1].guess, "", "a part without one simply has none");
   kind = "project";
   assert.deepStrictEqual((await call(deps, { task: "librarian-ask", input: { request: "fix my faucet" } })).body.parts, []);
 });
@@ -575,7 +577,7 @@ test("talk: one student asks in its own way; review is one question with what th
 // ---------- challenges (0.70) ----------
 const CH = (o = {}) => ({ title: "How can an airplane fly upside down?", kind: "investigate", minutes: 30, difficulty: "intro", why: "Lift isn't only about wing shape.",
   success: "Explain how a wing makes lift upside down, including angle of attack.", materials: [{ item: "Paper", required: true }], safety: "",
-  plan: [{ title: "What lift is", look: "How a wing turns air down", minutes: 8, search: "how wings make lift" }, { title: "Inverted flight", look: "The angle, upside down", minutes: 12, search: "how planes fly upside down" },
+  plan: [{ title: "What lift is", look: "How a wing turns air down", minutes: 8, search: "how wings make lift", guess: "What pushes a wing up?" }, { title: "Inverted flight", look: "The angle, upside down", minutes: 12, search: "how planes fly upside down" },
     { title: "Attempt the challenge", look: "", minutes: 10, search: "" }], ...o });
 test("challenges: three from an interest and the time, tidied; one from your own words; free accounts a few a day", async () => {
   const d = talkDeps("free", () => ({ ok: true, model: "m", inputTokens: 30, outputTokens: 20, text: JSON.stringify({ challenges: [CH(), CH({ title: "Cut your first dovetail", kind: "build", minutes: 300 }),
@@ -585,6 +587,7 @@ test("challenges: three from an interest and the time, tidied; one from your own
   assert.deepStrictEqual(r.body.challenges.map(c => c.title), ["How can an airplane fly upside down?", "Cut your first dovetail", "Why do planes stall at any speed?"], "unusable ones are dropped; three at most");
   assert.strictEqual(r.body.challenges[0].materials.length, 0, "materials only for hands-on ones");
   assert.strictEqual(r.body.challenges[1].minutes, 30, "never more than the time they have");
+  assert.strictEqual(r.body.challenges[0].plan[0].guess, "What pushes a wing up?", "each step comes with a question to guess at first");
   assert.match(d.calls[0].prompt, /INTEREST: aviation\nOffer exactly three challenges\.\nTIME: 30 minutes/);
   assert.match(d.calls[0].prompt, /DONE BEFORE:\n- Explained: What lift is/);
   assert.match(d.calls[0].prompt, /ALREADY OFFERED \(offer different ones\): Old one/);
@@ -607,6 +610,25 @@ test("the Final Challenge: judged against the success condition; not enough evid
   assert.match(d.calls[0].system, /judged only against its SUCCESS CONDITION/);
   const plain = await call(d, { task: "librarian-talk", input: { mode: "synthesis", session: SESSION, thread } });
   assert.strictEqual(plain.body.verdict, null, "without a challenge, there's no 'not enough' outcome");
+});
+
+test("the one-minute close: one question that brings their guess back, one gap, and an open question for next time", async () => {
+  const d = talkDeps("free", () => talkReply({ message: "Right: the wing turns air down. The gap: why it stops past a steep angle.", done: true, next: "So why does pushing the nose down fix a stall?",
+    gaps: [{ title: "Stall", what: "Why lift collapses past a steep angle", search: "why wings stall" }] }));
+  const input = { mode: "close", part: { title: "What lift is", brief: "How a wing turns air down" }, guess: "It pushes air down?", guessQuestion: "What do you think a wing does to the air?", session: SESSION };
+  const open = await call(d, { task: "librarian-talk", input: { ...input, opening: true } });
+  assert.strictEqual(open.status, 200, JSON.stringify(open.body));
+  assert.match(d.calls[0].prompt, /MODE: Close\. One question, about a minute/);
+  assert.match(d.calls[0].prompt, /JUST WATCHED: What lift is \(How a wing turns air down\)\nTHEIR GUESS BEFORE WATCHING \(to "What do you think a wing does to the air\?"\): It pushes air down\?/);
+  assert.match(d.calls[0].system, /Before the video you guessed/);
+  assert.strictEqual(open.body.next, null, "no open question until it closes");
+  assert.strictEqual(d.rows[0].task, "close-open", "closes are counted apart from conversations");
+  const r = await call(d, { task: "librarian-talk", input: { ...input, thread: [{ role: "aim", text: "Now?" }, { role: "person", text: "It turns the air down." }] } });
+  assert.ok(r.body.done && r.body.next === "So why does pushing the nose down fix a stall?" && r.body.gaps.length === 1, "one question, one gap, and the open question");
+  for (let i = 0; i < 3; i++) await call(d, { task: "librarian-talk", input: { ...input, opening: true } });
+  assert.strictEqual((await call(d, { task: "librarian-talk", input: { ...input, opening: true } })).status, 403, "free accounts: four closes a day");
+  const focus = await call(talkDeps("plus", () => talkReply({ done: true, next: "x" })), { task: "librarian-talk", input: { mode: "focus", session: SESSION, thread: [{ role: "aim", text: "q" }, { role: "person", text: "a" }] } });
+  assert.strictEqual(focus.body.next, null, "only the close leaves an open question");
 });
 
 test("talk: with caption excerpts (Plus), questions can be grounded in what was said, citing only captioned videos", async () => {

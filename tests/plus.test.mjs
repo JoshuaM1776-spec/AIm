@@ -68,7 +68,8 @@ const deps = {
       : props.includes("challenges") ? (srv.challengePrompts = [...(srv.challengePrompts || []), req.prompt], { challenges: [
           { title: "How can an airplane fly upside down?", kind: "investigate", minutes: 15, difficulty: "intro", why: "Lift isn't only about the wing's shape.",
             success: "Explain how a wing makes lift upside down, including the angle of attack.", materials: [], safety: "",
-            plan: [{ title: "What lift is", look: "How a wing turns air down", minutes: 5, search: "how wings make lift" }, { title: "Inverted flight", look: "Watch the angle", minutes: 6, search: "how planes fly upside down" },
+            plan: [{ title: "What lift is", look: "How a wing turns air down", minutes: 5, search: "how wings make lift", guess: "What do you think a wing does to the air around it?" },
+              { title: "Inverted flight", look: "Watch the angle", minutes: 6, search: "how planes fly upside down", guess: "How could a wing still lift when it's upside down?" },
               { title: "Attempt the challenge", look: "Explain it", minutes: 4, search: "" }] },
           { title: "Why can a plane stall at any speed?", kind: "understand", minutes: 15, difficulty: "intro", why: "It's the angle, not the speed.", success: "Explain why a stall depends on angle of attack.", materials: [], safety: "",
             plan: [{ title: "Angle of attack", look: "", minutes: 8, search: "angle of attack" }, { title: "Attempt", look: "", minutes: 7, search: "" }] },
@@ -229,6 +230,7 @@ step("free plan has no AI check", await opt.$("button:text-is('Check connection'
 const [checkout] = await Promise.all([ctx.waitForEvent("page"), opt.click("button:text-is('Upgrade to Plus')")]);
 step("Upgrade to Plus opens the payment page in a new tab (Stripe's, never Aim's)", checkout.url().endsWith("/stripe/checkout"), checkout.url());
 await checkout.close();
+await opt.waitForSelector("button:text-is(\"What's in Plus\"):not([disabled])", { timeout: 10000 });
 const [front] = await Promise.all([ctx.waitForEvent("page"), opt.click("button:text-is(\"What's in Plus\")")]);
 await front.waitForSelector(".feature");
 const frontText = await front.textContent("main");
@@ -771,6 +773,54 @@ await yt.waitForURL(/search_query=how%20wings%20make%20lift/);
 const chAim = (await sw.evaluate(() => chrome.storage.local.get("purpose"))).purpose;
 step("beginning it makes it your aim: on the shelf, its plan as the map, starting with the first step's search",
   chAim.text === "How can an airplane fly upside down?" && chAim.goal === true && chAim.challenge.status === "active" && chAim.map.parts.length === 2);
+// ---------- Guess first, explain after (0.71) ----------
+await sw.evaluate(() => serial(async () => {
+  const { purpose } = await chrome.storage.local.get("purpose");
+  allow(purpose, [{ id: "lift00000aa", title: "How wings make lift", channel: "Flight Training Network" }], [], "how wings make lift");
+  await chrome.storage.local.set({ purpose });
+}));
+await yt.goto("https://www.youtube.com/watch?v=lift00000aa");
+await yt.waitForSelector("#wp-aimpanel .wp-pre", { timeout: 10000 });
+const preText = (await yt.textContent("#wp-aimpanel .wp-pre")).replace(/\s+/g, " ");
+step("before the video: a question to take a real guess at, from the plan, with Skip", preText.includes("Before you watch") && preText.includes("What do you think a wing does to the air around it?") &&
+  preText.includes("Skip"), preText);
+if (process.env.SHOTS) { await yt.setViewportSize({ width: 1100, height: 760 }); await yt.addStyleTag({ content: "ytd-watch-flexy{display:grid;grid-template-columns:1fr 380px;gap:24px;padding:24px} #movie_player{aspect-ratio:16/9;background:#000;border-radius:12px} #secondary{grid-column:2;grid-row:1/4}" });
+  await yt.screenshot({ path: `${process.env.SHOTS}/guess-first.png` }); }
+await yt.fill("#wp-aimpanel .wp-pre-input", "Maybe it pushes air down, so the wing goes up?");
+await yt.click("#wp-aimpanel .wp-pre button:text-is('Save my guess')");
+await yt.waitForSelector("#wp-aimpanel .wp-pre-saved");
+let guessed = (await sw.evaluate(() => chrome.storage.local.get("purpose"))).purpose.map.parts[0].guessed;
+step("the guess is kept with that part of the aim", guessed?.text === "Maybe it pushes air down, so the wing goes up?");
+srv.talk.push({ message: "Before the video you guessed it pushes air down. Now: how does the wing do that?", done: false, memory: [], marks: [] },
+  { message: "Yes: the wing's angle turns the air down, and the air pushes back up. The gap: why that stops at a steep angle.", done: true, memory: [], marks: [],
+    gaps: [{ title: "Stalls", what: "Why lift stops at a steep angle", search: "why wings stall" }], next: "So why would tilting the wing too far make it stop lifting?",
+    feedback: { explained: ["A wing makes lift by turning air down"], uncertain: [], misconceptions: [] } });
+await yt.evaluate(() => document.querySelector("video").dispatchEvent(new Event("ended")));
+await yt.waitForSelector("#wp-aimpanel button:text-is('Explain it in a minute')", { timeout: 8000 });
+step("when it ends: your guess comes back, and one minute to explain", (await yt.textContent("#wp-aimpanel .wp-ap-prompt")).includes("you guessed: “Maybe it pushes air down"));
+await yt.click("#wp-aimpanel button:text-is('Explain it in a minute')");
+await answerBox();
+step("the one-minute close knows what you watched and what you guessed", srv.talkPrompts.at(-1).includes("MODE: Close") && srv.talkPrompts.at(-1).includes("JUST WATCHED: What lift is") &&
+  srv.talkPrompts.at(-1).includes("THEIR GUESS BEFORE WATCHING") && (await yt.textContent(".wp-talk .wp-talk-progress")).includes("about a minute"));
+await yt.fill(".wp-talk-input", "The wing is tilted, so it turns the air downward, and the air pushes it up.");
+await yt.press(".wp-talk-input", "Enter");
+await yt.waitForSelector(".wp-talk .wp-fb-next");
+const closeText = (await yt.textContent(".wp-talk .wp-talk-feedback")).replace(/\s+/g, " ");
+const closed = (await sw.evaluate(() => chrome.storage.local.get("purpose"))).purpose;
+step("it ends with one gap and an open question for next time, kept with the aim", closeText.includes("Next time") && closeText.includes("tilting the wing too far") &&
+  closed.map.parts[0].closedAt > 0 && closed.openQuestion?.q.startsWith("So why would tilting"), closeText.slice(0, 200));
+if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/close-next.png` });
+await yt.click(".wp-talk button:text-is('Close')");
+await yt.goto("https://www.youtube.com/");
+await yt.waitForSelector("#wp-home .wp-open-q");
+step("back on the homepage, the open question waits under your aim", (await yt.textContent("#wp-home .wp-open-q")).includes("tilting the wing too far"));
+await yt.goto("https://www.youtube.com/watch?v=lift00000aa");
+await yt.waitForSelector("#wp-aimpanel .wp-pre", { timeout: 10000 });
+step("next video: last time's open question is the one to guess at first", (await yt.textContent("#wp-aimpanel .wp-pre")).includes("Left open last time") &&
+  (await yt.textContent("#wp-aimpanel .wp-pre")).includes("tilting the wing too far"));
+await yt.click("#wp-aimpanel .wp-pre button:text-is('Skip')");
+await yt.waitForTimeout(300);
+step("Skip puts it away for now", !(await yt.$("#wp-aimpanel .wp-pre")));
 srv.talk.push({ message: "Okay, the challenge: explain how a wing can make lift upside down, and what the angle of attack has to do with it.", done: false, memory: [], marks: [] },
   { message: "That's it: the pilot holds the nose up so the wing meets the air at a positive angle, upside down too.", done: true, memory: [], marks: [], verdict: "solid",
     feedback: { explained: ["Lift comes from the angle of attack, either way up"], uncertain: [], misconceptions: [] } });

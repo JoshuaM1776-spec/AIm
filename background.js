@@ -2,7 +2,7 @@
 // Aim Free uses no AI and talks to no server. Aim Plus (plus.js) talks to Aim's server only
 // after the user signs in, and only when config.js names a server.
 
-importScripts("store.js", "config.js", "plus.js", "sync.js");
+importScripts("content/guess-shared.js", "store.js", "config.js", "plus.js", "sync.js");
 
 // Fires on first install and on every update or reload of the extension. A new install opens the
 // welcome tour; an update from before onboarding existed skips it (see setOnboarding in store.js).
@@ -75,6 +75,8 @@ const writes = {
   "review-offered": () => reviewOffered(),
   "goal-answer": m => goalAnswer(m.aimId, m.answer),
   "challenge-start": m => challengeStart(m.challenge),
+  "guess-save": m => guessSave(String(m.aimId || ""), { partId: String(m.partId || ""), text: m.text, skip: !!m.skip }),
+  "close-save": m => closeSave(String(m.aimId || ""), { partId: String(m.partId || ""), next: m.next }),
   "challenge-result": m => challengeResult(String(m.aimId || ""), { outcome: m.outcome, answer: m.answer, shown: m.shown }),
   "personal-reasons": m => personalReasons(m.reasons),
   "aim-goal": m => aimGoal(String(m.aimId || ""), m.on !== false, m.text || ""),

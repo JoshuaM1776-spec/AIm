@@ -1031,3 +1031,14 @@ html[dark] .wp-ap-row.wp-ap-next { border-color: var(--wp-text); box-shadow: ins
 .wp-ch-outcome b { font: 500 20px/26px var(--font-serif); }
 .wp-ch-outcome.won { border-color: var(--wp-accent); background: var(--wp-accent-soft); }
 .wp-ch-outcome span { font-size: 13px; line-height: 19px; color: var(--wp-muted); }
+
+/* Guess first, explain after (0.71): the question before a video, and the open question for next time. */
+.wp-pre { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 4px; padding: 14px; border-radius: 12px; border: 1px solid var(--wp-accent); background: var(--wp-accent-soft); }
+.wp-pre-saved { border-color: var(--wp-card-border); background: transparent; padding: 8px 12px; font-size: 13px; }
+.wp-pre-label { font-size: 11px; line-height: 16px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--wp-accent); }
+.wp-pre-q { font: 400 18px/25px var(--font-serif); color: var(--wp-text); }
+.wp-pre-input { width: 100%; box-sizing: border-box; resize: vertical; font: inherit; }
+.wp-pre-actions { gap: 6px; }
+.wp-fb-nextq { font: 400 16px/23px var(--font-serif); color: var(--wp-text); margin-top: 2px; }
+.wp-open-q { display: flex; flex-direction: column; gap: 2px; margin: 8px 0; padding: 10px 12px; border-left: 3px solid var(--wp-accent); background: var(--wp-tonal); border-radius: 0 8px 8px 0;
+  font: 400 15px/21px var(--font-serif); color: var(--wp-text); text-align: left; }

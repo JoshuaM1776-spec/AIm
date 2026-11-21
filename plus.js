@@ -346,8 +346,9 @@ const plusHandlers = {
   "plus-sync-erase": () => syncErase(),
   "plus-check": () => plusCall("check").then(r => ({ result: "ok", reply: r.reply })),
   // Subscribe or manage: Stripe's own page, in a new tab. Card details never touch Aim.
-  "plus-subscribe": () => plusCall("billing-checkout").then(r => chrome.tabs.create({ url: r.url })).then(() => ({ result: "ok" })),
-  "plus-manage": () => plusCall("billing-portal").then(r => chrome.tabs.create({ url: r.url })).then(() => ({ result: "ok" })),
+  // Open Stripe's page without waiting on the tab: closing it quickly must never leave Settings' buttons stuck.
+  "plus-subscribe": () => plusCall("billing-checkout").then(r => { chrome.tabs.create({ url: r.url }).catch(() => {}); return { result: "ok" }; }),
+  "plus-manage": () => plusCall("billing-portal").then(r => { chrome.tabs.create({ url: r.url }).catch(() => {}); return { result: "ok" }; }),
   "plus-call": async m => {
     if (!PLUS_TASKS.has(m.task)) throw new PlusError("Unknown request.");
     return plusCall(m.task, m.input);

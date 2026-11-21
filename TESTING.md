@@ -468,6 +468,14 @@ Needs a signed-in account and the server redeployed.
 - [ ] Free accounts: six challenge suggestions a day. Signed out: "Sign in for challenges".
 - [ ] Try the three test challenges from the spec: an aviation explanation, a Polish introduction, a woodworking task. Do they feel different, or like one template?
 
+### 63. Guess first, explain after (0.71)
+Needs a signed-in account and the server redeployed (questions come with new maps and challenges; older aims have none).
+- [ ] Start a challenge or a learning aim, then open a video for it: the panel shows **Before you watch** with a question to guess at ("What do you think a wing does to the air around it?"), and the video waits. **Save my guess** (it's fine to be wrong) or **Skip**; the video then plays. A skipped question isn't asked again for a few hours.
+- [ ] When the video ends: "Before it, you guessed: … Now explain it, in a minute." **Explain it in a minute**: one question that brings your guess back, a short reply with one gap, and **Next time**: an open question you can't answer yet.
+- [ ] Back on the homepage, the open question waits under your aim ("Left open last time"). The next video for that aim asks it first, as the question to guess at.
+- [ ] Pressing Done with a guess not yet explained ends with the same one-minute close.
+- [ ] Settings → The librarian → **Guess before I watch** turns the questions off. Free accounts: four one-minute closes a day.
+
 ## Known issues (not regressions)
 
 - The word check knows words, not meanings: synonyms ("tap" vs "faucet") get the question once; answering Yes teaches it that search.

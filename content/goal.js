@@ -68,3 +68,42 @@ function goalOfferBlock(p, rerender) {
     lead: o.why === "days" ? "You keep coming back to this. Make it an aim?" : "You're getting into this. Make it an aim?",
     onDone: () => { goalOfferSeen.offer = null; goalOfferSeen.el = null; rerender(); } }));
 }
+
+// Guess first (0.71): before a video for a part of your aim, one question to take a real guess at.
+// Shown at the top of the panel as a video starts, and the video waits (paused) until you answer or
+// skip; built once per video so redraws keep what you typed. The guess comes back after the video.
+let preCard = { video: "", el: null, done: false };
+function preQuestionBlock(p, rerender) {
+  if (!currentId || brk) return null;
+  if (preCard.video !== currentId) preCard = { video: currentId, el: null, done: false };
+  if (preCard.done) return preCard.el;
+  const pre = preQuestion(p, settings.guessFirst !== false);
+  if (!pre) return null;
+  if (preCard.el) return preCard.el;
+  const v = getVideoEl();
+  if (v && (v.currentTime || 0) > 30) return null; // well into a video: too late to guess first
+  if (v && !v.paused) { pausedByAim.add(v); v.pause(); }
+  // Not playing yet: wait once for it to start, then pause, so the guess still comes first.
+  else if (v) v.addEventListener("play", () => { if (!preCard.done && preCard.video === currentId && (v.currentTime || 0) < 30) { pausedByAim.add(v); v.pause(); } }, { once: true });
+  const input = el("textarea", { class: "wp-input wp-pre-input", rows: "2", maxlength: "400", placeholder: "Your guess, in a sentence. It's fine to be wrong.", "aria-label": "Your guess" });
+  const finish = async (skip) => {
+    const text = input.value.trim();
+    if (!skip && !text) return input.focus();
+    await send({ type: "guess-save", aimId: p.id, partId: pre.partId, text, skip });
+    applyStatus(await send({ type: "status" })); // so the panel's aim has the guess for the close
+    preCard.done = true;
+    preCard.el = skip ? null : el("div", { class: "wp-pre wp-pre-saved" }, el("span", { class: "wp-muted" }, "Guess saved. Watch, then explain it in a minute."));
+    resume(currentId);
+    rerender();
+  };
+  keepKeys(input, () => finish(false));
+  preCard.el = el("div", { class: "wp-pre", role: "region", "aria-label": "Before you watch" },
+    el("div", { class: "wp-pre-label" }, pre.open ? "Left open last time" : "Before you watch"),
+    el("div", { class: "wp-pre-q" }, pre.q),
+    input,
+    el("div", { class: "wp-row wp-pre-actions" },
+      el("button", { class: "wp-btn wp-btn-primary", onclick: () => finish(false) }, "Save my guess"),
+      el("button", { class: "wp-btn wp-btn-text", onclick: () => finish(true) }, "Skip")));
+  setTimeout(() => input.focus({ preventScroll: true }), 50);
+  return preCard.el;
+}

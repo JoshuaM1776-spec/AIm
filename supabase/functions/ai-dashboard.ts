@@ -609,7 +609,7 @@ Do:
 - Write a note of one or two short sentences (under 220 characters) that orients the person, for example the order to learn things in, or what matters for finding the right repair video.
 - Ask at most one clarifying question, and only when the right videos genuinely differ by the answer (an engine variant, a software version, beginner or advanced). Give 2 to 4 short options. Otherwise leave the question empty and the options empty.
 - Name the aim: the person's objective in a few words, in their own terms (under 80 characters). For "learn" and "project", phrase it as the goal ("Understand why the Western Roman Empire fell", "Replace the alternator on my 2014 Tacoma"), not a topic.
-- For "learn" only: map what understanding it takes. List 3 to 6 parts of a good answer or skill, the way a thoughtful friend would break it down (for "why did the Western Roman Empire fall": political instability, economic pressures, military challenges, migration and outside pressure). Each part: a title in plain words (under 50 characters), one sentence on what it covers (under 140 characters), and one YouTube search for it. Not a curriculum: no order, no "Introduction", no "Conclusion", no part that is just "how these fit together" (Aim adds that). Where reasonable people disagree, name the debate as a part rather than picking a side. When the goal is how something works or why something happens (a body, a drug, a machine, an illness, an event), cover the chain in plain words: what is happening, why it happens, and what counteracts or fixes it (for "how does epinephrine work in anaphylaxis": what anaphylaxis does to the body, why airways swell and blood pressure drops, how epinephrine reverses it, when and how it is given). For anything about medications or treatment, parts are about understanding, never doses or instructions. For every other kind, parts is empty.
+- For "learn" only: map what understanding it takes. List 3 to 6 parts of a good answer or skill, the way a thoughtful friend would break it down (for "why did the Western Roman Empire fall": political instability, economic pressures, military challenges, migration and outside pressure). Each part: a title in plain words (under 50 characters), one sentence on what it covers (under 140 characters), one YouTube search for it, and a question to guess at before watching (guess: under 110 characters, the question the part answers, asked so a newcomer can take a real guess: "What do you think happens to the air over a wing tilted too steeply?"; never a definition or a quiz). Not a curriculum: no order, no "Introduction", no "Conclusion", no part that is just "how these fit together" (Aim adds that). Where reasonable people disagree, name the debate as a part rather than picking a side. When the goal is how something works or why something happens (a body, a drug, a machine, an illness, an event), cover the chain in plain words: what is happening, why it happens, and what counteracts or fixes it (for "how does epinephrine work in anaphylaxis": what anaphylaxis does to the body, why airways swell and blood pressure drops, how epinephrine reverses it, when and how it is given). For anything about medications or treatment, parts are about understanding, never doses or instructions. For every other kind, parts is empty.
 - Classify the goal: "lookup" (a quick answer or one task, including researching a company, product or person; a single factual question like "why is the sky blue?"; or a bare topic with no goal stated, like "roman empire"), "learn" (a real goal of understanding a subject or studying, stated as one: "I want to understand atmospheric physics", "why did the Western Roman Empire fall"), "project" (a multi-step build, repair or skill they're taking on), or "relax" (they want to unwind and enjoy videos, not accomplish something: "I just want to enjoy…", "something fun to watch").
 - For "relax": the aim is the theme in a few words ("Aviation engineering"); the searches find enjoyable, well-made videos on it (documentaries, builds, stories), not lessons; the note is one light sentence. If the request is vague ("engineering videos", "something interesting") and their recent aims are listed, lean the theme toward those and say so ("Picked with your flight review prep in mind.").
 
@@ -632,8 +632,8 @@ const ASK_SCHEMA = {
       type: "array",
       items: {
         type: "object",
-        properties: { title: { type: "string" }, brief: { type: "string" }, search: { type: "string" } },
-        required: ["title", "brief", "search"], additionalProperties: false
+        properties: { title: { type: "string" }, brief: { type: "string" }, search: { type: "string" }, guess: { type: "string" } },
+        required: ["title", "brief", "search", "guess"], additionalProperties: false
       }
     }
   },
@@ -677,10 +677,12 @@ ${target ? `Set same_target to true if this continues the current aim (a follow-
     // Relaxing is never the same aim: it's a break, and the aim waits.
     sameTarget: r.kind === "relax" ? false : target ? r.same_target !== false : true,
     // What understanding a learning aim takes (Your understanding, in the extension).
-    parts: r.kind === "learn" ? [...new Map(list(r.parts).map(x => {
+    // Each part once: the first time it's named wins.
+    parts: r.kind === "learn" ? list(r.parts).map(x => {
       const o = asObject(x);
-      return [clean(o.title, 60).toLowerCase(), { title: clean(o.title, 60), brief: clean(o.brief, 160), search: clean(o.search, 150) }];
-    }).filter(([k, v]) => k && v.search && !/^(introduction|conclusion|overview|how (these|they) fit together)$/i.test(v.title))).values()].slice(0, 6) : []
+      return { title: clean(o.title, 60), brief: clean(o.brief, 160), search: clean(o.search, 150), guess: clean(o.guess, 140) };
+    }).filter((v, i, all) => v.title && v.search && !/^(introduction|conclusion|overview|how (these|they) fit together)$/i.test(v.title) &&
+      all.findIndex(w => w.title.toLowerCase() === v.title.toLowerCase()) === i).slice(0, 6) : []
   };
 }
 
@@ -1331,10 +1333,10 @@ export const TALK_LIMITS = {
   thread: 8,
   reply: 1200,
   message: 420,
-  questions: { explore: 1, focus: 3, synthesis: 1, deeper: 3, review: 1 } as Record<string, number>,
+  questions: { explore: 1, focus: 3, synthesis: 1, deeper: 3, review: 1, close: 1 } as Record<string, number>,
   // Free accounts, per rolling 24 hours: a few openings (each is an AI call even if nobody answers),
   // one conversation (counted at the first reply) and its replies.
-  free: { openings: 3, conversations: 1, replies: 3, reviews: 2 }
+  free: { openings: 3, conversations: 1, replies: 3, reviews: 2, closes: 4 }
 };
 
 // The one student in a TeachBack conversation (docs/SPEC.md §7). Each asks in its own way; the rules
@@ -1415,6 +1417,8 @@ Following up (when FOLLOW UP ON is in the request): they've since watched someth
 
 A student (when STUDENT is in the request): in this conversation you speak as that student, the person explaining to you is the teacher. Ask in that student's way, in first person ("I don't get why…"), still one short specific question at a time, still following every rule above. Never pretend to be a real person; you're a practice student.
 
+The one-minute close (MODE: Close, with JUST WATCHED): the short explanation that ends a stretch of watching. Open with one short question that asks them to explain exactly what they just watched, in their own words. If THEIR GUESS BEFORE WATCHING is given, bring it back: "Before the video you guessed that the wing just runs out of speed. Now what do you think?" After their reply, close in two sentences: one specific thing they got right or one correction, and the one most important gap (also in gaps). Then set next: one open question for next time (under 120 characters) that follows from what they said, that they can't answer yet and would want to ("So why does pushing the nose down fix a stall?"). Set done to true. Elsewhere, next is empty.
+
 The Final Challenge (MODE: Synthesis with THE CHALLENGE in the request): this is the finish line of a challenge they chose, judged only against its SUCCESS CONDITION, decided before they started. Open by inviting them to do exactly that, in its terms ("Okay, the challenge: explain how an airplane can keep making lift upside down, including what the angle of attack has to do with it."). For a build challenge, ask them to describe what they made, how they did it and how it turned out (they can't send a photo here yet), and judge only what their description can show; never claim to verify what you can't observe. For a language challenge, have the exchange itself, in that language, and judge what they wrote or said (you can't hear pronunciation). After their reply, close in 2 to 4 sentences: what they demonstrated, then the most important thing still missing, if anything. Verdict: "solid" if their answer meets the success condition, "getting_there" if it meets part of it (say which part is missing), "not_enough" if the answer is too short, off the point or about something you can't judge, so there isn't enough evidence to tell. Never a grade, never "you've mastered".
 
 Remembering (MODE: Review, with REMEMBER): weeks ago they explained the idea listed. Open with one short, specific question that makes them explain it again from memory, without giving the answer away ("A while back you explained why ash made Roman concrete last. How does that work again?"). After their reply, close in one or two sentences: what they still have, and the piece they've lost (if any) in plain words. Set done to true, and set recalled: "yes" if they explained the core of it, "partly" if some of it, "no" if they couldn't. Otherwise recalled is "none".
@@ -1467,6 +1471,7 @@ const TALK_SCHEMA = {
       }
     },
     recalled: { type: "string", enum: ["yes", "partly", "no", "none"] },
+    next: { type: "string" },
     feedback: {
       type: "object",
       properties: {
@@ -1477,7 +1482,7 @@ const TALK_SCHEMA = {
       required: ["explained", "uncertain", "misconceptions"], additionalProperties: false
     }
   },
-  required: ["message", "done", "memory", "marks", "verdict", "practice", "videos", "gaps", "recalled", "feedback"],
+  required: ["message", "done", "memory", "marks", "verdict", "practice", "videos", "gaps", "recalled", "feedback", "next"],
   additionalProperties: false
 };
 
@@ -1488,7 +1493,10 @@ export interface TalkUsage { countSince(task: string, since: Date): Promise<numb
 
 export async function talk(ctx: TaskCtx & { plan?: string; usage?: TalkUsage }) {
   const input = tObject(ctx.input);
-  const mode = ["explore", "synthesis", "deeper", "review"].includes(input.mode as string) ? input.mode as string : "focus";
+  const mode = ["explore", "synthesis", "deeper", "review", "close"].includes(input.mode as string) ? input.mode as string : "focus";
+  const part = tObject(input.part);
+  const partLine = mode === "close" && tClean(part.title, 60) ? `JUST WATCHED: ${tClean(part.title, 60)}${tClean(part.brief, 160) ? ` (${tClean(part.brief, 160)})` : ""}` : "";
+  const guessLine = mode === "close" && tClean(input.guess, 300) ? `THEIR GUESS BEFORE WATCHING${tClean(input.guessQuestion, 140) ? ` (to "${tClean(input.guessQuestion, 140)}")` : ""}: ${tClean(input.guess, 300)}` : "";
   const opening = input.opening === true;
   const free = ctx.plan === "free";
   if (mode === "deeper" && free) throw new TaskError(403, "plan", "Going deeper is part of Aim Plus.");
@@ -1518,6 +1526,8 @@ export async function talk(ctx: TaskCtx & { plan?: string; usage?: TalkUsage }) 
     const used = async (t: string) => ctx.usage!.countSince(t, since);
     if (mode === "review") {
       if (opening && await used("review-open") >= TALK_LIMITS.free.reviews) throw new TaskError(403, "plan", "That's today's review. Another tomorrow.");
+    } else if (mode === "close") {
+      if (opening && await used("close-open") >= TALK_LIMITS.free.closes) throw new TaskError(403, "plan", "That's today's one-minute explanations. With Aim Plus, explain after every video.");
     } else {
       const no = "That's today's conversation. With Aim Plus, talk things through any time.";
       if (opening && await used("talk-open") >= TALK_LIMITS.free.openings) throw new TaskError(403, "plan", no);
@@ -1566,15 +1576,15 @@ export async function talk(ctx: TaskCtx & { plan?: string; usage?: TalkUsage }) 
   const max = TALK_LIMITS.questions[mode];
   const mustEnd = !opening && asked >= max;
 
-  const prompt = `${studentKey ? `STUDENT: ${studentName || "A student"}, ${TALK_STUDENTS[studentKey]}\n` : ""}${reviewLine ? `REMEMBER: ${reviewLine} (explained ${tNum(review.daysAgo, 3650)} days ago)\n` : ""}MODE: ${mode === "review" ? "Review. A one-question check that they still remember something they explained before. Quick." : mode === "explore" ? "Explore. They were following their curiosity, not studying for anything. Light touch." : mode === "synthesis" ? "Synthesis. They've explored most of what this aim takes; now they put the whole answer together." : mode === "deeper" ? "Deeper. They chose to go deeper into one thing." : "Focus. They're working toward a specific aim. A bit more intentional."}${deeperOn ? `\nGO DEEPER ON: ${deeperOn}${tClean(focus.brief, 200) ? ` (${tClean(focus.brief, 200)})` : ""}${deeperChain.length ? `\nTHE CHAIN SO FAR: ${deeperChain.join(" → ")}` : ""}` : ""}
+  const prompt = `${studentKey ? `STUDENT: ${studentName || "A student"}, ${TALK_STUDENTS[studentKey]}\n` : ""}${reviewLine ? `REMEMBER: ${reviewLine} (explained ${tNum(review.daysAgo, 3650)} days ago)\n` : ""}MODE: ${mode === "close" ? `Close. One question, about a minute, at the end of a stretch of watching.${partLine ? `\n${partLine}` : ""}${guessLine ? `\n${guessLine}` : ""}` : mode === "review" ? "Review. A one-question check that they still remember something they explained before. Quick." : mode === "explore" ? "Explore. They were following their curiosity, not studying for anything. Light touch." : mode === "synthesis" ? "Synthesis. They've explored most of what this aim takes; now they put the whole answer together." : mode === "deeper" ? "Deeper. They chose to go deeper into one thing." : "Focus. They're working toward a specific aim. A bit more intentional."}${deeperOn ? `\nGO DEEPER ON: ${deeperOn}${tClean(focus.brief, 200) ? ` (${tClean(focus.brief, 200)})` : ""}${deeperChain.length ? `\nTHE CHAIN SO FAR: ${deeperChain.join(" → ")}` : ""}` : ""}
 THEIR AIM: ${aim}${kind ? `\nAIM KIND: ${kind}` : ""}${challengeLine ? `\n${challengeLine}` : ""}${triedLine ? `\n${triedLine}` : ""}
 TIME: about ${tNum(s.minutes, 1440)} minutes
 ${searches.length ? `SEARCHES, IN ORDER: ${searches.join(" → ")}\n` : ""}${videos.length ? `VIDEOS (${withCaptions ? "with caption excerpts where shown" : "titles only; you haven't seen them"}):\n${videos.join("\n")}\n` : ""}${notes ? `THEIR NOTES: ${notes}\n` : ""}${studyTopics.length ? `STUDY TOPICS: ${studyTopics.join(" | ")}\n` : ""}${parts.length ? `YOUR UNDERSTANDING (what this aim takes, and how far they've got):\n${parts.map(x => `- ${x.title}: ${x.status}`).join("\n")}\n` : ""}${memory.length ? `THINGS THEY TOLD YOU BEFORE:\n${memory.join("\n")}\n` : ""}${connectLine ? `OPEN WITH THIS CONNECTION if it genuinely fits the session: ${connectLine}\n` : ""}${followLine ? `FOLLOW UP ON: ${followLine}\n` : ""}
 LIMITS: at most ${max} question${max > 1 ? "s" : ""} in this conversation. You've asked ${asked}. ${mustEnd ? "This message must be a closing remark, not a question. Set done to true." : opening ? "Open with one specific question. Set done to false." : "Ask another question only if it would really help; otherwise close with a remark and set done to true."}
 ${thread.length ? `\nCONVERSATION SO FAR:\n${thread.map(m => `${m.role === "person" ? "THEM" : "YOU"}: ${m.text}`).join("\n")}\n` : ""}
-${free ? "Return memory as an empty list." : "Return memory from their replies so far."} ${topics.length ? "Return marks for the study topics or understanding parts you've covered." : "Return marks as an empty list."} ${mode === "synthesis" ? "Return a verdict once they've answered; until then, none." : "Return verdict none."} ${mode === "review" ? "Return recalled once they've answered; until then, none." : "Return recalled none."} Return feedback lists only in a closing message after they've replied; otherwise empty lists.`;
+${free ? "Return memory as an empty list." : "Return memory from their replies so far."} ${topics.length ? "Return marks for the study topics or understanding parts you've covered." : "Return marks as an empty list."} ${mode === "synthesis" ? "Return a verdict once they've answered; until then, none." : "Return verdict none."} ${mode === "review" ? "Return recalled once they've answered; until then, none." : "Return recalled none."} Return feedback lists only in a closing message after they've replied; otherwise empty lists. ${mode === "close" ? "Return next, the open question, in your closing message; until then, empty." : "Return next empty."}`;
 
-  const label = mode === "review" ? (opening ? "review-open" : "review-reply") : opening ? "talk-open" : thread.filter(m => m.role === "person").length === 1 ? "talk-first-reply" : "talk-reply";
+  const label = mode === "review" ? (opening ? "review-open" : "review-reply") : mode === "close" ? (opening ? "close-open" : "close-reply") : opening ? "talk-open" : thread.filter(m => m.role === "person").length === 1 ? "talk-first-reply" : "talk-reply";
   const r = tParse(await ctx.ai(label, { tier: "fast", maxTokens: 2000, schema: TALK_SCHEMA, system: TALK_SYSTEM, prompt }));
   // A citation must point at a video it had captions for; any other is dropped, never shown as a link.
   let message = tClean(r.message, TALK_LIMITS.message + 80).replace(FILLER, "")
@@ -1604,6 +1614,7 @@ ${free ? "Return memory as an empty list." : "Return memory from their replies s
       const o = tObject(g), title = tClean(o.title, 60), search = tClean(o.search, 150);
       return title && search ? { title, what: tClean(o.what, 200), search } : null;
     }).filter(Boolean).slice(0, 2),
+    next: mode === "close" && done ? tClean(r.next, 140) || null : null,
     recalled: mode === "review" && done && ["yes", "partly", "no"].includes(r.recalled as string) ? r.recalled : null,
     feedback: done && thread.some(m => m.role === "person") ? (() => {
       const f = tObject(r.feedback), l = (x: unknown) => tList(x).map(t => tClean(t, 100)).filter(Boolean).slice(0, 3);
@@ -2030,7 +2041,7 @@ Every challenge must:
 
 Kinds: "understand" (answer a question or explain how something works), "build" (make, repair, practice or perform something, including speaking a language), "investigate" (weigh evidence or explanations and defend a conclusion). When offering three, make them different kinds where the interest allows, and different angles.
 
-For each: title (under 90 characters), kind, minutes (the time they gave, or less), difficulty (intro, intermediate or advanced; most people start at intro), why (one sentence on what makes it interesting, under 140 characters), success (the success condition, under 200 characters), plan (3 or 4 steps that fit the minutes: each a short title, a one-sentence what-to-look-for, minutes, and one YouTube search that finds a good video for exactly that step; the last step is always attempting the challenge itself, with no search), materials (build only: up to 6 items, each required or optional; otherwise empty), safety (one sentence for anything with tools, heat, electricity, chemicals or height; otherwise empty).
+For each: title (under 90 characters), kind, minutes (the time they gave, or less), difficulty (intro, intermediate or advanced; most people start at intro), why (one sentence on what makes it interesting, under 140 characters), success (the success condition, under 200 characters), plan (3 or 4 steps that fit the minutes: each a short title, a one-sentence what-to-look-for, minutes, one YouTube search that finds a good video for exactly that step, and a question to guess at before watching (guess: under 110 characters, the question the step answers, asked so they can take a real guess; never a definition or a quiz); the last step is always attempting the challenge itself, with no search), materials (build only: up to 6 items, each required or optional; otherwise empty), safety (one sentence for anything with tools, heat, electricity, chemicals or height; otherwise empty).
 
 Safety: hands-on challenges stay beginner-safe (hand tools, low voltage, no mains electricity, no dangerous chemicals). Medical or flying topics are about understanding, never procedures, doses or numbers to act on.
 
@@ -2038,8 +2049,8 @@ Every challenge is written for this person, now: their interest, the time they h
 
 If they've done things before (DONE BEFORE), build on them where it helps ("You understand angle of attack; now…"), and don't repeat them.`;
 
-const STEP = { type: "object", properties: { title: { type: "string" }, look: { type: "string" }, minutes: { type: "integer" }, search: { type: "string" } },
-  required: ["title", "look", "minutes", "search"], additionalProperties: false };
+const STEP = { type: "object", properties: { title: { type: "string" }, look: { type: "string" }, minutes: { type: "integer" }, search: { type: "string" }, guess: { type: "string" } },
+  required: ["title", "look", "minutes", "search", "guess"], additionalProperties: false };
 const ONE = {
   type: "object",
   properties: {
@@ -2060,7 +2071,7 @@ export function tidyChallenge(x: unknown, minutes: number) {
   const kind = cOne(o.kind, CH_KINDS, "understand");
   const plan = cList(o.plan).map(s => {
     const st = cObject(s);
-    return { title: cText(st.title, 60), look: cText(st.look, 160), minutes: Math.max(1, Math.min(60, Math.round(Number(st.minutes) || 5))), search: cText(st.search, 150) };
+    return { title: cText(st.title, 60), look: cText(st.look, 160), minutes: Math.max(1, Math.min(60, Math.round(Number(st.minutes) || 5))), search: cText(st.search, 150), guess: cText(st.guess, 140) };
   }).filter(s => s.title).slice(0, 4);
   if (plan.length < 2) return null;
   return {

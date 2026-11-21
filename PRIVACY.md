@@ -23,6 +23,8 @@ This data never leaves your computer. Aim does not sell, share or transfer it, a
 
 Aim itself makes one kind of request: when you open a video, it asks YouTube's public "oEmbed" address on youtube.com for that video's title and channel, so it can tell which video is on screen. This request goes to YouTube, the site you're already on, and contains only the video's address.
 
+**Guess first, explain after:** your guess before a video is kept with the aim in your browser. The one-minute explanation afterwards sends what a conversation sends (above), plus the part you watched and your guess, to Aim's server and the AI; nothing of it is stored there beyond usage. The open question it leaves is kept in your browser.
+
 **Find a challenge** (signed in): sends what you typed (a subject, or your own challenge), the time you picked, the challenges already offered, and the names of up to eight related challenges you completed or parts you explained, to Aim's server and the AI, which suggests challenges. Nothing of it is stored there beyond usage. The challenge you begin, and your answer to its final challenge, are kept with the aim in your browser.
 
 **Suggest better groups** (Personalize your YouTube, signed in): sends only the names of the channels you subscribe to, and the reasons you picked for using YouTube, to Aim's server and the AI, which suggests groups and a few first aims. Nothing of it is stored there beyond usage. Without it, groups are suggested in your browser from channel names, with no AI.

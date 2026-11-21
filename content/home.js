@@ -227,6 +227,8 @@ function currentTargetRow(p) {
     el("div", { class: "wp-label" }, "Your aim"),
     el("button", { class: "wp-home-purpose wp-home-open", title: "Open this aim's page", onclick: () => send({ type: "open-aim", id: p.id }) }, p.text),
     el("div", { class: "wp-muted wp-home-meta" }, targetMeta({ ...p, videos: (p.videos || []).length })),
+    // The open loop (0.71): the question the last one-minute close left for next time.
+    p.openQuestion?.q && !p.openQuestion.closedAt ? el("div", { class: "wp-open-q" }, el("span", { class: "wp-label" }, "Left open last time"), el("span", {}, p.openQuestion.q)) : null,
     studyTodayBlock(p),
     activeStudy(p) ? null : understandingBlock(p),
     practiceBlock(p),
