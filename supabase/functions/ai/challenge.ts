@@ -35,7 +35,7 @@ If they've done things before (DONE BEFORE), build on them where it helps ("You 
 
 const STEP = { type: "object", properties: { title: { type: "string" }, look: { type: "string" }, minutes: { type: "integer" }, search: { type: "string" }, guess: { type: "string" } },
   required: ["title", "look", "minutes", "search", "guess"], additionalProperties: false };
-const ONE = {
+export const CHALLENGE_ONE = {
   type: "object",
   properties: {
     title: { type: "string" }, kind: { type: "string", enum: [...CH_KINDS] }, minutes: { type: "integer" }, difficulty: { type: "string", enum: [...CH_LEVELS] },
@@ -46,7 +46,7 @@ const ONE = {
   required: ["title", "kind", "minutes", "difficulty", "why", "success", "plan", "materials", "safety"],
   additionalProperties: false
 };
-const CHALLENGE_SCHEMA = { type: "object", properties: { challenges: { type: "array", items: ONE } }, required: ["challenges"], additionalProperties: false };
+const CHALLENGE_SCHEMA = { type: "object", properties: { challenges: { type: "array", items: CHALLENGE_ONE } }, required: ["challenges"], additionalProperties: false };
 
 // One challenge, tidied and bounded; null when it isn't usable.
 export function tidyChallenge(x: unknown, minutes: number) {

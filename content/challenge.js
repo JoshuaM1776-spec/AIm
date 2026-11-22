@@ -7,6 +7,10 @@
 
 const CH_KIND = { understand: "Understand", build: "Build & do", investigate: "Investigate" };
 const CH_LEVEL = { intro: "Intro", intermediate: "Intermediate", advanced: "Advanced" };
+// Explore's one-off challenges (0.72: a tool for exploring new topics; goals have paths). The block
+// redraws itself in place, so Explore's picks aren't fetched again on every click.
+let chHost = null;
+function chRedraw() { if (chHost?.isConnected) chHost.replaceWith(challengeBlock()); }
 // What's on screen, kept across the homepage card's redraws.
 // level: what the evidence suggests (from the background); shift: Easier or Harder, chosen here.
 let chFind = { minutes: 30, view: "closed", interest: "", list: [], picked: null, busy: false, error: "", offered: [], level: "intro", shift: 0 };
@@ -15,26 +19,27 @@ const chLevel = () => CH_LEVELS[Math.max(0, Math.min(2, CH_LEVELS.indexOf(chFind
 
 async function findChallenges(interest, { custom = "" } = {}) {
   interest = String(interest || "").trim();
-  if (!interest && !custom) { chFind = { ...chFind, view: "ask", error: "Type a subject first, like aviation, Polish or woodworking." }; return renderHome(); }
+  if (!interest && !custom) { chFind = { ...chFind, view: "ask", error: "Type a subject first, like aviation, Polish or woodworking." }; return chRedraw(); }
   // A new subject starts fresh: nothing offered yet, and the level its own evidence suggests.
-  if (interest && interest.toLowerCase() !== chFind.interest.toLowerCase()) chFind = { ...chFind, offered: [], shift: 0 };
+  if (interest && interest.toLowerCase() !== (chFind.listFor || "").toLowerCase()) chFind = { ...chFind, offered: [], shift: 0 };
   chFind = { ...chFind, busy: true, error: "", interest: interest || chFind.interest, view: chFind.view === "closed" ? "list" : chFind.view };
-  renderHome();
+  chRedraw();
   const k = (await send({ type: "challenge-known", interest: interest || custom })) || {};
   chFind.level = CH_LEVELS.includes(k.level) ? k.level : "intro";
   const r = await send({ type: "librarian", task: "challenges-suggest", input: { interest, custom, minutes: chFind.minutes, level: chLevel(), known: k.known || [], avoid: custom ? [] : chFind.offered } });
   chFind.busy = false;
-  if (!r || r.error) { chFind.error = r?.error || "Couldn't find challenges just now. Try again."; return renderHome(); }
+  if (!r || r.error) { chFind.error = r?.error || "Couldn't find challenges just now. Try again."; return chRedraw(); }
   const list = (r.challenges || []).map(c => ({ ...c, interest: interest || chFind.interest }));
+  chFind.listFor = interest || chFind.listFor || chFind.interest; // the subject these are for
   chFind = { ...chFind, list, view: custom ? "detail" : "list", picked: custom ? list[0] : null, offered: [...chFind.offered, ...list.map(c => c.title)].slice(-9) };
-  renderHome();
+  chRedraw();
 }
 
 async function beginChallenge(c) {
-  chFind.busy = true; renderHome();
+  chFind.busy = true; chRedraw();
   const r = await send({ type: "challenge-start", challenge: c });
   chFind.busy = false;
-  if (!r || r.result !== "applied") { chFind.error = r?.message || "Couldn't start that. Try again."; return renderHome(); }
+  if (!r || r.result !== "applied") { chFind.error = r?.message || "Couldn't start that. Try again."; return chRedraw(); }
   chFind = { minutes: chFind.minutes, view: "closed", interest: "", list: [], picked: null, busy: false, error: "", offered: [], level: "intro", shift: 0 };
   location.href = r.url;
 }
@@ -42,22 +47,26 @@ async function beginChallenge(c) {
 const chMeta = c => [CH_KIND[c.kind] || "Understand", `${c.minutes} min`, CH_LEVEL[c.difficulty] || "Intro"].join(" · ");
 
 // The block in the homepage card. input: the card's own box, read for the subject.
-function challengeBlock(input) {
-  if (status.totalReached || exploreOpen) return null;
+function challengeBlock() {
+  if (status.totalReached) return null;
+  const input = el("input", { class: "wp-input wp-ch-subject", type: "text", placeholder: "A subject, like aviation or Polish", "aria-label": "Subject for a challenge" });
+  input.value = chFind.interest;
+  input.addEventListener("input", () => { chFind.interest = input.value.trim(); });
   const times = el("div", { class: "wp-ch-times", role: "group", "aria-label": "Time you have" },
     ...[15, 30, 60].map(m => el("button", { class: `wp-chip${chFind.minutes === m ? " wp-chip-on" : ""}`, "aria-pressed": String(chFind.minutes === m),
-      onclick: () => { chFind.minutes = m; chFind.interest = input.value.trim() || chFind.interest; renderHome(); } }, `${m} min`)));
+      onclick: () => { chFind.minutes = m; chFind.interest = input.value.trim() || chFind.interest; chRedraw(); } }, `${m} min`)));
   const find = () => (account.on ? findChallenges(input.value || chFind.interest) : send({ type: "open-options", section: "account" }));
+  keepKeys(input, find);
   const head = el("div", { class: "wp-ch-head" },
-    el("span", { class: "wp-ch-q" }, "Curious, with some time?"),
-    times,
+    el("span", { class: "wp-ch-q" }, "A one-off challenge, to try a new topic"),
+    el("div", { class: "wp-ch-row" }, input, times),
     el("button", { class: "wp-btn wp-btn-tonal", disabled: chFind.busy, onclick: find }, icon("target"), chFind.busy ? "Finding…" : account.on ? "Find a challenge" : "Sign in for challenges"));
   const box = el("div", { class: "wp-ch" }, head);
   if (chFind.error) box.append(el("div", { class: "wp-error wp-ch-error" }, chFind.error));
   if (chFind.view === "list" && chFind.list.length) {
     box.append(
-      el("div", { class: "wp-ch-label" }, `Challenges for ${chFind.interest}`),
-      el("div", { class: "wp-ch-list" }, ...chFind.list.map(c => el("button", { class: "wp-ch-card", onclick: () => { chFind.picked = c; chFind.view = "detail"; renderHome(); } },
+      el("div", { class: "wp-ch-label" }, `Challenges for ${chFind.listFor || chFind.interest}`),
+      el("div", { class: "wp-ch-list" }, ...chFind.list.map(c => el("button", { class: "wp-ch-card", onclick: () => { chFind.picked = c; chFind.view = "detail"; chRedraw(); } },
         el("span", { class: "wp-ch-meta" }, chMeta(c)),
         el("b", { class: "wp-ch-title" }, c.title),
         c.why ? el("span", { class: "wp-ch-why" }, c.why) : null,
@@ -69,10 +78,11 @@ function challengeBlock(input) {
         chLevel() !== "advanced" ? el("button", { class: "wp-link", disabled: chFind.busy, onclick: () => { chFind.shift++; findChallenges(chFind.interest); } }, "Harder") : null,
         el("button", { class: "wp-link", onclick: () => {
           const own = input.value.trim();
-          if (own && own.toLowerCase() !== chFind.interest.toLowerCase()) return findChallenges(chFind.interest, { custom: own });
+          const subject = chFind.listFor || "";
+          if (own && own.toLowerCase() !== subject.toLowerCase()) return findChallenges(subject, { custom: own });
           input.value = ""; input.placeholder = "Write your own challenge, then press Write my own again"; input.focus();
         } }, "Write my own"),
-        el("button", { class: "wp-link", onclick: () => { chFind.view = "closed"; chFind.list = []; renderHome(); } }, "Close")));
+        el("button", { class: "wp-link", onclick: () => { chFind.view = "closed"; chFind.list = []; chRedraw(); } }, "Close")));
   }
   if (chFind.view === "detail" && chFind.picked) {
     const c = chFind.picked;
@@ -88,9 +98,10 @@ function challengeBlock(input) {
       c.safety ? el("div", { class: "wp-ch-safety" }, c.safety) : null,
       el("div", { class: "wp-row wp-ch-actions" },
         el("button", { class: "wp-btn wp-btn-primary", disabled: chFind.busy, onclick: () => beginChallenge(c) }, "Begin challenge"),
-        el("button", { class: "wp-btn wp-btn-text", onclick: () => { chFind.view = chFind.list.length > 1 ? "list" : "closed"; renderHome(); } }, chFind.list.length > 1 ? "Back to the list" : "Not this one")),
+        el("button", { class: "wp-btn wp-btn-text", onclick: () => { chFind.view = chFind.list.length > 1 ? "list" : "closed"; chRedraw(); } }, chFind.list.length > 1 ? "Back to the list" : "Not this one")),
       el("div", { class: "wp-muted wp-ch-note" }, "The time is a target, not a timer. Skip what you know, swap a video, or stop and pick it up later.")));
   }
+  chHost = box;
   return box;
 }
 

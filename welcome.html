@@ -57,6 +57,12 @@
   .done-list li { display: flex; gap: 10px; align-items: flex-start; }
   .done-list li::before { content: ""; width: 18px; height: 18px; flex: none; margin-top: 1px; border-radius: 50%; background: #2ba640 no-repeat center / 12px
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+  /* The first path's big picture, in order (0.72). */
+  .msg .path-units { margin: 10px 0 4px; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; font: 400 15px/21px var(--font); }
+  .msg .path-units b { font: 500 16px/21px var(--font-serif); }
+  .msg .path-units span { color: var(--muted); }
+  .msg .path-outside, .msg .path-confirm { font: 400 14px/20px var(--font); color: var(--muted); margin: 8px 0 0; }
+  .msg .path-confirm { padding: 8px 12px; border-radius: 8px; background: var(--tonal); color: var(--text); }
   @keyframes in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
   @media (prefers-reduced-motion: reduce) { .msg { animation: none; } .typing i { animation: none; } }
   @media (max-width: 560px) { .msg { max-width: 100%; } .msg.aim { font-size: 17px; line-height: 25px; } }

@@ -63,6 +63,7 @@ function openDropdown() {
 // Done and Set aside, the session tools and the session bar, in the same words and order. What only
 // makes sense on YouTube (this video, this channel) follows under "This video".
 const MENU_ICONS = {
+  plus: [22, ["path", { d: "M12 5v14M5 12h14", fill: "none", stroke: "currentColor", "stroke-width": "1.8", "stroke-linecap": "round" }]],
   target: [22, ["path", { d: "M12 21a9 9 0 1 1 9-9M12 17a5 5 0 1 1 5-5", fill: "none", stroke: "currentColor", "stroke-width": "1.8", "stroke-linecap": "round" }],
     ["path", { d: "M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM14 10l6.5-6.5M17 3.5h3.5V7", fill: "none", stroke: "currentColor", "stroke-width": "1.8", "stroke-linecap": "round", "stroke-linejoin": "round" }]],
   hourglass: [22, ["path", { d: "M7 3.5h10M7 20.5h10M8 3.5c0 5 8 5 8 8.5s-8 3.5-8 8.5M16 3.5c0 5-8 5-8 8.5s8 3.5 8 8.5", fill: "none", stroke: "currentColor", "stroke-width": "1.8", "stroke-linecap": "round", "stroke-linejoin": "round" }]],

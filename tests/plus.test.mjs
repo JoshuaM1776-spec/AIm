@@ -65,6 +65,17 @@ const deps = {
     const props = Object.keys(req.schema?.properties || {});
     const reply = !req.schema ? "ready" : JSON.stringify(
       props.includes("marks") ? (srv.talkPrompts.push(req.prompt), srv.talk.shift())
+      : props.includes("units") ? (srv.pathPrompts = [...(srv.pathPrompts || []), req.prompt], (srv.pathPrompts.length === 1 ? {
+          title: "Earn a private pilot's license", scope: "The ground knowledge for a private pilot certificate; flying needs an instructor.", measure: "Ground knowledge",
+          confirm: "Requirements change: confirm them with your flight instructor and the FAA.",
+          units: [{ title: "How a plane flies", about: "Lift, weight, thrust and drag", lessons: 2 }, { title: "Weather", about: "What pilots read in the sky", lessons: 2 }, { title: "Airspace", about: "Who flies where", lessons: 1 }],
+          outside: [{ title: "Get an FAA medical certificate", after: 2, note: "From an aviation medical examiner, before flying solo." }],
+          lessons: [
+            { title: "How does a wing make lift?", kind: "understand", minutes: 20, difficulty: "intro", why: "Everything else builds on it.", success: "Explain how a wing makes lift, in your own words.", materials: [], safety: "", unit: 1,
+              plan: [{ title: "Lift", look: "Air turned downward", minutes: 12, search: "how does a wing make lift", guess: "What do you think a wing does to the air?" }, { title: "Attempt", look: "", minutes: 8, search: "", guess: "" }] },
+            { title: "Why can a plane stall at any speed?", kind: "understand", minutes: 20, difficulty: "intro", why: "Stalls are about angle.", success: "Explain why a stall depends on angle of attack.", materials: [], safety: "", unit: 1,
+              plan: [{ title: "Angle of attack", look: "", minutes: 12, search: "angle of attack explained", guess: "What makes a wing stop lifting?" }, { title: "Attempt", look: "", minutes: 8, search: "", guess: "" }] }] }
+        : { title: "x", scope: "", measure: "", confirm: "", units: [], outside: [], lessons: [] }))
       : props.includes("challenges") ? (srv.challengePrompts = [...(srv.challengePrompts || []), req.prompt], { challenges: [
           { title: "How can an airplane fly upside down?", kind: "investigate", minutes: 15, difficulty: "intro", why: "Lift isn't only about the wing's shape.",
             success: "Explain how a wing makes lift upside down, including the angle of attack.", materials: [], safety: "",
@@ -747,13 +758,15 @@ const fetchesBefore = srv.captionFetches;
 // ---------- Challenges (0.70): find, choose, begin, attempt, complete ----------
 await yt.goto("https://www.youtube.com/");
 await yt.bringToFront();
+await yt.waitForSelector("#wp-home .wp-explore-open");
+await yt.click("#wp-home .wp-explore-open");
 await yt.waitForSelector("#wp-home .wp-ch");
-await yt.fill(".wp-home-input", "aviation");
+await yt.fill("#wp-home .wp-ch-subject", "aviation");
 await yt.click(".wp-ch-times button:text-is('15 min')");
 await yt.click(".wp-ch button:has-text('Find a challenge')");
 await yt.waitForFunction(() => document.querySelectorAll("#wp-home .wp-ch-card").length === 3, null, { timeout: 10000 });
 const chCards = (await yt.textContent(".wp-ch-list")).replace(/\s+/g, " ");
-step("beside What brings you here: three challenges for an interest and the time you have, each with its kind and why",
+step("in Explore, one-off challenges: three for a subject and the time you have, each with its kind and why",
   chCards.includes("How can an airplane fly upside down?") && chCards.includes("Investigate · 15 min · Intro") && chCards.includes("Needs: Paper") &&
   srv.challengePrompts.at(-1).includes("INTEREST: aviation") && srv.challengePrompts.at(-1).includes("TIME: 15 minutes") && srv.challengePrompts.at(-1).includes("LEVEL: intro"), chCards.slice(0, 200));
 await yt.click(".wp-ch-more button:text-is('Harder')");
@@ -839,6 +852,51 @@ step("Challenge complete: restrained, what you demonstrated, kept with your answ
 if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/challenge-complete.png` });
 await yt.click(".wp-talk button:text-is('Call it done')");
 await yt.waitForTimeout(600);
+
+// ---------- Paths (0.72): an interest and its goal, an ordered plan, lessons picked up in order ----------
+await yt.goto("https://www.youtube.com/");
+await yt.bringToFront();
+await yt.waitForSelector("#wp-home .wp-home-challenge");
+await yt.click("#wp-home .wp-home-challenge");
+await yt.waitForSelector("#wp-home .wp-pw");
+await yt.click("#wp-home .wp-pw-plus");
+await yt.fill("#wp-home .wp-pw-add input >> nth=0", "Aviation");
+await yt.fill("#wp-home .wp-pw-add input >> nth=1", "Earn a private pilot's license");
+await yt.click("#wp-home .wp-pw-add button:text-is('Add')");
+await yt.waitForFunction(() => document.querySelector("#wp-home .wp-pw")?.textContent.includes("lessons to: How a plane flies"), null, { timeout: 10000 });
+const pwText = (await yt.textContent("#wp-home .wp-pw")).replace(/\s+/g, " ");
+step("+ adds an interest with its goal; Aim drafts its path, and the window shows progress to the next checkpoint",
+  pwText.includes("Aviation") && pwText.includes("Earn a private pilot's license") && pwText.includes("0% of the path") && pwText.includes("2 lessons to: How a plane flies") &&
+  srv.pathPrompts[0].includes("INTEREST: Aviation") && srv.pathPrompts[0].includes("GOAL: Earn a private pilot's license"), pwText.slice(0, 200));
+if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/start-a-challenge.png`, fullPage: true });
+await yt.click("#wp-home .wp-pw-pick:has-text('Aviation')");
+await yt.waitForURL(/search_query=how%20does%20a%20wing%20make%20lift/);
+let pathAim = (await sw.evaluate(() => chrome.storage.local.get("purpose"))).purpose;
+step("picking it up starts the first lesson, in order, as a challenge", pathAim.text === "How does a wing make lift?" && !!pathAim.pathRef && pathAim.challenge.status === "active");
+srv.talk.push({ message: "Okay: explain how a wing makes lift.", done: false, memory: [], marks: [] },
+  { message: "Yes: the wing turns air down and the air pushes it up.", done: true, memory: [], marks: [], verdict: "solid", feedback: { explained: ["A wing turns air down"], uncertain: [], misconceptions: [] } });
+await yt.goto("https://www.youtube.com/#aim-put-together");
+await answerBox();
+await yt.fill(".wp-talk-input", "The wing meets the air at an angle and turns it downward, so the air pushes the wing up.");
+await yt.press(".wp-talk-input", "Enter");
+await yt.waitForSelector(".wp-talk button:text-is('Next lesson')");
+step("a lesson demonstrated: Challenge complete, then Next lesson", (await yt.textContent(".wp-talk .wp-ch-outcome")).includes("Challenge complete"));
+await yt.click(".wp-talk button:text-is('Next lesson')");
+await yt.waitForURL(/search_query=angle%20of%20attack%20explained/, { timeout: 10000 });
+const paths1 = (await sw.evaluate(() => chrome.storage.local.get(["paths", "history"])));
+step("Next lesson picks the path up where it left off; the finished lesson goes to history", paths1.paths[0].lessons[0].status === "completed" &&
+  paths1.paths[0].lessons[1].status === "active" && paths1.history.some(h => h.text === "How does a wing make lift?" && h.challenge?.status === "completed"));
+const pathPage = await ctx.newPage();
+await pathPage.goto(`chrome-extension://${extId}/path.html?id=${encodeURIComponent(paths1.paths[0].id)}`);
+await pathPage.waitForSelector(".units .unit");
+const planText = (await pathPage.textContent("main")).replace(/\s+/g, " ");
+step("the path page: the goal, progress, the units in order, the lesson in progress, and the step outside Aim with who to confirm with",
+  planText.includes("Earn a private pilot's license") && planText.includes("20% of the path · Ground knowledge") && planText.includes("1 lesson to the end of: How a plane flies") &&
+  planText.includes("How a plane flies") && planText.includes("Weather") && planText.includes("Outside Aim") && planText.includes("Get an FAA medical certificate") &&
+  planText.includes("confirm them with your flight instructor and the FAA") && !!(await pathPage.$("button:text-is('Continue on YouTube')")) && !/\bnull\b/.test(planText), planText.slice(0, 300));
+if (process.env.SHOTS) { await pathPage.setViewportSize({ width: 1100, height: 900 }); await pathPage.screenshot({ path: `${process.env.SHOTS}/path.png`, fullPage: true }); }
+await pathPage.close();
+await sw.evaluate(() => serial(() => finishPurpose("yes")));
 
 // ---------- Your understanding: a learning aim's map, and its finish line ----------
 srv.ask.push({ target: "Why the Western Roman Empire fell", kind: "learn", note: "Several causes worked together.", searches: ["fall of rome"], question: "", options: [], same_target: false,

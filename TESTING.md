@@ -476,7 +476,19 @@ Needs a signed-in account and the server redeployed (questions come with new map
 - [ ] Pressing Done with a guess not yet explained ends with the same one-minute close.
 - [ ] Settings → The librarian → **Guess before I watch** turns the questions off. Free accounts: four one-minute closes a day.
 
+### 64. Interests, goals and paths (0.72)
+Needs a signed-in account and the server redeployed to draft paths.
+- [ ] Install Aim: the conversation asks what you're curious about (chips or your own words), then the goal behind it, with an example that fits ("Earn a private pilot's license"); "Just curious" points to Explore instead. Add as many as you like, then That's it.
+- [ ] Signed in: Aim lays out the first path right there: the units in order, any steps outside Aim (an FAA medical), who to confirm requirements with, and your first lesson. **Start my first lesson** goes straight to it. Signed out: it says the path comes once you sign in.
+- [ ] YouTube's homepage: **Focus · Break · Library** at the top (Break opens its lengths on the card; Library opens the library), "What brings you here?", then **Start a challenge** and **Explore**. The aim you're on shows under Continue; set-aside aims are in the Library.
+- [ ] **Start a challenge**: a small window, not over the page, with each interest, its goal, a progress bar and "x% of the path · n lessons to: <unit>" (or the next step outside Aim), and **+** to add one (interest and goal; its path is drafted at once).
+- [ ] Pick an interest: it starts the next lesson, in order (a challenge: guess first, watch, explain, then the lesson's final challenge), or continues the one in progress. After a lesson's Challenge complete, **Next lesson** goes on. When the detailed lessons run out, Aim writes the next five from what you showed and what's still a gap.
+- [ ] **See the path** (or Library → Your paths): the goal, progress, the units in order with the lessons of the current one, steps outside Aim with Done boxes, and Remove this interest.
+- [ ] **Explore** now has the one-off challenge finder (a subject, 15/30/60 min, Find a challenge) above its channel picks.
+
 ## Known issues (not regressions)
+
+- In this test environment, "opening a video in YouTube's one page plays that video" (tests/browser.test.js) sometimes fails on timing alone; it passes on a rerun and fails the same way on 0.71.
 
 - The word check knows words, not meanings: synonyms ("tap" vs "faucet") get the question once; answering Yes teaches it that search.
 - Up next links reload the page instead of using YouTube's in-page navigation, so they're a little slower than YouTube's own.

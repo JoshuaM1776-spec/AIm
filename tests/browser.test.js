@@ -198,14 +198,25 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     welcome.on("pageerror", e => errors.push("welcome: " + e.message));
     await welcome.waitForSelector("#composer .chip");
     const hello = await welcome.textContent("#thread");
-    step("welcome: a conversation, one question at a time, with chips and a box to type in", hello.includes("I help you use YouTube on purpose") &&
-      hello.includes("What do you mostly come to YouTube for?") && (await welcome.$$("#composer .chip")).length === 5 && !!(await welcome.$("#composer input.say")), hello.slice(0, 200));
-    await welcome.click("#composer .chip:text-is('Learning skills')");
-    await welcome.fill("#composer input.say", "and to relax at night");
-    await welcome.click("#composer .btn:text-is(\"That's it\")");
+    step("welcome: a conversation, one question at a time: what are you curious about, with chips and a box to type in", hello.includes("I help you use YouTube on purpose") &&
+      hello.includes("What are you curious about?") && (await welcome.$$("#composer .chip")).length === 8 && !!(await welcome.$("#composer input.say")), hello.slice(0, 200));
+    await welcome.click("#composer .chip:text-is('Aviation')");
+    await welcome.waitForFunction(() => document.querySelector("#thread").textContent.includes("goal behind Aviation"));
+    step("then the goal behind it, with an example that fits", (await welcome.textContent("#thread")).includes("like “Earn a private pilot's license”") && !!(await welcome.$("#composer .chip:text-is('Just curious')")));
+    await welcome.fill("#composer input.say", "Earn a private pilot's license");
+    await welcome.press("#composer input.say", "Enter");
+    await welcome.waitForFunction(() => document.querySelector("#thread").textContent.includes("Anything else you're curious about?"));
+    await welcome.waitForSelector("#composer .chip:text-is(\"That's it\")");
+    const st0 = await store();
+    step("an interest with a goal is kept, to become a path", st0.paths?.length === 1 && st0.paths[0].interest === "Aviation" && st0.paths[0].goal === "Earn a private pilot's license");
+    await welcome.fill("#composer input.say", "Medieval castles");
+    await welcome.press("#composer input.say", "Enter");
+    await welcome.waitForSelector("#composer .chip:text-is('Just curious')");
+    await welcome.click("#composer .chip:text-is('Just curious')");
+    await welcome.waitForFunction(() => document.querySelector("#thread").textContent.includes("Explore is for Medieval castles"));
+    step("just curious: no plan, Explore is for that; add as many as you like", (await store()).paths.length === 1);
+    await welcome.click("#composer .chip:text-is(\"That's it\")");
     await welcome.waitForSelector("#composer .chip:text-is('Let me choose')");
-    step("it answers what you said (chips or your own words) before asking the next thing", (await welcome.textContent("#thread")).includes("Good mix") &&
-      (await store()).personal?.reasons?.join() === "skills,unwinding" && (await welcome.textContent("#thread .msg.you")).includes("and to relax at night"));
     await welcome.click("#composer .chip:text-is('Let me choose')");
     await welcome.waitForSelector(".quick-row");
     step("what would you like to change: four already on, a daily limit off", (await welcome.$$eval(".quick-row input", b => b.length === 5 && b.slice(0, 4).every(x => x.checked) && !b[4].checked)));
@@ -263,12 +274,9 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     await design.close();
     await sw.evaluate(() => serial(async () => { await setSetting("learnTopics", []); await setSetting("learnShorts", false); }));
     await welcome.click("#composer .chip:text-is('Done')");
-    await welcome.waitForSelector("#composer .chip:text-is('Not now')");
-    step("then it offers to look at the channels you follow, names only", (await welcome.textContent("#thread")).includes("look at the channels you already follow"));
-    await welcome.click("#skip");
     await welcome.waitForSelector("#composer #open");
-    step("Skip ends it kindly: what's next, how to pin Aim, Open YouTube", (await welcome.textContent("#thread")).includes("Keep me one click away") &&
-      !(await welcome.$("#composer .chip")) && !(await welcome.isVisible("#skip")));
+    step("without an account, the path waits until you sign in; then what's next, how to pin Aim, Open YouTube", (await welcome.textContent("#thread")).includes("When you've signed in, open Start a challenge") &&
+      (await welcome.textContent("#thread")).includes("Keep me one click away") && !(await welcome.$("#composer .chip")) && !(await welcome.isVisible("#skip")));
     await welcome.click("#open");
     await welcome.waitForURL("https://www.youtube.com/");
     await welcome.close();
@@ -301,14 +309,33 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   const card0 = await text("#wp-home");
   step("early hide hands over to the card", await p.evaluate(() =>
     !document.documentElement.classList.contains("wp-boot") && document.documentElement.classList.contains("wp-home")));
-  step("homepage card offers a search, examples and a break", (await text("#wp-home")).includes("What brings you here?") &&
+  step("homepage: Focus, Break and Library at the top, the search, then Start a challenge and Explore", (await text("#wp-home")).includes("What brings you here?") &&
     (await p.getAttribute("#wp-home .wp-home-input", "placeholder")) === "Tell me what you're looking for…" && !card0.includes("Search YouTube") &&
-    ["jet engines", "biology exam", "15m", "Custom"].every(t => card0.includes(t)), card0.slice(0, 160));
+    (await p.$$eval("#wp-home .wp-home-toggles button", b => b.map(x => x.textContent).join())) === "Focus,Break,Library" &&
+    !!(await p.$("#wp-home .wp-home-challenge")) && !!(await p.$("#wp-home .wp-explore-open")), card0.slice(0, 160));
   if (process.env.SHOTS) await p.screenshot({ path: `${process.env.SHOTS}/home-first.png` });
-  step("tapping an example fills the search box", await (async () => {
-    await p.click('#wp-home .wp-home-example:has-text("biology exam")');
-    return (await p.inputValue("#wp-home .wp-home-input")) === "Help me study for my biology exam.";
-  })());
+  await p.click("#wp-home .wp-home-toggle:has-text('Break')");
+  await p.waitForSelector("#wp-home .wp-home-break");
+  step("Break opens its lengths right on the card", (await text("#wp-home .wp-home-break")).includes("15m") &&
+    (await text("#wp-home .wp-home-break")).includes("Custom"));
+  await p.click("#wp-home .wp-home-toggle:has-text('Focus')");
+  await p.waitForFunction(() => !document.querySelector("#wp-home .wp-home-break"));
+  await p.click("#wp-home .wp-home-challenge");
+  await p.waitForSelector("#wp-home .wp-pw");
+  const pwText = await text("#wp-home .wp-pw");
+  step("Start a challenge: a small window with your interests, their progress, and +", pwText.includes("Your interests") && pwText.includes("Aviation") &&
+    pwText.includes("Earn a private pilot's license") && pwText.includes("No path yet") && !!(await p.$("#wp-home .wp-pw-plus")), pwText.slice(0, 200));
+  await p.click("#wp-home .wp-pw-plus");
+  await p.fill("#wp-home .wp-pw-add input >> nth=0", "Woodworking");
+  await p.fill("#wp-home .wp-pw-add input >> nth=1", "Build a small hardwood box");
+  await p.click("#wp-home .wp-pw-add button:text-is('Add')");
+  await p.waitForFunction(() => document.querySelector("#wp-home .wp-pw")?.textContent.includes("Build a small hardwood box"));
+  step("+ adds an interest with its goal (signed out: the path is drafted once you sign in)", (await store()).paths.some(x => x.interest === "Woodworking"));
+  await p.click("#wp-home .wp-pw-pick:has-text('Woodworking')");
+  await p.waitForFunction(() => document.querySelector("#wp-home .wp-pw")?.textContent.includes("Sign in to Aim"));
+  step("picking one without an account says to sign in for the path", (await text("#wp-home .wp-pw")).includes("Sign in to Aim, and it drafts a path"));
+  await sw.evaluate(() => serial(async () => { const { paths } = await chrome.storage.local.get("paths"); await chrome.storage.local.set({ paths: paths.filter(x => x.interest !== "Woodworking") }); }));
+  await p.click("#wp-home .wp-home-challenge");
   step("the mark (triangle, road and arrowhead) renders as SVG under Trusted Types", await p.evaluate(() => {
     const paths = [...document.querySelectorAll("#wp-chip .wp-icon:first-child svg path")];
     return paths.filter(x => (x.getAttribute("style") || "").includes("--wp-mark")).length === 1 && paths.filter(x => x.getAttribute("fill") === "#d0712f").length === 1;
@@ -630,15 +657,15 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.goto("https://www.youtube.com/");
   await p.waitForSelector("#wp-home .wp-home-resume");
   let home = await text("#wp-home");
-  step("home: Pick up where you left off, with the current aim and Continue",
-    home.includes("Pick up where you left off") && home.includes("Your aim") && home.includes("Fix my truck's AC") && home.includes("Continue"), home.slice(0, 160));
-  step("home: the set-aside aim under Recent aims, with when and Resume",
-    home.includes("Recent aims") && home.includes("Study for my biology exam") && home.includes("Last active today") && !!(await p.$(".wp-home-row button:text-is('Resume')")));
-  step("home: an aim with no videos yet keeps the text-only card; a recent aim shows its last video small",
-    !(await p.$(".wp-home-current .wp-home-video")) && !!(await p.$(".wp-home-row .wp-home-row-thumb .wp-thumb-xs")) &&
-    (await p.$eval(".wp-home-row .wp-thumb-xs", n => n.style.backgroundImage)).includes("i.ytimg.com/vi/bio1/"));
-  step("home: no example chips once there's something to pick up", !(await p.$(".wp-home-examples")) && home.includes("Your library") && !/\bnull\b/.test(home));
-  await p.click(".wp-home-row button:text-is('Resume')");
+  step("home: Continue with the aim you're on",
+    home.includes("Continue") && home.includes("Your aim") && home.includes("Fix my truck's AC"), home.slice(0, 160));
+  step("home: set-aside aims live in the Library, not on the homepage; no clutter",
+    !home.includes("Recent aims") && !home.includes("Study for my biology exam") && !(await p.$(".wp-home-examples")) && !/\bnull\b/.test(home));
+  step("home: an aim with no videos yet keeps the text-only card", !(await p.$(".wp-home-current .wp-home-video")));
+  // Picking a set-aside aim up, as the Library and its page do.
+  const setAsideId = (await store()).paused.find(x => x.text === "Study for my biology exam").id;
+  const resumed = await sw.evaluate(id => serial(() => resumePurpose(id)), setAsideId);
+  await p.goto(resumed.url);
   await p.waitForURL(/watch\?v=bio1/);
   step("Resume returns to the last video at the moment you left it", p.url().includes("watch?v=bio1&t=300s"), p.url());
   await p.waitForTimeout(800);
@@ -680,12 +707,11 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.click("#wp-chip .wp-pill");
   await p.click('.wp-dropdown .wp-dd-actions button:has-text("Set aside")');
   await p.waitForURL("https://www.youtube.com/");
-  await p.waitForSelector("#wp-home .wp-home-recent");
+  await p.waitForSelector("#wp-home .wp-home-toggles");
   st = await store();
   home = await text("#wp-home");
-  step("Set aside for later: no current aim, both waiting on the homepage", !st.purpose && st.paused.length === 2 &&
-    !home.includes("Your aim") && home.includes("Study for my biology exam") && home.includes("Fix my truck's AC"));
-  const [all] = await Promise.all([ctx.waitForEvent("page"), p.click("button:text-is('Your library')")]);
+  step("Set aside for later: no current aim; both wait in the Library", !st.purpose && st.paused.length === 2 && !home.includes("Your aim") && !home.includes("Continue"));
+  const [all] = await Promise.all([ctx.waitForEvent("page"), p.click("#wp-home .wp-home-toggle:has-text('Library')")]);
   await all.waitForSelector("#list .book");
   const allText = await all.textContent("main");
   step("Your library: every aim as a book, set-aside and finished ones too, and a New aim at the end",
@@ -779,6 +805,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await sw.evaluate(() => serial(() => endBreak()));
   await p.goto("https://www.youtube.com/");
   await p.waitForSelector("#wp-home .wp-home-saved");
+  await p.click("#wp-home .wp-home-toggle:has-text('Break')");
   await p.click('#wp-home .wp-chip:text-is("15m")');
   await p.waitForSelector(".wp-notice .wp-saved-row");
   step("starting a break offers what you saved", (await text(".wp-notice")).includes("You saved a video for later") && (await p.$$(".wp-notice .wp-mini-play")).length === 1);
@@ -822,7 +849,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await setLocal({ onboarding: { welcomed: true, tips: { home: true, chip: true, results: true }, hsTour: true }, learn: {} });
   await p.goto("https://www.youtube.com/");
   await p.waitForSelector("#wp-home .wp-explore-open");
-  step("the homepage offers Explore in one line under the box, and no row of videos", (await text(".wp-explore-line")).includes("Not sure what you're looking for?") &&
+  step("the homepage offers Explore as a button beside Start a challenge, and no row of videos", (await text("#wp-home .wp-explore-open")).includes("Explore") &&
     !(await p.$("#wp-home .wp-learn")));
   await p.click(".wp-explore-open");
   await p.waitForSelector("#wp-home.wp-explore .wp-explore-head");
@@ -881,7 +908,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await sw.evaluate(() => serial(async () => { await startPurpose({ text: "fix a leaky faucet" }); }));
   await p.goto("https://www.youtube.com/");
   await p.waitForSelector("#wp-home .wp-home-current");
-  step("with an aim going, Explore is still one line away", (await text(".wp-explore-line")).includes("Or find something new?"));
+  step("with an aim going, Explore is still one tap away", !!(await p.$("#wp-home .wp-explore-open")));
 
   // ---------- Shorts from your topics: a Quick review ----------
   await sw.evaluate(() => serial(async () => {
@@ -921,7 +948,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await sw.evaluate(() => serial(async () => { await finishPurpose("yes"); await setSetting("learnTopics", []); await setSetting("learnOff", []); }));
 
 
-  // ---------- Personalize your YouTube: why, what you follow, first aims ----------
+  // ---------- Personalize your YouTube: why, what you follow, interests and goals ----------
   {
     const before = await sw.evaluate(() => chrome.storage.local.get(["avoid", "subs", "settings"]));
     await sw.evaluate(() => serial(() => saveSubs([{ key: "/@flighttrainingnetwork", name: "Flight Training Network" }, { key: "/@mzeroa", name: "MzeroA Flight Training" },
@@ -937,31 +964,19 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     step("Personalize is the same conversation: your subscriptions in suggested groups, with Unwinding for breaks, before any AI",
       names.includes("Aviation") && names.includes("Woodworking") && names.includes("Unwinding") && !(await pz.textContent("#thread")).includes("Sound right?"), names.join());
     await pzChip("Looks good");
-    await pz.waitForSelector("#composer input.say", { timeout: 8000 });
-    await pz.fill("#composer input.say", "airplane stalls");
+    await pzChip("Woodworking");
+    await pz.waitForFunction(() => document.querySelector("#thread").textContent.includes("goal behind Woodworking"));
+    await pz.fill("#composer input.say", "Build a small hardwood box");
     await pz.press("#composer input.say", "Enter");
-    await pz.waitForSelector("#thread .goal");
-    step("a topic gets a goal suggested, to use or reword", (await pz.textContent("#thread .goal")) === "Understand airplane stalls");
-    await pzChip("Change the wording");
-    await pz.waitForSelector("#composer input.say");
-    await pz.fill("#composer input.say", "Understand how airplane stalls work");
-    await pz.press("#composer input.say", "Enter");
-    await pz.waitForSelector("#composer input.say[placeholder='Something else…']", { timeout: 8000 });
-    await pz.fill("#composer input.say", "I want to learn to sharpen my chisels");
-    await pz.press("#composer input.say", "Enter");
-    await pz.waitForFunction(() => document.querySelectorAll("#thread .goal").length === 2);
-    step("a goal said in passing is named cleanly for its book", (await pz.$$eval("#thread .goal", g => g[1].textContent)) === "Learn to sharpen my chisels");
-    await pzChip("Make it an aim");
     await pzChip("That's it");
     await pz.waitForSelector("#composer #open", { timeout: 8000 });
     if (process.env.SHOTS) await pz.screenshot({ path: `${process.env.SHOTS}/welcome-conversation.png`, fullPage: true });
     const after = await store();
-    step("Personalize: channels sorted by group (no change to YouTube itself), and the first aim is a book and current, the second on the shelf",
-      after.avoid["/@mzeroa"]?.topics?.includes("Aviation") && after.avoid["/@mrbeastgaming"]?.action === "break" && after.purpose?.text === "Understand how airplane stalls work" && after.purpose.keep === true &&
-      after.paused?.some(x => x.text === "Learn to sharpen my chisels") &&
+    step("Personalize: channels sorted by group (no change to YouTube itself), and a new interest with its goal, waiting for its path",
+      after.avoid["/@mzeroa"]?.topics?.includes("Aviation") && after.avoid["/@mrbeastgaming"]?.action === "break" &&
+      after.paths?.some(x => x.interest === "Woodworking" && x.goal === "Build a small hardwood box" && !x.plan) &&
       after.personal?.reasons?.includes("skills"), JSON.stringify(after.avoid["/@mzeroa"]));
     await pz.close();
-    await sw.evaluate(() => serial(() => finishPurpose("yes")));
     await sw.evaluate(b => chrome.storage.local.set({ avoid: b.avoid || {}, subs: b.subs || {}, settings: b.settings }), before);
   }
 

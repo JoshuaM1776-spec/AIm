@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="light dark">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your path</title>
+<link rel="stylesheet" href="aim.css">
+<style>
+  /* A path (0.72): the goal, progress, and the big picture in order, with the next lessons in detail
+     under the unit you're on, and any steps outside Aim where they fall. */
+  .path-head h1 { font: 500 38px/44px var(--font-serif); letter-spacing: -.4px; margin: 4px 0 6px; }
+  .eyebrow { font: 600 12px/16px var(--font); letter-spacing: .14em; text-transform: uppercase; color: var(--brass); }
+  .progress { margin: 18px 0 6px; }
+  .progress .bar { height: 8px; border-radius: 4px; background: var(--tonal); overflow: hidden; }
+  .progress .bar i { display: block; height: 100%; background: var(--accent); border-radius: 4px; min-width: 3px; }
+  .progress .line { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 8px; font-size: 14px; color: var(--muted); }
+  .confirm { margin: 16px 0 0; padding: 12px 14px; border-radius: 10px; background: var(--tonal); font-size: 14px; line-height: 21px; }
+  .units { list-style: none; margin: 26px 0 0; padding: 0; display: flex; flex-direction: column; }
+  .unit { display: grid; grid-template-columns: 28px 1fr; gap: 4px 14px; padding: 14px 0; border-top: 1px solid var(--divider); }
+  .unit .dot { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--card-border); display: grid; place-items: center; font: 500 12px/1 var(--font); color: var(--muted); margin-top: 2px; }
+  .unit.done .dot { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+  .unit.current .dot { border-color: var(--accent); color: var(--accent); }
+  .unit h2 { font: 500 20px/26px var(--font-serif); margin: 0; }
+  .unit .about { color: var(--muted); font-size: 14px; line-height: 20px; margin: 2px 0 0; }
+  .unit .count { color: var(--muted); font-size: 13px; }
+  .lessons { grid-column: 2; display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+  .lesson { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--card-border); }
+  .lesson b { display: block; font: 500 16px/22px var(--font-serif); }
+  .lesson small { color: var(--muted); font-size: 13px; }
+  .lesson.completed { opacity: .75; }
+  .outside { grid-template-columns: 28px 1fr auto; align-items: center; }
+  .outside .dot { border-style: dashed; }
+  .outside .tag { font-size: 12px; color: var(--brass); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+  .list { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
+  .list a.card { display: block; text-decoration: none; color: inherit; }
+  .foot { display: flex; justify-content: space-between; margin-top: 30px; }
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="page-head">
+    <img class="for-light" src="icons/48.png" alt=""><img class="for-dark" src="icons/light/48.png" alt="">
+    <span class="brand" data-brand>Aim</span><span class="crumb"><a href="targets.html">Library</a> · Your paths</span>
+  </header>
+  <div id="page" aria-live="polite"></div>
+</main>
+<div id="toast" role="status"></div>
+<script src="nav.js"></script>
+<script src="path.js"></script>
+</body>
+</html>

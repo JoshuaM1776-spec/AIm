@@ -1102,6 +1102,52 @@ test("guess first, explain after: a question before a part's video, the guess ke
   assert.ok(env.local.history.at(-1).openQuestion.q, "the open question goes into history with the aim");
 });
 
+test("paths: an interest with a goal, an ordered plan, lessons as challenges, and progress by lessons demonstrated", async () => {
+  const env = fresh();
+  assert.strictEqual((await env.run(`pathAdd({ interest: "" })`)).result, "error");
+  const { path } = await env.run(`pathAdd({ interest: "Aviation", goal: "Earn a private pilot's license" })`);
+  assert.strictEqual((await env.run(`pathAdd({ interest: "aviation", goal: "Earn a private pilot's license" })`)).existed, true, "the same interest and goal once");
+  assert.strictEqual((await env.run(`pathNext(${JSON.stringify(path.id)})`)).needs, "plan", "a new interest needs its plan drafted");
+  const lesson = (t, unit) => ({ title: t, kind: "understand", minutes: 20, success: `Explain ${t.toLowerCase()} in your own words.`, unit,
+    plan: [{ title: "Watch", look: "", minutes: 12, search: t.toLowerCase(), guess: "What do you think?" }, { title: "Attempt", look: "", minutes: 8, search: "" }] });
+  const plan = { title: "Earn a private pilot's license", scope: "The ground knowledge; flying needs an instructor.", measure: "Ground knowledge",
+    confirm: "Requirements change: confirm them with your flight instructor and the FAA.",
+    units: [{ title: "How a plane flies", about: "Lift, drag, thrust", lessons: 2 }, { title: "Weather", about: "", lessons: 2 }, { title: "Airspace", about: "", lessons: 2 }],
+    outside: [{ title: "Get an FAA medical certificate", after: 1, note: "From an aviation medical examiner." }],
+    lessons: [lesson("How does a wing make lift?", 1), lesson("Why can a plane stall at any speed?", 1), lesson("How do clouds form?", 2)] };
+  const saved = await env.run(`pathPlanSave(${JSON.stringify(path.id)}, ${JSON.stringify(plan)})`);
+  assert.strictEqual(saved.path.lessons.length, 3);
+  let g = await env.run(`pathGet(${JSON.stringify(path.id)})`);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(g.progress)), { percent: 0, done: 0, total: 6, next: { title: "How a plane flies", outside: false, left: 2, unit: 1 }, unitIndex: 0, measure: "Ground knowledge" });
+  const next = await env.run(`pathNext(${JSON.stringify(path.id)})`);
+  assert.strictEqual(next.lesson.title, "How does a wing make lift?", "picking it up: the first lesson, in order");
+  const begun = await env.run(`pathLessonBegin(${JSON.stringify(path.id)}, "l1")`);
+  assert.ok(begun.result === "applied" && env.local.purpose.pathRef.lessonId === "l1" && env.local.purpose.challenge.status === "active", "a lesson runs as a challenge on an aim");
+  assert.strictEqual((await env.run(`pathNext(${JSON.stringify(path.id)})`)).resume, env.local.purpose.id, "picking it up again resumes the lesson in progress");
+  await env.run(`challengeResult(${JSON.stringify(env.local.purpose.id)}, { outcome: "partly", answer: "Air goes over it." })`);
+  g = await env.run(`pathGet(${JSON.stringify(path.id)})`);
+  assert.strictEqual(g.progress.done, 0, "only what's demonstrated counts");
+  await env.run(`challengeResult(${JSON.stringify(env.local.purpose.id)}, { outcome: "demonstrated", answer: "It turns air down." })`);
+  g = await env.run(`pathGet(${JSON.stringify(path.id)})`);
+  assert.ok(g.progress.done === 1 && g.progress.percent === 17 && g.progress.next.left === 1, "a sixth of the path; one lesson to the first checkpoint");
+  await env.run(`pathLessonBegin(${JSON.stringify(path.id)}, "l2")`);
+  await env.run(`challengeResult(${JSON.stringify(env.local.purpose.id)}, { outcome: "demonstrated", answer: "Angle." })`);
+  g = await env.run(`pathGet(${JSON.stringify(path.id)})`);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(g.progress.next)), { title: "Get an FAA medical certificate", outside: true, left: 0 }, "the next checkpoint can be a step outside Aim");
+  await env.run(`pathOutsideDone(${JSON.stringify(path.id)}, "o1")`);
+  assert.strictEqual((await env.run(`pathGet(${JSON.stringify(path.id)})`)).progress.next.title, "Weather", "marked done: on to the next unit");
+  const ctx = await env.run(`pathContext(${JSON.stringify(path.id)})`);
+  assert.ok(ctx.existing.units.length === 3 && ctx.existing.done.length === 2 && ctx.existing.done.every(d => d.outcome === "demonstrated"), "continuing sends the units and what was done");
+  await env.run(`pathLessonBegin(${JSON.stringify(path.id)}, "l3")`);
+  await env.run(`challengeResult(${JSON.stringify(env.local.purpose.id)}, { outcome: "demonstrated", answer: "Cooling air." })`);
+  assert.strictEqual((await env.run(`pathNext(${JSON.stringify(path.id)})`)).needs, "lessons", "out of detailed lessons: time for the next five");
+  await env.run(`pathPlanSave(${JSON.stringify(path.id)}, ${JSON.stringify({ lessons: [lesson("What is a front?", 2), lesson("How does a wing make lift?", 1)] })})`);
+  assert.deepStrictEqual((await env.run(`pathGet(${JSON.stringify(path.id)})`)).path.lessons.map(l => l.title).slice(-1), ["What is a front?"], "new lessons are added once each; the plan's big picture stays");
+  assert.strictEqual(JSON.parse(JSON.stringify(await env.run(`pathsView()`)))[0].progress.done, 3);
+  await env.run(`pathRemove(${JSON.stringify(path.id)})`);
+  assert.strictEqual((await env.run(`pathsView()`)).length, 0);
+});
+
 test("subjects: EMS and medications read as health", async () => {
   const env = fresh();
   assert.strictEqual((await env.run(`aimSubject({ text: "Understand how airplane stalls work" })`)).id, "aviation", "airplane is aviation, not just plane");

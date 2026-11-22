@@ -1,4 +1,4 @@
-// Aim — getting started, as one conversation (0.68). Opened once when Aim is installed, and from the
+// Aim — getting started, as one conversation (0.68; interests and goals with a first path, 0.72). Opened once when Aim is installed, and from the
 // library's Personalize any time after (?again=1). Aim asks one thing at a time and answers what you
 // said before asking the next: why you use YouTube, how much of YouTube should step aside, the
 // channels you already follow (in groups), what you're working toward (your first aims), and,
@@ -84,7 +84,7 @@ const QUICK = [
   ["hideFeeds", "Quiet the subscriptions and trending feeds", "They come back on a break."]
 ];
 
-const S = { settings: {}, reasons: [], channels: [], groups: [], aiAims: [], signedIn: false, plusAvailable: false, aims: [], made: null };
+const S = { settings: {}, reasons: [], channels: [], groups: [], aiAims: [], signedIn: false, plusAvailable: false, added: [], first: null };
 
 async function setSetting(key, value) {
   const r = await send({ type: "setting", key, value });
@@ -256,47 +256,63 @@ function groupChips() {
   }));
 }
 
-// What you're working toward: your first aims, said in your own words, made into goals.
-async function goals() {
-  await say("Is there something you're working toward right now? Say it however you like.");
-  const ideas = S.aiAims.map(a => a.text).slice(0, 3);
-  for (let n = 0; n < 3; n++) {
-    const a = await ask({ chips: [...ideas.filter(t => !S.aims.includes(t)).map(t => ({ value: t, label: t })),
-      { value: "none", label: n ? "That's it" : "Nothing specific yet" }], text: n ? "Something else…" : "Like “Pass my private pilot checkride this spring”" });
-    if (a.value === "none") break;
-    const said = a.text || a.value;
-    const c = await send({ type: "goal-check", text: said }) || { goal: true, suggestion: said };
-    let text = c.name || said;
-    if (c.goal) await say("That's a real goal. I'll make it an aim, a book in your library:", node("p", { className: "goal", textContent: text }));
-    else {
-      await say("That sounds like a topic. As a goal, maybe:", node("p", { className: "goal", textContent: c.suggestion }));
-      text = c.suggestion;
+// What you're curious about, and the goal behind each (0.72): an interest with a goal gets a path, an
+// ordered plan Aim drafts; "just curious" is what Explore is for. Add as many as you like.
+const INTEREST_CHIPS = ["Aviation", "History", "Languages", "Science", "Woodworking", "Technology", "Cooking", "Music"];
+const GOAL_EXAMPLES = { aviation: "Earn a private pilot's license", languages: "Hold a conversation in Polish", woodworking: "Build a small hardwood box",
+  history: "Understand why the Roman Republic fell", science: "Understand how vaccines train the immune system", technology: "Build my first website",
+  cooking: "Cook a week of dinners without a recipe", music: "Play ten songs on the guitar" };
+async function interests() {
+  await say("What are you curious about? Pick one, or type your own.");
+  for (let n = 0; n < 8; n++) {
+    const chips = INTEREST_CHIPS.filter(c => !S.added.some(x => x.interest.toLowerCase() === c.toLowerCase())).map(c => ({ value: c, label: c }));
+    const a = await ask({ chips: [...chips, ...(n ? [{ value: "__done", label: "That's it" }] : [])], text: "Or type an interest…" });
+    if (a.value === "__done") break;
+    const interest = (a.text || a.value).slice(0, 60);
+    const example = GOAL_EXAMPLES[interest.toLowerCase()] || "Something you want to be able to do";
+    await say(`What's the goal behind ${interest}? Something you want to be able to do, like “${example}”.`);
+    const g = await ask({ chips: [{ value: "__curious", label: "Just curious" }], text: "Your goal…" });
+    if (g.value === "__curious") {
+      await say(`Then Explore is for ${interest}: good channels and one-off challenges, no plan needed.`);
+    } else {
+      const r = await send({ type: "path-add", interest, goal: g.text });
+      if (r?.result === "applied") { S.added.push(r.path); await say(`Got it: ${interest}, toward “${r.path.goal}”. I'll lay out a path for it, in order, and you pick it up from Start a challenge.`); }
+      else await say(r?.message || "I couldn't keep that one. You can add it later from Start a challenge.");
     }
-    const b = await ask({ chips: [{ value: "ok", label: c.goal ? "Make it an aim" : "Use that", primary: true }, { value: "edit", label: "Change the wording" }, { value: "drop", label: "Never mind" }], text: false });
-    if (b.value === "edit") {
-      await say("How would you put it?");
-      text = (await ask({ text: "Your goal", prefill: text })).text;
-    }
-    if (b.value !== "drop") S.aims.push(text);
-    if (S.aims.length >= 3) break;
-    await say(S.aims.length ? "Anything else you're working toward?" : "Anything else?");
+    await say("Anything else you're curious about?");
   }
-  if (!S.aims.length) return say("That's fine. When you search, I'll keep you on it, and if you keep coming back to something, I'll offer to make it an aim.");
-  const r = await send({ type: "aims-create", texts: S.aims, active: 0 });
-  if (r?.result !== "applied") return say("I couldn't save those just now. Say them on YouTube's homepage and they'll become aims.");
-  S.made = r;
-  await say(`On your shelf: ${r.created === 1 ? "one book" : `${r.created} books`}. We'll start with “${r.purpose.text}”.`);
+}
+
+// The first path, drafted here: the big picture in order, and the first lesson ready to begin.
+async function firstPath() {
+  const path = S.added[0];
+  if (!path) return;
+  const st = await send({ type: "plus-status" });
+  if (!st?.signedIn) return say(`When you've signed in, open Start a challenge on YouTube's homepage and pick ${path.interest}: I'll draft the path then.`);
+  await say(`Let's lay out your path toward “${path.goal}”. This takes a moment.`);
+  const ctx = await send({ type: "path-context", id: path.id });
+  let r;
+  try { r = await chrome.runtime.sendMessage({ type: "plus-call", task: "path-plan", input: ctx }); } catch { r = null; }
+  const saved = r && !r.error ? await send({ type: "path-plan-save", id: path.id, plan: r }) : null;
+  if (!saved || saved.result !== "applied") return say(`${r?.error || "I couldn't draft it just now."} Pick ${path.interest} from Start a challenge on YouTube and I'll try again.`);
+  const plan = saved.path.plan, first = saved.path.lessons[0];
+  await say("Here's the big picture, in order. Each part builds on the one before; I've written the first lessons in detail and I'll write the rest as you go.",
+    node("ol", { className: "path-units" }, ...plan.units.map(u => node("li", {}, node("b", { textContent: u.title }), u.about ? node("span", { textContent: ` · ${u.about}` }) : null))),
+    plan.outside.length ? node("p", { className: "path-outside", textContent: `Outside Aim, along the way: ${plan.outside.map(o => o.title).join("; ")}.` }) : null,
+    plan.confirm ? node("p", { className: "path-confirm", textContent: plan.confirm }) : null);
+  if (first) { S.first = { pathId: path.id, lessonId: first.id, title: first.title }; await say(`Your first lesson: “${first.title}”.`); }
+  if (S.added.length > 1) await say(`I'll draft ${S.added.slice(1).map(x => x.interest).join(" and ")} the first time you pick ${S.added.length > 2 ? "them" : "it"}.`);
 }
 
 async function account() {
-  await say(`Last thing: with a free ${BRAND} account, I can turn what you ask into good searches, point out the best videos, and talk things through with you after. Optional; I work without one.`);
+  await say(`To draft your path, I need a free ${BRAND} account. It also lets me find good videos and talk things through with you after. Optional; the rest works without one.`);
   const a = await ask({ chips: [{ value: "yes", label: "Create a free account", primary: true }, { value: "no", label: "Maybe later" }], text: false });
   if (a.value === "yes") { send({ type: "open-options", section: "account" }); await say("I've opened it in a new tab. Come back here when you're done."); }
 }
 
 async function wrapUp() {
   composer.replaceChildren();
-  await say(S.made ? "You're set. YouTube's homepage will pick up where we left off." : "You're set. On YouTube's homepage, just say what you're here for.",
+  await say(S.first ? "You're set. Start your first lesson whenever you're ready." : "You're set. On YouTube's homepage, say what you're here for, or press Start a challenge.",
     node("ul", { className: "done-list" },
       node("li", { textContent: "Your aim, breaks and time live in the Aim button at the top of YouTube." }),
       node("li", { textContent: "I'll point out a couple of things the first time you use them." })),
@@ -304,10 +320,17 @@ async function wrapUp() {
       node("span", { className: "tb", ariaHidden: "true" }, svg(PUZZLE), node("span", { className: "muted", textContent: "→" }), svg(PIN), MARK()),
       node("span", { textContent: `Keep me one click away: the puzzle piece in Chrome's toolbar, then the pin next to ${BRAND}.` })));
   composer.replaceChildren(node("div", { className: "chips" },
-    node("button", { className: "btn", type: "button", id: "open", textContent: "Open YouTube", onclick: finish }),
+    S.first ? node("button", { className: "btn", type: "button", id: "lesson", textContent: "Start my first lesson", onclick: startFirst }) : null,
+    node("button", { className: S.first ? "btn tonal" : "btn", type: "button", id: "open", textContent: "Open YouTube", onclick: finish }),
     node("a", { className: "btn tonal", href: "targets.html", textContent: "See my library", onclick: () => send({ type: "onboarding", welcomed: true }) })));
   $("skip").hidden = true;
-  composer.querySelector("#open").focus({ preventScroll: true });
+  composer.querySelector("#lesson, #open").focus({ preventScroll: true });
+}
+
+async function startFirst() {
+  const r = await send({ type: "path-lesson-begin", id: S.first.pathId, lessonId: S.first.lessonId });
+  await send({ type: "onboarding", welcomed: true });
+  location.href = r?.result === "applied" ? r.url : "https://www.youtube.com/";
 }
 
 async function finish() {
@@ -321,12 +344,18 @@ async function conversation() {
     else {
       await say(`Hi, I'm ${BRAND}. I help you use YouTube on purpose: you say what you're here for, and I keep YouTube on it.`);
     }
-    await say("What do you mostly come to YouTube for? Pick any.");
-    await why();
-    if (!AGAIN) await distractions();
-    await channels();
-    await goals();
-    if (S.plusAvailable) await account();
+    if (AGAIN) {
+      await say("What do you mostly come to YouTube for? Pick any.");
+      await why();
+      await channels();
+      await interests();
+      await firstPath();
+    } else {
+      await interests();
+      await distractions();
+      if (S.plusAvailable && S.added.length) await account();
+      await firstPath();
+    }
   } catch (e) {
     if (!(e instanceof Skip)) console.error(e);
   }

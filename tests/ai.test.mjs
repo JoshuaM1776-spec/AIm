@@ -631,6 +631,38 @@ test("the one-minute close: one question that brings their guess back, one gap, 
   assert.strictEqual(focus.body.next, null, "only the close leaves an open question");
 });
 
+// ---------- paths (0.72) ----------
+test("paths: an interest and its goal become ordered units, the first five lessons, and honest outside checkpoints", async () => {
+  const lesson = (t, unit) => CH({ title: t, unit });
+  const reply = { title: "Earn a private pilot's license", scope: "The ground knowledge for a private pilot certificate.", measure: "Ground knowledge",
+    confirm: "Requirements change: confirm them with your flight instructor and the FAA.",
+    units: [{ title: "How a plane flies", about: "Lift, weight, thrust, drag", lessons: 4 }, { title: "Weather", about: "", lessons: 15 }, { title: "Airspace", about: "", lessons: 3 }, { title: "", about: "", lessons: 2 }],
+    outside: [{ title: "Get an FAA medical certificate", after: 1, note: "From an aviation medical examiner." }],
+    lessons: [lesson("How does a wing make lift?", 1), lesson("Why can a plane stall at any speed?", 1), lesson("How does a wing make lift?", 1), lesson("What makes a cloud?", 2), lesson("x", 9), lesson("What is a front?", 2), lesson("How do pilots read a METAR?", 2), lesson("Class B airspace", 3)] };
+  const d = talkDeps("free", () => ({ ok: true, model: "m", inputTokens: 30, outputTokens: 20, text: JSON.stringify(reply) }));
+  const r = await call(d, { task: "path-plan", input: { interest: "Aviation", goal: "Earn a private pilot's license", level: "intro" } });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.deepStrictEqual(r.body.units.map(u => [u.title, u.lessons]), [["How a plane flies", 4], ["Weather", 10], ["Airspace", 3]], "units in order; estimates bounded; empty ones dropped");
+  assert.deepStrictEqual(r.body.lessons.map(l => l.title), ["How does a wing make lift?", "Why can a plane stall at any speed?", "What makes a cloud?", "What is a front?", "How do pilots read a METAR?"], "five lessons, each once, in order");
+  assert.strictEqual(r.body.lessons[2].unit, 2);
+  assert.ok(r.body.outside[0].title.includes("medical") && r.body.confirm.includes("FAA") && r.body.measure === "Ground knowledge", "steps outside Aim and who to confirm with");
+  assert.match(d.calls[0].prompt, /INTEREST: Aviation\nGOAL: Earn a private pilot's license\nLEVEL: intro/);
+  assert.match(d.calls[0].system, /Never imply Aim alone achieves such a goal/);
+  assert.match(d.calls[0].system, /Not a schedule: no dates, weeks or deadlines/);
+  // Continuing: the units stay as they are; what was done and the gaps shape the next five.
+  const more = await call(d, { task: "path-plan", input: { interest: "Aviation", goal: "Earn a private pilot's license",
+    existing: { units: [{ title: "How a plane flies", lessons: 4 }, { title: "Weather", lessons: 6 }, { title: "Airspace", lessons: 3 }],
+      done: [{ title: "How does a wing make lift?", unit: 1, outcome: "demonstrated" }, { title: "Why can a plane stall at any speed?", unit: 1, outcome: "partly" }], gaps: ["Stall recovery"] } } });
+  assert.deepStrictEqual(more.body.units.map(u => u.title), ["How a plane flies", "Weather", "Airspace"], "the big picture is kept");
+  assert.ok(!more.body.lessons.some(l => l.title === "How does a wing make lift?"), "nothing already done is repeated");
+  assert.strictEqual(more.body.scope, "", "the scope and checkpoints come once, with the first plan");
+  assert.match(d.calls[1].prompt, /DONE SO FAR:\n- unit 1: How does a wing make lift\? \(demonstrated\)\n- unit 1: Why can a plane stall at any speed\? \(only partly shown\)/);
+  assert.match(d.calls[1].prompt, /STILL GAPS: Stall recovery/);
+  assert.strictEqual((await call(d, { task: "path-plan", input: { interest: "Aviation" } })).status, 400, "a path needs a goal");
+  for (let i = 0; i < 2; i++) await call(d, { task: "path-plan", input: { interest: "Aviation", goal: "Fly" } });
+  assert.strictEqual((await call(d, { task: "path-plan", input: { interest: "Aviation", goal: "Fly" } })).status, 429, "free accounts: four plans a day");
+});
+
 test("talk: with caption excerpts (Plus), questions can be grounded in what was said, citing only captioned videos", async () => {
   const d = talkDeps("plus", () => talkReply({ message: "OverSimplified pins it on the army [V1 0:45], Historia Civilis on the Gracchi [V2 3:10]. Which do you buy?" }));
   const session = { ...SESSION, videos: [{ ...SESSION.videos[0], transcript: "[0:00] Welcome back\n[0:45] the Marian reforms made soldiers loyal to generals", captions: "creator" }, SESSION.videos[1]] };

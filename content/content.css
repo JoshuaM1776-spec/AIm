@@ -1042,3 +1042,40 @@ html[dark] .wp-ap-row.wp-ap-next { border-color: var(--wp-text); box-shadow: ins
 .wp-fb-nextq { font: 400 16px/23px var(--font-serif); color: var(--wp-text); margin-top: 2px; }
 .wp-open-q { display: flex; flex-direction: column; gap: 2px; margin: 8px 0; padding: 10px 12px; border-left: 3px solid var(--wp-accent); background: var(--wp-tonal); border-radius: 0 8px 8px 0;
   font: 400 15px/21px var(--font-serif); color: var(--wp-text); text-align: left; }
+
+/* The homepage (0.72): Focus, Break and Library at the top; Start a challenge and Explore under the
+   search; the interests window opens under its button without covering the page. */
+.wp-home-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.wp-home-top .wp-dialog-brand { margin: 0; }
+.wp-home-toggles { display: inline-flex; gap: 2px; padding: 3px; border-radius: 20px; background: var(--wp-tonal); }
+.wp .wp-home-toggle { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 0; border-radius: 16px; background: transparent;
+  color: var(--wp-muted); font: 500 13px/1 "Roboto", Arial, sans-serif; cursor: pointer; }
+.wp .wp-home-toggle .wp-icon svg, .wp .wp-home-toggle svg { width: 16px; height: 16px; }
+.wp .wp-home-toggle:hover { color: var(--wp-text); }
+.wp .wp-home-toggle.on { background: var(--wp-raised); color: var(--wp-text); box-shadow: 0 1px 2px rgba(0, 0, 0, .08); }
+.wp-home-break { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 12px 0 4px; }
+.wp-home-actions { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+.wp-home-actions .wp-btn { height: 42px; padding: 0 20px; border-radius: 21px; font-size: 15px; }
+.wp-pw { margin: 12px auto 0; max-width: 460px; padding: 14px; border-radius: 16px; border: 1px solid var(--wp-card-border); background: var(--wp-raised);
+  box-shadow: var(--wp-shadow); text-align: left; display: flex; flex-direction: column; gap: 10px; }
+.wp-pw-head { display: flex; align-items: center; justify-content: space-between; }
+.wp-pw-head b { font: 500 17px/22px var(--font-serif); }
+.wp-pw-plus { width: 36px; height: 36px; border-radius: 50%; background: var(--wp-tonal); }
+.wp-pw-list { display: flex; flex-direction: column; gap: 8px; }
+.wp-pw-row { display: flex; flex-direction: column; gap: 2px; }
+.wp .wp-pw-pick { display: grid; grid-template-columns: 1fr; gap: 4px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--wp-card-border); background: var(--wp-base);
+  text-align: left; cursor: pointer; font: inherit; color: var(--wp-text); }
+.wp .wp-pw-pick:hover { border-color: var(--wp-accent); }
+.wp-pw-interest { font: 500 16px/20px var(--font-serif); }
+.wp-pw-goal { font-size: 13px; line-height: 18px; color: var(--wp-muted); }
+.wp-pw-bar { display: block; height: 5px; border-radius: 3px; background: var(--wp-tonal); overflow: hidden; margin-top: 4px; }
+.wp-pw-bar i { display: block; height: 100%; background: var(--wp-accent); border-radius: 3px; min-width: 2px; }
+.wp-pw-meta { font-size: 12px; line-height: 16px; color: var(--wp-muted); }
+.wp .wp-pw-see { align-self: flex-end; font-size: 12px; padding: 2px 4px; }
+.wp-pw-add { display: flex; flex-direction: column; gap: 8px; }
+.wp-pw-add .wp-input { width: 100%; box-sizing: border-box; }
+.wp-pw-note { font-size: 13px; line-height: 19px; }
+.wp-pw-busy { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--wp-muted); }
+.wp-pw-busy .wp-talk-typing { padding: 0; }
+.wp-ch-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; flex: 1 1 100%; }
+.wp-ch-subject { flex: 1; min-width: 180px; height: 34px; }

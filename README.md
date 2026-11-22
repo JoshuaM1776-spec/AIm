@@ -63,6 +63,8 @@ On the server, `supabase/functions/ai/homeschool.ts` holds every rule (approval,
 | `study.html/js` | A study session's overview and summary |
 | `content/understanding.js` | Your understanding: a learning aim's map (parts and how far you've got), what's worth exploring next, Put it together (the finish line), and Put it into practice (the librarian's suggestion, Find a project video, I tried it) |
 | `content/captions.js` | Aim Plus, preview: a video's captions, read in the browser only when the librarian needs them, and the excerpt sent with a conversation or "In this video" |
+| `content/paths.js` | Start a challenge on YouTube's homepage: your interests with their goals and progress, + to add one, picking one up where you left off (`supabase/functions/ai/path.ts` drafts paths) |
+| `path.html/js` | A path: the goal, progress, the units in order with the current lessons, steps outside Aim; without an id, every path |
 | `content/guess-shared.js` | Guess first, explain after: which question to ask before a video, and what the one-minute close is about (pure functions, loaded by the background and on YouTube) |
 | `content/challenge.js` | Challenges on YouTube's homepage: Find a challenge for a subject and the time you have, a challenge's success condition and plan, Begin; and recording the Final Challenge's outcome with its evidence (`supabase/functions/ai/challenge.ts`) |
 | `content/goal.js` | When a search becomes an aim: "Searching" vs "Your aim", Make it an aim (menu, results bar), and the gentle offer in the panel |

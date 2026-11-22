@@ -333,7 +333,7 @@ function archive(history, record) {
 function purposeRecord(p, outcome) {
   return { type: "purpose", id: p.id, text: p.text, startedAt: p.startedAt, endedAt: Date.now(), usedSec: Math.round(p.usedSec),
     outcome: outcome || null, path: p.path, searches: p.searches, videos: p.videos, notes: p.notes || "",
-    kind: p.librarian?.kind || null, study: studySnapshot(p.study), map: p.map || null, practice: p.practice || null, scenarios: p.scenarios || [], chains: p.chains || [], gaps: p.gaps || [], keep: !!p.keep, ...(p.challenge ? { challenge: p.challenge } : {}), ...(p.openQuestion ? { openQuestion: p.openQuestion } : {}),
+    kind: p.librarian?.kind || null, study: studySnapshot(p.study), map: p.map || null, practice: p.practice || null, scenarios: p.scenarios || [], chains: p.chains || [], gaps: p.gaps || [], keep: !!p.keep, ...(p.challenge ? { challenge: p.challenge } : {}), ...(p.openQuestion ? { openQuestion: p.openQuestion } : {}), ...(p.pathRef ? { pathRef: p.pathRef } : {}),
     ...(p.goal !== undefined ? { goal: !!p.goal } : {}), ...(p.learn ? { learn: p.learn } : {}) };
 }
 
@@ -387,6 +387,141 @@ function newPurpose(text, search, limitMin) {
   };
 }
 
+// ---------- Paths (0.72): interests, the goals behind them, and an ordered plan ----------
+// An interest you add has a goal behind it ("Aviation" → "Earn a private pilot's license"). Its path
+// is the big picture in order (units, each with an estimated number of lessons) and the next few
+// lessons in detail; each lesson runs as a challenge on an aim. Progress is lessons demonstrated, as
+// a percent of the whole path and as lessons left to the next checkpoint (the end of a unit, or a
+// step outside Aim). Kept in this browser.
+const PATHS_MAX = 12;
+const pathId = () => `path${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+async function pathsAll() { return (await chrome.storage.local.get("paths")).paths || []; }
+async function pathsSave(paths) { await chrome.storage.local.set({ paths: paths.slice(0, PATHS_MAX) }); }
+async function pathAdd({ interest, goal = "", why = "" } = {}) {
+  interest = clip(interest, 60); goal = clip(goal, 160);
+  if (interest.length < 2) return { result: "error", message: "What are you curious about?" };
+  const paths = await pathsAll();
+  const same = paths.find(x => x.interest.toLowerCase() === interest.toLowerCase() && x.goal.toLowerCase() === goal.toLowerCase());
+  if (same) return { result: "applied", path: same, existed: true };
+  if (paths.length >= PATHS_MAX) return { result: "error", message: `Up to ${PATHS_MAX} interests. Remove one first.` };
+  const path = { id: pathId(), interest, goal, why: clip(why, 200), createdAt: Date.now(), plan: null, lessons: [] };
+  await pathsSave([...paths, path]);
+  return { result: "applied", path };
+}
+async function pathRemove(id) {
+  await pathsSave((await pathsAll()).filter(x => x.id !== id));
+  return { result: "applied" };
+}
+// The server's plan (path-plan), saved: the big picture the first time, then the next lessons.
+async function pathPlanSave(id, plan = {}) {
+  const paths = await pathsAll();
+  const path = paths.find(x => x.id === id);
+  if (!path) return { result: "error", message: "That interest isn't here any more." };
+  if (!path.plan) {
+    const units = (Array.isArray(plan.units) ? plan.units : []).slice(0, 14).map((u, i) => ({ id: `u${i + 1}`, title: clip(u?.title, 60), about: clip(u?.about, 180),
+      lessons: Math.max(1, Math.min(10, Math.round(Number(u?.lessons) || 3))) })).filter(u => u.title);
+    if (units.length < 2) return { result: "error", message: "That plan came back empty. Try again." };
+    path.plan = { title: clip(plan.title, 100) || path.goal, scope: clip(plan.scope, 200), measure: clip(plan.measure, 40), confirm: clip(plan.confirm, 200), units, plannedAt: Date.now(),
+      outside: (Array.isArray(plan.outside) ? plan.outside : []).slice(0, 8).map((o, i) => ({ id: `o${i + 1}`, title: clip(o?.title, 80), note: clip(o?.note, 180),
+        after: Math.max(0, Math.min(units.length, Math.round(Number(o?.after)) || units.length)) })).filter(o => o.title) };
+  }
+  const known = new Set(path.lessons.map(l => l.title.toLowerCase()));
+  for (const l of (Array.isArray(plan.lessons) ? plan.lessons : []).slice(0, 5)) {
+    const c = tidyChallengeIn({ ...l, interest: path.interest });
+    if (!c || known.has(c.title.toLowerCase())) continue;
+    known.add(c.title.toLowerCase());
+    path.lessons.push({ ...c, id: `l${path.lessons.length + 1}`, unit: Math.max(1, Math.min(path.plan.units.length, Math.round(Number(l.unit)) || 1)), status: "new" });
+  }
+  path.lessons = path.lessons.slice(-60);
+  await pathsSave(paths);
+  return { result: "applied", path };
+}
+// Progress: lessons demonstrated, against the whole path's estimate, and to the next checkpoint.
+function pathProgress(path) {
+  const units = path.plan?.units || [];
+  const done = path.lessons.filter(l => l.status === "completed");
+  const total = Math.max(units.reduce((n, u) => n + u.lessons, 0), path.lessons.length, 1);
+  const percent = Math.min(100, Math.round((done.length / total) * 100));
+  const doneIn = i => done.filter(l => l.unit === i + 1).length;
+  const ui = units.findIndex((u, i) => doneIn(i) < u.lessons);
+  const outside = (path.plan?.outside || []).find(o => !o.doneAt && ui >= 0 && o.after <= ui);
+  const next = outside ? { title: outside.title, outside: true, left: 0 }
+    : ui >= 0 ? { title: units[ui].title, outside: false, left: units[ui].lessons - doneIn(ui), unit: ui + 1 } : null;
+  return { percent, done: done.length, total, next, unitIndex: ui, measure: path.plan?.measure || "" };
+}
+// What picking an interest up means: the lesson in progress (its aim, if it's still there), else the
+// next lesson, else "needs more lessons" (the page then asks the server for the next five).
+async function pathNext(id) {
+  const [paths, d] = await Promise.all([pathsAll(), chrome.storage.local.get(["purpose", "paused"])]);
+  const path = paths.find(x => x.id === id);
+  if (!path) return { result: "error", message: "That interest isn't here any more." };
+  if (!path.plan) return { result: "applied", needs: "plan", path };
+  const aims = [d.purpose, ...(d.paused || [])].filter(Boolean);
+  const active = path.lessons.find(l => l.status === "active" && aims.some(a => a.id === l.aimId));
+  if (active) return { result: "applied", resume: active.aimId, lesson: active, path };
+  const lesson = path.lessons.find(l => l.status === "new" || l.status === "active");
+  if (!lesson) return { result: "applied", needs: "lessons", path };
+  return { result: "applied", lesson, path };
+}
+async function pathLessonBegin(id, lessonId) {
+  const paths = await pathsAll();
+  const path = paths.find(x => x.id === id);
+  const lesson = path?.lessons.find(l => l.id === lessonId);
+  if (!lesson) return { result: "error", message: "That lesson isn't here any more." };
+  // The lesson just completed is done: it goes into history rather than waiting on the shelf.
+  const { purpose: was } = await chrome.storage.local.get("purpose");
+  if (was?.pathRef && was.challenge?.status === "completed") await finishPurpose("yes");
+  const r = await challengeStart({ ...lesson, interest: path.interest });
+  if (r.result !== "applied") return r;
+  const { purpose } = await chrome.storage.local.get("purpose");
+  purpose.challenge.path = { id: path.id, lessonId: lesson.id, unit: lesson.unit };
+  purpose.pathRef = { id: path.id, lessonId: lesson.id };
+  lesson.status = "active";
+  lesson.aimId = purpose.id;
+  lesson.startedAt = Date.now();
+  await chrome.storage.local.set({ purpose });
+  await pathsSave(paths);
+  return { ...r, purpose };
+}
+// A lesson's final challenge: demonstrated completes it; the evidence stays with its aim.
+async function pathLessonResult(ref, outcome) {
+  if (!ref?.id) return;
+  const paths = await pathsAll();
+  const lesson = paths.find(x => x.id === ref.id)?.lessons.find(l => l.id === ref.lessonId);
+  if (!lesson) return;
+  lesson.lastOutcome = outcome;
+  if (outcome === "demonstrated") { lesson.status = "completed"; lesson.completedAt = Date.now(); }
+  await pathsSave(paths);
+}
+async function pathOutsideDone(id, outsideId, done = true) {
+  const paths = await pathsAll();
+  const o = paths.find(x => x.id === id)?.plan?.outside?.find(x => x.id === outsideId);
+  if (!o) return { result: "error", message: "That checkpoint isn't here." };
+  if (done) o.doneAt = Date.now(); else delete o.doneAt;
+  await pathsSave(paths);
+  return { result: "applied" };
+}
+// For the server, continuing a path: its units, what was done (with outcomes), and the gaps left.
+async function pathContext(id) {
+  const [paths, d] = await Promise.all([pathsAll(), chrome.storage.local.get(["purpose", "paused", "history"])]);
+  const path = paths.find(x => x.id === id);
+  if (!path) return null;
+  const aims = [d.purpose, ...(d.paused || []), ...(d.history || [])].filter(Boolean);
+  const gaps = aims.filter(a => a.pathRef?.id === id).flatMap(a => (a.gaps || []).filter(g => !g.resolvedAt).map(g => g.title));
+  return { interest: path.interest, goal: path.goal, why: path.why,
+    existing: path.plan ? { units: path.plan.units.map(u => ({ title: u.title, lessons: u.lessons })),
+      done: path.lessons.filter(l => l.lastOutcome || l.status === "completed").map(l => ({ title: l.title, unit: l.unit, outcome: l.status === "completed" ? "demonstrated" : l.lastOutcome })),
+      gaps: [...new Set(gaps)].slice(0, 6) } : null };
+}
+// The interests window and the path page: each path with its progress.
+async function pathsView() {
+  return (await pathsAll()).map(p => ({ id: p.id, interest: p.interest, goal: p.goal, planned: !!p.plan, title: p.plan?.title || p.goal, progress: p.plan ? pathProgress(p) : null }));
+}
+async function pathGet(id) {
+  const path = (await pathsAll()).find(x => x.id === id);
+  return path ? { result: "applied", path, progress: path.plan ? pathProgress(path) : null } : { result: "error", message: "That interest isn't here any more." };
+}
+
 // ---------- Challenges (0.70, docs/SPEC.md §3–§9, §15) ----------
 // A session challenge lives on an aim: a specific outcome, a success condition decided before
 // starting, and a short plan whose steps become the aim's map, so Up next, the panel and the
@@ -430,6 +565,7 @@ async function challengeResult(aimId, { outcome, answer, shown } = {}) {
   rec.challenge.attempts = [...(rec.challenge.attempts || []), { at, outcome, answer: clip(answer, 1200), shown: (Array.isArray(shown) ? shown : []).map(x => clip(x, 120)).slice(0, 4) }].slice(-5);
   if (outcome === "demonstrated") { rec.challenge.status = "completed"; rec.challenge.completedAt = at; }
   await chrome.storage.local.set({ purpose: d.purpose || null, paused: d.paused || [], history: d.history || [] });
+  if (rec.pathRef) await pathLessonResult(rec.pathRef, outcome); // a lesson on a path
   return { result: "applied", status: rec.challenge.status };
 }
 // What they've done before in this subject, for new challenges to build on, and the level that

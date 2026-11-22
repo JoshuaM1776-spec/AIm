@@ -5,6 +5,7 @@
 const EXAMPLES = ["How do jet engines work?", "Help me study for my biology exam."];
 
 // The card after Done, shown inside the homepage card (so it never covers it) until dismissed.
+let homeBreakOpen = false; // the Break toggle's lengths, open on the homepage card
 let homeEnd = null;
 
 function removeHome() {
@@ -37,7 +38,13 @@ async function renderHome() {
     let subject = "";
     try { subject = decodeURIComponent(location.hash.slice("#aim-challenge=".length)).slice(0, 120); } catch {}
     history.replaceState(null, "", "/");
-    if (subject) setTimeout(() => findChallenges(subject), 300);
+    if (subject) { exploreOpen = true; setTimeout(() => findChallenges(subject), 300); }
+  }
+  // "Next lesson", from a completed one: pick its path up where it left off.
+  if (location.hash.startsWith("#aim-path=")) {
+    const id = decodeURIComponent(location.hash.slice("#aim-path=".length)).slice(0, 40);
+    history.replaceState(null, "", "/");
+    if (id) setTimeout(() => { pw.open = true; renderHome(); send({ type: "paths" }).then(l => { pw.list = l || []; pickPath(id); }); }, 300);
   }
   if (location.hash === "#aim-talk" || location.hash === "#aim-put-together") {
     const mode = location.hash === "#aim-put-together" ? "synthesis" : null;
@@ -57,13 +64,12 @@ async function renderHome() {
   const key = status.totalReached ? "total" : exploreOpen ? "explore"
     : [p ? `p|${p.id}|${p.text}|${(p.map?.parts || []).map(x => x.id + x.status).join(".")}${p.map?.synthesis?.verdict || ""}${p.practice ? `${p.practice.title}${p.practice.triedAt || ""}` : ""}|${(status.currentVideos || []).map(v => v.id).join(",")}|${p.study ? `${p.study.current}:${p.study.topics.map(t => t.check?.at || 0).join(".")}:${p.study.apply?.doneAt || 0}` : ""}` : "idle", leisureUsedUp(),
       others.map(x => `${x.id}:${x.recent?.[0]?.id || ""}`).join(","), (status.saved || []).map(v => v.id).join(","),
-      account.on, status.pathways?.offer?.name || "", `${chFind.view}:${chFind.busy}:${chFind.list.length}:${chFind.picked?.title || ""}:${chFind.minutes}:${chFind.error}:${chFind.shift}`, (settings.learnTopics || []).join("+"), (settings.learnOff || []).length].join("|");
+      account.on, status.pathways?.offer?.name || "", `${homeBreakOpen}:${pw.open}`, (settings.learnTopics || []).join("+"), (settings.learnOff || []).length].join("|");
   if ($("#wp-home")?.dataset.key === key) return; // don't rebuild while someone is typing
   $("#wp-home")?.remove();
 
   const input = el("input", { class: "wp-home-input", type: "text", "aria-label": "Tell me what you're looking for",
     placeholder: "Tell me what you're looking for…" });
-  if (chFind.interest) input.value = chFind.interest; // what you typed survives the card redrawing
   // One rounded field with a small arrow inside it; Enter does the same.
   const findBtn = el("button", { class: "wp-home-go", "aria-label": "Go", title: "Go" }, icon("right"));
   const card = el("div", { id: "wp-home", class: "wp wp-home-card", "data-key": key });
@@ -100,31 +106,30 @@ async function renderHome() {
     return;
   }
 
-  const resumeBlock = (p || others.length) ? el("div", { class: "wp-home-resume" },
-    el("div", { class: "wp-label" }, "Pick up where you left off"),
-    p ? currentTargetRow(p) : null,
-    others.length ? el("div", { class: "wp-home-recent" },
-      el("div", { class: "wp-label wp-home-sub" }, "Recent aims"),
-      ...others.map(pausedTargetRow)) : null,
-    el("button", { class: "wp-btn wp-btn-text wp-home-all", onclick: () => send({ type: "open-targets" }) }, "Your library")) : null;
+  // The three at the top (0.72): Focus (what's on now), Break (casual viewing for a while: its
+  // lengths open right here), Library (every aim, and the learning record).
+  const toggles = el("div", { class: "wp-home-toggles", role: "group", "aria-label": "Aim" },
+    el("button", { class: `wp-home-toggle${homeBreakOpen ? "" : " on"}`, "aria-pressed": String(!homeBreakOpen), onclick: () => { homeBreakOpen = false; renderHome(); } }, icon("target"), "Focus"),
+    el("button", { class: `wp-home-toggle${homeBreakOpen ? " on" : ""}`, "aria-pressed": String(homeBreakOpen), onclick: () => { homeBreakOpen = !homeBreakOpen; renderHome(); } }, icon("hourglass"), "Break"),
+    el("button", { class: "wp-home-toggle", onclick: () => send({ type: "open-targets" }) }, icon("library"), "Library"));
+  const actions = el("div", { class: "wp-home-actions" },
+    el("button", { class: `wp-btn wp-btn-primary wp-home-challenge${pw.open ? " open" : ""}`, "aria-expanded": String(pw.open), onclick: togglePaths }, icon("target"), "Start a challenge"),
+    el("button", { class: "wp-btn wp-btn-tonal wp-explore-open", onclick: () => { exploreOpen = true; renderHome(); } }, icon("compass"), "Explore"));
 
   card.append(...[
-    brandLine(),
+    el("div", { class: "wp-home-top" }, brandLine(), toggles),
     homeEnd,
+    homeBreakOpen ? el("div", { class: "wp-home-break" },
+      el("div", { class: "wp-label" }, p ? "A break from your aim, for" : "Browse freely, for"), breakChips(takeBreak)) : null,
     el("h1", { class: "wp-home-title" }, "What brings you here?"),
     el("div", { class: "wp-home-search" }, input, findBtn),
     hint,
+    actions,
+    pathsWindow(),
     themeOfferBlock(),
-    // Examples help a first visit; once there's something to pick up, they'd only add clutter.
-    !p && !others.length && !(settings.learnTopics || []).length ? el("div", { class: "wp-home-examples" },
-      el("span", { class: "wp-muted" }, "Try"), ...EXAMPLES.map(t =>
-        el("button", { class: "wp-home-example", onclick: () => { input.value = t; input.focus(); } }, `“${t}”`))) : null,
-    exploreLine(p),
-    challengeBlock(input),
-    resumeBlock,
-    savedBlock(),
-    el("div", { class: "wp-label wp-home-break-label" }, p ? "Or take a break" : "Just browsing? Take a break"),
-    breakChips(takeBreak)].filter(Boolean));
+    // The aim you're on, to pick straight back up; everything else lives in the Library.
+    p ? el("div", { class: "wp-home-resume" }, el("div", { class: "wp-label" }, "Continue"), currentTargetRow(p)) : null,
+    savedBlock()].filter(Boolean));
   host.prepend(card);
   showTips();
   maybeOfferTalk(card);
@@ -271,3 +276,7 @@ async function setAsideTarget() {
   toast("Set aside. Pick it up again from the homepage anytime.");
   if (location.pathname !== "/") location.href = "https://www.youtube.com/";
 }
+
+// Links like "Next lesson" or "Find the next challenge" set the address's #part while you're already
+// on the homepage, which doesn't reload it: handle them as they arrive.
+addEventListener("hashchange", () => { if (location.pathname === "/" && /^#aim-/.test(location.hash) && alive) renderHome(); });

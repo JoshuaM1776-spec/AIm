@@ -235,7 +235,8 @@ function exploreView(card) {
       el("button", { class: "wp-link wp-explore-back", onclick: () => { exploreOpen = false; renderHome(); } }, icon("back"), "What brings you here?")),
     el("div", { class: "wp-label wp-explore-kicker" }, "Explore"),
     el("h1", { class: "wp-home-title" }, `${greeting()}.`), // greeting(): plan.js
-    el("div", { class: "wp-muted wp-explore-lede" }, "What would you like to explore today? A few videos worth learning from, from channels that teach well."),
+    el("div", { class: "wp-muted wp-explore-lede" }, "What would you like to explore today? A few videos worth learning from, from channels that teach well, or a one-off challenge on something new."),
+    challengeBlock(),
     head, body);
   fill();
 }

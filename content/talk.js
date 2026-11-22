@@ -302,7 +302,9 @@ function showTalk(state) {
         el("b", {}, won ? "Challenge complete" : state.challengeOutcome === "partly" ? "Partly there" : "Not enough to tell yet"),
         el("span", {}, won ? `You demonstrated: ${ch.title || state.session.aim}` : state.challengeOutcome === "partly" ? "The feedback below says what's still missing. Learn it, then try again." : "Say a bit more, in your own words, and try again.")));
       foot.replaceChildren(el("div", { class: "wp-talk-actions" }, ...(won ? [
-        el("button", { class: "wp-btn wp-btn-text", onclick: () => { closeTalk(); location.href = `/#aim-challenge=${encodeURIComponent(ch.interest || activePurpose()?.challenge?.interest || ch.title || "")}`; } }, "Find the next challenge"),
+        // A lesson on a path: straight on to the next one; a one-off challenge: another to explore.
+        activePurpose()?.pathRef ? el("button", { class: "wp-btn wp-btn-text", onclick: () => { closeTalk(); location.href = `/#aim-path=${encodeURIComponent(activePurpose().pathRef.id)}`; } }, "Next lesson")
+          : el("button", { class: "wp-btn wp-btn-text", onclick: () => { closeTalk(); location.href = `/#aim-challenge=${encodeURIComponent(ch.interest || activePurpose()?.challenge?.interest || ch.title || "")}`; } }, "Find the next challenge"),
         el("button", { class: "wp-btn wp-btn-primary", onclick: () => { closeTalk(); if (live) finishPurpose("yes"); } }, live ? "Call it done" : "Close")] : [
         el("button", { class: "wp-btn wp-btn-text", onclick: closeTalk }, "Keep learning"),
         el("button", { class: "wp-btn wp-btn-primary", onclick: () => { closeTalk(); openTalk({ mode: "synthesis", aimId: state.aimId }); } }, "Try again")])));
