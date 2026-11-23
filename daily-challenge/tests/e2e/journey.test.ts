@@ -10,6 +10,7 @@ import type { Browser, BrowserContext, Page } from "playwright";
 import { resetDatabase } from "../../scripts/db-reset.ts";
 import { startDevServer } from "../../server/dev-server.ts";
 import { testProvider } from "../../supabase/functions/_shared/evaluation/providers/test.ts";
+import { testGenerator } from "../../supabase/functions/_shared/generation/test-generator.ts";
 
 const require = createRequire(import.meta.url);
 const { chromium, devices } = require("playwright") as typeof import("playwright");
@@ -84,7 +85,7 @@ async function run() {
     cwd: root, stdio: "inherit", env: { ...process.env, VITE_SUPABASE_URL: BASE, VITE_SUPABASE_ANON_KEY: "local-dev-anon-key" },
   });
   const databaseUrl = await resetDatabase("dc_e2e", { quiet: true });
-  const server = await startDevServer({ port: PORT, databaseUrl, provider: testProvider(), serveDist: `${root}dist-e2e`, quiet: true });
+  const server = await startDevServer({ port: PORT, databaseUrl, provider: testProvider(), generator: testGenerator(), serveDist: `${root}dist-e2e`, quiet: true });
   const browser: Browser = await chromium.launch();
   const errors: string[] = [];
   const results: string[] = [];
@@ -192,6 +193,17 @@ async function run() {
       assert.equal(await a.locator("p.font-serif").filter({ hasText: /^\d+$/ }).first().textContent(), before);
       const calls = await (await fetch(`${BASE}/dev/sql`, { method: "POST", body: JSON.stringify({ sql: "select count(*)::int n from ai_calls" }) }).catch(() => null))?.json().catch(() => null);
       if (calls) assert.equal(calls[0].n, 1);
+    });
+
+    await check("asks whether the challenge was worth their time", async () => {
+      await a.getByRole("heading", { name: "Was this challenge worth your time?" }).waitFor();
+      await a.getByLabel(/^Yes/).check();
+      await a.getByText("Saved. You can change your answer any time.").waitFor();
+      await a.getByLabel(/Anything that would have made it better/).fill("More about how aqueducts were financed, please.");
+      await a.getByRole("button", { name: "Send" }).click();
+      await a.getByRole("button", { name: "Thank you" }).waitFor();
+      await a.reload();
+      assert.ok(await a.getByLabel(/^Yes/).isChecked());
     });
 
     await check("revising once shows both versions and the change in score", async () => {
@@ -348,7 +360,7 @@ async function run() {
       await shot(b, "evaluation-failed");
     });
 
-    await check("admins create, preview, schedule and publish; drafts stay hidden", async () => {
+    await check("admins write a challenge, approve it at the standard's bar, schedule and publish it; drafts stay hidden", async () => {
       await setToday(null);
       await fetch(`${BASE}/dev/admin`, { method: "POST", body: JSON.stringify({ email: "ada@example.com" }) });
       await a.goto(`${BASE}/admin`);
@@ -356,18 +368,18 @@ async function run() {
       await shot(a, "admin-list");
       await a.getByRole("link", { name: "New" }).click();
       await a.getByLabel("Title", { exact: true }).fill("The Bridge Question");
-      await a.getByLabel("Short description", { exact: true }).fill("A river town must decide how to cross a wide, flooding river.");
-      await a.getByLabel("Subjects", { exact: true }).fill("Engineering, Economics");
+      await a.getByLabel("Short preview", { exact: true }).fill("A river town must decide how to cross a wide, flooding river.");
+      await a.getByLabel("Primary disciplines", { exact: true }).fill("Engineering, Economics");
       await a.getByLabel("Role title", { exact: true }).fill("The Town Engineer");
       await a.getByLabel("Role", { exact: true }).fill("You advise the town council on all public works.");
       await a.getByLabel("The situation", { exact: true }).fill("The ferry can no longer cope with traffic, and the river floods each spring.");
-      await a.getByLabel("The decision (final task)", { exact: true }).fill("Recommend how the town should cross the river, and defend it.");
-      await a.getByLabel("Constraint 1", { exact: true }).fill("Limited funds");
-      await a.getByLabel("Constraint 2", { exact: true }).fill("Spring floods");
-      await a.getByLabel("Area 1", { exact: true }).fill("Engineering");
-      await a.getByLabel("Questions for area 1, one per line").fill("Which bridge designs suit a wide river?");
-      await a.getByLabel("Area 2", { exact: true }).fill("Economics");
-      await a.getByLabel("Questions for area 2, one per line").fill("What can the town afford?");
+      await a.getByLabel(/^The task/).fill("Recommend how the town should cross the river, and defend it.");
+      for (const [i, label] of ["Limited funds", "Spring floods", "A busy shipping lane"].entries()) await a.getByLabel(`Constraint ${i + 1}`, { exact: true }).fill(label);
+      for (const [i, [area, q]] of [["Bridge Design", "Which bridge designs suit a wide, flooding river?"], ["Costs", "What can the town afford to build and maintain?"],
+        ["River Traffic", "How would each design affect boats on the river?"]].entries()) {
+        await a.getByLabel(`Area ${i + 1}`, { exact: true }).fill(area);
+        await a.getByLabel(`Area ${i + 1}, question 1`, { exact: true }).fill(q);
+      }
       await a.getByRole("button", { name: "Create draft" }).click();
       await a.waitForURL(/\/admin\/[0-9a-f-]{36}$/);
       await a.getByText("Saved.").waitFor();
@@ -378,16 +390,27 @@ async function run() {
       await a.getByRole("heading", { name: "The Town Engineer" }).waitFor();
       await shot(a, "admin-preview");
       await a.goto(adminUrl);
-      await a.getByRole("button", { name: "Publish" }).click();
-      await a.getByText("Choose a release date before publishing.").waitFor();
+      // can't publish until approved; can't approve below the bar
+      assert.ok(await a.getByRole("button", { name: "Publish" }).isDisabled());
+      await a.getByRole("button", { name: "Approve" }).click();
+      await a.getByText("Add the factual reference guide for the evaluator before approving.").waitFor();
+      await a.getByLabel("Factual reference guide", { exact: true }).fill("Bridge types: beam, arch, suspension; costs rise with span.");
+      for (const label of ["Intrigue", "Responsibility", "Research depth", "Interdisciplinary integration", "Reasoning quality", "Researchability", "Clarity", "Articulation potential"]) {
+        await a.getByLabel(label, { exact: true }).selectOption("4");
+      }
+      await a.getByText("Total 32 / 40").waitFor();
+      await a.getByRole("button", { name: "Save changes" }).click();
+      await a.getByText("Saved.").waitFor();
+      await a.getByRole("button", { name: "Approve" }).click();
+      await a.getByText(/The quality total needs at least 35 of 40/).waitFor();
+      for (const label of ["Intrigue", "Research depth", "Reasoning quality"]) await a.getByLabel(label, { exact: true }).selectOption("5");
+      await a.getByRole("button", { name: "Save changes" }).click();
+      await a.getByText("Saved.").waitFor();
+      await a.getByRole("button", { name: "Approve" }).click();
+      await a.getByText("Marked Approved.").waitFor();
       await a.getByLabel("Release date (UTC)", { exact: true }).fill(addDays(today(), 10));
       await a.getByRole("button", { name: "Set date" }).click();
       await a.getByText(/Scheduled for/).waitFor();
-      await a.getByRole("button", { name: "Publish" }).click();
-      await a.getByText("Add reference material for the evaluator before publishing.").waitFor();
-      await a.getByLabel("Verified background", { exact: true }).fill("Bridge types: beam, arch, suspension; costs rise with span.");
-      await a.getByRole("button", { name: "Save changes" }).click();
-      await a.getByText("Saved.").waitFor();
       await a.getByRole("button", { name: "Publish" }).click();
       await a.getByText("Published.").waitFor();
       await shot(a, "admin-edit");
@@ -398,6 +421,22 @@ async function run() {
       await b.goto(BASE);
       await b.getByRole("heading", { name: "The Bridge Question" }).waitFor();
       await setToday(null);
+    });
+
+    await check("AI drafts follow the standard and wait, unverified, for an editor", async () => {
+      await a.goto(`${BASE}/admin`);
+      await a.getByRole("button", { name: "Draft with AI" }).click();
+      await a.getByLabel("Direction (optional)").fill("Something about sound and weather");
+      await a.getByRole("dialog").getByRole("button", { name: "Draft a challenge" }).click();
+      await a.waitForURL(/\/admin\/[0-9a-f-]{36}$/);
+      await a.getByRole("heading", { name: "Test Draft: The Winter Bells" }).waitFor();
+      await a.getByText("Pending fact verification").first().waitFor();
+      await a.getByText(/Drafted by AI following the Challenge Standard/).waitFor();
+      await a.getByText("1 critical source not yet verified").waitFor();
+      await shot(a, "admin-ai-draft");
+      await a.getByRole("button", { name: "Approve" }).click();
+      await a.getByText(/critical source is still unverified/).waitFor();
+      assert.ok(await a.getByRole("button", { name: "Publish" }).isDisabled());
     });
 
     await check("profile, mission and settings pages work", async () => {

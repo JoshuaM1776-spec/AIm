@@ -7,7 +7,7 @@ import { Illustration } from "../illustrations/index.tsx";
 import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth.tsx";
 import { guest } from "../lib/local.ts";
-import { openUntil, SCENARIO_LABEL } from "../lib/text.ts";
+import { openUntil, researchTime, SCENARIO_LABEL, TYPE_LABEL } from "../lib/text.ts";
 import type { Challenge } from "../lib/types.ts";
 import { useLoad } from "../lib/useLoad.ts";
 
@@ -32,7 +32,7 @@ export function ChallengePreview({ c, compact = false, kindLabel = true }: { c: 
   return (
     <div>
       <div className="relative">
-        <Illustration image={heroImage(c)} className="aspect-[400/250] overflow-hidden rounded-2xl border border-line shadow-[0_1px_0_rgba(0,0,0,.04)]" />
+        <Illustration image={heroImage(c)} fallback className="aspect-[400/250] overflow-hidden rounded-2xl border border-line shadow-[0_1px_0_rgba(0,0,0,.04)]" />
         <span className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 rounded-full border border-line bg-paper px-4 py-1 text-xs font-semibold tracking-[0.14em] text-ink">
           DAY {c.number}
         </span>
@@ -47,7 +47,10 @@ export function ChallengePreview({ c, compact = false, kindLabel = true }: { c: 
         ))}
       </div>
       <p className="mx-auto mt-4 max-w-sm text-center text-[1.02rem] leading-relaxed text-ink-soft">{c.summary}</p>
-      {kindLabel && <p className="mt-2 text-center text-xs text-muted">{SCENARIO_LABEL[c.scenario_kind]}</p>}
+      <p className="mt-2 text-center text-xs text-muted">
+        {TYPE_LABEL[c.challenge_type]}{c.research_minutes ? ` · allow ${researchTime(c.research_minutes)} to investigate` : ""}
+        {kindLabel ? ` · ${SCENARIO_LABEL[c.scenario_kind]}` : ""}
+      </p>
     </div>
   );
 }

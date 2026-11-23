@@ -1,4 +1,4 @@
-// Turns content/challenges/*.ts into supabase/seed.sql.
+// Turns content/challenges/*.ts into supabase/seed.sql (run the migrations first).
 // The seed publishes the five sample challenges on consecutive UTC days starting the day it runs
 // (Day 1 today), and adds their clearly labelled sample responses. Running it again updates the
 // content without moving release dates or duplicating samples.
@@ -21,7 +21,7 @@ const lines: string[] = [
   "begin;",
 ];
 for (const c of seedChallenges) {
-  const { samples, ...doc } = c;
+  const { samples, editorial_status, ...doc } = c;
   if (c.cards.length !== 5) throw new Error(`${c.slug}: needs five cards`);
   lines.push(
     `-- Day ${c.number}: ${c.title}`,
@@ -29,7 +29,10 @@ for (const c of seedChallenges) {
     `insert into public.challenge_schedule (release_date, challenge_id)`,
     `  select public.app_today() + ${c.number - 1}, id from public.challenges where slug = '${c.slug}'`,
     `  on conflict do nothing;`,
-    `update public.challenges set status = 'published' where slug = '${c.slug}' and status = 'draft';`
+    `update public.challenges set editorial_status = '${editorial_status}', quality = quality || jsonb_build_object('assessed_at', now()),`,
+    `  approved_at = ${editorial_status === "approved" ? "coalesce(approved_at, now())" : "null"} where slug = '${c.slug}';`,
+    // Only an Approved challenge is ever published, here as in the admin screens.
+    `update public.challenges set status = 'published' where slug = '${c.slug}' and status = 'draft' and editorial_status = 'approved';`
   );
   samples.forEach((s, i) => {
     lines.push(

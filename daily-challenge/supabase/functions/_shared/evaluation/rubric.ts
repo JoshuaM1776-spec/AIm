@@ -65,6 +65,7 @@ export function buildRequest(ctx: EvalContext): ProviderRequest {
   const r = ctx.reference;
   const d = ctx.submission.difficulty;
   const list = (items: string[]) => items.map(i => `- ${i}`).join("\n");
+  const section = (title: string, body?: string) => (body && body.trim() ? `${title}:\n${body.trim()}` : "");
   const prompt = `<challenge>
 Day ${c.number}: ${c.title} (${c.subjects.join(", ")})
 Scenario type: ${c.scenario_kind}. ${c.scenario_note}
@@ -88,15 +89,21 @@ Suggested length: ${LENGTH_GUIDE[d]} (a guide, not a requirement).
 </difficulty>
 
 <reference_material>
-${r ? `${r.background}
-
-Defensible approaches (examples, not an exhaustive list):
-${list(r.approaches.map(a => `${a.title}: ${a.summary}`))}
-
-Common misconceptions:
-${list(r.misconceptions)}
-
-Notes for evaluators: ${r.evaluator_notes}` : "None provided. Rely on general knowledge and say so where it matters."}
+${r ? [
+    section("Verified factual reference", r.background),
+    section("Core knowledge", r.core_knowledge),
+    section("Important uncertainties", r.uncertainties),
+    section("How the fields connect", r.investigation_map),
+    section("Defensible approaches (examples, not an exhaustive list)", list(r.approaches.map(a =>
+      [`${a.title}: ${a.summary}`, a.strengths && `strengths: ${a.strengths}`, a.weaknesses && `weaknesses: ${a.weaknesses}`,
+        a.conditions && `works when: ${a.conditions}`].filter(Boolean).join("; ")))),
+    section("What separates a superficial answer from an excellent one", r.critical_reasoning),
+    section("Common mistakes", list(r.misconceptions)),
+    section("Evidence a strong response might use", r.evidence_expectations),
+    section(`What ${d} asks for on this challenge`, r.difficulty_guide?.[d]),
+    section("Fairness", r.fairness_notes),
+    section("Notes for evaluators", r.evaluator_notes),
+  ].filter(Boolean).join("\n\n") : "None provided. Rely on general knowledge and say so where it matters."}
 </reference_material>
 
 ${ctx.submission.kind === "revision" ? "This is the writer's one revision, written after reading feedback on a first draft. Evaluate it on its own merits with the same standard.\n\n" : ""}<response word_count="${ctx.submission.word_count}">

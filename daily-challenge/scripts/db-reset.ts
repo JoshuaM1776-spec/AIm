@@ -1,7 +1,7 @@
 // Recreates the local development database from scratch: Supabase stand-ins, the migration, the seed.
 // Usage: npm run db:reset [-- database_name]
 // Uses DATABASE_URL's server (default postgres://postgres:postgres@localhost:5432).
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import pg from "pg";
 
 export async function resetDatabase(name = "daily_challenge", { seed = true, quiet = false } = {}) {
@@ -17,7 +17,8 @@ export async function resetDatabase(name = "daily_challenge", { seed = true, qui
   await db.connect();
   const file = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), "utf8");
   await db.query(file("tests/db/stub.sql"));
-  await db.query(file("supabase/migrations/0001_daily_challenge.sql"));
+  const migrations = readdirSync(new URL("../supabase/migrations/", import.meta.url)).filter(f => f.endsWith(".sql")).sort();
+  for (const m of migrations) await db.query(file(`supabase/migrations/${m}`));
   if (seed) await db.query(file("supabase/seed.sql"));
   await db.end();
   if (!quiet) console.log(`Database ${name} is ready${seed ? " with the five sample challenges (Day 1 is today, UTC)" : ""}.`);

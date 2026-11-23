@@ -77,7 +77,7 @@ export async function serveEvaluate(req: Request, deps: EvalDeps): Promise<Respo
   const timer = setTimeout(() => controller.abort(), deps.timeoutMs);
   const started = Date.now();
   try {
-    const result = await provider.evaluate(buildRequest(claim.context), controller.signal);
+    const result = await provider.run(buildRequest(claim.context), controller.signal);
     if (!result.ok) {
       await deps.store.fail(claim.evaluation_id, result.code, provider.name, result.model ?? provider.model);
       deps.log?.("evaluation_failed", { code: result.code, detail: result.detail, ms: Date.now() - started });

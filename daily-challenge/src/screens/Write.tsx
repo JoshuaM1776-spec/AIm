@@ -209,7 +209,9 @@ export default function Write({ kind = "initial" }: { kind?: "initial" | "revisi
           <span aria-live="polite">{words} {words === 1 ? "word" : "words"} · suggested {guide.min}–{guide.max}</span>
         </div>
       </div>
-      <p className="mt-2 text-center text-xs text-muted">{openUntil(c.closes_at)}. {kind === "revision" ? "Your revision" : "Your response"} must be submitted while the challenge is open.</p>
+      {kind === "initial"
+        ? <p className="mt-2 text-center text-xs text-muted">{openUntil(c.closes_at)}. Your response must be submitted while the challenge is open.</p>
+        : <p className="mt-2 text-center text-xs text-muted">Revise whenever you like. Your first version&rsquo;s score is the one used in global results.</p>}
 
       {work.mode === "guest" && (
         <Notice className="mt-3">Your writing is saved on this device. Sign in to submit it for evaluation; it moves to your account.</Notice>

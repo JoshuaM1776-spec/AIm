@@ -20,10 +20,18 @@ export interface ChallengeContext {
   investigation: { title: string; questions: string[] }[];
 }
 
+/** The private evaluation guide from the Challenge Creation & Quality Standard. */
 export interface ReferenceContext {
   background: string;
-  approaches: { title: string; summary: string }[];
+  core_knowledge?: string;
+  uncertainties?: string;
+  investigation_map?: string;
+  approaches: { title: string; summary: string; strengths?: string; weaknesses?: string; conditions?: string }[];
+  critical_reasoning?: string;
   misconceptions: string[];
+  evidence_expectations?: string;
+  difficulty_guide?: Partial<Record<Difficulty, string>>;
+  fairness_notes?: string;
   evaluator_notes: string;
 }
 
@@ -53,16 +61,24 @@ export interface ProviderRequest {
   schema: Record<string, unknown>;
 }
 
+/** Per-request overrides: drafting a challenge needs a longer answer than evaluating one. */
+export interface RunOptions {
+  maxTokens?: number;
+  effort?: "low" | "medium" | "high";
+  stream?: boolean;
+}
+
 export type ProviderErrorCode = "timeout" | "refusal" | "busy" | "upstream" | "invalid_output" | "config";
 
 export type ProviderResult =
   | { ok: true; output: unknown; model: string; inputTokens: number; outputTokens: number }
   | { ok: false; code: ProviderErrorCode; model?: string; detail?: string };
 
+/** A model that answers one request with JSON matching a schema. */
 export interface EvalProvider {
-  name: string; // "anthropic", or "test" for the built-in test evaluator
+  name: string; // "anthropic", or "test" for the built-in test evaluator and generator
   model: string;
-  evaluate(req: ProviderRequest, signal: AbortSignal): Promise<ProviderResult>;
+  run(req: ProviderRequest, signal: AbortSignal, options?: RunOptions): Promise<ProviderResult>;
 }
 
 export type ClaimResult =

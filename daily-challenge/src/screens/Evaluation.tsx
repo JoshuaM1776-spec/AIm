@@ -7,7 +7,7 @@ import { Button, ButtonLink, Card, cx, ErrorNote, Field, inputClass, Notice, Pag
 import { api, ApiError } from "../lib/api.ts";
 import { useAuth } from "../lib/auth.tsx";
 import { useChallenge } from "../lib/challenge.tsx";
-import { DIFFICULTY_LABEL, formatDate, paragraphs } from "../lib/text.ts";
+import { DIFFICULTY_LABEL, formatDate, paragraphs, WORTH_IT } from "../lib/text.ts";
 import type { Category, EvaluationRecord, Submission } from "../lib/types.ts";
 
 const CATS: Category[] = ["understanding", "reasoning", "clarity", "organization"];
@@ -206,6 +206,61 @@ function ShareCard() {
   );
 }
 
+/** "Was this challenge worth your time?" Helps editors learn what makes a good challenge. */
+function WorthItCard() {
+  const { challenge: c, work, setAttempt } = useChallenge();
+  const a = work.attempt!;
+  const [rating, setRating] = useState<number | null>(a.feedback?.rating ?? null);
+  const [comment, setComment] = useState(a.feedback?.comment ?? "");
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(Boolean(a.feedback));
+  const [error, setError] = useState<string | null>(null);
+  const save = async (r: number, text: string) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const f = await api.rate(c.number, r, text);
+      setAttempt({ ...a, feedback: f });
+      setSaved(true);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Couldn't save your answer.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Card as="section" className="px-4 py-4">
+      <p className="eyebrow">After completing the challenge</p>
+      <h2 className="mt-1 text-[1.3rem]">Was this challenge worth your time?</h2>
+      <p className="text-sm text-muted">Your answer helps us create better challenges. It&rsquo;s never shown to anyone else.</p>
+      <fieldset className="mt-3" disabled={busy}>
+        <legend className="sr-only">Was this challenge worth your time?</legend>
+        <div className="space-y-1">
+          {WORTH_IT.map(o => (
+            <label key={o.rating} className="flex min-h-11 cursor-pointer items-center gap-3">
+              <input type="radio" name="worth" className="h-4 w-4 accent-[#3b281b]" checked={rating === o.rating}
+                onChange={() => { setRating(o.rating); setSaved(false); void save(o.rating, comment); }} />
+              <span><span className="font-semibold text-ink">{o.label}</span> <span className="text-ink-soft">({o.detail})</span></span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      {rating !== null && (
+        <form className="mt-2" onSubmit={e => { e.preventDefault(); void save(rating, comment); }}>
+          <label htmlFor="worth-comment" className="text-sm text-ink">Anything that would have made it better? (optional)</label>
+          <textarea id="worth-comment" rows={2} maxLength={500} className={`${inputClass} mt-1`} value={comment}
+            onChange={e => { setComment(e.target.value); setSaved(false); }} />
+          <div className="mt-2 flex items-center gap-3">
+            <Button type="submit" variant="secondary" busy={busy} disabled={saved}>{saved ? "Thank you" : "Send"}</Button>
+            {saved && <span className="text-xs text-muted" role="status">Saved. You can change your answer any time.</span>}
+          </div>
+        </form>
+      )}
+      {error && <ErrorNote className="mt-3" message={error} />}
+    </Card>
+  );
+}
+
 export default function Evaluation() {
   const { challenge: c, work } = useChallenge();
   const [params, setParams] = useSearchParams();
@@ -278,10 +333,10 @@ export default function Evaluation() {
           </Notice>
 
           <div className="mt-6 flex flex-col gap-3">
-            {showing?.kind === "initial" && !revision && c.is_open && (
+            {showing?.kind === "initial" && !revision && (
               <>
                 <ButtonLink to={`/c/${c.number}/revise`} variant="primary" size="lg" arrow>Revise Your Response</ButtonLink>
-                <p className="-mt-1 text-center text-xs text-muted">Optional. You can revise once, while the challenge is open; both versions are kept.</p>
+                <p className="-mt-1 text-center text-xs text-muted">Optional, whenever you like. Both versions are kept; your first score is the one used in global results.</p>
               </>
             )}
             <ButtonLink to={`/c/${c.number}/community`} variant="secondary" className="w-full"><Users size={18} /> See how others approached it</ButtonLink>
@@ -292,6 +347,7 @@ export default function Evaluation() {
 
       <div className="mt-6 space-y-4">
         {showing && <ResponseText s={showing} />}
+        {initial.evaluation?.status === "complete" && <WorthItCard />}
         {!pending && (initial.evaluation?.status === "complete" || a.shared) && <ShareCard />}
         <div className="flex justify-center gap-5 text-sm">
           <Link to={`/c/${c.number}/brief`} className="font-semibold text-bronze">Mission brief</Link>

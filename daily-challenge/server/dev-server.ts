@@ -22,11 +22,14 @@ import { serveEvaluate } from "../supabase/functions/_shared/evaluation/handler.
 import { anthropicProvider } from "../supabase/functions/_shared/evaluation/providers/anthropic.ts";
 import { testProvider } from "../supabase/functions/_shared/evaluation/providers/test.ts";
 import type { ClaimResult, EvalProvider, EvalStore } from "../supabase/functions/_shared/evaluation/types.ts";
+import { type GenClaim, type GenStore, serveGenerate } from "../supabase/functions/_shared/generation/generate.ts";
+import { testGenerator } from "../supabase/functions/_shared/generation/test-generator.ts";
 
 export interface DevServerOptions {
   port?: number;
   databaseUrl?: string;
   provider?: EvalProvider | null;
+  generator?: EvalProvider | null;
   serveDist?: string | null;
   quiet?: boolean;
   limits?: { perHour: number; perDay: number };
@@ -138,17 +141,33 @@ export async function startDevServer(opts: DevServerOptions = {}) {
   };
 
   let provider: EvalProvider | null = opts.provider !== undefined ? opts.provider : null;
+  let generator: EvalProvider | null = opts.generator !== undefined ? opts.generator : null;
   if (opts.provider === undefined) {
     const kind = process.env.EVAL_PROVIDER || (process.env.ANTHROPIC_API_KEY ? "anthropic" : "");
     if (kind === "anthropic") {
       provider = anthropicProvider(new Anthropic(), Anthropic, { model: process.env.EVAL_MODEL || "claude-opus-5-5" });
+      if (opts.generator === undefined) generator = anthropicProvider(new Anthropic(), Anthropic, { model: process.env.GEN_MODEL || "claude-opus-5-5" });
     } else if (kind === "test") {
       provider = testProvider();
-      log("Using the built-in TEST evaluator (not AI). Evaluations are labelled as test evaluations.");
+      if (opts.generator === undefined) generator = testGenerator();
+      log("Using the built-in TEST evaluator and drafting model (not AI). Their results are labelled as tests.");
     } else {
       log("No evaluator configured: set ANTHROPIC_API_KEY, or EVAL_PROVIDER=test for the mechanical test evaluator.");
     }
   }
+
+  const genStore: GenStore = {
+    async claim(userId, perDay) {
+      return (await pool.query("select public.gen_claim($1, $2) as r", [userId, perDay])).rows[0].r as GenClaim;
+    },
+    async save(userId, callId, doc, prov, model, inTok, outTok) {
+      return (await pool.query("select public.gen_save_draft($1, $2, $3, $4, $5, $6, $7) as r",
+        [userId, callId, JSON.stringify(doc), prov, model, inTok, outTok])).rows[0].r as { id: string; number: number };
+    },
+    async fail(callId, code, prov, model) {
+      await pool.query("select public.gen_fail($1, $2, $3, $4)", [callId, code, prov, model]);
+    },
+  };
 
   const CORS = {
     "Access-Control-Allow-Origin": "*",
@@ -248,6 +267,22 @@ export async function startDevServer(opts: DevServerOptions = {}) {
           if (status === 500) console.error("[dev-server] rpc", m[1], err.message);
           return send(res, status, { code: err.code, message: err.message, details: err.detail ?? null, hint: err.hint ?? null });
         }
+      }
+
+      // ---- the generate function ----
+      if (path === "/functions/v1/generate") {
+        const body = req.method === "POST" ? await readBody(req) : undefined;
+        const headers = new Headers();
+        for (const [k, v] of Object.entries(req.headers)) if (typeof v === "string" && k !== "host" && k !== "connection") headers.set(k, v);
+        const response = await serveGenerate(new Request(url, { method: req.method, headers, body }), {
+          async authenticate(authorization) {
+            return (verifyJwt(bearer(authorization))?.sub as string) ?? null;
+          },
+          store: genStore, provider: generator, perDay: 10, timeoutMs: 300_000, allowedOrigins: ["*"],
+          log: (event, data) => log(event, JSON.stringify(data)),
+        });
+        res.writeHead(response.status, Object.fromEntries(response.headers));
+        return res.end(await response.text());
       }
 
       // ---- the evaluate function ----

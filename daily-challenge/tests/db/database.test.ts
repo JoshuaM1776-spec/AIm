@@ -125,7 +125,7 @@ describe("attempts", () => {
     expect(lib[0]).toMatchObject({ number: 1, unfinished: true });
   });
 
-  it("finishes evaluations of work submitted in time, but closes revisions with the challenge", async () => {
+  it("finishes evaluations of work submitted in time, and allows the revision any time without changing the public score", async () => {
     const u = await db.user();
     const att = await submitted(u);
     const tomorrow = addDays(today(), 1);
@@ -133,10 +133,16 @@ describe("attempts", () => {
     expect(claim.state).toBe("claimed");
     await db.sql("select public.eval_complete($1, $2, $3, 'test', 'm')", [claim.evaluation_id,
       JSON.stringify({ understanding: 70, reasoning: 70, clarity: 70, organization: 70 }), JSON.stringify({ summary: "x" })]);
-    expect(await err(db.call(u, "submit_response", { p_attempt: att.id, p_kind: "revision", p_body: essay(), p_key: randomUUID() }, tomorrow))).toBe("challenge_closed");
-    const later = await db.call(u, "get_attempt", { p_number: 1 }, tomorrow);
+    await db.call(u, "save_draft", { p_attempt: att.id, p_kind: "revision", p_body: "Second thoughts" }, tomorrow);
+    const later = await db.call(u, "submit_response", { p_attempt: att.id, p_kind: "revision", p_body: essay(120), p_key: randomUUID() }, tomorrow);
     expect(later.status).toBe("submitted");
-    expect(later.submissions[0].evaluation.overall).toBe(70);
+    expect(later.submissions.map((x: { kind: string }) => x.kind)).toEqual(["initial", "revision"]);
+    const rev = (await db.sql("select public.eval_claim($1, $2) as r", [u, later.submissions[1].id]))[0].r;
+    await db.sql("select public.eval_complete($1, $2, $3, 'test', 'm')", [rev.evaluation_id,
+      JSON.stringify({ understanding: 95, reasoning: 95, clarity: 95, organization: 95 }), JSON.stringify({ summary: "x" })]);
+    // results, averages and progress keep the first version's score
+    expect((await db.call(u, "challenge_stats", { p_number: 1 }, tomorrow)).your_score).toBe(70);
+    expect((await db.call(u, "my_progress", {}, tomorrow)).trend.find((t: { number: number }) => t.number === 1).overall).toBe(70);
     expect((await db.call(u, "list_community", { p_number: 1 }, tomorrow)).items.length).toBeGreaterThan(0); // participants keep reading
   });
 
@@ -313,6 +319,21 @@ describe("progress", () => {
   });
 });
 
+describe("challenge feedback", () => {
+  it("asks 'was this worth your time?' after submitting, and can be changed", async () => {
+    const u = await db.user();
+    expect(await err(db.call(u, "rate_challenge", { p_number: 1, p_rating: 4 }))).toBe("submit_first");
+    await db.call(u, "start_attempt", { p_number: 1, p_difficulty: "easy" });
+    expect(await err(db.call(u, "rate_challenge", { p_number: 1, p_rating: 4 }))).toBe("submit_first");
+    await submitted(u);
+    expect(await err(db.call(u, "rate_challenge", { p_number: 1, p_rating: 5 }))).toBe("invalid_rating");
+    await db.call(u, "rate_challenge", { p_number: 1, p_rating: 4, p_comment: "Loved it" });
+    await db.call(u, "rate_challenge", { p_number: 1, p_rating: 3 });
+    expect((await db.call(u, "get_attempt", { p_number: 1 })).feedback).toEqual({ rating: 3, comment: "" });
+    expect(await db.as(await db.user(), "select * from challenge_feedback")).toEqual([]);
+  });
+});
+
 describe("challenge management", () => {
   const doc = {
     slug: "test-challenge", title: "The Test Bridge", summary: "A bridge needs building across a wide river.",
@@ -332,28 +353,71 @@ describe("challenge management", () => {
     expect(await err(db.call(u, "admin_save_challenge", { p_doc: doc }))).toBe("forbidden");
   });
 
-  it("creates drafts that ordinary users can't see, and publishes them on a scheduled UTC date", async () => {
+  const quality = (overrides: Record<string, number> = {}) => ({
+    scores: { intrigue: 5, responsibility: 4, research_depth: 5, integration: 4, reasoning: 5, researchability: 4, clarity: 5, articulation: 4, ...overrides },
+    weaknesses: "", assessed_by: "editor",
+  });
+
+  it("creates drafts users can't see, approves them only at the standard's bar, and publishes on a UTC date", async () => {
     const admin = await db.user();
     await db.sql("update profiles set is_admin = true where id = $1", [admin]);
     const saved = await db.call(admin, "admin_save_challenge", { p_doc: doc });
-    expect(saved.number).toBe(6);
-    expect(saved.status).toBe("draft");
+    expect(saved).toMatchObject({ number: 6, status: "draft", editorial_status: "needs_revision", origin: "editor", challenge_type: "decide" });
     expect(saved.cards).toHaveLength(5);
     const user = await db.user();
     expect(await err(db.call(user, "get_challenge", { p_number: 6 }))).toBe("challenge_not_found");
     expect((await db.call(admin, "get_challenge", { p_number: 6 })).title).toBe("The Test Bridge"); // preview
+
+    // publishing needs approval; approval needs the reference guide, verified critical sources and the quality bar
+    expect(await err(db.call(admin, "admin_set_status", { p_id: saved.id, p_status: "published" }))).toBe("not_approved");
+    const approve = () => db.call(admin, "admin_set_editorial", { p_id: saved.id, p_status: "approved" });
+    expect(await err(approve())).toBe("needs_reference");
+    const withRef = { ...doc, id: saved.id, number: 6, reference: { ...doc.reference, background: "Facts.",
+      sources: [{ title: "A bridge handbook", note: "", url: "https://example.org", verified: false, critical: true }] } };
+    await db.call(admin, "admin_save_challenge", { p_doc: withRef });
+    expect(await err(approve())).toBe("unverified");
+    const verified = { ...withRef, reference: { ...withRef.reference, sources: [{ ...withRef.reference.sources[0], verified: true }] } };
+    await db.call(admin, "admin_save_challenge", { p_doc: verified });
+    expect(await err(approve())).toBe("quality_bar");
+    await db.call(admin, "admin_save_challenge", { p_doc: { ...verified, quality: quality({ clarity: 3 }) } });
+    expect(await err(approve())).toBe("quality_bar");
+    await db.call(admin, "admin_save_challenge", { p_doc: { ...verified, quality: quality() } }); // 36 of 40
+    expect((await approve()).editorial_status).toBe("approved");
+    // editing an approved draft sends it back for review
+    expect((await db.call(admin, "admin_save_challenge", { p_doc: { ...verified, quality: quality(), title: "The Test Bridge, Revised" } })).editorial_status).toBe("needs_revision");
+    await approve();
 
     expect(await err(db.call(admin, "admin_set_status", { p_id: saved.id, p_status: "published" }))).toBe("needs_date");
     expect(await err(db.call(admin, "admin_schedule", { p_id: saved.id, p_date: today() }))).toBe("date_taken");
     expect(await err(db.call(admin, "admin_schedule", { p_id: saved.id, p_date: addDays(today(), -1) }))).toBe("date_in_past");
     const date = addDays(today(), 7);
     await db.call(admin, "admin_schedule", { p_id: saved.id, p_date: date });
-    expect(await err(db.call(admin, "admin_set_status", { p_id: saved.id, p_status: "published" }))).toBe("needs_reference");
-    await db.call(admin, "admin_save_challenge", { p_doc: { ...doc, id: saved.id, number: 6, reference: { ...doc.reference, background: "Facts." } } });
     await db.call(admin, "admin_set_status", { p_id: saved.id, p_status: "published" });
-
     expect(await err(db.call(user, "get_challenge", { p_number: 6 }))).toBe("challenge_not_found"); // not yet its day
     expect((await db.call(user, "get_today", {}, date)).challenge.number).toBe(6);
     expect((await db.call(null, "get_today", {}, date)).challenge.number).toBe(6);
+  });
+
+  it("saves AI drafts only for admins, within a daily limit, always pending verification", async () => {
+    const admin = (await db.sql("select id from profiles where is_admin limit 1"))[0].id;
+    const user = await db.user();
+    expect((await db.sql("select public.gen_claim($1) as r", [user]))[0].r.state).toBe("forbidden");
+    expect(await err(db.call(admin, "gen_claim", { p_user: admin }))).toMatch(/permission denied/);
+    const claim = (await db.sql("select public.gen_claim($1, 2) as r", [admin]))[0].r;
+    expect(claim.state).toBe("claimed");
+    expect(claim.recent.length).toBeGreaterThan(0);
+    const draft = (await db.sql("select public.gen_save_draft($1, $2, $3, 'test', 'test-generator') as r",
+      [admin, claim.call_id, JSON.stringify({ ...doc, title: "The Test Bridge", quality: quality(), slug: "ignored" })]))[0].r;
+    const c = await db.call(admin, "admin_get_challenge", { p_id: draft.id });
+    expect(c).toMatchObject({ origin: "ai", editorial_status: "pending_verification", status: "draft", slug: "the-test-bridge", number: draft.number });
+    // a second draft with the same title gets a distinct address
+    const again = (await db.sql("select public.gen_save_draft($1, $2, $3, 'test', 'test-generator') as r",
+      [admin, claim.call_id, JSON.stringify({ ...doc, title: "The Test Bridge", quality: quality() })]))[0].r;
+    expect((await db.call(admin, "admin_get_challenge", { p_id: again.id })).slug).toBe(`the-test-bridge-${again.number}`);
+    expect((await db.sql("select ok, task from ai_calls where id = $1", [claim.call_id]))[0]).toEqual({ ok: true, task: "generate" });
+    await db.sql("select public.gen_claim($1, 2)", [admin]);
+    expect((await db.sql("select public.gen_claim($1, 2) as r", [admin]))[0].r.state).toBe("rate_limited");
+    // drafting doesn't use up the evaluation allowance
+    expect((await db.sql("select count(*)::int n from ai_calls where user_id = $1 and task = 'evaluate'", [admin]))[0].n).toBe(0);
   });
 });

@@ -3,7 +3,7 @@
 // Edge Function, which holds the AI key.
 import { SUPABASE_ANON_KEY, SUPABASE_URL, supabase } from "./supabase.ts";
 import type {
-  AdminChallengeRow, AdminResponse, Attempt, Challenge, ChallengeAdmin, CommunityItem, Difficulty, LibraryItem,
+  AdminChallengeRow, AdminResponse, Attempt, Challenge, ChallengeAdmin, CommunityItem, Difficulty, EditorialStatus, LibraryItem,
   MyState, Progress, Stats, Today,
 } from "./types.ts";
 
@@ -61,6 +61,34 @@ async function rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T
   return result.data as T;
 }
 
+/** Calls one of the server's Edge Functions with the signed-in user's token. */
+async function callFunction<T>(name: string, payload: unknown, timeoutMs: number,
+  networkMessage = "We couldn't reach the server. Please try again."): Promise<T & { ok: true }> {
+  if (!supabase) throw new ApiError("not_configured", "This app isn't connected to a server yet.");
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new ApiError("auth", "Please sign in again.");
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let res: Response;
+  try {
+    res = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, apikey: SUPABASE_ANON_KEY, "content-type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+  } catch {
+    throw new ApiError("network", networkMessage, "", true);
+  } finally {
+    clearTimeout(timer);
+  }
+  const body = await res.json().catch(() => null) as ({ ok?: boolean; error?: { code: string; message: string; retryable?: boolean; retry_after?: number; detail?: string } } & T) | null;
+  if (res.ok && body?.ok) return body as T & { ok: true };
+  const e = body?.error;
+  throw new ApiError(e?.code ?? "server", e?.message ?? "Something went wrong. Please try again.", e?.detail ?? "", e?.retryable ?? true, e?.retry_after);
+}
+
 export const api = {
   today: () => rpc<Today>("get_today"),
   challenge: (number: number) => rpc<Challenge>("get_challenge", { p_number: number }),
@@ -87,6 +115,8 @@ export const api = {
     rpc<{ reported: boolean }>("report_response", { p_response: responseId, p_reason: reason, p_details: details }),
 
   stats: (number: number) => rpc<Stats>("challenge_stats", { p_number: number }),
+  rate: (number: number, rating: number, comment: string) =>
+    rpc<{ rating: number; comment: string }>("rate_challenge", { p_number: number, p_rating: rating, p_comment: comment }),
   progress: () => rpc<Progress>("my_progress"),
   library: () => rpc<LibraryItem[]>("my_library"),
 
@@ -95,6 +125,9 @@ export const api = {
     get: (id: string) => rpc<ChallengeAdmin>("admin_get_challenge", { p_id: id }),
     save: (doc: Record<string, unknown>) => rpc<ChallengeAdmin>("admin_save_challenge", { p_doc: doc }),
     setStatus: (id: string, status: Challenge["status"]) => rpc<ChallengeAdmin>("admin_set_status", { p_id: id, p_status: status }),
+    setEditorial: (id: string, status: EditorialStatus) => rpc<ChallengeAdmin>("admin_set_editorial", { p_id: id, p_status: status }),
+    /** Ask the AI to draft a challenge following the standard. Saved as a draft pending verification. */
+    generate: (direction: string, type: string) => callFunction<{ id: string; number: number }>("generate", { direction, type }, 330_000),
     schedule: (id: string, date: string | null) => rpc<ChallengeAdmin>("admin_schedule", { p_id: id, p_date: date }),
     responses: (id: string) => rpc<AdminResponse[]>("admin_list_responses", { p_id: id }),
     updateResponse: (id: string, patch: { selected_label?: string | null; selected_position?: number | null; hidden?: boolean; clear_selection?: boolean }) =>
@@ -106,28 +139,8 @@ export const api = {
 
   /** Ask the server to evaluate a stored submission. Resolves to "complete" or "in_progress". */
   async evaluate(submissionId: string): Promise<"complete" | "in_progress"> {
-    if (!supabase) throw new ApiError("not_configured", "This app isn't connected to a server yet.");
-    const { data } = await supabase.auth.getSession();
-    const token = data.session?.access_token;
-    if (!token) throw new ApiError("auth", "Please sign in again.");
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 170_000);
-    let res: Response;
-    try {
-      res = await fetch(`${SUPABASE_URL}/functions/v1/evaluate`, {
-        method: "POST",
-        headers: { authorization: `Bearer ${token}`, apikey: SUPABASE_ANON_KEY, "content-type": "application/json" },
-        body: JSON.stringify({ submissionId }),
-        signal: controller.signal,
-      });
-    } catch {
-      throw new ApiError("network", "We couldn't reach the evaluator. Your response is saved; please try again.", "", true);
-    } finally {
-      clearTimeout(timer);
-    }
-    const body = await res.json().catch(() => null) as { ok?: boolean; status?: string; error?: { code: string; message: string; retryable?: boolean; retry_after?: number } } | null;
-    if (res.ok && body?.ok) return body.status === "in_progress" ? "in_progress" : "complete";
-    const e = body?.error;
-    throw new ApiError(e?.code ?? "server", e?.message ?? "Something went wrong. Your response is saved; please try again.", "", e?.retryable ?? true, e?.retry_after);
+    const body = await callFunction<{ status?: string }>("evaluate", { submissionId }, 170_000,
+      "We couldn't reach the evaluator. Your response is saved; please try again.");
+    return body.status === "in_progress" ? "in_progress" : "complete";
   },
 };

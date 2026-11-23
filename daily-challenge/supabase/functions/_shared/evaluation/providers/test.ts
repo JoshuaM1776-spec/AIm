@@ -10,7 +10,7 @@ export function testProvider(opts: { delayMs?: number; fail?: "timeout" | "inval
   return {
     name: "test",
     model: "test-evaluator",
-    async evaluate(req: ProviderRequest, signal: AbortSignal): Promise<ProviderResult> {
+    async run(req: ProviderRequest, signal: AbortSignal): Promise<ProviderResult> {
       if (opts.delayMs) {
         await new Promise<void>((resolve, reject) => {
           const t = setTimeout(resolve, opts.delayMs);

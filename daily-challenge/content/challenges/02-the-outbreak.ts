@@ -7,7 +7,9 @@ export const theOutbreak: ChallengeSeed = {
   summary:
     "A deadly illness is spreading through a river town and nobody agrees on why. Decide what to do now, and how to find out what is causing it.",
   subjects: ["Epidemiology", "Statistics", "Governance"],
-  scenario_kind: "fictional",
+  challenge_type: "investigate",
+  research_minutes: 40,
+  scenario_kind: "fictionalized_historical",
   scenario_note:
     "A fictional English river town in the mid-19th century. The town, people and numbers are invented; the methods of investigation are real.",
   role: {
@@ -27,11 +29,11 @@ export const theOutbreak: ChallengeSeed = {
       "Design an investigation that could distinguish the explanations (including what would change your mind), address confounding and small numbers, consider the political and economic costs of acting before you are certain, and defend your plan against its strongest objection.",
   },
   cards: [
-    { kind: "role", image: { key: "ledger", alt: "An open case register with a quill pen and an oil lamp on a desk." } },
-    { kind: "situation", image: { key: "pump", alt: "A cast-iron public water pump on a cobbled street corner." } },
-    { kind: "constraints", image: { key: "street-map", alt: "A hand-drawn street map of a river town with small marks clustered around one street." } },
-    { kind: "investigation", image: null },
-    { kind: "decision", image: { key: "pump", alt: "A cast-iron public water pump on a cobbled street corner." } },
+    { kind: "role", image: { key: "ledger", alt: "An open case register with a quill pen and an oil lamp on a desk." }, direction: "A clerk's desk by lamplight: an open case register with tallies, a quill and an inkpot." },
+    { kind: "situation", image: { key: "pump", alt: "A cast-iron public water pump on a cobbled street corner." }, direction: "A cast-iron public water pump on a cobbled corner of a 19th-century English town, brick terraces behind." },
+    { kind: "constraints", image: { key: "street-map", alt: "A hand-drawn street map of a river town with small marks clustered around one street." }, direction: "A hand-drawn town plan with small marks clustered around one street and a dashed outline around a workhouse." },
+    { kind: "investigation", image: null, direction: "No picture: the questions are the content." },
+    { kind: "decision", image: { key: "pump", alt: "A cast-iron public water pump on a cobbled street corner." }, direction: "The same street pump, seen closer." },
   ],
   constraints: [
     { label: "Lives at stake every day", detail: "Waiting for certainty has a cost measured in deaths.", icon: "heart-pulse" },
@@ -43,22 +45,22 @@ export const theOutbreak: ChallengeSeed = {
     {
       title: "Epidemiology",
       questions: [
-        "How does an illness like this spread, and what pattern would each explanation produce?",
-        "What can you learn from where and when people fell ill, and who did not?",
+        { text: "How does an illness like this spread, and what pattern would each explanation produce?", priority: "essential" },
+        { text: "What can you learn from where and when people fell ill, and who did not?", priority: "exploratory" },
       ],
     },
     {
       title: "Statistics",
       questions: [
-        "How would you compare illness rates between groups fairly?",
-        "What could make a pattern misleading: confounding, small numbers, missing records?",
+        { text: "How would you compare illness rates between groups fairly?", priority: "essential" },
+        { text: "What could make a pattern misleading: confounding, small numbers, missing records?", priority: "exploratory" },
       ],
     },
     {
       title: "Governance",
       questions: [
-        "What can you ask the council to do before the cause is certain, and how will you persuade them?",
-        "Who bears the cost of each action, and how would you handle their objections?",
+        { text: "What can you ask the council to do before the cause is certain, and how will you persuade them?", priority: "essential" },
+        { text: "Who bears the cost of each action, and how would you handle their objections?", priority: "exploratory" },
       ],
     },
   ],
@@ -67,10 +69,31 @@ export const theOutbreak: ChallengeSeed = {
 In the mid-19th century the dominant "miasma" theory held that disease came from foul air. John Snow argued from evidence that cholera was waterborne. In the 1854 Broad Street outbreak in London he mapped deaths around a public pump and persuaded the local authorities to remove its handle; he also noted that a nearby workhouse and brewery with their own water had few deaths. In his study of 1853-54 he compared death rates among households supplied by two water companies, one drawing from the Thames below London's sewage outfalls and one from above, finding far higher mortality among customers of the downstream company (a "natural experiment", because the companies' customers were otherwise mixed in the same streets).
 Useful investigative ideas: map cases and the time of onset (an epidemic curve); count cases per household by water source and compute rates, not just counts; look for exceptions (people far away who fell ill, people nearby who did not) and find out what they drank; compare groups similar in other respects (to control confounding such as poverty, crowding and proximity to the sewer, which correlate with both bad air and bad water); be aware that small numbers produce noisy rates and that records may be incomplete.
 Precaution under uncertainty: closing a suspected pump or advising boiling water is cheap relative to the potential lives saved, even before the cause is proven, and stopping exposure can itself be a test (cases should fall after a few days if water is the cause, though outbreaks also decline on their own as people flee or susceptible people are exhausted, which complicates the inference).`,
+    core_knowledge: "Waterborne (faecal-oral) transmission versus the then-dominant miasma theory; cholera's incubation (WHO: about 12 hours to 5 days); comparing rates rather than counts; confounding (poverty, crowding and nearness to the sewer go with both bad air and bad water); natural experiments; acting under uncertainty.",
+    uncertainties: "Numbers are small and records incomplete; outbreaks decline on their own, so a fall after an intervention is weak evidence by itself; households may draw water from more than one source.",
+    investigation_map: "Essential: how an illness like this spreads and what pattern each theory predicts; how to compare groups fairly. Exploratory: what the council can do before certainty; who bears the costs. Statistics meets governance because evidence must be strong enough, and presented well enough, to move a divided council with conflicts of interest.",
     approaches: [
-      { title: "Act on the water now", summary: "Treat the water as the likely source: close or disable the public pump, warn customers of the downstream company, advise boiling; investigate in parallel." },
-      { title: "Investigate to decide", summary: "Rapidly collect case data by household, water source and onset date, compare rates, then act decisively on what the data show." },
-      { title: "Cover both explanations", summary: "Take low-cost measures against both bad air and bad water (clearing the sewer, closing the pump), while running a comparison that can tell them apart." },
+      {
+        title: "Act on the water now",
+        summary: "Disable the public pump, warn customers of the downstream company, advise boiling, investigate in parallel.",
+        strengths: "Low cost relative to lives at stake; acts on the strongest clue (the workhouse's own well).",
+        weaknesses: "Angers people who depend on the pump; a fall in cases afterwards is weak proof by itself.",
+        conditions: "Works if clean water can be supplied meanwhile.",
+      },
+      {
+        title: "Investigate to decide",
+        summary: "Collect cases by household, water source and onset date for a few days, compare rates, then act decisively.",
+        strengths: "Builds the evidence needed to persuade a divided council.",
+        weaknesses: "People may die while data is gathered unless no-cost precautions are taken at once.",
+        conditions: "Works if the investigation is fast and paired with immediate advice.",
+      },
+      {
+        title: "Cover both explanations",
+        summary: "Cheap measures against both bad air and bad water, staged so they also test which explanation is right.",
+        strengths: "Politically easier; can teach something if measures are staggered.",
+        weaknesses: "Spreads limited resources; simultaneous measures can confuse the evidence.",
+        conditions: "Works if measures are sequenced or targeted so their effects can be told apart.",
+      },
     ],
     misconceptions: [
       "Comparing raw numbers of cases between groups of different sizes instead of rates.",
@@ -78,13 +101,26 @@ Precaution under uncertainty: closing a suspected pump or advising boiling water
       "That nothing should be done until the cause is certain.",
       "That a fall in cases after closing a pump proves the pump was the cause (outbreaks may decline on their own).",
     ],
+    critical_reasoning: "A weak answer picks a cause and asserts it. A strong answer separates protective action now from the investigation, explains which evidence would distinguish the explanations (rates by water source, the workhouse with its own well, timing), deals with confounding and small numbers, and has a plan for persuading the council.",
+    evidence_expectations: "Use of the scenario's clues (clustering, the workhouse, two companies with different intakes); proposals to compare rates by water source; awareness of incubation and timing; reference to historical investigations such as John Snow's or to basic epidemiology.",
+    difficulty_guide: {"easy": "Sensible immediate actions and a clear first step for investigating the cause.", "moderate": "Weighs the competing explanations, proposes how to test them with the available evidence, and justifies acting before certainty.", "hard": "Designs an investigation that could distinguish the explanations and says what would change the writer's mind; handles confounding and small numbers; weighs the political and economic costs of acting early; answers the strongest objection."},
+    fairness_notes: "Naming John Snow is not required. A cautious plan that investigates first can score well if it limits harm in the meantime. Modern knowledge of cholera is acceptable; credit responses that also consider what was possible in the period.",
     evaluator_notes:
       "Do not require the user to name John Snow or to reach a specific answer. Strong responses separate immediate protective action from the investigation, explain how evidence would distinguish the explanations (comparison of rates by water source, attention to exceptions such as the workhouse, timing), deal with uncertainty and confounding, and handle the governance problem of persuading a divided council with conflicts of interest. Modern knowledge of cholera is acceptable; credit responses that also consider what could be done with the tools of the period. Penalise confident claims unsupported by the scenario (for example asserting the tannery is definitely innocent without evidence).",
     sources: [
-      { title: "John Snow, On the Mode of Communication of Cholera (2nd ed., 1855)", note: "The Broad Street map and the comparison of two water companies." },
-      { title: "World Health Organization, cholera fact sheet", note: "Modern summary of transmission, incubation and treatment." },
+      { title: "UCLA Department of Epidemiology, John Snow site: the Broad Street outbreak", note: "The nearby workhouse had its own well and few cases; brewery workers drank beer and had no deaths.", url: "https://epi-snow.ph.ucla.edu/Stream2_BSPoutbreak_c.html", verified: true, critical: true },
+      { title: "UCLA Department of Epidemiology, John Snow site: the 'Grand Experiment'", note: "Southwark & Vauxhall (intake below London's sewage) versus Lambeth (intake moved upstream in 1852): far higher cholera mortality among Southwark & Vauxhall customers.", url: "https://epi-snow.ph.ucla.edu/Stream3_GrandExperiment_d.html", verified: true, critical: true },
+      { title: "World Health Organization, cholera fact sheet No. 107", note: "Symptoms 12 hours to 5 days after infection (checked in the Chinese-language edition).", url: "https://www.who.int/mediacentre/factsheets/fs107/zh/", verified: true, critical: false },
+      { title: "John Snow, On the Mode of Communication of Cholera (2nd ed., 1855)", note: "The original account of both studies. Not checked directly.", verified: false, critical: false },
     ],
   },
+  quality: {
+    scores: {"intrigue": 5, "responsibility": 5, "research_depth": 5, "integration": 4, "reasoning": 5, "researchability": 5, "clarity": 5, "articulation": 5},
+    weaknesses: "Closely echoes the famous Broad Street case, so well-read users may recognise it; strong answers must still reason from the scenario's own evidence.",
+    recommendation: "approved",
+    assessed_by: "ai",
+  },
+  editorial_status: "approved",
   samples: [
     {
       display_name: "Sample",

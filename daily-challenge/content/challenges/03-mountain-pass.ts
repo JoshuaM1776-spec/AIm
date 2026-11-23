@@ -7,7 +7,9 @@ export const mountainPass: ChallengeSeed = {
   summary:
     "Two valleys divided by a mountain range need a railway between them. Choose how to cross the mountains, and defend the route you would build.",
   subjects: ["Engineering", "Geography", "Logistics"],
-  scenario_kind: "fictional",
+  challenge_type: "decide",
+  research_minutes: 45,
+  scenario_kind: "fictionalized_historical",
   scenario_note:
     "A fictional Alpine-style region in the 1870s. The valleys, company and figures are invented; the engineering choices are the real ones railway builders faced.",
   role: {
@@ -27,11 +29,11 @@ export const mountainPass: ChallengeSeed = {
       "Evaluate the routes against each other, address the major uncertainties (geology, weather, traffic forecasts), consider long-term operating costs and second-order effects on the region, and defend your choice against the strongest case for an alternative.",
   },
   cards: [
-    { kind: "role", image: { key: "survey", alt: "A surveyor's theodolite on a tripod beside rolled maps." } },
-    { kind: "situation", image: { key: "pass", alt: "A road zig-zagging up a steep mountainside to a high pass." } },
-    { kind: "constraints", image: { key: "avalanche", alt: "Snow-covered slopes above a narrow track, with an avalanche path cut through the forest." } },
-    { kind: "investigation", image: null },
-    { kind: "decision", image: { key: "pass", alt: "A road zig-zagging up a steep mountainside to a high pass." } },
+    { kind: "role", image: { key: "survey", alt: "A surveyor's theodolite on a tripod beside rolled maps." }, direction: "A surveyor's theodolite on a tripod with rolled maps, Alpine slopes behind." },
+    { kind: "situation", image: { key: "pass", alt: "A road zig-zagging up a steep mountainside to a high pass." }, direction: "A road zig-zagging up a steep mountainside to a high pass, with a mule train at the bottom." },
+    { kind: "constraints", image: { key: "avalanche", alt: "Snow-covered slopes above a narrow track, with an avalanche path cut through the forest." }, direction: "Snow-covered slopes with an avalanche path cut through pine forest, and a snow shed over a narrow track." },
+    { kind: "investigation", image: null, direction: "No picture: the questions are the content." },
+    { kind: "decision", image: { key: "pass", alt: "A road zig-zagging up a steep mountainside to a high pass." }, direction: "The pass road again, from further back." },
   ],
   constraints: [
     { label: "Steep gradients", detail: "Ordinary locomotives lose grip and power on steep slopes.", icon: "trending-up" },
@@ -43,36 +45,63 @@ export const mountainPass: ChallengeSeed = {
     {
       title: "Engineering",
       questions: [
-        "How steep can a railway be, and how have engineers gained height on mountain lines?",
-        "What makes long tunnels difficult, slow and dangerous to build?",
+        { text: "How steep can a railway be, and how have engineers gained height on mountain lines?", priority: "essential" },
+        { text: "What makes long tunnels difficult, slow and dangerous to build?", priority: "exploratory" },
       ],
     },
     {
       title: "Geography",
       questions: [
-        "How do snow, avalanches and spring floods affect each route?",
-        "What does each route mean for the towns and land along it?",
+        { text: "How do snow, avalanches and spring floods affect each route?", priority: "essential" },
+        { text: "What does each route mean for the towns and land along it?", priority: "exploratory" },
       ],
     },
     {
       title: "Logistics",
       questions: [
-        "How much traffic must the line carry, and how fast and how reliably?",
-        "How do construction time, building cost and running costs compare between the routes?",
+        { text: "How much traffic must the line carry, and how fast and how reliably?", priority: "essential" },
+        { text: "How do construction time, building cost and running costs compare between the routes?", priority: "exploratory" },
       ],
     },
   ],
   reference: {
-    background: `Gradient: conventional (adhesion) railways rely on friction between wheel and rail. Main lines are usually kept to gentle gradients (often under about 2.5%), and steep mountain main lines rarely exceed roughly 3-4%. Steeper climbs need rack (cog) railways, which are slow and carry limited loads, or cable systems.
-Gaining height: engineers lengthen the route to reduce the gradient, using curves along valley sides, horseshoe curves, spiral (helical) tunnels, and zig-zag switchbacks (which require trains to reverse, limiting speed and capacity). The Gotthard line in Switzerland (opened 1882) used spiral tunnels on its approaches.
-Summit vs base tunnels: a tunnel beneath a pass removes the highest, snowiest section. 19th-century examples include the Fréjus (Mont Cenis) tunnel, opened 1871, and the Gotthard tunnel, about 15 km, built 1872-1882 at great cost and with the deaths of many workers. Long tunnels faced unknown geology, water inflows, heat, ventilation problems and slow progress; the compressed-air rock drill and dynamite (1860s) sped construction. A lower, longer tunnel shortens the climb but costs more and takes longer.
+    background: `Gradient: conventional (adhesion) railways rely on friction between wheel and rail, so gradients must stay gentle: freight lines are preferably kept below about 1.5%, few standard-gauge main lines exceed about 4-6%, and the steepest adhesion railways reach around 11%. Steeper climbs need rack (cog) railways: the common Abt rack system was limited to about 25% in the 19th century, and the Pilatus railway reaches 48%. Rack lines are slow and carry limited loads.
+Gaining height: engineers lengthen the route to reduce the gradient, using curves along valley sides, horseshoe curves, spiral (helical) tunnels, and zig-zag switchbacks (which require trains to reverse, limiting speed and capacity). The Gotthard line in Switzerland uses spiral tunnels on its approach ramps.
+Summit vs base tunnels: a tunnel beneath a pass removes the highest, snowiest section. 19th-century examples include the Fréjus (Mont Cenis) tunnel, about 13.7 km, built 1857-1871, and the Gotthard tunnel, about 15 km, built 1872-1882 and then the world's longest rail tunnel; roughly 170-200 workers died building it. Long tunnels faced unknown geology, water inflows, heat, ventilation problems and slow progress; the compressed-air rock drill and dynamite (1860s) sped construction. A lower, longer tunnel shortens the climb but costs more and takes longer.
 Winter: lines over high passes face snow and avalanches; protections include snow sheds/galleries, avalanche barriers, and choosing routes on less exposed slopes, but closures can still occur. Rivers in gorges flood in spring snowmelt; lines need embankments, bridges and protection, and gorge routes can face rockfall.
 Economics: building cost vs running cost. A longer, flatter route can cost more to build but less to operate (lighter locomotives, heavier trains), while a short steep route may need extra locomotives (banking engines) on every train. Reliability through winter often matters as much as speed for freight. Phased approaches (e.g., a cheaper line first, improved later) and the risk of cost overruns on tunnels are real considerations.`,
+    core_knowledge: "Why adhesion railways need gentle gradients and how engineers gain height (loops, spirals, switchbacks, rack sections); what makes long tunnels slow, costly and dangerous; snow, avalanches and floods as threats to reliability; building cost versus operating cost; capacity and reliability as what makes a railway pay.",
+    uncertainties: "No one knows the rock inside the mountain, so tunnel cost and time are genuinely uncertain. Traffic forecasts are unknown. The scenario's distances are approximate.",
+    investigation_map: "Essential: realistic railway gradients and ways of gaining height; why long tunnels are hard; how winter affects each route. Exploratory: traffic and operating costs; effects on towns along each route. Engineering meets logistics because the cheapest line to build may be the costliest to run; geography constrains both.",
     approaches: [
-      { title: "Tunnel beneath the pass", summary: "Accept a long, costly build for a shorter, gentler, year-round line with high capacity." },
-      { title: "Gorge route", summary: "Avoid the mountain: longer but gentler and quicker to build, with flood and rockfall protection." },
-      { title: "Climb to the pass", summary: "Use loops, spirals or rack sections and snow sheds for a cheaper, faster-to-build line, accepting winter risk and lower capacity." },
-      { title: "Phased", summary: "Build the gorge or climbing line first to earn revenue, and plan a tunnel later if traffic justifies it." },
+      {
+        title: "Tunnel beneath the pass",
+        summary: "A long tunnel with gentle approaches, avoiding the highest, snowiest ground.",
+        strengths: "Year-round, gentle, high capacity; lowest running costs.",
+        weaknesses: "Very costly and slow to build; unknown geology; dangerous construction.",
+        conditions: "Works if investors accept a long wait and the risk of overruns.",
+      },
+      {
+        title: "Gorge route",
+        summary: "Follow the river around the range on gentle gradients, protected against floods and rockfall.",
+        strengths: "Quicker and more predictable to build; avoids snow and unknown rock.",
+        weaknesses: "Longer forever; spring floods and rockfall need defences.",
+        conditions: "Works if flood defences are affordable and the extra distance is acceptable for traffic.",
+      },
+      {
+        title: "Climb to the pass",
+        summary: "Loops, spirals or rack sections and snow sheds over the worst slopes.",
+        strengths: "Cheapest and fastest to open.",
+        weaknesses: "Steep, slow, lower capacity; winter disruption remains.",
+        conditions: "Works if traffic is modest and winter closures are tolerable.",
+      },
+      {
+        title: "Phased",
+        summary: "Open a gorge or climbing line first and tunnel later if traffic justifies it.",
+        strengths: "Earns revenue early and proves demand.",
+        weaknesses: "The tunnel may never be funded; some work is duplicated.",
+        conditions: "Works if profits are set aside for the later stage.",
+      },
     ],
     misconceptions: [
       "That trains can climb gradients similar to roads.",
@@ -80,13 +109,26 @@ Economics: building cost vs running cost. A longer, flatter route can cost more 
       "Comparing routes only by distance rather than by gradient, reliability and operating cost.",
       "That snow sheds or avalanche defences make a high route fully reliable.",
     ],
+    critical_reasoning: "A weak answer compares routes by distance alone or assumes trains can climb like roads. A strong answer reasons about gradient and its effect on loads and locomotives, winter reliability, construction time and risk, and the difference between building and running costs, and treats the tunnel's geology as real uncertainty.",
+    evidence_expectations: "Reference to real railway practice (ruling gradients, rack railways, spiral tunnels, snow sheds) and historical Alpine tunnels such as the Fréjus and Gotthard; reasoning about operating costs and seasonal closure.",
+    difficulty_guide: {"easy": "A route and method with a clear reason it fits the problem better than the alternatives.", "moderate": "Compares routes on gradient, cost, construction time and year-round reliability, and explains the trade-offs.", "hard": "Handles uncertainty about geology, weather and traffic; distinguishes building and operating cost; considers phasing and effects on the region; answers the strongest case for another route."},
+    fairness_notes: "Any of the routes can be well defended. Do not require exact historical figures. Correct clear physical errors, such as ordinary trains climbing 10% grades.",
     evaluator_notes:
       "Any of the routes can be defended. Credit responses that reason about gradient (and why it matters for rail), winter reliability, construction time and cost, and the traffic the line must serve. Strong hard-level responses treat the tunnel's geology as genuine uncertainty, distinguish building cost from operating cost, and consider phasing. Do not require exact historical figures; correct clear errors such as assuming ordinary trains can climb 10% grades.",
     sources: [
-      { title: "Histories of the Gotthard and Mont Cenis (Fréjus) railway tunnels", note: "Construction methods, timelines, costs and dangers." },
-      { title: "Introductory railway engineering texts on adhesion and ruling gradients", note: "Why railways need gentle slopes." },
+      { title: "List of steepest gradients on adhesion railways", note: "Freight lines preferably below 1.5%; steepest standard-gauge main-line inclines around 4-6%; steepest adhesion railways around 11%.", url: "https://en.wikipedia.org/wiki/List_of_steepest_gradients_on_adhesion_railways", verified: true, critical: true },
+      { title: "Pilatus Railway: technical details", note: "Steepest rack railway, 48%; the Abt rack system was limited to 25% at the time.", url: "https://pilatus.ch/en/discover/cogwheel-railway/technical-details", verified: true, critical: false },
+      { title: "Encyclopaedia Britannica: Saint Gotthard Tunnel", note: "Built 1872-1882, about 15 km; then the world's longest rail tunnel.", url: "https://www.britannica.com/place/Saint-Gotthard-Tunnel-railway-tunnel-Switzerland", verified: true, critical: false },
+      { title: "Encyclopaedia Britannica: Mount Cenis Tunnel", note: "Fréjus / Mont Cenis tunnel, about 13.7 km, built 1857-1871.", url: "https://www.britannica.com/topic/Mount-Cenis-Tunnel", verified: true, critical: false },
     ],
   },
+  quality: {
+    scores: {"intrigue": 4, "responsibility": 5, "research_depth": 5, "integration": 4, "reasoning": 5, "researchability": 5, "clarity": 5, "articulation": 4},
+    weaknesses: "Another infrastructure decision; the next challenges should vary the type of work. Answers can lean on engineering more than geography or logistics.",
+    recommendation: "approved",
+    assessed_by: "ai",
+  },
+  editorial_status: "approved",
   samples: [
     {
       display_name: "Sample",

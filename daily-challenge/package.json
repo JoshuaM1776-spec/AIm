@@ -15,7 +15,8 @@
     "db:reset": "node --experimental-strip-types scripts/db-reset.ts",
     "test": "vitest run",
     "test:db": "vitest run --config vitest.db.config.ts",
-    "test:e2e": "node --experimental-strip-types tests/e2e/journey.test.ts"
+    "test:e2e": "node --experimental-strip-types tests/e2e/journey.test.ts",
+    "standard:build": "node --experimental-strip-types scripts/build-standard.ts"
   },
   "engines": {
     "node": ">=22.18"

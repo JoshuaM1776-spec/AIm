@@ -23,3 +23,6 @@ otp_length = 6
 
 [functions.evaluate]
 verify_jwt = true
+
+[functions.generate]
+verify_jwt = true

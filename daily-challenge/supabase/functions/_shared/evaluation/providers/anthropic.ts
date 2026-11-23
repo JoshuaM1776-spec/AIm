@@ -3,7 +3,7 @@
 //   import Anthropic from "npm:@anthropic-ai/sdk@1.12.0";   // Deno (the Edge Function)
 //   import Anthropic from "@anthropic-ai/sdk";              // Node (the dev server)
 //   anthropicProvider(new Anthropic(), Anthropic, { model: "claude-opus-5-5" })
-import type { EvalProvider, ProviderRequest, ProviderResult } from "../types.ts";
+import type { EvalProvider, ProviderRequest, ProviderResult, RunOptions } from "../types.ts";
 
 // deno-lint-ignore no-explicit-any
 type ErrorClass = abstract new (...args: any[]) => Error;
@@ -26,11 +26,14 @@ interface BetaMessage {
   content: { type: string; text?: string }[];
   usage?: Usage;
 }
+type RequestOptions = { signal?: AbortSignal; maxRetries?: number; timeout?: number };
 export interface AnthropicLike {
   beta: {
     messages: {
       // deno-lint-ignore no-explicit-any
-      create(params: any, options?: { signal?: AbortSignal; maxRetries?: number; timeout?: number }): PromiseLike<BetaMessage>;
+      create(params: any, options?: RequestOptions): PromiseLike<BetaMessage>;
+      // deno-lint-ignore no-explicit-any
+      stream?(params: any, options?: RequestOptions): { finalMessage(): PromiseLike<BetaMessage> };
     };
   };
 }
@@ -56,18 +59,22 @@ export function anthropicProvider(client: AnthropicLike, sdk: AnthropicErrorClas
   return {
     name: "anthropic",
     model: opts.model,
-    async evaluate(req: ProviderRequest, signal: AbortSignal): Promise<ProviderResult> {
+    async run(req: ProviderRequest, signal: AbortSignal, run: RunOptions = {}): Promise<ProviderResult> {
       try {
-        const msg = await client.beta.messages.create({
+        const params = {
           model: opts.model,
-          max_tokens: opts.maxTokens ?? 16000,
+          max_tokens: run.maxTokens ?? opts.maxTokens ?? 16000,
           // If the model declines for policy reasons, the API retries on a fallback model.
           betas: ["server-side-fallback-2026-07-01"],
           fallbacks: "default",
-          output_config: { effort: opts.effort ?? "medium", format: { type: "json_schema", schema: req.schema } },
+          output_config: { effort: run.effort ?? opts.effort ?? "medium", format: { type: "json_schema", schema: req.schema } },
           system: req.system,
           messages: [{ role: "user", content: req.prompt }],
-        }, { signal, maxRetries: 1 });
+        };
+        // Long answers stream, so the HTTP request doesn't time out while the model writes.
+        const msg = run.stream && client.beta.messages.stream
+          ? await client.beta.messages.stream(params, { signal, maxRetries: 1 }).finalMessage()
+          : await client.beta.messages.create(params, { signal, maxRetries: 1 });
         const used = tokens(msg.usage);
         if (msg.stop_reason === "refusal") return { ok: false, code: "refusal", model: msg.model };
         if (msg.stop_reason === "max_tokens") return { ok: false, code: "invalid_output", model: msg.model, detail: "cut off at max_tokens" };

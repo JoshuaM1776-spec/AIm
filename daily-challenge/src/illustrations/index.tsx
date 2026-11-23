@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import type { ImageRef } from "../lib/types.ts";
+import { Plate } from "./Plate.tsx";
 import { PowerStation, Pylons, WindCoast } from "./energy.tsx";
 import { Avalanche, Pass, Survey } from "./mountain.tsx";
 import { Ledger, Pump, StreetMap } from "./outbreak.tsx";
@@ -28,8 +29,8 @@ export const ILLUSTRATIONS: Record<string, { scene: Scene; name: string }> = {
   pylons: { scene: Pylons, name: "Transmission pylons" },
 };
 
-/** A challenge picture: a built-in illustration, an image URL, or a quiet placeholder. */
-export function Illustration({ image, className = "" }: { image: ImageRef | null | undefined; className?: string }) {
+/** A challenge picture: a built-in illustration, an image URL, or (with fallback) a quiet plate. */
+export function Illustration({ image, className = "", fallback = false }: { image: ImageRef | null | undefined; className?: string; fallback?: boolean }) {
   if (image?.key && ILLUSTRATIONS[image.key]) {
     const Scene = ILLUSTRATIONS[image.key].scene;
     return <div className={className}><Scene label={image.alt} /></div>;
@@ -40,6 +41,20 @@ export function Illustration({ image, className = "" }: { image: ImageRef | null
         <img src={image.src} alt={image.alt} className="h-full w-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
         {image.credit && <figcaption className="sr-only">{image.credit}</figcaption>}
       </figure>
+    );
+  }
+  if (fallback) {
+    return (
+      <div className={className} aria-hidden>
+        <Plate sky="paper" label="">
+          {() => (
+            <g transform="translate(168 98)" opacity="0.55">
+              <path d="M32 33c-6.6-3.2-8.4-9.4-5.2-15.3 1.5-2.8 3.7-5 4.3-8.7 2.9 2.6 4 5.6 3.4 8.6 1.4-.8 2.3-2.2 2.6-3.9 3.6 4.4 4.8 10.6 1.4 15.4-1.5 2.1-3.7 3.4-6.5 3.9Z" fill="#8a5d33" />
+              <path d="M31 38.5C24.8 34.6 15.6 33.4 6 35v14.2c9.6-1.6 18.8-.4 25 3.5V38.5ZM33 38.5c6.2-3.9 15.4-5.1 25-3.5v14.2c-9.6-1.6-18.8-.4-25 3.5V38.5Z" fill="#8a5d33" />
+            </g>
+          )}
+        </Plate>
+      </div>
     );
   }
   return null;

@@ -4,7 +4,7 @@ import { Link, Navigate } from "react-router";
 import { constraintIcon } from "../components/icons.tsx";
 import { ButtonLink, Page, TopBar } from "../components/ui.tsx";
 import { useChallenge } from "../lib/challenge.tsx";
-import { DIFFICULTY_LABEL, LENGTH_GUIDE, SCENARIO_LABEL } from "../lib/text.ts";
+import { DIFFICULTY_LABEL, LENGTH_GUIDE, researchTime, SCENARIO_LABEL, TASK_HEADING } from "../lib/text.ts";
 import type { Challenge, Difficulty } from "../lib/types.ts";
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -53,7 +53,7 @@ export function BriefContent({ c, difficulty }: { c: Challenge; difficulty: Diff
         </div>
         <p className="mt-2 text-xs text-muted">Optional starting points. Pursue whatever lines of inquiry you find most useful.</p>
       </Section>
-      <Section title="Your decision">
+      <Section title={TASK_HEADING[c.challenge_type] ?? "Your decision"}>
         <p>{c.final_task}</p>
       </Section>
       <Section title={`Difficulty: ${DIFFICULTY_LABEL[difficulty]}`}>
@@ -75,6 +75,7 @@ export default function Brief() {
         <p className="eyebrow">Day {c.number}</p>
         <h1 className="text-[2.2rem] leading-tight">{c.title}</h1>
         <p className="mt-1 text-sm text-muted">{c.subjects.join(" · ")}</p>
+        {c.research_minutes ? <p className="text-xs text-muted">Allow {researchTime(c.research_minutes)} to investigate. It&rsquo;s an estimate, not a limit.</p> : null}
       </header>
 
       <div className="mt-5 rounded-2xl border border-line bg-bronze-wash/50 px-4 py-4">

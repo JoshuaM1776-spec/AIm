@@ -5,7 +5,7 @@ import { constraintIcon } from "../components/icons.tsx";
 import { Button, NextCircle, Page, Segments, TopBar } from "../components/ui.tsx";
 import { Illustration } from "../illustrations/index.tsx";
 import { useChallenge } from "../lib/challenge.tsx";
-import { DIFFICULTY_LABEL, LENGTH_GUIDE } from "../lib/text.ts";
+import { DIFFICULTY_LABEL, LENGTH_GUIDE, TASK_HEADING } from "../lib/text.ts";
 import type { CardKind, Challenge, Difficulty } from "../lib/types.ts";
 
 const ORDER: CardKind[] = ["role", "situation", "constraints", "investigation", "decision"];
@@ -91,7 +91,7 @@ export function StoryCard({ c, index, difficulty, action }: { c: Challenge; inde
       return (
         <article className="flex flex-1 flex-col">
           <p className="eyebrow text-center">The task</p>
-          <h1 className="mt-1 text-center text-[2.1rem] leading-tight">Your Decision</h1>
+          <h1 className="mt-1 text-center text-[2.1rem] leading-tight">{TASK_HEADING[c.challenge_type] ?? "Your Decision"}</h1>
           <p className="mt-3 text-[1.05rem] leading-relaxed text-ink-soft">{c.final_task}</p>
           <div className="mt-4 rounded-2xl border border-line bg-card/70 px-4 py-3 text-[0.95rem]">
             <p className="eyebrow">{DIFFICULTY_LABEL[difficulty]}</p>
