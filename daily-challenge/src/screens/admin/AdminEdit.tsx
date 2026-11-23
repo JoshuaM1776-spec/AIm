@@ -11,7 +11,7 @@ import type { AdminResponse, CardKind, ChallengeAdmin, Difficulty, ImageRef } fr
 const KINDS: CardKind[] = ["role", "situation", "constraints", "investigation", "decision"];
 const CARD_LABEL: Record<CardKind, string> = { role: "1 · Your Role", situation: "2 · The Situation", constraints: "3 · The Constraints", investigation: "4 · Your Investigation", decision: "5 · Your Decision" };
 
-type Doc = Omit<ChallengeAdmin, "id" | "status" | "release_date" | "reference" | "cards"> & {
+type Doc = Omit<ChallengeAdmin, "id" | "status" | "release_date" | "reference" | "cards" | "is_open" | "closes_at"> & {
   id?: string;
   cards: { kind: CardKind; image: ImageRef | null }[];
   reference: NonNullable<ChallengeAdmin["reference"]>;

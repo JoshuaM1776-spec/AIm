@@ -19,6 +19,10 @@ export interface Challenge {
   expectations: Record<Difficulty, string>;
   status: "draft" | "published" | "archived";
   release_date: string | null;
+  /** The one open challenge: the only one that can be started, written and submitted. */
+  is_open: boolean;
+  /** When the open challenge closes (00:00 UTC on the next release); null if nothing is scheduled yet. */
+  closes_at: string | null;
   cards: { position: number; kind: CardKind; image: ImageRef | null }[];
   constraints: { label: string; detail: string; icon: string }[];
   investigation: { title: string; questions: string[] }[];
@@ -73,7 +77,7 @@ export interface Attempt {
   id: string;
   challenge_id: string;
   difficulty: Difficulty;
-  status: "active" | "submitted" | "abandoned";
+  status: "active" | "submitted" | "expired";
   card_position: number;
   briefing_done: boolean;
   started_at: string;
@@ -86,7 +90,7 @@ export interface Attempt {
 
 export interface Today {
   today: string;
-  next_reset: string;
+  closes_at: string | null;
   challenge: Challenge | null;
   is_new_today: boolean;
 }
@@ -94,7 +98,6 @@ export interface Today {
 export interface MyState {
   today: string;
   profile: { id: string; display_name: string | null; preferred_difficulty: Difficulty; is_admin: boolean };
-  active: { attempt_id: string; number: number; title: string; difficulty: Difficulty; release_date: string | null } | null;
   attempts: Record<string, { status: Attempt["status"]; has_evaluation: boolean }>;
 }
 
@@ -137,7 +140,10 @@ export interface LibraryItem {
   title: string;
   subjects: string[];
   difficulty: Difficulty;
-  submitted_at: string;
+  submitted_at: string | null;
+  release_date: string | null;
+  /** A draft on a challenge that closed before it was submitted. */
+  unfinished: boolean;
   initial: { overall: number | null; status: EvaluationRecord["status"] | null } | null;
   revision: { overall: number | null; status: EvaluationRecord["status"] | null } | null;
   shared: boolean;

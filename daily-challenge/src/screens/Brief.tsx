@@ -66,7 +66,7 @@ export function BriefContent({ c, difficulty }: { c: Challenge; difficulty: Diff
 
 export default function Brief() {
   const { challenge: c, work } = useChallenge();
-  if (work.status === "none" || work.status === "abandoned") return <Navigate to={`/c/${c.number}`} replace />;
+  if (work.status === "none") return <Navigate to={`/c/${c.number}`} replace />;
   const draft = work.attempt?.drafts.initial?.body ?? work.guestAttempt?.draft ?? "";
   return (
     <Page>
@@ -92,6 +92,8 @@ export default function Brief() {
 
       {work.status === "submitted" ? (
         <ButtonLink to={`/c/${c.number}/evaluation`} size="lg" arrow className="mt-4 w-full">Your Evaluation</ButtonLink>
+      ) : work.status === "expired" ? (
+        <ButtonLink to={`/c/${c.number}/write`} variant="secondary" className="mt-4 w-full">Read your unfinished draft</ButtonLink>
       ) : (
         <ButtonLink to={`/c/${c.number}/write`} size="lg" arrow className="mt-4 w-full">{draft.trim() ? "Continue Writing" : "Write Your Response"}</ButtonLink>
       )}

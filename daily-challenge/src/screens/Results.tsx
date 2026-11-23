@@ -119,7 +119,7 @@ export default function Results() {
           <div className="mt-6 flex flex-col gap-3">
             {work.status === "submitted"
               ? <ButtonLink to={`/c/${c.number}/community`} variant="secondary">Read &amp; learn from others</ButtonLink>
-              : <ButtonLink to={`/c/${c.number}`} arrow>Take on this challenge</ButtonLink>}
+              : <ButtonLink to={c.is_open ? `/c/${c.number}` : "/"} arrow>{c.is_open ? "Take on this challenge" : "Today\u2019s challenge"}</ButtonLink>}
           </div>
         </div>
       )}

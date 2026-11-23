@@ -278,10 +278,12 @@ export default function Evaluation() {
           </Notice>
 
           <div className="mt-6 flex flex-col gap-3">
-            {showing?.kind === "initial" && !revision && (
-              <ButtonLink to={`/c/${c.number}/revise`} variant="primary" size="lg" arrow>Revise Your Response</ButtonLink>
+            {showing?.kind === "initial" && !revision && c.is_open && (
+              <>
+                <ButtonLink to={`/c/${c.number}/revise`} variant="primary" size="lg" arrow>Revise Your Response</ButtonLink>
+                <p className="-mt-1 text-center text-xs text-muted">Optional. You can revise once, while the challenge is open; both versions are kept.</p>
+              </>
             )}
-            {showing?.kind === "initial" && !revision && <p className="-mt-1 text-center text-xs text-muted">Optional. You can revise once; both versions are kept.</p>}
             <ButtonLink to={`/c/${c.number}/community`} variant="secondary" className="w-full"><Users size={18} /> See how others approached it</ButtonLink>
             <ButtonLink to={`/c/${c.number}/results`} variant="secondary" className="w-full"><Globe size={18} /> Global results</ButtonLink>
           </div>

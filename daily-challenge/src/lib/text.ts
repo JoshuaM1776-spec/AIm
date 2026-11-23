@@ -28,6 +28,15 @@ export function formatDate(iso: string | null | undefined, opts: Intl.DateTimeFo
   return d.toLocaleDateString(undefined, { timeZone: "UTC", ...opts });
 }
 
+/** "Open until 00:00 UTC (in 5h 12m)", or until the next challenge when none is scheduled yet. */
+export function openUntil(closesAt: string | null) {
+  if (!closesAt) return "Open until the next challenge is released";
+  if (Date.parse(closesAt) - Date.now() > 24 * 3_600_000) {
+    return `Open until 00:00 UTC on ${formatDate(closesAt, { weekday: "short", day: "numeric", month: "short" })}`;
+  }
+  return `Open until 00:00 UTC (in ${timeUntil(closesAt)})`;
+}
+
 export function timeUntil(iso: string) {
   const ms = Date.parse(iso) - Date.now();
   if (ms <= 0) return "soon";

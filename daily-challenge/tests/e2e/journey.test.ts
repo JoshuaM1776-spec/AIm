@@ -307,23 +307,36 @@ async function run() {
       await a.waitForURL(/\/c\/1\/evaluation$/);
     });
 
-    await check("tomorrow brings a new challenge, and unfinished work never blocks it", async () => {
+    await check("one challenge at a time: the next day's replaces today's, and unfinished drafts are kept read-only", async () => {
       await setToday(addDays(today(), 1));
       await b.goto(BASE);
       await b.getByRole("heading", { name: "The Outbreak" }).waitFor();
       await startChallenge(b, 2);
+      await b.goto(`${BASE}/c/2/write`);
+      await b.getByLabel("Your response").fill("A first thought about the pump and the workhouse.");
+      await b.getByText("Saved", { exact: true }).waitFor();
       await setToday(addDays(today(), 2));
       await b.goto(BASE);
       await b.getByRole("heading", { name: "The Mountain Pass" }).waitFor();
-      await b.getByText(/You have an unfinished challenge/).waitFor();
-      await shot(b, "home-unfinished");
-      await b.getByRole("link", { name: /Begin Today/ }).click();
-      await b.getByRole("button", { name: "Begin Challenge" }).click();
-      await b.getByRole("dialog", { name: "You have an unfinished challenge" }).waitFor();
-      await shot(b, "abandon-confirm");
-      await b.getByRole("button", { name: /Set it aside and begin Day 3/ }).click();
-      await b.waitForURL(/\/c\/3\/story\/1$/);
+      assert.equal(await b.getByText(/unfinished/i).count(), 0, "nothing to catch up on");
+      await shot(b, "home-next-day");
+      // yesterday's challenge has closed; its draft is kept to reread, not to submit
+      await b.goto(`${BASE}/c/2`);
+      await b.getByText("This challenge has closed").waitFor();
+      await shot(b, "closed");
+      await b.getByRole("link", { name: "Read your draft" }).click();
+      await b.getByText("A first thought about the pump and the workhouse.").waitFor();
+      assert.equal(await b.getByRole("button", { name: "Submit for Review" }).count(), 0);
+      await b.goto(`${BASE}/library`);
+      await b.getByText("Unfinished, draft kept").waitFor();
+      // today's challenge starts straight away
+      await startChallenge(b, 3);
       await b.getByRole("heading", { name: "The Chief Engineer" }).waitFor();
+      // someone who didn't take part can't open an earlier challenge
+      const visitor = await browser.newPage();
+      await visitor.goto(`${BASE}/c/1`);
+      await visitor.getByText(/That challenge (is not|isn't) available/).waitFor();
+      await visitor.close();
     });
 
     await check("a failed evaluation is reported honestly and can be retried", async () => {

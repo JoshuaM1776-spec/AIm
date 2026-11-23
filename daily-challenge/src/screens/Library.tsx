@@ -34,12 +34,12 @@ export default function Library() {
             const rev = item.revision?.overall;
             return (
               <li key={item.number}>
-                <Link to={`/c/${item.number}/evaluation`} className="flex items-center gap-4 rounded-2xl border border-line bg-card/80 px-4 py-3 transition hover:border-bronze-soft">
+                <Link to={`/c/${item.number}/${item.unfinished ? "write" : "evaluation"}`} className="flex items-center gap-4 rounded-2xl border border-line bg-card/80 px-4 py-3 transition hover:border-bronze-soft">
                   <div className="min-w-0 flex-1">
                     <p className="eyebrow">Day {item.number}</p>
                     <p className="font-serif text-[1.25rem] leading-snug text-ink">{item.title}</p>
                     <p className="mt-0.5 text-xs text-muted">
-                      {formatDate(item.submitted_at)} · {DIFFICULTY_LABEL[item.difficulty]}
+                      {formatDate(item.submitted_at ?? item.release_date)} · {DIFFICULTY_LABEL[item.difficulty]}
                       {item.revision ? " · Revised" : ""}
                       {item.shared && <> · <Share2 size={11} className="inline" aria-hidden /> Shared</>}
                     </p>
@@ -51,7 +51,7 @@ export default function Library() {
                         {rev != null && <p className="text-xs text-muted">from {first}</p>}
                       </>
                     ) : (
-                      <p className="text-xs text-muted">{item.initial?.status === "failed" ? "Not evaluated" : "Awaiting evaluation"}</p>
+                      <p className="text-xs text-muted">{item.unfinished ? "Unfinished, draft kept" : item.initial?.status === "failed" ? "Not evaluated" : "Awaiting evaluation"}</p>
                     )}
                   </div>
                   <ChevronRight size={18} className="text-muted" aria-hidden />

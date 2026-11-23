@@ -2,7 +2,7 @@
 
 One thought-provoking challenge every day, shared by everyone.
 
-Each day at 00:00 UTC everyone receives the same problem: a role, a situation and real constraints. People investigate on their own, write a recommendation and defend it, get specific AI feedback on their understanding, reasoning, clarity and organization, revise once if they like, and then see how others approached the same problem.
+Each day at 00:00 UTC everyone receives the same problem: a role, a situation and real constraints. There is one challenge at a time. People investigate on their own, write a recommendation and defend it, get specific AI feedback on their understanding, reasoning, clarity and organization, revise once if they like, and then see how others approached the same problem.
 
 This folder is a complete, separate web app (React, TypeScript, Tailwind CSS, Supabase). It doesn't share code with the Aim extension in the rest of this repository.
 
@@ -79,17 +79,19 @@ npm run dev:local     # the app on http://localhost:5173, a local stand-in for S
 - **The AI key lives only in the Edge Function.** Evaluation requests need a signed-in user, are rate-limited per user (8 an hour and 24 a day by default; failed calls count too), and are idempotent: one evaluation per submission. A finished evaluation is never regenerated, and a running one isn't duplicated.
 - **Submissions are idempotent.** The app sends a key with each submission, kept across refreshes, so a double tap or a retry after a dropped connection returns the same submission.
 - **User text is rendered as plain text** (React escapes it), never as HTML.
+- **One open challenge, enforced on the server.** Starting, saving and submitting check that the challenge is the open one, so a closed challenge can't be written to even by calling the API directly.
 - **Private by default.** Responses are shared only when the person chooses, under a name they choose, and can be unshared. Scores and feedback are never shared. Other people's responses open only after you've submitted your own.
 - **No invented numbers.** Global results show real counts. The average and distribution appear only once 10 people have a first evaluation. Sample responses are labelled as samples and never counted.
 - **Honest failures.** If the AI fails, times out, refuses, or returns output that doesn't validate, the person is told, their response stays saved, and they can retry. No fallback feedback is ever made up.
 
 ### Product rules, as built
 
-- The day changes at 00:00 UTC. Today's challenge is the most recent published challenge whose release date has arrived. Earlier challenges stay open.
-- One active challenge at a time. Starting another asks first; setting one aside keeps its writing, doesn't count as complete, and it can be picked back up later. There's no backlog to catch up on.
+- **One global challenge at a time.** The open challenge is the most recent published challenge whose release date has arrived: normally the one released today. It closes at 00:00 UTC when the next one is released. If nothing is scheduled for a day, the current challenge simply stays open until something is.
+- Only the open challenge can be started, written, submitted or revised. There's no backlog and nothing to catch up on.
+- When a challenge closes, unfinished drafts are kept and can be reread (from the Library), but not submitted. Anything submitted in time keeps its evaluation, which can still finish or be retried after the close. People who took part can always reread their work and feedback, the community responses and the results. Earlier challenges aren't visible to anyone who didn't take part.
 - Difficulty (Easy, Moderate, Hard) is chosen before starting and can change until you submit. Everyone gets the same scenario; difficulty changes what the response is expected to do and how it's judged. Suggested lengths are guides: 150–300, 250–500, 400–800 words. There's no hard upper limit below 30,000 characters; at least 40 words are needed to submit.
 - The overall score is the equal-weight average of the four categories, computed on the server.
-- One optional revision, after the first evaluation. Both versions and both evaluations are kept, with the change in score shown.
+- One optional revision, after the first evaluation and while the challenge is open. Both versions and both evaluations are kept, with the change in score shown.
 - A streak counts consecutive UTC days on which you submitted a first response. Missing today doesn't break it until the day is over. It's shown quietly, with no reminders or penalties.
 
 ### The evaluator
@@ -108,7 +110,7 @@ The five seed challenges (The Water Decision, The Outbreak, The Mountain Pass, T
 
 ```sh
 npm test            # evaluator: validation, prompt, handler (auth, limits, timeouts, invalid output), Claude provider error mapping
-npm run test:db     # schema and rules against a throwaway Postgres database: privacy and RLS, daily visibility, one active challenge,
+npm run test:db     # schema and rules against a throwaway Postgres database: privacy and RLS, one open challenge and closing at 00:00 UTC,
                     # idempotent submission, evaluation claims and rate limits, revision, community gating and reports,
                     # results thresholds, streaks, admin scheduling and publishing
 npm run test:e2e    # the whole journey in Chromium on iPhone 13 and Pixel 7 sizes, with the test evaluator, checking for console errors

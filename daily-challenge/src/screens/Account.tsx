@@ -201,7 +201,7 @@ export function About() {
       <ScreenTitle title="How It Works" />
       <ol className="mt-6 space-y-4 text-[1.02rem]">
         {[
-          ["Encounter a problem", "Each day at 00:00 UTC, everyone receives the same challenge: a role, a situation and real constraints."],
+          ["Encounter a problem", "Each day at 00:00 UTC, everyone receives the same challenge: a role, a situation and real constraints. It's open for that day; then the next one begins. Your past work and feedback stay with you."],
           ["Investigate independently", "The app gives you starting points, not answers. Research however you like, away from the app."],
           ["Decide and explain", "Write your recommendation and defend it with reasoning and evidence, at the difficulty you choose."],
           ["Get constructive feedback", "An AI evaluates understanding, reasoning, clarity and organization, and suggests how to grow. You can revise once."],

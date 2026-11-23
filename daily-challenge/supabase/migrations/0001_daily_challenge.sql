@@ -9,6 +9,9 @@
 -- * Challenge reference material (what the evaluator is told) is readable only by admins and by
 --   the evaluation function (service_role). It never reaches the browser of an ordinary user.
 -- * Functions named eval_* are for the evaluation Edge Function only (service_role).
+-- * One global challenge at a time: only the open challenge (see _current_challenge) can be
+--   started, written, submitted or revised. Earlier challenges stay readable to the people who
+--   took part, and evaluations of work submitted in time can always finish.
 
 -- ---------------------------------------------------------------------------------------------
 -- Time. Everyone shares one calendar: the day changes at 00:00 UTC.
@@ -120,13 +123,14 @@ create table public.attempts (
   user_id uuid not null references auth.users (id) on delete cascade,
   challenge_id uuid not null references public.challenges (id) on delete cascade,
   difficulty text not null check (difficulty in ('easy', 'moderate', 'hard')),
-  -- active: being worked on (at most one per user); submitted: sent for review; abandoned: set aside
-  status text not null default 'active' check (status in ('active', 'submitted', 'abandoned')),
+  -- active: being worked on (only ever on the open challenge); submitted: sent for review;
+  -- expired: the challenge closed before it was submitted (the draft is kept, read-only)
+  status text not null default 'active' check (status in ('active', 'submitted', 'expired')),
   card_position smallint not null default 1 check (card_position between 1 and 5),
   briefing_done boolean not null default false,
   started_at timestamptz not null default now(),
   submitted_at timestamptz,
-  abandoned_at timestamptz,
+  expired_at timestamptz,
   updated_at timestamptz not null default now(),
   unique (user_id, challenge_id)
 );
@@ -328,12 +332,31 @@ $$;
 create or replace function public._release_date(cid uuid) returns date
 language sql stable as $$ select release_date from public.challenge_schedule where challenge_id = cid $$;
 
--- Ordinary users see a challenge once it is published and its release date has arrived.
-create or replace function public._is_visible(cid uuid) returns boolean
+-- One global challenge at a time. The open challenge is the most recent published challenge
+-- released on or before today (UTC): normally the one released today. It stays open until the
+-- next one is released, so a day with nothing scheduled never leaves people without a challenge.
+create or replace function public._current_challenge() returns uuid
 language sql stable as $$
-  select exists (select 1 from public.challenges c join public.challenge_schedule s on s.challenge_id = c.id
-                 where c.id = cid and c.status = 'published' and s.release_date <= public.app_today())
+  select s.challenge_id from public.challenge_schedule s join public.challenges c on c.id = s.challenge_id
+   where c.status = 'published' and s.release_date <= public.app_today()
+   order by s.release_date desc limit 1
 $$;
+
+-- When the open challenge closes: 00:00 UTC on the next scheduled release (null if none is scheduled yet).
+create or replace function public._closes_at() returns timestamptz
+language sql stable as $$
+  select min(s.release_date)::timestamp at time zone 'utc'
+    from public.challenge_schedule s join public.challenges c on c.id = s.challenge_id
+   where c.status = 'published' and s.release_date > public.app_today()
+$$;
+
+create or replace function public._require_open(cid uuid) returns void
+language plpgsql stable as $$
+begin
+  if cid is distinct from public._current_challenge() then
+    perform public._fail('challenge_closed', 'This challenge has closed. Each challenge is open on its own day, until 00:00 UTC.');
+  end if;
+end $$;
 
 -- The public content of a challenge, as the app shows it. Never includes reference material.
 create or replace function public._challenge_json(cid uuid) returns jsonb
@@ -344,6 +367,8 @@ language sql stable as $$
     'role', jsonb_build_object('title', c.role_title, 'body', c.role_body),
     'situation', c.situation, 'final_task', c.final_task, 'expectations', c.expectations,
     'status', c.status, 'release_date', public._release_date(c.id),
+    'is_open', c.id = public._current_challenge(),
+    'closes_at', case when c.id = public._current_challenge() then public._closes_at() end,
     'cards', coalesce((select jsonb_agg(jsonb_build_object('position', k.position, 'kind', k.kind, 'image', k.image) order by k.position)
                         from public.challenge_cards k where k.challenge_id = c.id), '[]'),
     'constraints', coalesce((select jsonb_agg(jsonb_build_object('label', x.label, 'detail', x.detail, 'icon', x.icon) order by x.position)
@@ -361,8 +386,9 @@ language plpgsql stable as $$
 declare cid uuid;
 begin
   select id into cid from public.challenges where number = p_number;
-  -- also open to anyone who already worked on it, so past work stays readable if a challenge is retired
-  if cid is null or not (public._is_visible(cid) or public.is_admin()
+  -- Anyone can see the open challenge. Earlier challenges stay readable only to the people who
+  -- took part in them (their work, feedback, community and results), and to admins.
+  if cid is null or not (cid = public._current_challenge() or public.is_admin()
                          or exists (select 1 from public.attempts where challenge_id = cid and user_id = auth.uid())) then
     perform public._fail('challenge_not_found', 'That challenge is not available.');
   end if;
@@ -373,7 +399,9 @@ end $$;
 create or replace function public._attempt_json(aid uuid) returns jsonb
 language sql stable as $$
   select jsonb_build_object(
-    'id', a.id, 'challenge_id', a.challenge_id, 'difficulty', a.difficulty, 'status', a.status,
+    'id', a.id, 'challenge_id', a.challenge_id, 'difficulty', a.difficulty,
+    -- unfinished work on a challenge that has closed reads as expired, whether or not it has been marked yet
+    'status', case when a.status = 'active' and a.challenge_id is distinct from public._current_challenge() then 'expired' else a.status end,
     'card_position', a.card_position, 'briefing_done', a.briefing_done,
     'started_at', a.started_at, 'submitted_at', a.submitted_at, 'updated_at', a.updated_at,
     'drafts', coalesce((select jsonb_object_agg(d.kind, jsonb_build_object('body', d.body, 'updated_at', d.updated_at))
@@ -407,20 +435,16 @@ end $$;
 -- Reading challenges
 -- ---------------------------------------------------------------------------------------------
 
--- Today's challenge: the most recent published challenge released on or before today (UTC).
+-- Today's challenge: the one open challenge, the same for everyone.
 create or replace function public.get_today() returns jsonb
 language plpgsql stable security definer set search_path = public, pg_temp as $$
-declare cid uuid; d date;
+declare cid uuid := public._current_challenge();
 begin
-  select s.challenge_id, s.release_date into cid, d
-    from public.challenge_schedule s join public.challenges c on c.id = s.challenge_id
-   where c.status = 'published' and s.release_date <= public.app_today()
-   order by s.release_date desc limit 1;
   return jsonb_build_object(
     'today', public.app_today(),
-    'next_reset', ((public.app_today() + 1)::timestamp at time zone 'utc'),
     'challenge', case when cid is null then null else public._challenge_json(cid) end,
-    'is_new_today', d = public.app_today()
+    'closes_at', public._closes_at(),
+    'is_new_today', public._release_date(cid) = public.app_today()
   );
 end $$;
 
@@ -435,7 +459,7 @@ end $$;
 -- ---------------------------------------------------------------------------------------------
 create or replace function public.my_state() returns jsonb
 language plpgsql security definer set search_path = public, pg_temp as $$
-declare u uuid := public._uid(); p public.profiles; act record;
+declare u uuid := public._uid(); p public.profiles; cur uuid := public._current_challenge();
 begin
   select * into p from public.profiles where id = u;
   if p.id is null then
@@ -443,16 +467,12 @@ begin
     insert into public.profiles (id) values (u) on conflict (id) do nothing;
     select * into p from public.profiles where id = u;
   end if;
-  select a.id, a.status, a.difficulty, c.number, c.title, public._release_date(c.id) as release_date
-    into act from public.attempts a join public.challenges c on c.id = a.challenge_id
-   where a.user_id = u and a.status = 'active';
   return jsonb_build_object(
     'today', public.app_today(),
     'profile', jsonb_build_object('id', p.id, 'display_name', p.display_name,
                  'preferred_difficulty', p.preferred_difficulty, 'is_admin', p.is_admin),
-    'active', case when act.id is null then null else jsonb_build_object('attempt_id', act.id, 'number', act.number,
-                 'title', act.title, 'difficulty', act.difficulty, 'release_date', act.release_date) end,
-    'attempts', coalesce((select jsonb_object_agg(c.number::text, jsonb_build_object('status', a.status,
+    'attempts', coalesce((select jsonb_object_agg(c.number::text, jsonb_build_object(
+                   'status', case when a.status = 'active' and a.challenge_id is distinct from cur then 'expired' else a.status end,
                    'has_evaluation', exists (select 1 from public.submissions s join public.evaluations e on e.submission_id = s.id
                                              where s.attempt_id = a.id and e.status = 'complete')))
                  from public.attempts a join public.challenges c on c.id = a.challenge_id where a.user_id = u), '{}')
@@ -481,33 +501,24 @@ end $$;
 -- Attempts and drafts
 -- ---------------------------------------------------------------------------------------------
 
--- Start (or resume) the current user's attempt at a challenge. Only one attempt can be active:
--- if another is active, this fails with 'active_exists' unless p_abandon_active is true.
-create or replace function public.start_attempt(p_number integer, p_difficulty text, p_abandon_active boolean default false)
+-- Start (or resume) the current user's attempt at the open challenge. Only the open challenge can
+-- be started. Unfinished work on an earlier challenge is marked expired (its draft is kept).
+create or replace function public.start_attempt(p_number integer, p_difficulty text)
 returns jsonb language plpgsql security definer set search_path = public, pg_temp as $$
-declare u uuid := public._uid(); cid uuid; a public.attempts; other record;
+declare u uuid := public._uid(); cid uuid; a public.attempts;
 begin
   if p_difficulty not in ('easy', 'moderate', 'hard') then perform public._fail('invalid_difficulty'); end if;
   cid := public._challenge_by_number(p_number);
+  perform public._require_open(cid);
   -- serialise this user's attempt changes
   perform 1 from public.profiles where id = u for update;
+  update public.attempts set status = 'expired', expired_at = now(), updated_at = now()
+   where user_id = u and status = 'active' and challenge_id <> cid;
   select * into a from public.attempts where user_id = u and challenge_id = cid for update;
-  if a.id is not null and a.status in ('active', 'submitted') then
-    return public._attempt_json(a.id);
-  end if;
-  select at.id, c.number, c.title into other
-    from public.attempts at join public.challenges c on c.id = at.challenge_id
-   where at.user_id = u and at.status = 'active' and at.challenge_id <> cid;
-  if other.id is not null then
-    if not p_abandon_active then
-      perform public._fail('active_exists', jsonb_build_object('number', other.number, 'title', other.title)::text);
-    end if;
-    update public.attempts set status = 'abandoned', abandoned_at = now(), updated_at = now() where id = other.id;
-  end if;
   if a.id is not null then
-    -- picking an abandoned attempt back up keeps its draft
-    update public.attempts set status = 'active', abandoned_at = null, difficulty = p_difficulty, updated_at = now()
-     where id = a.id;
+    if a.status = 'expired' then -- only if an admin re-opened a closed challenge
+      update public.attempts set status = 'active', expired_at = null, updated_at = now() where id = a.id;
+    end if;
     return public._attempt_json(a.id);
   end if;
   insert into public.attempts (user_id, challenge_id, difficulty) values (u, cid, p_difficulty) returning * into a;
@@ -533,7 +544,9 @@ begin
   if p_card_position is not null and p_card_position not between 1 and 5 then perform public._fail('invalid_position'); end if;
   if p_difficulty is not null then
     if p_difficulty not in ('easy', 'moderate', 'hard') then perform public._fail('invalid_difficulty'); end if;
-    if a.status <> 'active' then perform public._fail('difficulty_locked', 'Difficulty is fixed once you submit.'); end if;
+    if a.status <> 'active' or a.challenge_id is distinct from public._current_challenge() then
+      perform public._fail('difficulty_locked', 'Difficulty is fixed once you submit.');
+    end if;
   end if;
   update public.attempts set
     card_position = coalesce(p_card_position, card_position),
@@ -541,15 +554,6 @@ begin
     difficulty = coalesce(p_difficulty, difficulty),
     updated_at = now()
   where id = a.id;
-  return public._attempt_json(a.id);
-end $$;
-
-create or replace function public.abandon_attempt(p_attempt uuid) returns jsonb
-language plpgsql security definer set search_path = public, pg_temp as $$
-declare a public.attempts := public._own_attempt(p_attempt);
-begin
-  if a.status <> 'active' then perform public._fail('not_active', 'Only an unfinished challenge can be set aside.'); end if;
-  update public.attempts set status = 'abandoned', abandoned_at = now(), updated_at = now() where id = a.id;
   return public._attempt_json(a.id);
 end $$;
 
@@ -565,7 +569,7 @@ begin
   if p_kind = 'revision' and exists (select 1 from public.submissions where attempt_id = a.id and kind = 'revision') then
     perform public._fail('already_submitted', 'Your revision has already been submitted.');
   end if;
-  if a.status = 'abandoned' then perform public._fail('not_active', 'Pick this challenge back up to keep writing.'); end if;
+  perform public._require_open(a.challenge_id);
   insert into public.drafts (attempt_id, kind, user_id, body, updated_at) values (a.id, p_kind, a.user_id, b, now())
   on conflict (attempt_id, kind) do update set body = excluded.body, updated_at = excluded.updated_at
   returning updated_at into t;
@@ -593,8 +597,10 @@ begin
   wc := public._word_count(b);
   if wc < 40 then perform public._fail('too_short', 'Write at least 40 words so there is enough to evaluate.'); end if;
   if char_length(b) > 30000 then perform public._fail('too_long', 'Responses can be up to 30,000 characters.'); end if;
+  -- the response and its one revision are both written while the challenge is open
+  perform public._require_open(a.challenge_id);
   if p_kind = 'initial' then
-    if a.status <> 'active' then perform public._fail('not_active', 'Pick this challenge back up before submitting.'); end if;
+    if a.status <> 'active' then perform public._fail('not_active'); end if;
   else
     select e.status into init_eval from public.submissions s2 join public.evaluations e on e.submission_id = s2.id
      where s2.attempt_id = a.id and s2.kind = 'initial';
@@ -764,14 +770,15 @@ begin
   );
 end $$;
 
+-- Everything you've submitted, plus unfinished drafts on challenges that have closed (kept, read-only).
 create or replace function public.my_library() returns jsonb
 language plpgsql stable security definer set search_path = public, pg_temp as $$
-declare u uuid := public._uid();
+declare u uuid := public._uid(); cur uuid := public._current_challenge();
 begin
   return coalesce((select jsonb_agg(x.j order by x.t desc) from (
-    select a.submitted_at as t, jsonb_build_object(
+    select coalesce(a.submitted_at, a.updated_at) as t, jsonb_build_object(
       'number', c.number, 'title', c.title, 'subjects', to_jsonb(c.subjects), 'difficulty', a.difficulty,
-      'submitted_at', a.submitted_at,
+      'submitted_at', a.submitted_at, 'unfinished', a.status <> 'submitted', 'release_date', public._release_date(c.id),
       'initial', (select jsonb_build_object('overall', e.overall, 'status', e.status) from public.submissions s
                     left join public.evaluations e on e.submission_id = s.id where s.attempt_id = a.id and s.kind = 'initial'),
       'revision', (select jsonb_build_object('overall', e.overall, 'status', e.status) from public.submissions s
@@ -779,7 +786,8 @@ begin
       'shared', exists (select 1 from public.community_responses r where r.user_id = u and r.challenge_id = a.challenge_id)
     ) as j
     from public.attempts a join public.challenges c on c.id = a.challenge_id
-   where a.user_id = u and a.status = 'submitted') x), '[]');
+   where a.user_id = u and (a.status = 'submitted'
+         or (a.challenge_id is distinct from cur and exists (select 1 from public.drafts d where d.attempt_id = a.id and btrim(d.body) <> '')))) x), '[]');
 end $$;
 
 -- ---------------------------------------------------------------------------------------------
@@ -1052,8 +1060,8 @@ revoke execute on all functions in schema public from public, anon, authenticate
 grant execute on function public.app_today(), public.is_admin(), public.get_today(), public.get_challenge(integer),
   public.challenge_stats(integer) to anon, authenticated;
 grant execute on function public.my_state(), public.update_profile(text, text),
-  public.start_attempt(integer, text, boolean), public.get_attempt(integer),
-  public.update_attempt(uuid, integer, boolean, text), public.abandon_attempt(uuid),
+  public.start_attempt(integer, text), public.get_attempt(integer),
+  public.update_attempt(uuid, integer, boolean, text),
   public.save_draft(uuid, text, text), public.submit_response(uuid, text, text, uuid),
   public.publish_response(uuid, text, text), public.unpublish_response(uuid),
   public.list_community(integer, text, integer, integer), public.report_response(uuid, text, text),

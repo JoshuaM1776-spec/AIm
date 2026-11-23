@@ -170,7 +170,7 @@ export default function Story() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index]);
   if (!Number.isInteger(index) || index < 1 || index > 5) return <Navigate to={`/c/${c.number}/story/1`} replace />;
-  if (work.status === "none" || work.status === "abandoned") return <Navigate to={`/c/${c.number}`} replace />;
+  if (work.status === "none") return <Navigate to={`/c/${c.number}`} replace />;
   const begin = async () => {
     setBusy(true);
     try {
@@ -184,6 +184,8 @@ export default function Story() {
     <StoryFrame c={c} index={index} difficulty={work.difficulty ?? "moderate"} base={`/c/${c.number}/story`} back={`/c/${c.number}`}
       action={work.status === "submitted"
         ? <Button size="lg" className="w-full" arrow onClick={() => navigate(`/c/${c.number}/evaluation`)}>Back to Your Evaluation</Button>
-        : <Button size="lg" className="w-full" arrow busy={busy} onClick={begin}>Begin Investigation</Button>} />
+        : work.status === "expired"
+          ? <Button size="lg" variant="secondary" className="w-full" onClick={() => navigate(`/c/${c.number}/write`)}>Read your unfinished draft</Button>
+          : <Button size="lg" className="w-full" arrow busy={busy} onClick={begin}>Begin Investigation</Button>} />
   );
 }

@@ -12,7 +12,7 @@ const err = async (p: Promise<unknown>) => {
 };
 
 async function submitted(user: string, number = 1, body = essay()) {
-  const a = await db.call(user, "start_attempt", { p_number: number, p_difficulty: "moderate", p_abandon_active: true });
+  const a = await db.call(user, "start_attempt", { p_number: number, p_difficulty: "moderate" });
   return db.call(user, "submit_response", { p_attempt: a.id, p_kind: "initial", p_body: body, p_key: randomUUID() });
 }
 
@@ -42,11 +42,24 @@ describe("today's challenge", () => {
     expect(t).not.toContain("Frontinus");
   });
 
-  it("changes at the UTC day boundary, and earlier challenges stay available", async () => {
+  it("changes at the UTC day boundary: one open challenge, earlier ones closed", async () => {
     const tomorrow = addDays(today(), 1);
-    expect((await db.call(null, "get_today", {}, tomorrow)).challenge.number).toBe(2);
-    expect(await err(db.call(null, "get_challenge", { p_number: 2 }))).toBe("challenge_not_found");
-    expect((await db.call(null, "get_challenge", { p_number: 1 }, tomorrow)).number).toBe(1);
+    const t = await db.call(null, "get_today", {}, tomorrow);
+    expect(t.challenge.number).toBe(2);
+    expect(t.challenge.is_open).toBe(true);
+    expect(t.closes_at).toBe(`${addDays(today(), 2)}T00:00:00+00:00`);
+    expect(await err(db.call(null, "get_challenge", { p_number: 2 }))).toBe("challenge_not_found"); // not yet
+    expect(await err(db.call(null, "get_challenge", { p_number: 1 }, tomorrow))).toBe("challenge_not_found"); // closed
+    const u = await db.user();
+    expect(await err(db.call(u, "start_attempt", { p_number: 1, p_difficulty: "easy" }, tomorrow))).toBe("challenge_not_found");
+  });
+
+  it("stays open until the next challenge is released", async () => {
+    const last = addDays(today(), 4); // Day 5 is the last scheduled
+    const t = await db.call(null, "get_today", {}, addDays(last, 3));
+    expect(t.challenge.number).toBe(5);
+    expect(t.challenge.is_open).toBe(true);
+    expect(t.closes_at).toBeNull();
   });
 
   it("keeps a draft (unpublished) challenge hidden even on its date", async () => {
@@ -74,7 +87,7 @@ describe("privacy", () => {
     expect(await db.as(b, "select * from drafts")).toEqual([]);
     expect(await db.as(b, "select * from attempts")).toEqual([]);
     expect(await err(db.call(b, "save_draft", { p_attempt: att.id, p_kind: "initial", p_body: "overwrite" }))).toBe("attempt_not_found");
-    expect(await err(db.call(b, "abandon_attempt", { p_attempt: att.id }))).toBe("attempt_not_found");
+    expect(await err(db.call(b, "update_attempt", { p_attempt: att.id, p_card_position: 2 }))).toBe("attempt_not_found");
   });
 
   it("doesn't let browsers write tables directly or call the evaluation functions", async () => {
@@ -88,29 +101,43 @@ describe("privacy", () => {
 });
 
 describe("attempts", () => {
-  it("allows only one active challenge, and asks before setting one aside", async () => {
+  it("closes unfinished work when its challenge closes, keeping the draft readable", async () => {
     const u = await db.user();
-    const first = await db.call(u, "start_attempt", { p_number: 1, p_difficulty: "hard" });
-    expect(first.status).toBe("active");
-    expect((await db.call(u, "start_attempt", { p_number: 1, p_difficulty: "easy" })).id).toBe(first.id); // resumes
+    const a = await db.call(u, "start_attempt", { p_number: 1, p_difficulty: "hard" });
+    expect(a.status).toBe("active");
+    expect((await db.call(u, "start_attempt", { p_number: 1, p_difficulty: "easy" })).id).toBe(a.id); // resumes
+    await db.call(u, "save_draft", { p_attempt: a.id, p_kind: "initial", p_body: "Half an idea" });
     const tomorrow = addDays(today(), 1);
-    const msg = await err(db.call(u, "start_attempt", { p_number: 2, p_difficulty: "easy" }, tomorrow));
-    expect(msg).toBe("active_exists");
-    const second = await db.call(u, "start_attempt", { p_number: 2, p_difficulty: "easy", p_abandon_active: true }, tomorrow);
-    expect(second.status).toBe("active");
-    const rows = await db.as(u, "select status from attempts order by started_at");
-    expect(rows.map(r => r.status)).toEqual(["abandoned", "active"]);
+    // the next day: nothing more can be written or submitted on Day 1, but the draft is kept
+    expect(await err(db.call(u, "save_draft", { p_attempt: a.id, p_kind: "initial", p_body: "more" }, tomorrow))).toBe("challenge_closed");
+    expect(await err(db.call(u, "submit_response", { p_attempt: a.id, p_kind: "initial", p_body: essay(), p_key: randomUUID() }, tomorrow))).toBe("challenge_closed");
+    const old = await db.call(u, "get_attempt", { p_number: 1 }, tomorrow);
+    expect(old.status).toBe("expired");
+    expect(old.drafts.initial.body).toBe("Half an idea");
+    expect((await db.call(u, "get_challenge", { p_number: 1 }, tomorrow)).is_open).toBe(false); // still readable to them
+    expect((await db.call(u, "my_state", {}, tomorrow)).attempts["1"].status).toBe("expired");
+    // starting the new challenge needs no confirmation, and marks the old attempt expired
+    const next = await db.call(u, "start_attempt", { p_number: 2, p_difficulty: "easy" }, tomorrow);
+    expect(next.status).toBe("active");
+    expect((await db.as(u, "select status from attempts order by started_at")).map(r => r.status)).toEqual(["expired", "active"]);
+    const lib = await db.call(u, "my_library", {}, tomorrow);
+    expect(lib).toHaveLength(1);
+    expect(lib[0]).toMatchObject({ number: 1, unfinished: true });
   });
 
-  it("keeps the draft of an abandoned attempt if it is picked back up", async () => {
+  it("finishes evaluations of work submitted in time, but closes revisions with the challenge", async () => {
     const u = await db.user();
-    const a = await db.call(u, "start_attempt", { p_number: 1, p_difficulty: "easy" });
-    await db.call(u, "save_draft", { p_attempt: a.id, p_kind: "initial", p_body: "Half an idea" });
-    await db.call(u, "abandon_attempt", { p_attempt: a.id });
-    const back = await db.call(u, "start_attempt", { p_number: 1, p_difficulty: "moderate" });
-    expect(back.id).toBe(a.id);
-    expect(back.status).toBe("active");
-    expect(back.drafts.initial.body).toBe("Half an idea");
+    const att = await submitted(u);
+    const tomorrow = addDays(today(), 1);
+    const claim = (await db.sql("select public.eval_claim($1, $2) as r", [u, att.submissions[0].id]))[0].r;
+    expect(claim.state).toBe("claimed");
+    await db.sql("select public.eval_complete($1, $2, $3, 'test', 'm')", [claim.evaluation_id,
+      JSON.stringify({ understanding: 70, reasoning: 70, clarity: 70, organization: 70 }), JSON.stringify({ summary: "x" })]);
+    expect(await err(db.call(u, "submit_response", { p_attempt: att.id, p_kind: "revision", p_body: essay(), p_key: randomUUID() }, tomorrow))).toBe("challenge_closed");
+    const later = await db.call(u, "get_attempt", { p_number: 1 }, tomorrow);
+    expect(later.status).toBe("submitted");
+    expect(later.submissions[0].evaluation.overall).toBe(70);
+    expect((await db.call(u, "list_community", { p_number: 1 }, tomorrow)).items.length).toBeGreaterThan(0); // participants keep reading
   });
 
   it("remembers the story position", async () => {
@@ -251,7 +278,7 @@ describe("global results", () => {
     for (let i = 0; i < 10; i++) {
       const u = await db.user();
       users.push(u);
-      const a = await db.call(u, "start_attempt", { p_number: 3, p_difficulty: "moderate", p_abandon_active: true }, d3);
+      const a = await db.call(u, "start_attempt", { p_number: 3, p_difficulty: "moderate" }, d3);
       const s = await db.call(u, "submit_response", { p_attempt: a.id, p_kind: "initial", p_body: essay(), p_key: randomUUID() }, d3);
       if (i < 9) await evaluate(u, s.submissions[0].id, { understanding: 60 + i, reasoning: 60 + i, clarity: 60 + i, organization: 60 + i });
     }

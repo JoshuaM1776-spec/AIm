@@ -115,8 +115,8 @@ export default function Community() {
           <Lock className="mx-auto text-bronze" size={26} strokeWidth={1.5} aria-hidden />
           <p className="mt-2 font-serif text-xl text-ink">Form your own view first</p>
           <p className="mt-1 text-sm">Others&rsquo; responses open once you&rsquo;ve submitted yours, so everyone&rsquo;s first thinking is their own.</p>
-          <ButtonLink to={work.status === "active" ? `/c/${c.number}/continue` : `/c/${c.number}`} className="mt-4 w-full" arrow>
-            {work.status === "active" ? "Continue the challenge" : "Take on the challenge"}
+          <ButtonLink to={!c.is_open ? "/" : work.status === "active" ? `/c/${c.number}/continue` : `/c/${c.number}`} className="mt-4 w-full" arrow>
+            {!c.is_open ? "Today\u2019s challenge" : work.status === "active" ? "Continue the challenge" : "Take on the challenge"}
           </ButtonLink>
         </Card>
       ) : (

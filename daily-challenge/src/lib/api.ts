@@ -29,7 +29,8 @@ const MESSAGES: Record<string, string> = {
   already_submitted: "This response has already been submitted.",
   too_short: "Write at least 40 words so there's enough to evaluate.",
   too_long: "Responses can be up to 30,000 characters.",
-  not_active: "Pick this challenge back up to keep working on it.",
+  not_active: "This challenge can't be changed now.",
+  challenge_closed: "This challenge has closed. Each challenge is open on its own day, until 00:00 UTC.",
   revision_not_ready: "You can revise once your first evaluation is ready.",
   submit_first: "Submit your own response to see how others approached this challenge.",
   invalid_display_name: "Use 2 to 40 letters, numbers, spaces, dots, dashes or apostrophes.",
@@ -68,11 +69,10 @@ export const api = {
     rpc<MyState["profile"]>("update_profile", { p_display_name: displayName, p_preferred_difficulty: difficulty }),
 
   attempt: (number: number) => rpc<Attempt | null>("get_attempt", { p_number: number }),
-  startAttempt: (number: number, difficulty: Difficulty, abandonActive = false) =>
-    rpc<Attempt>("start_attempt", { p_number: number, p_difficulty: difficulty, p_abandon_active: abandonActive }),
+  startAttempt: (number: number, difficulty: Difficulty) =>
+    rpc<Attempt>("start_attempt", { p_number: number, p_difficulty: difficulty }),
   updateAttempt: (id: string, patch: { card_position?: number; briefing_done?: boolean; difficulty?: Difficulty }) =>
     rpc<Attempt>("update_attempt", { p_attempt: id, p_card_position: patch.card_position ?? null, p_briefing_done: patch.briefing_done ?? null, p_difficulty: patch.difficulty ?? null }),
-  abandonAttempt: (id: string) => rpc<Attempt>("abandon_attempt", { p_attempt: id }),
   saveDraft: (id: string, kind: "initial" | "revision", body: string) =>
     rpc<{ updated_at: string; word_count: number }>("save_draft", { p_attempt: id, p_kind: kind, p_body: body }),
   submit: (id: string, kind: "initial" | "revision", body: string, key: string) =>

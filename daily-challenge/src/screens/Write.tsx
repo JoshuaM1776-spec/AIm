@@ -1,14 +1,14 @@
-import { Check, ChevronDown, CloudOff, FileText, Loader, PenLine } from "lucide-react";
+import { Check, ChevronDown, CloudOff, FileText, Loader, Lock, PenLine } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router";
 import { Button, ButtonLink, Dialog, ErrorNote, Notice, Page, TopBar } from "../components/ui.tsx";
 import { ApiError } from "../lib/api.ts";
 import { useChallenge } from "../lib/challenge.tsx";
 import { backup, readLocal, removeLocal, writeLocal } from "../lib/local.ts";
-import { DIFFICULTY_LABEL, LENGTH_GUIDE, MIN_WORDS, newKey, wordCount } from "../lib/text.ts";
+import { DIFFICULTY_LABEL, LENGTH_GUIDE, MIN_WORDS, newKey, openUntil, wordCount } from "../lib/text.ts";
 import { BriefContent } from "./Brief.tsx";
 
-type SaveState = "idle" | "saving" | "saved" | "local" | "error";
+type SaveState = "idle" | "saving" | "saved" | "local" | "error" | "closed";
 
 const STRONG = [
   "States a clear recommendation or solution.",
@@ -25,6 +25,7 @@ function SaveStatus({ state, mode }: { state: SaveState; mode: "guest" | "accoun
     saved: [<Check key="i" size={14} />, mode === "guest" ? "Saved on this device" : "Saved"],
     local: [<CloudOff key="i" size={14} />, "Saved on this device. Will sync when you're back online."],
     error: [<CloudOff key="i" size={14} />, "Couldn't save to your account. A copy is kept on this device."],
+    closed: [<Lock key="i" size={14} />, "This challenge has closed. Your writing is kept on this device."],
   };
   const [icon, text] = map[state];
   return <span className="inline-flex items-center gap-1.5" role="status" aria-live="polite">{icon}{text}</span>;
@@ -70,7 +71,7 @@ export default function Write({ kind = "initial" }: { kind?: "initial" | "revisi
       await saveDraft(kind, body);
       setSave("saved");
     } catch (e) {
-      setSave(e instanceof ApiError && e.code === "network" ? "local" : "error");
+      setSave(e instanceof ApiError && e.code === "network" ? "local" : e instanceof ApiError && e.code === "challenge_closed" ? "closed" : "error");
       if (pending.current === null) pending.current = body; // retry with the next change or on leaving
     }
   }, [saveDraft, kind]);
@@ -99,9 +100,29 @@ export default function Write({ kind = "initial" }: { kind?: "initial" | "revisi
   const difficulty = work.difficulty ?? "moderate";
   const guide = LENGTH_GUIDE[difficulty];
 
-  if (work.status === "none" || work.status === "abandoned") return <Navigate to={`/c/${c.number}`} replace />;
+  if (work.status === "none") return <Navigate to={`/c/${c.number}`} replace />;
   if (kind === "initial" && work.status === "submitted") return <Navigate to={`/c/${c.number}/evaluation`} replace />;
-  if (kind === "revision" && (revisionSub || initialSub?.evaluation?.status !== "complete")) return <Navigate to={`/c/${c.number}/evaluation`} replace />;
+  if (kind === "revision" && (revisionSub || initialSub?.evaluation?.status !== "complete" || !c.is_open)) return <Navigate to={`/c/${c.number}/evaluation`} replace />;
+
+  // The challenge closed before this was submitted: the draft is kept, read-only.
+  if (work.status === "expired") {
+    return (
+      <Page>
+        <TopBar back={`/c/${c.number}`} center={<span className="eyebrow">Unfinished draft</span>} />
+        <h1 className="text-center text-[2rem] leading-tight">{c.title}</h1>
+        <p className="text-center text-sm text-muted">Day {c.number} · {DIFFICULTY_LABEL[difficulty]}</p>
+        <Notice className="mt-5 flex gap-2">
+          <Lock size={16} className="mt-0.5 shrink-0 text-bronze" aria-hidden />
+          <span>This challenge closed before your response was submitted. Your draft is kept here to reread; it can&rsquo;t be submitted now.</span>
+        </Notice>
+        <article className="mt-4 rounded-2xl border border-line bg-card/80 px-4 py-4 text-[1.02rem] leading-relaxed" aria-label="Your draft">
+          {text.trim() ? text.split(/\n\s*\n/).map((p, i) => <p key={i} className="prose-response mt-3 first:mt-0">{p}</p>)
+            : <p className="text-muted">This draft is empty.</p>}
+        </article>
+        <ButtonLink to="/" className="mt-5 w-full" arrow>Today&rsquo;s challenge</ButtonLink>
+      </Page>
+    );
+  }
 
   const onChange = (v: string) => {
     setText(v);
@@ -182,6 +203,7 @@ export default function Write({ kind = "initial" }: { kind?: "initial" | "revisi
           <span aria-live="polite">{words} {words === 1 ? "word" : "words"} · suggested {guide.min}–{guide.max}</span>
         </div>
       </div>
+      <p className="mt-2 text-center text-xs text-muted">{openUntil(c.closes_at)}. {kind === "revision" ? "Your revision" : "Your response"} must be submitted while the challenge is open.</p>
 
       {work.mode === "guest" && (
         <Notice className="mt-3">Your writing is saved on this device. Sign in to submit it for evaluation; it moves to your account.</Notice>

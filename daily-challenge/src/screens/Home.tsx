@@ -7,7 +7,7 @@ import { Illustration } from "../illustrations/index.tsx";
 import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth.tsx";
 import { guest } from "../lib/local.ts";
-import { SCENARIO_LABEL, timeUntil } from "../lib/text.ts";
+import { openUntil, SCENARIO_LABEL } from "../lib/text.ts";
 import type { Challenge } from "../lib/types.ts";
 import { useLoad } from "../lib/useLoad.ts";
 
@@ -19,7 +19,7 @@ function usePrimaryAction(c: Challenge | null) {
   const base = `/c/${c.number}`;
   if (session) {
     const s = me?.attempts[String(c.number)];
-    if (!s || s.status === "abandoned") return { label: s ? "Return to Today's Challenge" : "Begin Today's Challenge", to: base };
+    if (!s) return { label: "Begin Today's Challenge", to: base };
     if (s.status === "active") return { label: "Continue Challenge", to: `${base}/continue` };
     if (!s.has_evaluation) return { label: "View Your Evaluation", to: `${base}/evaluation` };
     return { label: "Explore Today's Results", to: `${base}/results` };
@@ -53,7 +53,7 @@ export function ChallengePreview({ c, compact = false, kindLabel = true }: { c: 
 }
 
 export default function Home() {
-  const { session, me } = useAuth();
+  const { session } = useAuth();
   const today = useLoad(() => api.today(), []);
   const c = today.data?.challenge ?? null;
   const action = usePrimaryAction(c);
@@ -62,7 +62,6 @@ export default function Home() {
     const t = window.setInterval(() => tick(n => n + 1), 60_000);
     return () => window.clearInterval(t);
   }, []);
-  const unfinished = me?.active && c && me.active.number !== c.number ? me.active : null;
 
   return (
     <Page>
@@ -92,21 +91,10 @@ export default function Home() {
         {c && action && (
           <>
             <ChallengePreview c={c} />
-            {unfinished && (
-              <Card className="mt-5 px-4 py-3 text-sm">
-                <p className="text-ink">
-                  You have an unfinished challenge: <strong className="font-semibold">Day {unfinished.number}, {unfinished.title}</strong>.
-                </p>
-                <p className="mt-1 text-muted">There&rsquo;s no need to catch up. Pick it back up, or start today&rsquo;s and set it aside.</p>
-                <Link to={`/c/${unfinished.number}/continue`} className="mt-2 inline-block font-semibold text-bronze underline underline-offset-2">
-                  Continue Day {unfinished.number}
-                </Link>
-              </Card>
-            )}
             <ButtonLink to={action.to} size="lg" arrow className="mt-6 w-full">{action.label}</ButtonLink>
             {today.data && (
               <p className="mt-3 text-center text-xs text-muted">
-                A new challenge in {timeUntil(today.data.next_reset)} (00:00 UTC).
+                {openUntil(today.data.closes_at)}{today.data.closes_at ? ", when the next challenge begins." : "."}
               </p>
             )}
           </>
