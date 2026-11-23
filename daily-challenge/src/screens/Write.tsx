@@ -4,7 +4,7 @@ import { Navigate, useNavigate } from "react-router";
 import { Button, ButtonLink, Dialog, ErrorNote, Notice, Page, TopBar } from "../components/ui.tsx";
 import { ApiError } from "../lib/api.ts";
 import { useChallenge } from "../lib/challenge.tsx";
-import { backup, readLocal, removeLocal, writeLocal } from "../lib/local.ts";
+import { backup, guest, readLocal, removeLocal, writeLocal } from "../lib/local.ts";
 import { DIFFICULTY_LABEL, LENGTH_GUIDE, MIN_WORDS, newKey, openUntil, wordCount } from "../lib/text.ts";
 import { BriefContent } from "./Brief.tsx";
 
@@ -39,13 +39,19 @@ export default function Write({ kind = "initial" }: { kind?: "initial" | "revisi
   const initialSub = attempt?.submissions.find(s => s.kind === "initial");
   const revisionSub = attempt?.submissions.find(s => s.kind === "revision");
 
-  // Start from whichever is newer: the server's draft or this device's copy.
+  // Start from the newest copy: the server's draft, this device's backup, or a draft written
+  // before signing in that hasn't finished moving to the account yet.
   const startText = useMemo(() => {
     if (work.mode === "guest" || !attempt) return work.guestAttempt?.draft ?? "";
+    const copies: { body: string; at: number }[] = [];
     const server = attempt.drafts[kind];
+    if (server) copies.push({ body: server.body, at: Date.parse(server.updated_at) });
     const local = backup.get(scope, kind);
-    if (local && (!server || Date.parse(local.saved_at) > Date.parse(server.updated_at))) return local.body;
-    if (server) return server.body;
+    if (local) copies.push({ body: local.body, at: Date.parse(local.saved_at) });
+    const device = kind === "initial" ? guest.get(c.number) : null;
+    if (device) copies.push({ body: device.draft, at: Date.parse(device.draft_saved_at ?? device.started_at) });
+    const newest = copies.filter(x => x.body.trim()).sort((x, y) => y.at - x.at)[0];
+    if (newest) return newest.body;
     return kind === "revision" ? initialSub?.body ?? "" : "";
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attempt?.id, kind]);

@@ -44,6 +44,25 @@ export function useChallenge() {
   return v;
 }
 
+/** Moves a visitor's device draft into their account's attempt, then forgets the device copy. */
+async function moveGuestWork(attempt: Attempt, number: number): Promise<Attempt> {
+  const g = guest.get(number);
+  if (!g) return attempt;
+  let a = attempt;
+  if (a.status === "active") {
+    if (g.draft.trim() && !(a.drafts.initial?.body ?? "").trim()) await api.saveDraft(a.id, "initial", g.draft);
+    a = await api.updateAttempt(a.id, { card_position: Math.max(a.card_position, g.card_position), briefing_done: g.briefing_done });
+    // anything typed on the device while this was happening
+    const latest = guest.get(number);
+    if (latest && latest.draft !== g.draft && latest.draft.trim()) {
+      await api.saveDraft(a.id, "initial", latest.draft);
+      a = (await api.attempt(number)) ?? a;
+    }
+  }
+  guest.clear(number); // only once the account has it (or already has its own submitted work)
+  return a;
+}
+
 export function ChallengeLayout() {
   const { number: raw } = useParams();
   const number = Number(raw);
@@ -89,13 +108,8 @@ export function ChallengeLayout() {
     migrating.current = true;
     (async () => {
       try {
-        let a = attempt ?? await api.startAttempt(number, g.difficulty);
-        if (a.status === "active") {
-          if (g.draft.trim() && !(a.drafts.initial?.body ?? "").trim()) await api.saveDraft(a.id, "initial", g.draft);
-          a = await api.updateAttempt(a.id, { card_position: Math.max(a.card_position, g.card_position), briefing_done: g.briefing_done });
-        }
+        const a = await moveGuestWork(attempt ?? await api.startAttempt(number, g.difficulty), number);
         setAttemptState(a);
-        guest.clear(number);
         setGuestAttempt(null);
         void refreshMe();
       } catch {
@@ -141,11 +155,8 @@ export function ChallengeLayout() {
         return;
       }
       let a = await api.startAttempt(number, difficulty);
-      const g = guest.get(number);
-      if (g && a.status === "active") {
-        if (g.draft.trim() && !(a.drafts.initial?.body ?? "").trim()) await api.saveDraft(a.id, "initial", g.draft);
-        a = await api.updateAttempt(a.id, { card_position: Math.max(a.card_position, g.card_position), briefing_done: g.briefing_done });
-        guest.clear(number);
+      if (guest.get(number)) {
+        a = await moveGuestWork(a, number);
         setGuestAttempt(null);
       }
       if (a.status === "active" && a.difficulty !== difficulty) a = await api.updateAttempt(a.id, { difficulty });
