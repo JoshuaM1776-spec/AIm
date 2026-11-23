@@ -1,0 +1,25 @@
+# Supabase CLI configuration for Daily Challenge (used by `supabase start` / `supabase db push`).
+project_id = "daily-challenge"
+
+[api]
+port = 54321
+
+[db]
+port = 54322
+major_version = 16
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[auth]
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173"]
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false
+otp_length = 6
+
+[functions.evaluate]
+verify_jwt = true

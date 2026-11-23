@@ -4,6 +4,8 @@ Use YouTube on purpose without blocking what's useful. Your search becomes your 
 
 Chrome extension, Manifest V3, no build step.
 
+> **Daily Challenge**, a separate web app (one shared challenge a day, written responses, AI feedback), lives in [`daily-challenge/`](daily-challenge/README.md).
+
 ## Load it
 
 `chrome://extensions` → Developer mode → **Load unpacked** → this folder. Nothing to set up: Aim Free uses no AI, needs no account or key, and talks to no server. Everything stays in your browser.
