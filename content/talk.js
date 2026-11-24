@@ -427,10 +427,10 @@ async function maybeOfferTalk(card) {
   if (!(await send({ type: "plus-brief" }))?.plus) return;
   if (!(await send({ type: "talk-offer", aimId: p.id }))?.offer) return;
   const state = await prepareTalk({ aimId: p.id, source: "explore" });
-  if (state.error || !card.isConnected || exploreOpen) return;
+  if (state.error || !card.isConnected || exploreOpen || scene.panel) return;
   send({ type: "talk-offered", aimId: p.id, answer: "shown" });
   const block = el("div", { class: "wp-home-end wp-talk-offer" }, talkInvite(state, { lead: `${state.student.name} · ${state.student.role} · ${p.text}`, onEnd: () => block.remove() }));
-  card.querySelector(".wp-dialog-brand")?.after(block);
+  (card.querySelector(".wp-scene-invites") || card).append(block);
 }
 
 // Spaced review (docs/SPEC.md §10): about a week after you explained something, once, on the
@@ -451,7 +451,7 @@ async function maybeOfferReview(card) {
       el("button", { class: "wp-btn wp-btn-tonal", onclick: () => { block.remove(); openTalk({ mode: "review", review: item, source: "review" }); } }, "Try it · 1 minute"),
       el("button", { class: "wp-btn wp-btn-text", onclick: () => done("later") }, "Not now"),
       el("button", { class: "wp-btn wp-btn-text", onclick: () => done("never") }, "Don't ask about this")));
-  card.querySelector(".wp-dialog-brand")?.after(block);
+  (card.querySelector(".wp-scene-invites") || card).append(block);
 }
 
 // While watching, with Aim Plus: a quiet line when this video connects to something you explained

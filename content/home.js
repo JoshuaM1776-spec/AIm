@@ -1,17 +1,18 @@
-// Aim — the homepage card that replaces the feed.
+// Aim — YouTube's homepage, replaced by the reading room (content/scene.js): Home, Break and the
+// panels. This file draws it and keeps the pieces the panels share: the aim you're on, its videos,
+// and what you saved for later.
 
-// ---------------- homepage: "What brings you here?" ----------------
-// Example requests on the card, said the way you'd ask a librarian: one tap fills the box.
+// Example requests, said the way you'd ask a librarian.
 const EXAMPLES = ["How do jet engines work?", "Help me study for my biology exam."];
 
-// The card after Done, shown inside the homepage card (so it never covers it) until dismissed.
-let homeBreakOpen = false; // the Break toggle's lengths, open on the homepage card
+// The card after Done, shown on the homepage (never covering it) until dismissed.
 let homeEnd = null;
 
 function removeHome() {
   exploreOpen = false;
+  scene = { view: "home", panel: null };
   early.showFeed();
-  document.documentElement.classList.remove("wp-home");
+  document.documentElement.classList.remove("wp-home", "wp-scene-on");
   $("#wp-home")?.remove();
 }
 
@@ -22,9 +23,8 @@ function goSearch(query) {
 
 async function renderHome() {
   if (location.pathname !== "/") return;
-  // Explore, asked for from the popup (youtube.com/#aim-explore).
-  if (location.hash === "#aim-explore") { exploreOpen = true; history.replaceState(null, "", "/"); }
-  // From an aim's page: talk it through, or put it together (the aim was picked up first).
+  // Explore and Break, asked for from the popup or the menu (youtube.com/#aim-explore, #aim-break).
+  if (location.hash === "#aim-explore" || location.hash === "#aim-break") { scene = { view: "break", panel: null }; history.replaceState(null, "", "/"); }
   // Go deeper into one thing (Aim Plus): #aim-deeper= and the focus, from an aim's page.
   if (location.hash.startsWith("#aim-deeper=")) {
     let focus = null;
@@ -33,18 +33,18 @@ async function renderHome() {
     if (focus?.title) setTimeout(() => openTalk({ mode: "deeper", focus: { title: String(focus.title).slice(0, 120), brief: String(focus.brief || "").slice(0, 200),
       chain: (Array.isArray(focus.chain) ? focus.chain : []).map(String).slice(0, 8) } }), 300);
   }
-  // "Find the next challenge", from a completed one: the subject, ready to find challenges for.
+  // "Find the next challenge", from a completed one: today's challenge, on that subject.
   if (location.hash.startsWith("#aim-challenge=")) {
     let subject = "";
     try { subject = decodeURIComponent(location.hash.slice("#aim-challenge=".length)).slice(0, 120); } catch {}
     history.replaceState(null, "", "/");
-    if (subject) { exploreOpen = true; setTimeout(() => findChallenges(subject), 300); }
+    if (subject) setTimeout(() => openChallengePanel("daily", subject), 300);
   }
   // "Next lesson", from a completed one: pick its path up where it left off.
   if (location.hash.startsWith("#aim-path=")) {
     const id = decodeURIComponent(location.hash.slice("#aim-path=".length)).slice(0, 40);
     history.replaceState(null, "", "/");
-    if (id) setTimeout(() => { pw.open = true; renderHome(); send({ type: "paths" }).then(l => { pw.list = l || []; pickPath(id); }); }, 300);
+    if (id) setTimeout(() => openContinue().then(() => pickPath(id)), 300);
   }
   if (location.hash === "#aim-talk" || location.hash === "#aim-put-together") {
     const mode = location.hash === "#aim-put-together" ? "synthesis" : null;
@@ -58,29 +58,55 @@ async function renderHome() {
   document.documentElement.classList.add("wp-home");
   early.showFeed(); // the card's own rule (html.wp-home) hides the feed from here on
   await librarianOn(); // signed in: the box also takes requests for the librarian
-  if (planOn() && !status.totalReached) return renderToday(host); // a Homeschool student's day
+  if (planOn() && !status.totalReached) { // a Homeschool student's day
+    document.documentElement.classList.remove("wp-scene-on");
+    if ($("#wp-home.wp-scene")) $("#wp-home").remove();
+    return renderToday(host);
+  }
   const p = activePurpose();
-  const others = status.paused || [];
-  const key = status.totalReached ? "total" : exploreOpen ? "explore"
-    : [p ? `p|${p.id}|${p.text}|${(p.map?.parts || []).map(x => x.id + x.status).join(".")}${p.map?.synthesis?.verdict || ""}${p.practice ? `${p.practice.title}${p.practice.triedAt || ""}` : ""}|${(status.currentVideos || []).map(v => v.id).join(",")}|${p.study ? `${p.study.current}:${p.study.topics.map(t => t.check?.at || 0).join(".")}:${p.study.apply?.doneAt || 0}` : ""}` : "idle", leisureUsedUp(),
-      others.map(x => `${x.id}:${x.recent?.[0]?.id || ""}`).join(","), (status.saved || []).map(v => v.id).join(","),
-      account.on, status.pathways?.offer?.name || "", `${homeBreakOpen}:${pw.open}`, (settings.learnTopics || []).join("+"), (settings.learnOff || []).length].join("|");
+  const today = account.on && !status.totalReached ? (await send({ type: "challenge-today" })) || {} : {};
+  if (location.pathname !== "/") return;
+  exploreOpen = scene.view === "break" && !scene.panel;
+  const view = status.totalReached ? "total" : scene.view;
+  const key = [view, scene.panel || "",
+    p ? `p|${p.id}|${p.text}|${(p.map?.parts || []).map(x => x.id + x.status).join(".")}${p.map?.synthesis?.verdict || ""}${p.practice ? `${p.practice.title}${p.practice.triedAt || ""}` : ""}|${(status.currentVideos || []).map(v => v.id).join(",")}|${p.study ? `${p.study.current}:${p.study.topics.map(t => t.check?.at || 0).join(".")}:${p.study.apply?.doneAt || 0}` : ""}` : "idle",
+    leisureUsedUp(), (status.saved || []).map(v => v.id).join(","), account.on, status.pathways?.offer?.name || "", !!homeEnd,
+    today.daily?.list?.[today.daily.pick]?.title || "", today.weekly?.list?.[today.weekly.pick]?.title || "",
+    (settings.learnTopics || []).join("+"), (settings.learnOff || []).length].join("|");
   if ($("#wp-home")?.dataset.key === key) return; // don't rebuild while someone is typing
   $("#wp-home")?.remove();
+  document.documentElement.classList.add("wp-scene-on");
 
-  const input = el("input", { class: "wp-home-input", type: "text", "aria-label": "Tell me what you're looking for",
-    placeholder: "Tell me what you're looking for…" });
-  // One rounded field with a small arrow inside it; Enter does the same.
+  const root = el("div", { id: "wp-home", class: "wp wp-scene", "data-key": key, "data-view": view });
+  root.style.setProperty("--wp-scene-img", `url("${sceneFile(SCENE_BG[view] || SCENE_BG.home)}")`);
+  const main = el("main", { class: "wp-scene-main" });
+  root.append(el("div", { class: "wp-scene-bg", "aria-hidden": "true" }), sceneTop(), main);
+
+  if (view === "total") {
+    main.append(sceneTitle("That's today's YouTube time"),
+      el("p", { class: "wp-scene-sub" }, `You set a daily limit of ${settings.totalMin} minutes. It resets at midnight.`));
+  } else if (scene.panel === "continue") main.append(continuePanel(p));
+  else if (scene.panel === "daily" || scene.panel === "weekly") main.append(challengePanel(scene.panel));
+  else if (view === "break") breakMain(main);
+  else homeMain(main, p, today);
+  document.body.append(root);
+  if (view === "home" && !scene.panel) {
+    showTips();
+    maybeOfferTalk(root);
+    maybeOfferReview(root);
+  }
+}
+
+// Home: a greeting, the search, and the three ways in.
+function homeMain(main, p, today) {
+  const input = el("input", { class: "wp-home-input", type: "text", "aria-label": "Search for videos, topics, or anything you want to learn",
+    placeholder: "Search for videos, topics, or anything you want to learn…" });
   const findBtn = el("button", { class: "wp-home-go", "aria-label": "Go", title: "Go" }, icon("right"));
-  const card = el("div", { id: "wp-home", class: "wp wp-home-card", "data-key": key });
-  const lib = account.on;
-  const hintText = p ? "Searching for something new? If it isn't part of your aim, Aim asks first."
-    : lib ? `Tell ${BRAND} what you want to accomplish. It'll help you find it.` : "What you type becomes your aim. Be specific.";
-  const hint = el("div", { class: "wp-muted wp-home-hint" }, hintText);
+  const hint = el("div", { class: "wp-muted wp-home-hint", role: "status" });
   // Signed in, a request or goal goes to the librarian; a plain search goes straight to YouTube.
   const busy = on => {
     input.disabled = on; findBtn.disabled = on;
-    hint.textContent = on ? `${BRAND} is looking…` : hintText;
+    hint.textContent = on ? `${BRAND} is looking…` : "";
   };
   const submit = () => {
     const q = input.value.trim();
@@ -89,51 +115,22 @@ async function renderHome() {
   };
   findBtn.onclick = submit;
   keepKeys(input, submit);
-
-  if (status.totalReached) {
-    card.append(
-      brandLine(),
-      el("h1", { class: "wp-home-title" }, "That's today's YouTube time"),
-      el("div", { class: "wp-muted" }, `You set a daily limit of ${settings.totalMin} minutes. It resets at midnight.`));
-    host.prepend(card);
-    return;
-  }
-
-  if (exploreOpen) {
-    card.classList.add("wp-explore");
-    exploreView(card);
-    host.prepend(card);
-    return;
-  }
-
-  // The three at the top (0.72): Focus (what's on now), Break (casual viewing for a while: its
-  // lengths open right here), Library (every aim, and the learning record).
-  const toggles = el("div", { class: "wp-home-toggles", role: "group", "aria-label": "Aim" },
-    el("button", { class: `wp-home-toggle${homeBreakOpen ? "" : " on"}`, "aria-pressed": String(!homeBreakOpen), onclick: () => { homeBreakOpen = false; renderHome(); } }, icon("target"), "Focus"),
-    el("button", { class: `wp-home-toggle${homeBreakOpen ? " on" : ""}`, "aria-pressed": String(homeBreakOpen), onclick: () => { homeBreakOpen = !homeBreakOpen; renderHome(); } }, icon("hourglass"), "Break"),
-    el("button", { class: "wp-home-toggle", onclick: () => send({ type: "open-targets" }) }, icon("library"), "Library"));
-  const actions = el("div", { class: "wp-home-actions" },
-    el("button", { class: `wp-btn wp-btn-primary wp-home-challenge${pw.open ? " open" : ""}`, "aria-expanded": String(pw.open), onclick: togglePaths }, icon("target"), "Start a challenge"),
-    el("button", { class: "wp-btn wp-btn-tonal wp-explore-open", onclick: () => { exploreOpen = true; renderHome(); } }, icon("compass"), "Explore"));
-
-  card.append(...[
-    el("div", { class: "wp-home-top" }, brandLine(), toggles),
+  const pick = s => today[s]?.list?.[today[s].pick];
+  main.append(...[
     homeEnd,
-    homeBreakOpen ? el("div", { class: "wp-home-break" },
-      el("div", { class: "wp-label" }, p ? "A break from your aim, for" : "Browse freely, for"), breakChips(takeBreak)) : null,
-    el("h1", { class: "wp-home-title" }, "What brings you here?"),
-    el("div", { class: "wp-home-search" }, input, findBtn),
+    sceneTitle(`${greeting()}.`),
+    el("p", { class: "wp-scene-sub" }, "Learn, explore, or take on a challenge."),
+    el("div", { class: "wp-home-search" }, el("span", { class: "wp-home-search-icon" }, icon("search")), input, findBtn),
     hint,
-    actions,
-    pathsWindow(),
-    themeOfferBlock(),
-    // The aim you're on, to pick straight back up; everything else lives in the Library.
-    p ? el("div", { class: "wp-home-resume" }, el("div", { class: "wp-label" }, "Continue"), currentTargetRow(p)) : null,
-    savedBlock()].filter(Boolean));
-  host.prepend(card);
-  showTips();
-  maybeOfferTalk(card);
-  maybeOfferReview(card);
+    el("div", { class: "wp-scene-cards" },
+      sceneCard({ cls: "wp-home-continue", ic: "playRing", title: "Continue Learning", glow: true, onclick: openContinue,
+        sub: p ? `Pick up: ${p.text}` : "Resume a learning plan or journey." }),
+      sceneCard({ cls: "wp-home-daily", ic: "calendarDots", title: "Daily Challenge", onclick: () => openChallengePanel("daily"),
+        sub: pick("daily") ? `Today: ${pick("daily").title}` : "A focused problem to solve today." }),
+      sceneCard({ cls: "wp-home-weekly", ic: "users", title: "Weekly Challenge", onclick: () => openChallengePanel("weekly"),
+        sub: pick("weekly") ? `This week: ${pick("weekly").title}` : "A larger goal to build real understanding." })),
+    el("div", { class: "wp-scene-invites" }),
+    themeOfferBlock()].filter(Boolean));
 }
 
 // "Last active yesterday"
@@ -226,23 +223,30 @@ function savedBlock() {
     savedRow(list, 6));
 }
 
+// The aim you're on, at the top of Continue Learning: a row like a path's (its last video, its name,
+// where it stands, and play), then what it holds: the question left open, the study session, the
+// map of what you've explained, the thing to try, and its videos.
 function currentTargetRow(p) {
   const vids = status.currentVideos || [];
-  return el("div", { class: "wp-home-current" },
-    el("div", { class: "wp-label" }, "Your aim"),
-    el("button", { class: "wp-home-purpose wp-home-open", title: "Open this aim's page", onclick: () => send({ type: "open-aim", id: p.id }) }, p.text),
-    el("div", { class: "wp-muted wp-home-meta" }, targetMeta({ ...p, videos: (p.videos || []).length })),
+  const v = vids[0];
+  return el("div", { class: "wp-home-resume" }, el("div", { class: "wp-home-current" },
+    el("div", { class: "wp-cl-row wp-cl-aim" },
+      v ? el("span", { class: "wp-cl-thumb", style: `background-image: url("${thumbUrl(v.id)}")`, "aria-hidden": "true" }) : subjectThumb("general"),
+      el("div", { class: "wp-cl-text" },
+        el("span", { class: "wp-label" }, "Your aim"),
+        el("button", { class: "wp-home-purpose wp-home-open wp-cl-title", title: "Open this aim's page", onclick: () => send({ type: "open-aim", id: p.id }) }, p.text),
+        el("span", { class: "wp-muted wp-home-meta" }, targetMeta({ ...p, videos: (p.videos || []).length }))),
+      el("button", { class: "wp-cl-play", "aria-label": "Continue", title: "Continue", onclick: () => resumeTarget(p.id) }, icon("playSolid"))),
     // The open loop (0.71): the question the last one-minute close left for next time.
     p.openQuestion?.q && !p.openQuestion.closedAt ? el("div", { class: "wp-open-q" }, el("span", { class: "wp-label" }, "Left open last time"), el("span", {}, p.openQuestion.q)) : null,
     studyTodayBlock(p),
     activeStudy(p) ? null : understandingBlock(p),
     practiceBlock(p),
-    vids[0] ? lastVideoCard(p, vids[0]) : null,
+    v ? lastVideoCard(p, v) : null,
     moreVideos(vids.slice(1)),
     el("div", { class: "wp-home-alt" },
-      el("button", { class: "wp-btn wp-btn-accent", onclick: () => resumeTarget(p.id) }, icon("play"), "Continue"),
       el("button", { class: "wp-btn wp-btn-tonal", onclick: doneAction(p) }, icon("check2"), doneLabel(p)),
-      el("button", { class: "wp-btn wp-btn-text", onclick: setAsideTarget }, "Set aside")));
+      el("button", { class: "wp-btn wp-btn-text", onclick: setAsideTarget }, "Set aside"))));
 }
 
 // What picking this aim up would mean, in a few words: the study topic that needs review or comes

@@ -182,7 +182,8 @@ function interestPicker(onChange) {
 }
 
 
-// The Explore view, in place of the homepage card's usual contents.
+// Explore & Learn, under a break's lengths on the homepage (content/scene.js): picks from channels
+// that teach well, from your interests and something different.
 function exploreView(card) {
   const body = el("div", { class: "wp-explore-body" }, el("div", { class: "wp-muted wp-learn-loading" }, "Finding picks worth learning from…"));
   let editing = false;
@@ -229,15 +230,7 @@ function exploreView(card) {
     if (refresh || changed || !body.querySelector(".wp-explore-grid, .wp-explore-end")) show(cache);
     else if (settings.learnShorts && !body.querySelector(".wp-review")) fillReview(body, reviewShorts);
   };
-  card.append(
-    brandLine(),
-    el("div", { class: "wp-explore-top" },
-      el("button", { class: "wp-link wp-explore-back", onclick: () => { exploreOpen = false; renderHome(); } }, icon("back"), "What brings you here?")),
-    el("div", { class: "wp-label wp-explore-kicker" }, "Explore"),
-    el("h1", { class: "wp-home-title" }, `${greeting()}.`), // greeting(): plan.js
-    el("div", { class: "wp-muted wp-explore-lede" }, "What would you like to explore today? A few videos worth learning from, from channels that teach well, or a one-off challenge on something new."),
-    challengeBlock(),
-    head, body);
+  card.append(head, body);
   fill();
 }
 
@@ -254,14 +247,6 @@ async function startLearning(v, row) {
   }
   exploreOpen = false;
   location.href = `/watch?v=${encodeURIComponent(v.id)}`;
-}
-
-// The homepage's one line about Explore.
-function exploreLine(p) {
-  if (status.totalReached) return null;
-  return el("div", { class: "wp-explore-line" },
-    el("span", { class: "wp-muted" }, p ? "Or find something new?" : "Not sure what you're looking for?"),
-    el("button", { class: "wp-btn wp-btn-tonal wp-explore-open", onclick: () => { exploreOpen = true; renderHome(); } }, icon("compass"), "Explore"));
 }
 
 // "Go deeper": on a video you're exploring, one quiet line turns it into an aim.

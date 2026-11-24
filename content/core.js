@@ -80,7 +80,7 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
   if (msg?.type === "tab-save") { if (!currentId || !currentInfo) return reply({ ok: false }); saveCurrent(false).then(() => reply({ ok: true })); return true; }
   if (msg?.type !== "go" || !/^https:\/\/www\.youtube\.com\//.test(msg.url || "")) return;
   // Same page, new #: YouTube won't reload for it, so act on it here (Explore from the popup).
-  if (location.pathname === "/" && msg.url === "https://www.youtube.com/#aim-explore") { exploreOpen = true; renderHome(); reply({ ok: true }); return; }
+  if (location.pathname === "/" && msg.url === "https://www.youtube.com/#aim-explore") { openExplore(); reply({ ok: true }); return; }
   location.href = msg.url;
   reply({ ok: true });
 });

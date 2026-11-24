@@ -8,12 +8,20 @@
   /* Fonts and colors: tokens.css (shared with Aim's pages). Aim coral is an accent only: Resume,
      Back to my aim and the time ring. The popup's compact layout has its own small rules here. */
   :root { --hover: var(--tonal); }
+  /* The reading room (0.73), as on Aim's pages (aim.css): dark wood, cream and candlelight gold. */
+  :root { color-scheme: dark;
+    --bg: #1a120b; --surface: rgba(40, 28, 18, .9); --text: #f6ead5; --muted: rgba(246, 234, 213, .72);
+    --divider: rgba(233, 196, 140, .18); --card-border: rgba(233, 196, 140, .3); --tonal: rgba(246, 225, 190, .08); --tonal-hover: rgba(246, 225, 190, .15);
+    --field: rgba(18, 12, 7, .6); --field-border: rgba(233, 196, 140, .38); --focus: #ebc58c; --link: #f0c98a;
+    --primary: #f1dfbd; --primary-hover: #fff0d4; --on-primary: #24160b; --accent: #e8ab6a; --accent-hover: #f3bd82; --on-accent: #24160b;
+    --shadow: 0 10px 30px rgba(0, 0, 0, .35); }
+  body { background: radial-gradient(120% 80% at 50% 0%, #2a1c11, #140e09 70%); }
+  .brand { font: 500 21px var(--font-serif); letter-spacing: 0; }
   * { box-sizing: border-box; }
   body { width: 340px; margin: 0; padding: 8px 0; background: var(--bg); color: var(--text); font: 14px/20px var(--font); -webkit-font-smoothing: antialiased; }
   .brand { display:flex; align-items:center; gap:8px; font: 700 17px var(--font-display); letter-spacing: -.2px; padding: 6px 12px 10px 16px; }
   .logo { width: 28px; height: 28px; }
-  .for-dark { display: none; }
-  @media (prefers-color-scheme: dark) { .for-dark { display: inline; } .for-light { display: none; } }
+  .for-light { display: none; }
   h2 { font-family: var(--font); font-size: 14px; line-height: 20px; font-weight: 500; margin: 0; padding: 12px 16px 4px; border-top: 1px solid var(--divider); }
   #session { padding: 0 16px 12px; }
   #session .card { background: var(--surface); border: 1px solid var(--card-border); border-radius: 16px; padding: 14px; box-shadow: var(--shadow); }

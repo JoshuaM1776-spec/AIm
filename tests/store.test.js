@@ -1148,6 +1148,38 @@ test("paths: an interest with a goal, an ordered plan, lessons as challenges, an
   assert.strictEqual((await env.run(`pathsView()`)).length, 0);
 });
 
+test("the Daily and Weekly Challenges (0.73): one of each, kept for the day or the week", async () => {
+  const env = fresh();
+  const ch = title => ({ title, kind: "understand", minutes: 10, difficulty: "intro", why: "Why not.", success: "Explain it in a few sentences.", materials: [], safety: "", interest: "aviation",
+    plan: [{ title: "Watch", look: "", minutes: 6, search: "lift", guess: "" }, { title: "Attempt", look: "", minutes: 4, search: "", guess: "" }] });
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(await env.run(`challengeToday()`))), {}, "nothing kept yet");
+  assert.strictEqual((await env.run(`challengeTodaySave("daily", ${JSON.stringify({ interest: "aviation", list: [ch("How can a plane fly upside down?"), ch("Why can a plane stall?"), { title: "x" }], pick: 5 })})`)).result, "applied");
+  let today = JSON.parse(JSON.stringify(await env.run(`challengeToday()`)));
+  assert.ok(today.daily && !today.weekly && today.daily.list.length === 2 && today.daily.pick === 1 && today.daily.interest === "aviation", "kept: the usable ones, and which is showing");
+  assert.strictEqual(today.daily.key, await env.run(`challengePeriod("daily")`));
+  assert.strictEqual((await env.run(`challengeTodaySave("hourly", ${JSON.stringify({ list: [ch("Nope, not hourly")] })})`)).result, "invalid");
+  assert.strictEqual((await env.run(`challengeTodaySave("weekly", ${JSON.stringify({ list: [] })})`)).result, "invalid");
+  assert.strictEqual(await env.run(`challengePeriod("weekly", new Date(2026, 10, 26))`), "2026-11-23", "a week starts on Monday");
+  assert.strictEqual(await env.run(`challengePeriod("weekly", new Date(2026, 10, 23))`), "2026-11-23");
+  assert.strictEqual(await env.run(`challengePeriod("daily", new Date(2026, 10, 26))`), "2026-11-26");
+  env.local.chToday.daily.key = "2026-01-01";
+  assert.ok(!JSON.parse(JSON.stringify(await env.run(`challengeToday()`))).daily, "a new day starts fresh");
+});
+
+test("paths for Continue Learning (0.73): the lesson you're on and a subject for its picture", async () => {
+  const env = fresh();
+  await env.run(`pathAdd({ interest: "Ancient Rome", goal: "Explain how the Roman Republic worked" })`);
+  let [v] = JSON.parse(JSON.stringify(await env.run(`pathsView()`)));
+  assert.ok(v.subject === "history" && v.lesson === null, "no plan yet: no lesson");
+  const lesson = (title, unit) => ({ title, kind: "understand", minutes: 20, difficulty: "intro", why: "x", success: "Explain it in your own words.", materials: [], safety: "", unit,
+    plan: [{ title: "Watch", look: "", minutes: 12, search: "rome", guess: "" }, { title: "Attempt", look: "", minutes: 8, search: "", guess: "" }] });
+  await env.run(`pathPlanSave(${JSON.stringify(v.id)}, ${JSON.stringify({ title: "The Republic", scope: "", measure: "", confirm: "", units: [{ title: "Kings to consuls", about: "", lessons: 2 }, { title: "The plebs", about: "", lessons: 2 }], outside: [],
+    lessons: [lesson("Why did Rome throw out its last king?", 1), lesson("Why two consuls?", 1)] })})`);
+  env.local.paths[0].lessons[0].status = "completed";
+  [v] = JSON.parse(JSON.stringify(await env.run(`pathsView()`)));
+  assert.deepStrictEqual(v.lesson, { n: 2, title: "Why two consuls?" }, "the next lesson, numbered");
+});
+
 test("subjects: EMS and medications read as health", async () => {
   const env = fresh();
   assert.strictEqual((await env.run(`aimSubject({ text: "Understand how airplane stalls work" })`)).id, "aviation", "airplane is aviation, not just plane");

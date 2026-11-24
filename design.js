@@ -119,8 +119,8 @@ function rail(d, after) {
 function homeView(d, after) {
   const main = node("div", { class: "yt-main" });
   if (after && d.homeCard) {
-    main.append(node("div", { class: "aim-ask", "data-go": "home" }, node("img", { src: MARK, alt: "" }), node("b", {}, "What brings you here?"), node("span", {}, "Tell me what you're looking for…")));
-    main.append(node("div", { class: "aim-explore", "data-go": "home" }, node("span", {}, "Not sure what you're looking for?"), node("b", {}, "Explore")));
+    main.append(node("div", { class: "aim-ask", "data-go": "home" }, node("img", { src: MARK, alt: "" }), node("b", {}, "Good morning."), node("span", {}, "Search for videos, topics, or anything you want to learn…")));
+    main.append(node("div", { class: "aim-explore", "data-go": "home" }, node("span", {}, "Continue Learning · Daily Challenge · Weekly Challenge"), node("b", {}, "Explore, under Break")));
   } else {
     main.append(node("div", { "data-go": "home" }, node("div", { class: "yt-head" }, node("h3", {}, "Recommended for you")),
       node("div", { class: "yt-cards" }, [0, 1].map(loudCard))));
@@ -204,7 +204,7 @@ function stagePanel(id) {
   if (id === "home") {
     const g = greeting(d);
     return [
-      opt("A clean page with my aim", "Just \u201cWhat brings you here?\u201d, with Explore one tap away for when you're not sure.", g === "clean", () => { S.d = { ...S.d, homeCard: true }; draw(); }),
+      opt("A clean page with my aim", "A greeting, the search, and Continue Learning, the Daily and the Weekly Challenge. Explore is under Break.", g === "clean", () => { S.d = { ...S.d, homeCard: true }; draw(); }),
       opt("The regular YouTube feed", "Recommendations, as YouTube chooses them.", g === "feed", () => { S.d = { ...S.d, homeCard: false }; draw(); })].flat();
   }
   if (id === "shorts") {

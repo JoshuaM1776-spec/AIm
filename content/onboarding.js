@@ -68,16 +68,17 @@ function showTips() {
   if (coach || modal || !status.onboarding || brk) return;
   const today = $("#wp-home.wp-today");
   if (today) return status.onboarding.hsTour ? null : startStudentTour();
-  const home = $("#wp-home.wp-home-card .wp-home-search");
+  const home = $("#wp-home .wp-home-search");
   if (home && !tipSeen("home")) {
     return showCoach(home, { title: "Start here", step: 1, of: 2, primary: "Next",
       body: `Tell ${BRAND} what you're looking for, the way you'd ask a librarian. That becomes your aim, and ${BRAND} keeps YouTube on it.`,
       onPrimary: async () => { await markTip("home"); closeCoach(); showTips(); } });
   }
-  const chip = $("#wp-chip .wp-pill");
+  // On the homepage (0.73) the aim you're on is under Continue Learning; on a video, the Aim button.
+  const chip = $("#wp-home.wp-scene .wp-home-continue") || $("#wp-chip .wp-pill");
   if (chip && tipSeen("home") && !tipSeen("chip") && location.pathname === "/") {
     return showCoach(chip, { title: "Your aim lives here", step: 2, of: 2, primary: "Got it",
-      body: "Open this anytime to take a break, change your aim, or say you're done. It's the only button to remember.",
+      body: "Continue Learning picks up your aim and your paths. On a video, the Aim button at the top does it: take a break, change your aim, or say you're done.",
       onPrimary: async () => { await markTip("chip"); closeCoach(); } });
   }
 }

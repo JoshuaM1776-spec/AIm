@@ -486,6 +486,17 @@ Needs a signed-in account and the server redeployed to draft paths.
 - [ ] **See the path** (or Library → Your paths): the goal, progress, the units in order with the lessons of the current one, steps outside Aim with Done boxes, and Remove this interest.
 - [ ] **Explore** now has the one-off challenge finder (a subject, 15/30/60 min, Find a challenge) above its channel picks.
 
+### 65. The reading room (0.73)
+- [ ] YouTube's homepage is one full-screen scene (a library hall): Aim at the left, **Home · Break · Library** in the middle, and you (a person in a circle) at the right. YouTube's own bar and sidebar are under it; nothing behind scrolls.
+- [ ] Home: "Good morning." (afternoon, evening), "Learn, explore, or take on a challenge.", the search, then three cards: **Continue Learning** (glowing; with an aim on, it names it), **Daily Challenge** and **Weekly Challenge**.
+- [ ] Continue Learning opens a panel: the aim you're on first (its last video, its name, where it stands, play; under it the study session, the map, what to try, its videos, Done and Set aside), then your paths (a picture, the interest and its goal, "Lesson n · …", a progress bar with its percent, what's left to the next checkpoint, See the path, play), and Add an interest. × closes it.
+- [ ] Daily Challenge (signed in): today's challenge from one of your interests (a different one each day), about ten minutes, with its success condition and plan, and Begin. Close it and open it again: the same one, all day. Another one, See all 3, Easier, Harder, a different subject, Write my own. Signed out, it says challenges come with an account.
+- [ ] Weekly Challenge: the same, for the week (from Monday), up to two hours, building or investigating first.
+- [ ] Break (garden scene): "Take a Break", the lengths in one glass bar, then **Explore & Learn** (picks from channels that teach well, as cards) and Saved for later.
+- [ ] Library opens Aim's Library in the same tab: "Library" between gold rules, the search, your subjects as picture tiles with how many aims each (a tile shows only that subject's books), then the shelf. Home and Break there go back to YouTube's homepage.
+- [ ] You (on YouTube's homepage) opens Aim's menu (Set aim, Take a Break, Focus or Explore) with your account, Settings, Your paths, Learning record, Homeschool, Subscriptions and History under it.
+- [ ] Every Aim page has the same bar and the dark library look, whatever Chrome's theme; Settings and the rest are under you.
+
 ## Known issues (not regressions)
 
 - In this test environment, "opening a video in YouTube's one page plays that video" (tests/browser.test.js) sometimes fails on timing alone; it passes on a rerun and fails the same way on 0.71.

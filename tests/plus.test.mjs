@@ -347,6 +347,9 @@ await ctx.route(/^https:\/\/www\.youtube\.com\//, route => {
   route.fulfill({ contentType: "text/html", body, headers: { "content-security-policy": "require-trusted-types-for 'script'" } });
 });
 const yt = await ctx.newPage();
+// The homepage (0.73): Continue Learning holds the aim you're on; Aim's menu opens from "You".
+const ytContinue = async () => { await yt.waitForSelector("#wp-home .wp-home-continue"); await yt.click("#wp-home .wp-home-continue"); await yt.waitForSelector("#wp-home .wp-cl"); };
+const ytMenu = async () => yt.click((await yt.$("#wp-home.wp-scene .wp-scene-me")) ? "#wp-home .wp-scene-me" : "#wp-chip .wp-pill");
 // The librarian folds away unless it has something new for this search; open it when it's folded.
 async function openLibrarian() {
   await yt.waitForSelector("#wp-results-bar [aria-label='Ask the librarian'], .wp-lib-input");
@@ -355,7 +358,7 @@ async function openLibrarian() {
 }
 await yt.goto("https://www.youtube.com/");
 await yt.waitForSelector("#wp-home");
-step("signed in, the homepage invites requests for the librarian", (await yt.textContent("#wp-home")).includes("It'll help you find it"));
+step("signed in, the homepage's search takes requests too", (await yt.getAttribute("#wp-home .wp-home-input", "placeholder")).includes("anything you want to learn"));
 await yt.fill(".wp-home-input", "I need to replace the alternator on my 2014 Tacoma");
 await yt.press(".wp-home-input", "Enter");
 await yt.waitForURL(/results\?search_query=2014%20tacoma%20alternator%20replacement/);
@@ -559,8 +562,9 @@ await pw.waitForSelector("button:text-is('Turn on Pathways')");
 const gone = await sw.evaluate(() => chrome.storage.local.get(["pathways", "interests"]));
 step("turning Pathways off deletes all of it", !gone.pathways && !gone.interests);
 await pw.close();
-// Today, on YouTube's home page: the next topic, and a review a day after a check that found gaps.
+// Today, on YouTube's home page (under Continue Learning, 0.73): the next topic, and a review a day after a check that found gaps.
 await yt.goto("https://www.youtube.com/");
+await ytContinue();
 await yt.waitForSelector("#wp-home .wp-study-today");
 let today = await yt.textContent(".wp-study-today");
 step("home: Today for the study session shows what's next and how far along", today.includes("Today · Cellular respiration") && today.includes("1 of 2 topics checked") &&
@@ -568,6 +572,7 @@ step("home: Today for the study session shows what's next and how far along", to
 await sw.evaluate(async () => { const { purpose } = await chrome.storage.local.get("purpose");
   purpose.study.topics[0].check.at = Date.now() - 86400000 * 1.5; await chrome.storage.local.set({ purpose }); });
 await yt.reload();
+await ytContinue();
 await yt.waitForSelector("#wp-home .wp-study-today-kind.wp-review");
 today = await yt.textContent(".wp-study-today");
 step("a day after a check that found gaps, the topic comes back as Review today", today.includes("Review today") && today.includes("Glycolysis"), today);
@@ -756,28 +761,59 @@ step("Forget removes it", ((await sw.evaluate(() => chrome.storage.local.get("me
 await sw.evaluate(() => serial(() => setSetting("captions", false)));
 const fetchesBefore = srv.captionFetches;
 // ---------- Challenges (0.70): find, choose, begin, attempt, complete ----------
+// The Daily Challenge (0.73): one for today, from your interests or a subject you name, kept for the day.
 await yt.goto("https://www.youtube.com/");
 await yt.bringToFront();
-await yt.waitForSelector("#wp-home .wp-explore-open");
-await yt.click("#wp-home .wp-explore-open");
-await yt.waitForSelector("#wp-home .wp-ch");
+await yt.waitForSelector("#wp-home .wp-home-daily");
+await yt.click("#wp-home .wp-home-daily");
+await yt.waitForSelector("#wp-home .wp-ch-daily .wp-ch-ask");
+step("the Daily Challenge, with no interests yet, asks what you're curious about", (await yt.textContent("#wp-home .wp-scene-panel-title")) === "Daily Challenge" &&
+  (await yt.textContent("#wp-home .wp-ch-ask")).includes("What are you curious about?"));
+const chAsked = (srv.challengePrompts || []).length;
 await yt.fill("#wp-home .wp-ch-subject", "aviation");
-await yt.click(".wp-ch-times button:text-is('15 min')");
 await yt.click(".wp-ch button:has-text('Find a challenge')");
-await yt.waitForFunction(() => document.querySelectorAll("#wp-home .wp-ch-card").length === 3, null, { timeout: 10000 });
-const chCards = (await yt.textContent(".wp-ch-list")).replace(/\s+/g, " ");
-step("in Explore, one-off challenges: three for a subject and the time you have, each with its kind and why",
-  chCards.includes("How can an airplane fly upside down?") && chCards.includes("Investigate · 15 min · Intro") && chCards.includes("Needs: Paper") &&
-  srv.challengePrompts.at(-1).includes("INTEREST: aviation") && srv.challengePrompts.at(-1).includes("TIME: 15 minutes") && srv.challengePrompts.at(-1).includes("LEVEL: intro"), chCards.slice(0, 200));
+await yt.waitForSelector("#wp-home .wp-ch-detail", { timeout: 10000 });
+let chDetail = (await yt.textContent(".wp-ch-detail")).replace(/\s+/g, " ");
+step("today's challenge: one, for the subject and about ten minutes, with what makes it interesting",
+  chDetail.includes("How can an airplane fly upside down?") && chDetail.includes("aviation · Investigate · 10 min · Intro") &&
+  srv.challengePrompts.at(-1).includes("INTEREST: aviation") && srv.challengePrompts.at(-1).includes("TIME: 10 minutes") && srv.challengePrompts.at(-1).includes("LEVEL: intro"), chDetail.slice(0, 200));
+const beforeHarder = srv.challengePrompts.length;
 await yt.click(".wp-ch-more button:text-is('Harder')");
-await yt.waitForFunction(n => window.__chPrompts === undefined && document.querySelectorAll("#wp-home .wp-ch-card").length === 3, null, { timeout: 10000 });
+for (let i = 0; i < 80 && srv.challengePrompts.length === beforeHarder; i++) await yt.waitForTimeout(100);
+await yt.waitForSelector("#wp-home .wp-ch-detail", { timeout: 10000 });
 await yt.waitForTimeout(400);
 step("written for this person: Harder asks again a level up, with different challenges", srv.challengePrompts.at(-1).includes("LEVEL: intermediate") &&
   srv.challengePrompts.at(-1).includes("ALREADY OFFERED") && !!(await yt.$(".wp-ch-more button:text-is('Easier')")));
-if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/challenges.png`, fullPage: true });
+await yt.click(".wp-ch-more button:text-is('See all 3')");
+await yt.waitForFunction(() => document.querySelectorAll("#wp-home .wp-ch-card").length === 3, null, { timeout: 10000 });
+const chCards = (await yt.textContent(".wp-ch-list")).replace(/\s+/g, " ");
+step("See all 3: the other two, each with its kind and why", chCards.includes("Fold a paper wing and find its stall") && chCards.includes("Build & do · 10 min · Intro"), chCards.slice(0, 200));
+if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/challenges.png` });
 await yt.click(".wp-ch-card:has-text('upside down')");
 await yt.waitForSelector(".wp-ch-detail");
-const chDetail = (await yt.textContent(".wp-ch-detail")).replace(/\s+/g, " ");
+const asked = srv.challengePrompts.length;
+await yt.click("#wp-home .wp-scene-x");
+await yt.waitForSelector("#wp-home .wp-home-daily");
+step("kept for the day: the homepage card names today's challenge", (await yt.textContent("#wp-home .wp-home-daily")).includes("Today: How can an airplane fly upside down?"));
+await yt.reload();
+await yt.click("#wp-home .wp-home-daily");
+await yt.waitForSelector("#wp-home .wp-ch-detail");
+step("open it again and it's the same one, without asking the server", (await yt.textContent(".wp-ch-detail")).includes("How can an airplane fly upside down?") && srv.challengePrompts.length === asked);
+// The Weekly Challenge: a larger one, building or investigating first.
+await yt.click("#wp-home .wp-scene-x");
+await yt.click("#wp-home .wp-home-weekly");
+await yt.waitForSelector("#wp-home .wp-ch-weekly .wp-ch-ask");
+await yt.fill("#wp-home .wp-ch-subject", "aviation");
+await yt.click(".wp-ch button:has-text('Find a challenge')");
+await yt.waitForSelector("#wp-home .wp-ch-weekly .wp-ch-detail", { timeout: 10000 });
+step("the Weekly Challenge: a larger one, up to two hours, building or investigating before explaining", srv.challengePrompts.at(-1).includes("TIME: 120 minutes") &&
+  (await yt.textContent("#wp-home .wp-scene-panel-title")) === "Weekly Challenge" &&
+  (await sw.evaluate(() => chrome.storage.local.get("chToday"))).chToday.weekly.list.map(c => c.kind).join() === "investigate,build,understand");
+if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/weekly-challenge.png` });
+await yt.click("#wp-home .wp-scene-x");
+await yt.click("#wp-home .wp-home-daily");
+await yt.waitForSelector(".wp-ch-detail");
+chDetail = (await yt.textContent(".wp-ch-detail")).replace(/\s+/g, " ");
 step("a challenge's details: the success condition decided up front, and a short plan", chDetail.includes("You'll have done it when") &&
   chDetail.includes("including the angle of attack") && chDetail.includes("What lift is") && chDetail.includes("~5 min"), chDetail.slice(0, 200));
 if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/challenge-detail.png`, fullPage: true });
@@ -825,6 +861,7 @@ step("it ends with one gap and an open question for next time, kept with the aim
 if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/close-next.png` });
 await yt.click(".wp-talk button:text-is('Close')");
 await yt.goto("https://www.youtube.com/");
+await ytContinue();
 await yt.waitForSelector("#wp-home .wp-open-q");
 step("back on the homepage, the open question waits under your aim", (await yt.textContent("#wp-home .wp-open-q")).includes("tilting the wing too far"));
 await yt.goto("https://www.youtube.com/watch?v=lift00000aa");
@@ -856,8 +893,7 @@ await yt.waitForTimeout(600);
 // ---------- Paths (0.72): an interest and its goal, an ordered plan, lessons picked up in order ----------
 await yt.goto("https://www.youtube.com/");
 await yt.bringToFront();
-await yt.waitForSelector("#wp-home .wp-home-challenge");
-await yt.click("#wp-home .wp-home-challenge");
+await ytContinue();
 await yt.waitForSelector("#wp-home .wp-pw");
 await yt.click("#wp-home .wp-pw-plus");
 await yt.fill("#wp-home .wp-pw-add input >> nth=0", "Aviation");
@@ -866,10 +902,10 @@ await yt.click("#wp-home .wp-pw-add button:text-is('Add')");
 await yt.waitForFunction(() => document.querySelector("#wp-home .wp-pw")?.textContent.includes("lessons to: How a plane flies"), null, { timeout: 10000 });
 const pwText = (await yt.textContent("#wp-home .wp-pw")).replace(/\s+/g, " ");
 step("+ adds an interest with its goal; Aim drafts its path, and the window shows progress to the next checkpoint",
-  pwText.includes("Aviation") && pwText.includes("Earn a private pilot's license") && pwText.includes("0% of the path") && pwText.includes("2 lessons to: How a plane flies") &&
+  pwText.includes("Aviation") && pwText.includes("Earn a private pilot's license") && pwText.includes("0%") && pwText.includes("Lesson 1 · How does a wing make lift?") && pwText.includes("2 lessons to: How a plane flies") &&
   srv.pathPrompts[0].includes("INTEREST: Aviation") && srv.pathPrompts[0].includes("GOAL: Earn a private pilot's license"), pwText.slice(0, 200));
 if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/start-a-challenge.png`, fullPage: true });
-await yt.click("#wp-home .wp-pw-pick:has-text('Aviation')");
+await yt.click("#wp-home .wp-pw-row:has-text('Aviation') .wp-pw-pick");
 await yt.waitForURL(/search_query=how%20does%20a%20wing%20make%20lift/);
 let pathAim = (await sw.evaluate(() => chrome.storage.local.get("purpose"))).purpose;
 step("picking it up starts the first lesson, in order, as a challenge", pathAim.text === "How does a wing make lift?" && !!pathAim.pathRef && pathAim.challenge.status === "active");
@@ -913,6 +949,7 @@ let mapAim = (await sw.evaluate(() => chrome.storage.local.get("purpose"))).purp
 step("a learning goal comes with a map of what understanding it takes", mapAim.map?.parts.map(x => x.title).join() === "Political instability,Economic pressures,Military challenges" &&
   mapAim.map.parts.every(x => x.status === "new"));
 await yt.goto("https://www.youtube.com/");
+await ytContinue();
 await yt.waitForSelector("#wp-home .wp-map");
 let mapText = (await yt.textContent(".wp-map")).replace(/\s+/g, " ");
 step("Your understanding on the homepage: each part, not yet explored, how they fit together, and what's worth exploring next",
@@ -920,6 +957,7 @@ step("Your understanding on the homepage: each part, not yet explored, how they 
   mapText.includes("Worth exploring next: Political instability"), mapText);
 await sw.evaluate(id => serial(() => talkMarks(id, [{ topic: "Political instability", status: "demonstrated" }, { topic: "Military challenges", status: "demonstrated" }])), mapAim.id);
 await yt.reload();
+await ytContinue();
 await yt.waitForSelector("#wp-home .wp-map button:text-is('Put it together')");
 mapText = (await yt.textContent(".wp-map")).replace(/\s+/g, " ");
 step("explained by what you said: most of it there, Aim offers to put it together", mapText.includes("2 of 3 explained") && mapText.includes("Explained"), mapText);
@@ -957,8 +995,9 @@ await sw.evaluate(() => serial(async () => {
 }));
 await yt.goto("https://www.youtube.com/");
 await yt.bringToFront();
+await ytContinue();
 await yt.waitForSelector("#wp-home .wp-home-current");
-await yt.click("#wp-chip .wp-pill");
+await ytMenu();
 await yt.click(".wp-dropdown button:has-text('Talk it through')");
 await answerBox();
 await yt.fill(".wp-talk-input", "Recut them. Or shim the joint, I guess.");
@@ -972,6 +1011,7 @@ await yt.click(".wp-talk .wp-practice button:text-is('Save for later')");
 await yt.waitForSelector(".wp-talk .wp-practice :text('Saved with your aim')");
 await yt.click(".wp-talk button:text-is('Close')");
 await yt.reload();
+await ytContinue();
 await yt.waitForSelector("#wp-home .wp-practice-home");
 step("saved, it's on the homepage with the aim", (await yt.textContent(".wp-practice-home")).includes("Build a miniature frame-and-panel door"));
 await yt.click(".wp-practice-home button:text-is('I tried it')");

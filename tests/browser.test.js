@@ -231,11 +231,11 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     design.on("pageerror", e => errors.push("design: " + e.message));
     await design.waitForSelector(".yt");
     const prev = () => design.textContent("#preview");
-    step("Design your YouTube: step 1 of 3, with a live preview of the homepage", (await design.textContent(".panel .count")) === "Step 1 of 3" && (await prev()).includes("What brings you here?"));
+    step("Design your YouTube: step 1 of 3, with a live preview of the homepage", (await design.textContent(".panel .count")) === "Step 1 of 3" && (await prev()).includes("Good morning."));
     await design.click(".opt:has-text('The regular YouTube feed')");
-    step("choosing YouTube's feed changes the preview at once", !(await prev()).includes("What brings you here?") && (await prev()).includes("Recommended for you"));
+    step("choosing YouTube's feed changes the preview at once", !(await prev()).includes("Good morning.") && (await prev()).includes("Recommended for you"));
     await design.click(".opt:has-text('A clean page with my aim')");
-    step("a clean page: What brings you here, with Explore one tap away, no videos", (await prev()).includes("What brings you here?") && (await prev()).includes("Explore") &&
+    step("a clean page: the greeting and the three ways in, with Explore under Break, no videos", (await prev()).includes("Good morning.") && (await prev()).includes("Explore") &&
       !(await prev()).includes("Learn something"));
     step("the Home stage has two choices, not three", (await design.$$(".panel .opt")).length === 2);
     await design.click("#next");
@@ -286,6 +286,11 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   const p = await ctx.newPage();
   p.on("pageerror", e => errors.push("page: " + e.message));
   p.on("console", m => { if (m.type() === "error") errors.push("console: " + m.text()); });
+  // The homepage's Continue Learning panel (0.73): the aim you're on, then your paths.
+  // Aim's menu: from the Aim button on a video, or from "You" on the homepage's scene (0.73).
+  const aimMenu = async () => p.click((await p.$("#wp-home.wp-scene .wp-scene-me")) ? "#wp-home .wp-scene-me" : "#wp-chip .wp-pill");
+  const openContinue = async () => { await p.waitForSelector("#wp-home .wp-home-continue"); await p.click("#wp-home .wp-home-continue"); await p.waitForSelector("#wp-home .wp-cl"); };
+  const breakTab = async () => { await p.waitForSelector("#wp-home .wp-scene-tab"); await p.click("#wp-home .wp-scene-tab:has-text('Break')"); await p.waitForSelector("#wp-home .wp-home-break"); };
 
   // ---------- homepage ----------
   await p.goto("https://www.youtube.com/", { waitUntil: "domcontentloaded" });
@@ -309,21 +314,29 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   const card0 = await text("#wp-home");
   step("early hide hands over to the card", await p.evaluate(() =>
     !document.documentElement.classList.contains("wp-boot") && document.documentElement.classList.contains("wp-home")));
-  step("homepage: Focus, Break and Library at the top, the search, then Start a challenge and Explore", (await text("#wp-home")).includes("What brings you here?") &&
-    (await p.getAttribute("#wp-home .wp-home-input", "placeholder")) === "Tell me what you're looking for…" && !card0.includes("Search YouTube") &&
-    (await p.$$eval("#wp-home .wp-home-toggles button", b => b.map(x => x.textContent).join())) === "Focus,Break,Library" &&
-    !!(await p.$("#wp-home .wp-home-challenge")) && !!(await p.$("#wp-home .wp-explore-open")), card0.slice(0, 160));
+  const sceneImg = () => p.evaluate(() => getComputedStyle(document.querySelector("#wp-home .wp-scene-bg")).backgroundImage);
+  step("homepage (0.73): the reading room. Home, Break and Library at the top, a greeting, the search, then Continue Learning, the Daily and the Weekly Challenge",
+    /^Good (morning|afternoon|evening)\.$/.test(await text("#wp-home .wp-home-title")) &&
+    (await p.getAttribute("#wp-home .wp-home-input", "placeholder")) === "Search for videos, topics, or anything you want to learn…" && !card0.includes("Search YouTube") &&
+    (await p.$$eval("#wp-home .wp-scene-tab", b => b.map(x => x.textContent).join())) === "Home,Break,Library" && !!(await p.$("#wp-home .wp-scene-tab.on:has-text('Home')")) &&
+    (await p.$$eval("#wp-home .wp-scene-card-title", b => b.map(x => x.textContent).join())) === "Continue Learning,Daily Challenge,Weekly Challenge" &&
+    (await sceneImg()).includes("scenes/home.jpg"), card0.slice(0, 160));
+  step("the scene covers YouTube's own bar, and the page under it doesn't scroll", await p.evaluate(() => {
+    const r = document.querySelector("#wp-home").getBoundingClientRect();
+    return getComputedStyle(document.querySelector("#wp-home")).position === "fixed" && r.top === 0 && r.height === innerHeight && getComputedStyle(document.body).overflow === "hidden";
+  }));
   if (process.env.SHOTS) await p.screenshot({ path: `${process.env.SHOTS}/home-first.png` });
-  await p.click("#wp-home .wp-home-toggle:has-text('Break')");
+  await p.click("#wp-home .wp-scene-tab:has-text('Break')");
   await p.waitForSelector("#wp-home .wp-home-break");
-  step("Break opens its lengths right on the card", (await text("#wp-home .wp-home-break")).includes("15m") &&
-    (await text("#wp-home .wp-home-break")).includes("Custom"));
-  await p.click("#wp-home .wp-home-toggle:has-text('Focus')");
+  step("Break: a break's lengths, then Explore & Learn, in the garden", (await text("#wp-home .wp-home-break")).includes("15m") &&
+    (await text("#wp-home .wp-home-break")).includes("Custom") && (await text("#wp-home")).includes("Take a Break") && (await text("#wp-home")).includes("Explore & Learn") &&
+    (await sceneImg()).includes("scenes/break.jpg"));
+  await p.click("#wp-home .wp-scene-tab:has-text('Home')");
   await p.waitForFunction(() => !document.querySelector("#wp-home .wp-home-break"));
-  await p.click("#wp-home .wp-home-challenge");
+  await p.click("#wp-home .wp-home-continue");
   await p.waitForSelector("#wp-home .wp-pw");
   const pwText = await text("#wp-home .wp-pw");
-  step("Start a challenge: a small window with your interests, their progress, and +", pwText.includes("Your interests") && pwText.includes("Aviation") &&
+  step("Continue Learning: a panel with your paths, their progress, and Add an interest", (await text("#wp-home .wp-scene-panel-title")) === "Continue Learning" && pwText.includes("Your paths") && pwText.includes("Aviation") &&
     pwText.includes("Earn a private pilot's license") && pwText.includes("No path yet") && !!(await p.$("#wp-home .wp-pw-plus")), pwText.slice(0, 200));
   await p.click("#wp-home .wp-pw-plus");
   await p.fill("#wp-home .wp-pw-add input >> nth=0", "Woodworking");
@@ -331,11 +344,12 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.click("#wp-home .wp-pw-add button:text-is('Add')");
   await p.waitForFunction(() => document.querySelector("#wp-home .wp-pw")?.textContent.includes("Build a small hardwood box"));
   step("+ adds an interest with its goal (signed out: the path is drafted once you sign in)", (await store()).paths.some(x => x.interest === "Woodworking"));
-  await p.click("#wp-home .wp-pw-pick:has-text('Woodworking')");
+  await p.click("#wp-home .wp-pw-row:has-text('Woodworking') .wp-pw-pick");
   await p.waitForFunction(() => document.querySelector("#wp-home .wp-pw")?.textContent.includes("Sign in to Aim"));
   step("picking one without an account says to sign in for the path", (await text("#wp-home .wp-pw")).includes("Sign in to Aim, and it drafts a path"));
   await sw.evaluate(() => serial(async () => { const { paths } = await chrome.storage.local.get("paths"); await chrome.storage.local.set({ paths: paths.filter(x => x.interest !== "Woodworking") }); }));
-  await p.click("#wp-home .wp-home-challenge");
+  await p.click("#wp-home .wp-scene-x");
+  await p.waitForFunction(() => !document.querySelector("#wp-home .wp-scene-panel"));
   step("the mark (triangle, road and arrowhead) renders as SVG under Trusted Types", await p.evaluate(() => {
     const paths = [...document.querySelectorAll("#wp-chip .wp-icon:first-child svg path")];
     return paths.filter(x => (x.getAttribute("style") || "").includes("--wp-mark")).length === 1 && paths.filter(x => x.getAttribute("fill") === "#d0712f").length === 1;
@@ -425,7 +439,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     !(await p.$("#wp-aimpanel .wp-ap-bar")), morePanel.slice(0, 160));
 
   // ---------- the menu ----------
-  await p.click("#wp-chip .wp-pill");
+  await aimMenu();
   let menu = await text(".wp-dropdown");
   step("menu: laid out like the toolbar popup (Focus or Explore, the aim, Done, Set aside, session tools), then this video",
     ["Focus", "Explore", "Your aim", "Done", "Set aside", "Session tools", "Take a Break", "My Library", "No time limit", "Change my aim", "This video", "Save this video", "Sort this channel",
@@ -445,7 +459,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("the indicator counts the break down by the second, with an end button", /Break1[45]:\d\d left/.test(chip1) && chip1 !== chip2 && !!(await p.$("#wp-chip .wp-chip-end")), `${chip1} → ${chip2}`);
   step("on a break: recommendations, Shorts and autoplay are back", (await p.isVisible("#related")) && (await p.isVisible("#guideShorts")) &&
     (await p.getAttribute(".ytp-autonav-toggle-button", "aria-checked")) === "true");
-  await p.click("#wp-chip .wp-pill");
+  await aimMenu();
   menu = await text(".wp-dropdown");
   step("break menu offers going back to the purpose", menu.includes("Back to my aim") && menu.includes("Your aim is waiting"));
   await p.click('.wp-dropdown button:has-text("Back to my aim")');
@@ -454,7 +468,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("ending the break resumes the purpose", !st.brk && st.purpose?.suspended === false);
 
   // ---------- a break running out ----------
-  await p.click("#wp-chip .wp-pill");
+  await aimMenu();
   await p.click('.wp-dropdown .wp-dd-tool:has-text("Take a Break")');
   await p.click('.wp-break-dialog .wp-opt:text-is("15 minutes")');
   await p.click('.wp-break-dialog button:text-is("Start Break")');
@@ -470,7 +484,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.click('.wp-break-over button:has-text("Back to my aim")');
 
   // ---------- a purpose time limit ----------
-  await p.click("#wp-chip .wp-pill");
+  await aimMenu();
   await p.click('.wp-dropdown button.wp-link:text-is("Set one")');
   await p.click('.wp-dialog .wp-chip:text-is("15m")');
   await p.click('.wp-dialog button:text-is("Save")');
@@ -487,7 +501,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("Add 15 minutes clears it", !st.purpose.timeUp && !(await p.$(".wp-player-card")));
 
   // ---------- Done ----------
-  await p.click("#wp-chip .wp-pill");
+  await aimMenu();
   await p.click('.wp-dropdown .wp-dd-actions button:has-text("Done")');
   await p.waitForURL("https://www.youtube.com/", { timeout: 5000 });
   await p.waitForSelector("#wp-home .wp-home-end .wp-end-rate", { timeout: 5000 });
@@ -504,7 +518,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("answering is quiet: the card says thanks in place", (await text(".wp-home-end")).includes("Nice work"));
   await p.click('.wp-home-end [aria-label="Dismiss"]');
   step("dismissing it leaves the homepage card as usual", !(await p.$(".wp-home-end")) && !!(await p.$("#wp-home .wp-home-title")));
-  await p.click("#wp-chip .wp-pill");
+  await aimMenu();
   await p.click('.wp-dropdown .wp-dd-actions button:text-is("Set aim")');
   await p.waitForSelector(".wp-dialog .wp-recent", { timeout: 3000 });
   step("setting a purpose offers recent ones", (await text(".wp-dialog .wp-recent")).includes("Learn how sourdough starters work"));
@@ -655,10 +669,13 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await sw.evaluate(() => serial(() => recordTick(10, { id: "bio1", title: "Video bio1", channel: "Chan bio1", t: 300, d: 900 })));
   await sw.evaluate(() => serial(() => startPurpose({ text: "Fix my truck's AC", search: "truck ac recharge" })));
   await p.goto("https://www.youtube.com/");
+  await p.waitForSelector("#wp-home .wp-home-continue");
+  step("home: Continue Learning names the aim you're on", (await text("#wp-home .wp-home-continue")).includes("Pick up: Fix my truck's AC"));
+  await openContinue();
   await p.waitForSelector("#wp-home .wp-home-resume");
   let home = await text("#wp-home");
-  step("home: Continue with the aim you're on",
-    home.includes("Continue") && home.includes("Your aim") && home.includes("Fix my truck's AC"), home.slice(0, 160));
+  step("Continue Learning: the aim you're on, first",
+    home.includes("Continue") && home.includes("Your aim") && home.includes("Fix my truck's AC") && !!(await p.$("#wp-home .wp-cl-aim .wp-cl-play")), home.slice(0, 160));
   step("home: set-aside aims live in the Library, not on the homepage; no clutter",
     !home.includes("Recent aims") && !home.includes("Study for my biology exam") && !(await p.$(".wp-home-examples")) && !/\bnull\b/.test(home));
   step("home: an aim with no videos yet keeps the text-only card", !(await p.$(".wp-home-current .wp-home-video")));
@@ -673,6 +690,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("the resumed aim is current and the other is set aside", st.purpose?.text === "Study for my biology exam" &&
     st.paused.map(x => x.text).join() === "Fix my truck's AC" && !(await p.$(".wp-player-card")));
   await p.goto("https://www.youtube.com/");
+  await openContinue();
   await p.waitForSelector("#wp-home .wp-home-current .wp-home-video");
   const lastCard = await text("#wp-home .wp-home-video");
   step("home: the current aim leads with its last video: thumbnail, title, channel, where you stopped, a coral progress line",
@@ -688,7 +706,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("a small thumbnail plays that video from where you stopped, still on the aim",
     p.url().includes("watch?v=bio3&t=90s") && (await store()).purpose?.text === "Study for my biology exam", p.url());
   // Change my aim: switch to one you have, or start a new one.
-  await p.click("#wp-chip .wp-pill");
+  await aimMenu();
   await p.click(".wp-dropdown .wp-dd-change");
   await p.waitForSelector(".wp-change-dialog .wp-switch-item");
   const changeText = await text(".wp-change-dialog");
@@ -704,14 +722,18 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await sw.evaluate(id => serial(() => resumePurpose(id)), bioId);
   await p.goto("https://www.youtube.com/watch?v=bio3");
   await p.waitForSelector("#wp-chip .wp-pill");
-  await p.click("#wp-chip .wp-pill");
+  await aimMenu();
   await p.click('.wp-dropdown .wp-dd-actions button:has-text("Set aside")');
   await p.waitForURL("https://www.youtube.com/");
-  await p.waitForSelector("#wp-home .wp-home-toggles");
+  await p.waitForSelector("#wp-home .wp-scene-tab");
   st = await store();
   home = await text("#wp-home");
-  step("Set aside for later: no current aim; both wait in the Library", !st.purpose && st.paused.length === 2 && !home.includes("Your aim") && !home.includes("Continue"));
-  const [all] = await Promise.all([ctx.waitForEvent("page"), p.click("#wp-home .wp-home-toggle:has-text('Library')")]);
+  step("Set aside for later: no current aim; both wait in the Library", !st.purpose && st.paused.length === 2 && !home.includes("Your aim") && !home.includes("Pick up:"));
+  await p.click("#wp-home .wp-scene-tab:has-text('Library')");
+  await p.waitForURL(`chrome-extension://${extId}/targets.html`);
+  step("Library opens in the same tab, like a place", p.url().endsWith("/targets.html"));
+  const all = await ctx.newPage();
+  await all.goto(`chrome-extension://${extId}/targets.html`);
   await all.waitForSelector("#list .book");
   const allText = await all.textContent("main");
   step("Your library: every aim as a book, set-aside and finished ones too, and a New aim at the end",
@@ -773,15 +795,18 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("Learning record: totals and the aims you worked on, with their videos", recText.includes("Aims completed") && recText.includes("Study for my biology exam") &&
     recText.includes("Video bio1") && (await rec.$$("#record .entry")).length >= 2 && !/undefined|null|NaN/.test(recText), recText.slice(0, 200));
   const places = async pg => pg.$$eval(".page-head .places a", as => as.map(a => (a.getAttribute("aria-current") ? "*" : "") + a.textContent));
-  step("four places on every page: YouTube, Library, Pathways, Settings; the learning record is a tab of the Library",
-    (await places(rec)).join() === "YouTube,*Library,Pathways,Settings" && (await places(all)).join() === "YouTube,*Library,Pathways,Settings" &&
+  step("the same bar on every page (0.73): Home, Break and Library, then you; the learning record is a tab of the Library",
+    (await places(rec)).join() === "Home,Break,*Library" && (await places(all)).join() === "Home,Break,*Library" && !!(await all.$(".page-head .me")) &&
+    (await all.getAttribute(".page-head .places a:text-is('Break')", "href")) === "https://www.youtube.com/#aim-break" &&
     (await rec.$$eval(".lib-tabs a", as => as.map(a => (a.getAttribute("aria-current") ? "*" : "") + a.textContent))).join() === "Your aims,*Learning record" &&
     !!(await all.$(".lib-tabs a[href='record.html']")) && !!(await rec.$(".page-sub #print")));
   const optPage = await ctx.newPage();
   await optPage.goto(`chrome-extension://${extId}/options.html`);
   await optPage.waitForSelector(".page-head .places");
-  step("Settings is one of the four places, and has the spaced review switch", (await places(optPage)).join() === "YouTube,Library,Pathways,*Settings" &&
-    await optPage.isChecked("#spacedReview"));
+  await optPage.click(".page-head .me");
+  step("Settings is under you (with your paths, the learning record and Homeschool), and has the spaced review switch", (await places(optPage)).join() === "Home,Break,Library" &&
+    !!(await optPage.$(".page-head .me.on")) && await optPage.isVisible(".me-menu a[aria-current='page']:text-is('Settings')") &&
+    !!(await optPage.$(".me-menu a[href='pathways.html']")) && await optPage.isChecked("#spacedReview"));
   await optPage.close();
   await rec.close();
   await all.click(".slot:has-text(\"Fix my truck's AC\") button");
@@ -795,8 +820,9 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   // ---------- Saved for later ----------
   await sw.evaluate(() => serial(async () => { await saveForLater({ id: "sav1", title: "Saved one", channel: "C" }); await saveForLater({ id: "sav2", title: "Saved two", channel: "C" }); }));
   await p.goto("https://www.youtube.com/");
+  await breakTab();
   await p.waitForSelector("#wp-home .wp-home-saved");
-  step("home: Saved for later, newest first", (await p.$$eval(".wp-home-saved .wp-mini-play", ns => ns.map(n => n.title).join())) === "Saved two,Saved one");
+  step("Break: Saved for later, newest first", (await p.$$eval(".wp-home-saved .wp-mini-play", ns => ns.map(n => n.title).join())) === "Saved two,Saved one");
   await p.click(".wp-home-saved .wp-mini-play");
   await p.waitForURL(/watch\?v=sav2/);
   step("watching a saved video is a one-video break", (await store()).brk?.oneVideoId === "sav2");
@@ -804,9 +830,9 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("a saved video you've watched leaves the list", (await store()).saved.map(v => v.id).join() === "sav1");
   await sw.evaluate(() => serial(() => endBreak()));
   await p.goto("https://www.youtube.com/");
+  await breakTab();
   await p.waitForSelector("#wp-home .wp-home-saved");
-  await p.click("#wp-home .wp-home-toggle:has-text('Break')");
-  await p.click('#wp-home .wp-chip:text-is("15m")');
+  await p.click('#wp-home .wp-home-break .wp-chip:has-text("15m")');
   await p.waitForSelector(".wp-notice .wp-saved-row");
   step("starting a break offers what you saved", (await text(".wp-notice")).includes("You saved a video for later") && (await p.$$(".wp-notice .wp-mini-play")).length === 1);
   await p.click('.wp-notice button[aria-label="Dismiss"]');
@@ -820,6 +846,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     await chrome.storage.local.set({ purpose: { ...purpose, librarian: { kind: "lookup" } } });
   }));
   await p.goto("https://www.youtube.com/");
+  await openContinue();
   await p.waitForSelector("#wp-home .wp-home-current");
   step("a lookup aim says Got my answer instead of Done with this aim",
     !!(await p.$('.wp-home-current button:has-text("Got my answer")')) && !(await p.$('.wp-home-current button:has-text("Done with this aim")')));
@@ -848,11 +875,10 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   // ---------- Explore ----------
   await setLocal({ onboarding: { welcomed: true, tips: { home: true, chip: true, results: true }, hsTour: true }, learn: {} });
   await p.goto("https://www.youtube.com/");
-  await p.waitForSelector("#wp-home .wp-explore-open");
-  step("the homepage offers Explore as a button beside Start a challenge, and no row of videos", (await text("#wp-home .wp-explore-open")).includes("Explore") &&
-    !(await p.$("#wp-home .wp-learn")));
-  await p.click(".wp-explore-open");
-  await p.waitForSelector("#wp-home.wp-explore .wp-explore-head");
+  await p.waitForSelector("#wp-home .wp-scene-tab");
+  step("the homepage has no row of videos; Explore & Learn is under Break", !(await p.$("#wp-home .wp-learn")) && !(await p.$("#wp-home .wp-explore-grid")));
+  await breakTab();
+  await p.waitForSelector("#wp-home .wp-explore-head");
   step("Explore needs no setup: a bit of everything, with interests to pick", (await text("#wp-home")).includes("A bit of everything") && (await text("#wp-home")).includes("Pick interests") &&
     !/\bnull\b/.test(await text(".wp-explore-head")));
   await p.waitForSelector("#wp-home .wp-explore-grid, #wp-home .wp-explore-end", { timeout: 20000 });
@@ -879,7 +905,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.waitForTimeout(500);
   step("and when they run out, that's it for today", (await text(".wp-explore-end")).includes("That's everything new for today"));
   await p.goto("https://www.youtube.com/");
-  await p.click(".wp-explore-open");
+  await breakTab();
   await p.waitForSelector("#wp-home .wp-explore-grid .wp-learn-item", { timeout: 20000 });
   await p.click("#wp-home .wp-explore-grid .wp-learn-item");
   await p.waitForURL(/watch\?v=tbobvid1/);
@@ -899,16 +925,17 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await sw.evaluate(() => serial(() => finishPurpose("yes")));
   await sw.evaluate(() => serial(() => setSetting("learnOff", ["@numberphile"])));
   await p.goto("https://www.youtube.com/");
-  await p.click(".wp-explore-open");
+  await breakTab();
   await p.waitForSelector("#wp-home .wp-explore-grid .wp-learn-item", { timeout: 20000 });
   const exIds3 = await pickIds();
   step("what you watched isn't offered again, and a channel you took out is gone", !exIds3.includes("tbobvid1") && !exIds3.some(id => id.startsWith("numb")), exIds3.join());
-  await p.click(".wp-explore-back");
-  step("back returns to What brings you here?", (await text("#wp-home")).includes("What brings you here?") && !(await p.$("#wp-home.wp-explore")));
+  await p.click("#wp-home .wp-scene-tab:has-text('Home')");
+  await p.waitForFunction(() => !document.querySelector("#wp-home .wp-explore-head"));
+  step("Home returns to the greeting", /^Good (morning|afternoon|evening)\.$/.test(await text("#wp-home .wp-home-title")) && (await p.getAttribute("#wp-home", "data-view")) === "home");
   await sw.evaluate(() => serial(async () => { await startPurpose({ text: "fix a leaky faucet" }); }));
   await p.goto("https://www.youtube.com/");
-  await p.waitForSelector("#wp-home .wp-home-current");
-  step("with an aim going, Explore is still one tap away", !!(await p.$("#wp-home .wp-explore-open")));
+  await p.waitForSelector("#wp-home .wp-home-continue");
+  step("with an aim going, Explore & Learn is still one tap away, under Break", (await text("#wp-home .wp-home-continue")).includes("fix a leaky faucet") && !!(await p.$("#wp-home .wp-scene-tab:has-text('Break')")));
 
   // ---------- Shorts from your topics: a Quick review ----------
   await sw.evaluate(() => serial(async () => {
@@ -921,7 +948,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     await setSetting("learnShorts", true);
   }));
   await p.goto("https://www.youtube.com/");
-  await p.click(".wp-explore-open");
+  await breakTab();
   await p.waitForSelector("#wp-home .wp-review-item", { timeout: 15000 });
   if (process.env.SHOTS) { await p.waitForTimeout(300); await (await p.$("#wp-home")).screenshot({ path: `${process.env.SHOTS}/quick-review.png` }); }
   const reviewIds = await p.$$eval(".wp-review-item", ns => ns.map(n => n.querySelector(".wp-review-thumb").style.backgroundImage.match(/vi\/([^/]+)\//)[1]));
@@ -1110,8 +1137,8 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("You're done for today, with optional Go deeper and a break", (await text(".wp-plan-finished")).includes("You're done for today.") &&
     (await text(".wp-plan-finished")).includes("Go deeper") && (await text("#wp-home")).includes("6 of 6 done"));
   await p.click('.wp-today-preview button:text-is("Turn off")');
-  await p.waitForSelector("#wp-home.wp-home-card");
-  step("turning the preview off brings back the usual card", (await text("#wp-home")).includes("What brings you here?") && !(await store()).homeschool);
+  await p.waitForSelector("#wp-home.wp-scene");
+  step("turning the preview off brings back the usual homepage", !!(await p.$("#wp-home.wp-scene .wp-home-continue")) && !(await store()).homeschool);
 
   const opt = await ctx.newPage();
   opt.on("pageerror", e => errors.push("options: " + e.message));

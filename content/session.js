@@ -47,11 +47,13 @@ function tickCountdown() {
 
 // ---------------- the menu ----------------
 function openDropdown() {
-  const pill = $("#wp-chip .wp-pill");
+  // On the homepage (0.73) the scene covers YouTube's bar: the menu opens from "You" instead.
+  const fromScene = $("#wp-home.wp-scene .wp-scene-me");
+  const pill = fromScene || $("#wp-chip .wp-pill");
   if (!pill) return;
   const r = pill.getBoundingClientRect();
   dropdown = el("div", { class: "wp wp-dropdown", role: "menu", onclick: e => e.stopPropagation() },
-    ...(brk ? breakMenu() : activePurpose() ? purposeMenu() : idleMenu()));
+    ...(brk ? breakMenu() : activePurpose() ? purposeMenu() : idleMenu()), fromScene ? sceneYou() : null);
   dropdown.style.top = `${r.bottom + 8}px`;
   document.body.append(dropdown);
   // Right-aligned under the pill, but always inside the window, wherever YouTube puts the pill.
@@ -83,7 +85,7 @@ function menuModes() {
   return el("div", { class: "wp-dd-modes" },
     mode(focused, "target", "Focus", "Learn something specific", () => { location.href = "/"; }),
     mode(exploring, "compass", "Explore", "Follow your curiosity", () => {
-      if (location.pathname === "/") { exploreOpen = true; renderHome(); } else location.href = "/#aim-explore";
+      if (location.pathname === "/") openExplore(); else location.href = "/#aim-explore";
     }));
 }
 

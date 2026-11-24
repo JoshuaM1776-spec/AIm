@@ -75,6 +75,7 @@ const writes = {
   "review-offered": () => reviewOffered(),
   "goal-answer": m => goalAnswer(m.aimId, m.answer),
   "challenge-start": m => challengeStart(m.challenge),
+  "challenge-today-save": m => challengeTodaySave(String(m.scale || ""), m.rec),
   "path-add": m => pathAdd({ interest: m.interest, goal: m.goal, why: m.why }),
   "path-remove": m => pathRemove(String(m.id || "")),
   "path-plan-save": m => pathPlanSave(String(m.id || ""), m.plan),
@@ -165,6 +166,7 @@ const reads = {
   "path-next": m => pathNext(String(m.id || "")),
   "path-context": m => pathContext(String(m.id || "")),
   "challenge-known": m => challengeKnown(String(m.interest || "")),
+  "challenge-today": () => challengeToday(),
   "goal-check": m => ({ goal: goalShaped(String(m.text || "")), name: goalName(String(m.text || "")), suggestion: suggestGoal(String(m.text || "")) }),
   "memory-list": () => memoryList(),
   "captions-stats": () => captionsStats(),
@@ -189,7 +191,9 @@ const reads = {
     if (typeof m.theme === "string" && m.theme.trim()) q.set("theme", m.theme.trim().slice(0, 80));
     return chrome.tabs.create({ url: chrome.runtime.getURL("pathways.html" + (q.size ? "?" + q : "")) }).then(() => ({ result: "applied" }));
   },
-  "open-targets": () => chrome.tabs.create({ url: chrome.runtime.getURL("targets.html") }).then(() => ({ result: "applied" })),
+  // From the homepage's top bar (same: true), the Library opens in the same tab, like a place.
+  "open-targets": (m, sender) => (m.same && sender?.tab?.id ? chrome.tabs.update(sender.tab.id, { url: chrome.runtime.getURL("targets.html") })
+    : chrome.tabs.create({ url: chrome.runtime.getURL("targets.html") })).then(() => ({ result: "applied" })),
   "open-scenario": m => chrome.tabs.create({ url: chrome.runtime.getURL(`scenario.html?aim=${encodeURIComponent(String(m.aimId || ""))}`) }).then(() => ({ result: "applied" })),
   "open-references": () => chrome.tabs.create({ url: chrome.runtime.getURL("references.html") }).then(() => ({ result: "applied" })),
   "open-aim": m => chrome.tabs.create({ url: chrome.runtime.getURL(`aim.html?id=${encodeURIComponent(String(m.id || ""))}`) }).then(() => ({ result: "applied" })),
@@ -241,8 +245,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   const w = writes[msg.type], r = reads[msg.type];
   if (!w && !r) return;
   // Make sure stored data is current before anything reads or changes it.
-  const run = w ? serial(async () => { await ensureMigrated(); return w(msg); })
-    : serial(ensureMigrated).then(() => r(msg));
+  const run = w ? serial(async () => { await ensureMigrated(); return w(msg, sender); })
+    : serial(ensureMigrated).then(() => r(msg, sender));
   run.then(res => sendResponse(res ?? null), e => sendResponse({ error: String(e.message || e) }));
   if (SYNC_AFTER.has(msg.type)) run.then(syncSoon, () => {});
   // A student's lesson done (or watched to the end): tell the family's side soon.

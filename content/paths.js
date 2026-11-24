@@ -1,19 +1,12 @@
-// Aim — Start a challenge (0.72): a small window under the button on YouTube's homepage with the
-// interests you've added, each with its goal and progress (percent of the whole path, and what's left
-// to the next checkpoint), and + to add one. Picking an interest picks up where you left off on its
+// Aim — your paths (0.72), in Continue Learning on YouTube's homepage (0.73, content/scene.js): the
+// interests you've added, each with the lesson you're on and progress (percent of the whole path, and
+// what's left to the next checkpoint), and + to add one. Picking an interest picks up where you left off on its
 // path: the lesson in progress, or the next one; when the detailed lessons run out, or a new interest
 // has no plan yet, Aim drafts them first (Aim's server, signed in). See store.js → Paths.
 
 let pw = { open: false, list: null, adding: false, busy: "", error: "" };
 let pwHost = null;
 function pwRedraw() { if (pwHost?.isConnected) pwHost.replaceWith(pathsWindow()); }
-
-async function togglePaths() {
-  pw.open = !pw.open;
-  pw.error = "";
-  if (pw.open) { pw.list = null; pwRedraw(); pw.list = (await send({ type: "paths" })) || []; }
-  pwRedraw();
-}
 
 // Draft (or continue) a path's plan on Aim's server, then save it here.
 async function draftPath(id, label) {
@@ -56,18 +49,28 @@ async function addInterest(interest, goal) {
   if (account.on && !r.existed && await draftPath(r.path.id, `Drafting your path for ${interest}…`)) { pw.list = (await send({ type: "paths" })) || []; pwRedraw(); }
 }
 
+// What's left to the next checkpoint: lessons to the end of a unit, or a step outside Aim.
 const pwProgressText = pr => !pr ? "No path yet: pick it to draft one"
-  : [`${pr.percent}% of the path`, pr.next ? (pr.next.outside ? `next checkpoint: ${pr.next.title} (outside Aim)` : `${pr.next.left} lesson${pr.next.left === 1 ? "" : "s"} to: ${pr.next.title}`) : "every unit done"].join(" · ");
+  : pr.next ? (pr.next.outside ? `Next checkpoint: ${pr.next.title} (outside Aim)` : `${pr.next.left} lesson${pr.next.left === 1 ? "" : "s"} to: ${pr.next.title}`) : "Every unit done";
 
 function pathsWindow() {
   if (!pw.open) { pwHost = el("div", { class: "wp-pw-slot", hidden: true }); return pwHost; }
-  const rows = (pw.list || []).map(x => el("div", { class: "wp-pw-row" },
-    el("button", { class: "wp-pw-pick", disabled: !!pw.busy, onclick: () => pickPath(x.id), title: `Pick up ${x.interest} where you left off` },
-      el("span", { class: "wp-pw-interest" }, x.interest),
-      el("span", { class: "wp-pw-goal" }, x.goal),
-      el("span", { class: "wp-pw-bar", "aria-hidden": "true" }, el("i", { style: `width:${x.progress?.percent || 0}%` })),
-      el("span", { class: "wp-pw-meta" }, pwProgressText(x.progress))),
-    x.planned ? el("button", { class: "wp-link wp-pw-see", onclick: () => send({ type: "open-path", id: x.id }) }, "See the path") : null));
+  const rows = (pw.list || []).map(x => {
+    const pct = x.progress?.percent || 0;
+    const row = el("div", { class: "wp-pw-row wp-cl-row", title: `Pick up ${x.interest} where you left off` },
+      subjectThumb(x.subject),
+      el("div", { class: "wp-cl-text" },
+        el("span", { class: "wp-cl-head" }, el("span", { class: "wp-cl-title wp-pw-interest" }, x.interest), el("span", { class: "wp-cl-goal" }, x.goal)),
+        el("span", { class: "wp-muted wp-pw-goal" }, x.lesson ? `Lesson ${x.lesson.n} · ${x.lesson.title}` : "Pick it up, and Aim lays out the path"),
+        el("span", { class: "wp-cl-progress" },
+          el("span", { class: "wp-pw-bar", role: "progressbar", "aria-valuenow": String(pct), "aria-valuemin": "0", "aria-valuemax": "100", "aria-label": `${pct}% of the path` }, el("i", { style: `width:${pct}%` })),
+          el("span", { class: "wp-cl-pct" }, x.progress ? `${pct}%` : "")),
+        el("span", { class: "wp-pw-meta" }, pwProgressText(x.progress),
+          x.planned ? el("button", { class: "wp-link wp-pw-see", onclick: e => { e.stopPropagation(); send({ type: "open-path", id: x.id }); } }, "See the path") : null)),
+      el("button", { class: "wp-cl-play wp-pw-pick", disabled: !!pw.busy, "aria-label": `Pick up ${x.interest} where you left off`, onclick: e => { e.stopPropagation(); pickPath(x.id); } }, icon("playSolid")));
+    row.addEventListener("click", () => { if (!pw.busy) pickPath(x.id); });
+    return row;
+  });
   const add = pw.adding ? (() => {
     const i = el("input", { class: "wp-input", type: "text", placeholder: "An interest, like aviation", "aria-label": "Interest", maxlength: "60" });
     const g = el("input", { class: "wp-input", type: "text", placeholder: "The goal behind it, like “earn a private pilot's license”", "aria-label": "Goal", maxlength: "160" });
@@ -78,10 +81,10 @@ function pathsWindow() {
       el("button", { class: "wp-btn wp-btn-primary", onclick: () => addInterest(i.value, g.value) }, "Add"),
       el("button", { class: "wp-btn wp-btn-text", onclick: () => { pw.adding = false; pw.error = ""; pwRedraw(); } }, "Cancel")));
   })() : null;
-  pwHost = el("div", { class: "wp-pw", role: "dialog", "aria-label": "Your interests" },
+  pwHost = el("div", { class: "wp-pw", "aria-label": "Your paths" },
     el("div", { class: "wp-pw-head" },
-      el("b", {}, "Your interests"),
-      el("button", { class: "wp-icon-btn wp-pw-plus", title: "Add an interest", "aria-label": "Add an interest", onclick: () => { pw.adding = true; pw.error = ""; pwRedraw(); } }, icon("plus"))),
+      el("span", { class: "wp-label" }, "Your paths"),
+      el("button", { class: "wp-link wp-pw-plus", title: "Add an interest", onclick: () => { pw.adding = true; pw.error = ""; pwRedraw(); } }, icon("plus"), "Add an interest")),
     pw.list === null ? el("div", { class: "wp-muted wp-pw-note" }, "Loading…")
       : rows.length ? el("div", { class: "wp-pw-list" }, ...rows)
       : pw.adding ? null : el("div", { class: "wp-muted wp-pw-note" }, "Add what you're curious about, and the goal behind it. Aim lays out a path, in order, and you pick it up here."),

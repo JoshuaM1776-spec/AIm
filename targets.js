@@ -1,5 +1,6 @@
-// Aim — Your library: every aim as a book. All, In progress (what you're on, set aside or exploring)
-// and Completed, with a search. Opening a book shows that aim's page (aim.html).
+// Aim — Your library: your subjects as tiles (a picture, the subject, how many aims), then every aim as
+// a book on the shelf: All, In progress (what you're on, set aside or exploring) and Completed, with a
+// search. A tile shows only that subject's books. Opening a book shows that aim's page (aim.html).
 
 const BRAND = chrome.runtime.getManifest().name;
 for (const n of document.querySelectorAll("[data-brand]")) n.textContent = BRAND;
@@ -52,7 +53,38 @@ function goalRow(t) {
   return node("div", { className: "qa qa-goal" }, input, node("button", { className: "btn", type: "button", textContent: "Make it an aim", onclick: save }));
 }
 
-let tab = "all", query = "";
+let tab = "all", query = "", only = null; // only: a subject's id, from its tile
+
+// Subjects with a picture (scenes/subjects/, as on YouTube's homepage); the rest show their emblem.
+const SUBJECT_ART = ["history", "science", "math", "space", "engineering", "craft", "health", "arts", "people", "faith", "general"];
+const BOOK_ICON = () => {
+  const NS = "http://www.w3.org/2000/svg", svg = document.createElementNS(NS, "svg"), path = document.createElementNS(NS, "path");
+  svg.setAttribute("viewBox", "0 0 24 24"); svg.setAttribute("aria-hidden", "true");
+  for (const [k, v] of Object.entries({ d: "M12 6.5C10 5 7 4.8 4 5.5v13c3-.7 6-.5 8 1 2-1.5 5-1.7 8-1v-13c-3-.7-6-.5-8 1zM12 6.5v13", fill: "none", stroke: "currentColor", "stroke-width": "1.8", "stroke-linejoin": "round" })) path.setAttribute(k, v);
+  svg.append(path);
+  return svg;
+};
+function tiles(books) {
+  const by = new Map();
+  for (const t of books) {
+    const s = t.subject || { id: "general", name: "Learning" };
+    const e = by.get(s.id) || { ...s, n: 0 };
+    e.n++;
+    by.set(s.id, e);
+  }
+  const list = [...by.values()].sort((a, b) => b.n - a.n || a.name.localeCompare(b.name));
+  document.getElementById("tiles").replaceChildren(...list.map(s => {
+    const art = SUBJECT_ART.includes(s.id);
+    const b = node("button", { type: "button", className: `tile${art ? "" : " drawn"}`, title: only === s.id ? "Show every subject" : `Only ${s.name}`,
+      onclick: () => { only = only === s.id ? null : s.id; render(); } },
+      art ? null : (() => { const e = coverEmblem(s.id); e.setAttribute("class", "book-emblem big"); return e; })(),
+      node("span", { className: "tile-row" }, coverEmblem(s.id), node("span", { className: "tile-name", textContent: s.name }),
+        node("span", { className: "tile-n" }, BOOK_ICON(), String(s.n))));
+    if (art) b.style.backgroundImage = `url("scenes/subjects/${s.id}.jpg")`;
+    b.setAttribute("aria-pressed", String(only === s.id));
+    return b;
+  }));
+}
 let data = null;
 async function render() {
   data ||= await send({ type: "targets" });
@@ -64,7 +96,9 @@ async function render() {
   const quick = [data.current, ...data.paused, ...data.completed].filter(t => t && !book(t));
   const live = [data.current, ...data.paused].filter(t => t && book(t));
   const completed = data.completed.filter(book);
-  const groups = { all: [...live, ...completed], progress: live, completed };
+  tiles([...live, ...completed]);
+  const inSubject = t => !only || (t.subject?.id || "general") === only;
+  const groups = { all: [...live, ...completed].filter(inSubject), progress: live.filter(inSubject), completed: completed.filter(inSubject) };
   const q = query.trim().toLowerCase();
   const shown = groups[tab].filter(t => !q || t.text.toLowerCase().includes(q) || t.subject?.name.toLowerCase().includes(q));
   list.replaceChildren(...[

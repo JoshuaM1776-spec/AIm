@@ -515,11 +515,43 @@ async function pathContext(id) {
 }
 // The interests window and the path page: each path with its progress.
 async function pathsView() {
-  return (await pathsAll()).map(p => ({ id: p.id, interest: p.interest, goal: p.goal, planned: !!p.plan, title: p.plan?.title || p.goal, progress: p.plan ? pathProgress(p) : null }));
+  // The lesson you're on (or the next one), numbered, and a subject for its picture (aimSubject).
+  return (await pathsAll()).map(p => {
+    const lessons = p.lessons || [], cur = lessons.find(l => l.status === "active") || lessons.find(l => l.status === "new");
+    return { id: p.id, interest: p.interest, goal: p.goal, planned: !!p.plan, title: p.plan?.title || p.goal, progress: p.plan ? pathProgress(p) : null,
+      subject: aimSubject({ text: `${p.interest} ${p.goal}` }).id, lesson: cur ? { n: lessons.indexOf(cur) + 1, title: cur.title } : null };
+  });
 }
 async function pathGet(id) {
   const path = (await pathsAll()).find(x => x.id === id);
   return path ? { result: "applied", path, progress: path.plan ? pathProgress(path) : null } : { result: "error", message: "That interest isn't here any more." };
+}
+
+// ---------- The Daily and Weekly Challenges (0.73, content/challenge.js) ----------
+// One of each, kept for the day or the week: the subject, the three the server offered, and which one
+// is showing. A new day (or week, from Monday) starts fresh.
+function challengePeriod(scale, now = new Date()) {
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (scale === "weekly") d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+async function challengeToday() {
+  const { chToday = {} } = await chrome.storage.local.get("chToday");
+  const out = {};
+  for (const scale of ["daily", "weekly"]) {
+    const rec = chToday[scale];
+    if (rec?.key === challengePeriod(scale) && rec.list?.length) out[scale] = rec;
+  }
+  return out;
+}
+async function challengeTodaySave(scale, rec) {
+  if (!["daily", "weekly"].includes(scale)) return { result: "invalid" };
+  const list = (Array.isArray(rec?.list) ? rec.list : []).slice(0, 3).map(tidyChallengeIn).filter(Boolean);
+  if (!list.length) return { result: "invalid" };
+  const { chToday = {} } = await chrome.storage.local.get("chToday");
+  chToday[scale] = { key: challengePeriod(scale), interest: clip(rec.interest, 120), list, pick: Math.max(0, Math.min(list.length - 1, Math.round(Number(rec.pick) || 0))), at: Date.now() };
+  await chrome.storage.local.set({ chToday });
+  return { result: "applied" };
 }
 
 // ---------- Challenges (0.70, docs/SPEC.md §3–§9, §15) ----------
