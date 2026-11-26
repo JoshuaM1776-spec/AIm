@@ -785,6 +785,17 @@ const fetchesBefore = srv.captionFetches;
 await opt.goto(`chrome-extension://${extId}/options.html#plus`);
 await opt.waitForSelector("#weeklyEditor", { timeout: 10000 }).catch(() => {});
 step("Settings shows an editor's account the Weekly Challenge editor", (await opt.getAttribute("#weeklyEditor", "href").catch(() => "")) === "weekly-editor.html");
+// Not (yet) an editor: the page says which email the server checked, and where to add it.
+const editors = deps.config.dailyEditors;
+deps.config.dailyEditors = [];
+const notEd = await ctx.newPage();
+await notEd.goto(`chrome-extension://${extId}/weekly-editor.html`);
+await notEd.waitForFunction(() => document.getElementById("err").textContent.length > 0, null, { timeout: 10000 });
+const notEdText = await notEd.textContent("#err");
+step("an account that isn't an editor: the editor says which email the server checked, and where to add it",
+  notEdText.includes("doesn't list learner@example.com as an editor") && notEdText.includes("AIM_DAILY_EDITORS") && !(await notEd.$("#weeks .week")), notEdText);
+await notEd.close();
+deps.config.dailyEditors = editors;
 const wkEd = await ctx.newPage();
 const wkEdErrors = [];
 wkEd.on("pageerror", e => wkEdErrors.push(e.message));

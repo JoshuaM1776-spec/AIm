@@ -353,8 +353,9 @@ const deps: Deps = {
       dayTokens: num("AIM_FREE_DAY_TOKENS", 80_000),
       minuteCalls: num("AIM_FREE_MINUTE_CALLS", 10)
     },
-    // Who drafts, checks and publishes the Daily Challenge: account emails, comma-separated (a secret, not in code).
-    dailyEditors: env("AIM_DAILY_EDITORS").split(",").map(s => s.trim().toLowerCase()).filter(Boolean),
+    // Who drafts, checks and publishes the Daily and Weekly Challenges: account emails, comma-separated (a
+    // secret, not in code). Read forgivingly: semicolons or spaces work too, and stray quotes or <> are ignored.
+    dailyEditors: env("AIM_DAILY_EDITORS").split(/[,;\s]+/).map(s => s.replace(/^["'<]+|["'>]+$/g, "").trim().toLowerCase()).filter(Boolean),
     maxBodyBytes: 24 * 1024, // a pasted study guide can run to a few pages
     maxSyncBytes: 1024 * 1024
   }
