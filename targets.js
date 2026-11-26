@@ -3,7 +3,9 @@
 //     exploring) and Completed, with a search. Opening a book shows that aim's page (aim.html).
 //   Learning Plans: your paths (an interest and the goal behind it), each with the lesson you're on and
 //     progress; opening one shows the whole plan (path.html).
-//   Collections: your subjects as picture tiles with how many aims each; a tile shows that subject's books.
+//   Collections: your topics (subjects as picture tiles with how many aims each; a tile shows that
+//     subject's books), the videos you saved for later, and your references.
+// The search above the cards searches whichever part is open.
 
 const BRAND = chrome.runtime.getManifest().name;
 for (const n of document.querySelectorAll("[data-brand]")) n.textContent = BRAND;
@@ -75,7 +77,8 @@ function tiles(books) {
     e.n++;
     by.set(s.id, e);
   }
-  const list = [...by.values()].sort((a, b) => b.n - a.n || a.name.localeCompare(b.name));
+  const q = query.trim().toLowerCase();
+  const list = [...by.values()].filter(s => !q || s.name.toLowerCase().includes(q)).sort((a, b) => b.n - a.n || a.name.localeCompare(b.name));
   document.getElementById("tiles").replaceChildren(...list.map(s => {
     const art = SUBJECT_ART.includes(s.id);
     const b = node("button", { type: "button", className: `tile${art ? "" : " drawn"}`, title: only === s.id ? "Show every subject" : `Only ${s.name}`,
@@ -87,9 +90,7 @@ function tiles(books) {
     b.setAttribute("aria-pressed", String(only === s.id));
     return b;
   }));
-  document.getElementById("nCollections").textContent = list.length ? `${list.length} subject${list.length === 1 ? "" : "s"}` : "";
-  document.getElementById("tiles").replaceChildren(...(list.length ? [...document.getElementById("tiles").childNodes]
-    : [node("p", { className: "plans-empty", textContent: "Your subjects collect here as you add aims." })]));
+  if (!list.length) document.getElementById("tiles").replaceChildren(node("p", { className: "none", textContent: q ? `No topic matches “${query}”.` : "Your topics collect here as you add aims." }));
 }
 
 // The three parts of the Library, one at a time.
@@ -106,8 +107,9 @@ for (const b of document.querySelectorAll(".hub-card")) b.addEventListener("clic
 const nextText = pr => !pr ? "No plan yet: pick it up on YouTube's homepage and Aim lays it out"
   : pr.next ? (pr.next.outside ? `Next checkpoint: ${pr.next.title} (outside Aim)` : `${pr.next.left} lesson${pr.next.left === 1 ? "" : "s"} to: ${pr.next.title}`) : "Every unit done";
 async function plans() {
-  const list = (await send({ type: "paths" })) || [];
-  document.getElementById("nPlans").textContent = list.length ? `${list.length} plan${list.length === 1 ? "" : "s"}` : "";
+  const q = query.trim().toLowerCase();
+  const all = (await send({ type: "paths" })) || [];
+  const list = all.filter(x => !q || `${x.interest} ${x.goal}`.toLowerCase().includes(q));
   document.getElementById("plans").replaceChildren(...(list.length ? list.map(x => {
     const art = SUBJECT_ART.includes(x.subject), pct = x.progress?.percent || 0;
     const pic = node("span", { className: `pic${art ? "" : " drawn"}` }, art ? null : coverEmblem(x.subject || "general"));
@@ -120,8 +122,35 @@ async function plans() {
         x.progress ? node("span", { className: "bar" }, node("i", {}, Object.assign(node("b"), { style: `width:${pct}%` })), `${pct}%`) : null,
         node("span", { className: "next", textContent: nextText(x.progress) })),
       node("span", { className: "open", textContent: "See the plan" }));
-  }) : [node("p", { className: "plans-empty" }, "No learning plans yet. Add what you're curious about, and the goal behind it, under Start a challenge on ",
-    node("a", { href: "https://www.youtube.com/", textContent: "YouTube's homepage" }), ".")]));
+  }) : [all.length ? node("p", { className: "plans-empty", textContent: `No learning plan matches “${query}”.` })
+    : node("p", { className: "plans-empty" }, "No learning plans yet. Add what you're curious about, and the goal behind it, under Start a challenge on ",
+      node("a", { href: "https://www.youtube.com/", textContent: "YouTube's homepage" }), ".")]));
+}
+
+// Collections, after your topics: the videos you saved for later (watching one is a one-video break,
+// as on YouTube), and the references your scenarios and checks use.
+async function saved() {
+  const q = query.trim().toLowerCase();
+  const st = await send({ type: "status" });
+  const list = (st?.saved || []).filter(v => !q || `${v.title} ${v.channel || ""}`.toLowerCase().includes(q));
+  document.getElementById("saved").replaceChildren(...(list.length ? list.map(v => {
+    const shot = node("span", { className: "shot" });
+    shot.style.backgroundImage = `url("https://i.ytimg.com/vi/${encodeURIComponent(v.id)}/mqdefault.jpg")`;
+    return node("div", { className: "saved-item" },
+      node("button", { type: "button", className: "watch", title: `Watch “${v.title}” (a one-video break)`, onclick: async () => {
+        await send({ type: "break-start", oneVideoId: v.id });
+        location.href = `https://www.youtube.com/watch?v=${encodeURIComponent(v.id)}`;
+      } }, shot, node("span", { className: "t", textContent: v.title }), node("span", { className: "c", textContent: v.channel || "" })),
+      node("button", { type: "button", className: "x", title: "Remove", ariaLabel: `Remove “${v.title}”`, textContent: "×", onclick: async () => { await send({ type: "saved-remove", id: v.id }); saved(); } }));
+  }) : [node("p", { className: "none", textContent: q ? `Nothing saved matches “${query}”.` : "Videos you save for later on YouTube show up here." })]));
+}
+async function refs() {
+  const q = query.trim().toLowerCase();
+  const list = ((await send({ type: "ref-list" })) || []).filter(r => !q || (r.name || "").toLowerCase().includes(q));
+  document.getElementById("refs").replaceChildren(...list.map(r => node("a", { className: "ref-item", href: "references.html" },
+    node("b", { textContent: r.name }), node("span", { textContent: [r.kind, r.level, r.region].filter(Boolean).join(" · ") }))),
+  node("a", { className: "ref-item", href: "references.html" }, node("b", { textContent: list.length ? "Manage references" : "Add a reference" }),
+    node("span", { textContent: "Protocols and course texts that scenarios use for medications, doses and steps. Kept in this browser." })));
 }
 let data = null;
 async function render() {
@@ -135,7 +164,6 @@ async function render() {
   const live = [data.current, ...data.paused].filter(t => t && book(t));
   const completed = data.completed.filter(book);
   tiles([...live, ...completed]);
-  document.getElementById("nAims").textContent = `${live.length + completed.length} aim${live.length + completed.length === 1 ? "" : "s"}`;
   const inSubject = t => !only || (t.subject?.id || "general") === only;
   const filter = document.getElementById("filter"), named = [...live, ...completed].find(t => (t.subject?.id || "general") === only)?.subject?.name;
   filter.hidden = !only;
@@ -169,7 +197,9 @@ async function render() {
       label, node("span", { className: "n", textContent: String(groups[key].length) }))));
 }
 
-document.getElementById("search").addEventListener("input", e => { query = e.target.value; render(); });
+document.getElementById("search").addEventListener("input", e => { query = e.target.value; render(); plans(); saved(); refs(); });
 showSec(location.hash.slice(1));
 render();
 plans();
+saved();
+refs();

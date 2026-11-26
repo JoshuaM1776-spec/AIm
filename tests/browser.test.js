@@ -745,7 +745,8 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     (await all.textContent(".slot:has-text('Study for my biology exam') .where")).startsWith("Set aside"));
   step("the Library (0.74): My Library, Learning Plans and Collections; My Library is open",
     (await all.$$eval(".hub-card b", b => b.map(x => x.textContent).join())) === "My Library,Learning Plans,Collections" &&
-    (await all.getAttribute(".hub-card[data-sec='aims']", "aria-selected")) === "true" && !(await all.isVisible("#sec-collections")) && (await all.textContent("#nAims")).includes(" aim"));
+    (await all.getAttribute(".hub-card[data-sec='aims']", "aria-selected")) === "true" && !(await all.isVisible("#sec-collections")) &&
+    (await all.$$eval(".hub-card .hub-d", b => b.map(x => x.textContent).join("|"))) === "Videos, notes, and ideas you've built|Your goals, challenges, and progress|Curated topics and saved resources");
   await all.click(".hub-card[data-sec='collections']");
   await all.waitForSelector("#tiles .tile");
   const firstTile = (await all.textContent("#tiles .tile .tile-name")).trim();
@@ -839,6 +840,17 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.goto("https://www.youtube.com/");
   await breakTab();
   await p.waitForSelector("#wp-home .wp-home-saved");
+  {
+    const lib = await ctx.newPage();
+    await lib.goto(`chrome-extension://${extId}/targets.html#collections`);
+    await lib.waitForSelector("#saved .saved-item");
+    step("the Library's Collections: your saved videos too, newest first, and your references", (await lib.$$eval("#saved .saved-item .t", ns => ns.map(n => n.textContent).join())) === "Saved two,Saved one" &&
+      (await lib.textContent("#refs")).includes("Add a reference"));
+    await lib.fill("#search", "one");
+    await lib.waitForFunction(() => document.querySelectorAll("#saved .saved-item").length === 1);
+    step("the search above the cards searches the open part", (await lib.textContent("#saved .saved-item .t")) === "Saved one");
+    await lib.close();
+  }
   step("Break: Saved for later, newest first", (await p.$$eval(".wp-home-saved .wp-mini-play", ns => ns.map(n => n.title).join())) === "Saved two,Saved one");
   await p.click(".wp-home-saved .wp-mini-play");
   await p.waitForURL(/watch\?v=sav2/);
