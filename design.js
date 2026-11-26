@@ -36,7 +36,7 @@ const STAGES = [
   { id: "shorts", name: "Shorts", title: "What about Shorts?", q: "Keep them, curate them, or remove them." },
   { id: "watching", name: "Watching", title: "How strict should Aim be?", q: `${BRAND} always asks what you're here for, then keeps the videos that fit. Choose what else steps aside.` }
 ];
-const KEYS = ["homeCard", "learnRow", "learnTopics", "hideShorts", "learnShorts", "hideRecs", "noAutoplay", "hideFeeds", "strict"];
+const KEYS = ["homeCard", "learnTopics", "hideShorts", "learnShorts", "hideRecs", "noAutoplay", "hideFeeds", "strict"];
 const greeting = d => (!d.homeCard ? "feed" : "clean");
 
 const S = { cur: null, d: null, stage: 0, review: false, wizard: true, view: "after", data: { videos: {}, shorts: {} }, avoid: {}, readonly: false, applied: false };

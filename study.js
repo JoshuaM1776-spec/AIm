@@ -45,8 +45,9 @@ function topicCard(st, t, i) {
         o.status !== "demonstrated" && o.search ? node("a", { href: yt(`/results?search_query=${encodeURIComponent(o.search)}`), textContent: "Review", className: "small" }) : null))) : null,
     st.endedAt ? null : node("div", { className: "row" },
       btn("Go to this topic", "tonal", async () => { await send({ type: "study-update", current: i }); location.href = yt(`/results?search_query=${encodeURIComponent(t.searches[0])}`); }),
-      btn(t.check ? "Check again" : "Check yourself", "text", () => send({ type: "open-teachback", topic: `${t.title} (${st.title})`,
-        notes: [t.brief, st.notes].filter(Boolean).join("\n\n").slice(0, 3000), study: t.id }))));
+      btn(t.check ? "Check again" : "Check yourself", "text", () => {
+        location.href = yt(`/#aim-check=${encodeURIComponent(JSON.stringify({ id: t.id, title: t.title, what: t.brief || "" }))}`);
+      })));
 }
 
 // "Put it into practice": one small project using what the session covered, once there's something to

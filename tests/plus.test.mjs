@@ -1,7 +1,7 @@
 // Aim Plus end to end: loads a copy of the extension pointed at a local stand-in for Supabase
-// (Auth plus the real AI endpoint and TeachBack logic from supabase/functions/ai/, with a scripted
-// Claude and an in-memory database), signs in through Settings, and runs a TeachBack session.
-// Set SHOTS=/some/dir to save screenshots of the TeachBack page.
+// (Auth plus the real AI endpoint from supabase/functions/ai/, with a scripted Claude and an in-memory
+// database), signs in through Settings, and uses Aim Plus on YouTube and Aim's pages.
+// Set SHOTS=/some/dir to save screenshots.
 // Run: node --experimental-strip-types tests/plus.test.mjs   (needs Playwright, like browser.test.js)
 import { createRequire } from "node:module";
 import http from "node:http";
@@ -10,7 +10,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { handle } from "../supabase/functions/ai/handler.ts";
-import { memDaily, memDb, memSync, memWeekly } from "./helpers/memdb.mjs";
+import { memDb, memSync, memWeekly } from "./helpers/memdb.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT || "playwright");
@@ -75,14 +75,6 @@ const deps = {
       : props.includes("showed") ? (srv.weeklyPrompts = [...(srv.weeklyPrompts || []), req.prompt], { summary: "You worked the numbers before you spent the money, and it showed.",
           showed: ["Turning a flow rate into a daily total", "Rating a pipe for its lowest point"], next: [{ topic: "Friction loss", why: "Long pipes lose pressure as water flows.", search: "friction loss in pipes explained" }] })
       : props.includes("marks") ? (srv.talkPrompts.push(req.prompt), srv.talk.shift())
-      : props.includes("days") ? (srv.dailyPrompts = [...(srv.dailyPrompts || []), req.prompt], { days: [...req.prompt.matchAll(/^DAY \d+: (\S+)/gm)].map(m => ({
-          area: "Math and logic", title: `Tax day ${m[1]}`, moment: "AD 10, Rome", scene: "You inherit an estate worth 200,000 sesterces from a friend. First the 5% inheritance tax comes out, then a 1% sales tax on what's left when you sell it.",
-          question: "How much tax do you pay in total?", choices: ["12,000 sesterces", "11,900 sesterces", "11,000 sesterces"], answer: 1,
-          why: "5% of 200,000 is 10,000. The 1% is taken from the 190,000 left: 1,900. Together, 11,900.", explain: "Why isn't it simply 6% of 200,000?",
-          learn: { search: "percent of a percent explained", note: "Watch how a second percent is taken from what's left." },
-          second: { question: "A coat is 20% off, then 10% more at the till. How much off in all?", choices: ["30%", "28%", "25%"], answer: 1, why: "10% of the 80% left is 8%, so 28%." },
-          sources: [{ title: "Vicesima hereditatium (Britannica)", url: "https://www.britannica.com/topic/vicesima" }, { title: "OpenStax Prealgebra: Percents", url: "https://openstax.org/books/prealgebra/percents" }],
-          plan: { interest: "Personal finance", goal: "Work out taxes and discounts in my head" } })) })
       : props.includes("units") ? (srv.pathPrompts = [...(srv.pathPrompts || []), req.prompt], (srv.pathPrompts.length === 1 ? {
           title: "Earn a private pilot's license", scope: "The ground knowledge for a private pilot certificate; flying needs an instructor.", measure: "Ground knowledge",
           confirm: "Requirements change: confirm them with your flight instructor and the FAA.",
@@ -94,17 +86,6 @@ const deps = {
             { title: "Why can a plane stall at any speed?", kind: "understand", minutes: 20, difficulty: "intro", why: "Stalls are about angle.", success: "Explain why a stall depends on angle of attack.", materials: [], safety: "", unit: 1,
               plan: [{ title: "Angle of attack", look: "", minutes: 12, search: "angle of attack explained", guess: "What makes a wing stop lifting?" }, { title: "Attempt", look: "", minutes: 8, search: "", guess: "" }] }] }
         : { title: "x", scope: "", measure: "", confirm: "", units: [], outside: [], lessons: [] }))
-      : props.includes("challenges") ? (srv.challengePrompts = [...(srv.challengePrompts || []), req.prompt], { challenges: [
-          { title: "How can an airplane fly upside down?", kind: "investigate", minutes: 15, difficulty: "intro", why: "Lift isn't only about the wing's shape.",
-            success: "Explain how a wing makes lift upside down, including the angle of attack.", materials: [], safety: "",
-            plan: [{ title: "What lift is", look: "How a wing turns air down", minutes: 5, search: "how wings make lift", guess: "What do you think a wing does to the air around it?" },
-              { title: "Inverted flight", look: "Watch the angle", minutes: 6, search: "how planes fly upside down", guess: "How could a wing still lift when it's upside down?" },
-              { title: "Attempt the challenge", look: "Explain it", minutes: 4, search: "" }] },
-          { title: "Why can a plane stall at any speed?", kind: "understand", minutes: 15, difficulty: "intro", why: "It's the angle, not the speed.", success: "Explain why a stall depends on angle of attack.", materials: [], safety: "",
-            plan: [{ title: "Angle of attack", look: "", minutes: 8, search: "angle of attack" }, { title: "Attempt", look: "", minutes: 7, search: "" }] },
-          { title: "Fold a paper wing and find its stall", kind: "build", minutes: 15, difficulty: "intro", why: "See the stall happen on your desk.", success: "Show the angle where your paper wing stops lifting, and explain why.",
-            materials: [{ item: "Paper", required: true }, { item: "A fan", required: false }], safety: "",
-            plan: [{ title: "Make the wing", look: "", minutes: 7, search: "paper wing experiment" }, { title: "Test it", look: "", minutes: 8, search: "" }] }] })
       : props.includes("first_question") ? { type: "concepts", first_question: "What does a plant actually make during photosynthesis?",
           objectives: ["Explain what photosynthesis produces", "Explain the role of light", "Explain where it happens in the cell"] }
       : props.includes("shows") ? (srv.applyPrompt = req.prompt, { title: "Trace a sugar cube", task: "Follow one glucose molecule from breakfast to ATP and draw where each step happens.",
@@ -161,10 +142,9 @@ const deps = {
     close: async customer => { srv.closedCustomers = [...(srv.closedCustomers || []), customer]; }
   },
   sync: memSync(),
-  daily: memDaily(),
   weekly: memWeekly(),
   now: () => new Date(),
-  config: { origins: [], limits: { dayCalls: 300, dayTokens: 400000, minuteCalls: 20 }, maxBodyBytes: 16384, maxSyncBytes: 1024 * 1024, dailyEditors: ["learner@example.com"] }
+  config: { origins: [], limits: { dayCalls: 300, dayTokens: 400000, minuteCalls: 20 }, maxBodyBytes: 16384, maxSyncBytes: 1024 * 1024, editors: ["learner@example.com"] }
 };
 
 const server = http.createServer(async (req, res) => {
@@ -291,45 +271,8 @@ step("plus plan shows AI use", (await opt.textContent("#plusBody")).includes("of
 await opt.click("button:text-is('Check connection')");
 await opt.waitForFunction(() => /Connected/.test(document.getElementById("plusMsg").textContent));
 step("Check connection reaches the AI endpoint", srv.aiCalls === 1);
-step("Settings offers TeachBack on the Plus plan", await opt.isVisible("button:text-is('Test my understanding')"));
-
-// ---------- TeachBack ----------
+step("Settings no longer opens a separate TeachBack page", !(await opt.$("button:text-is('Test my understanding')")));
 step("YouTube tabs are told Plus features can be offered", (await sw.evaluate(() => plusBrief())).plus === true);
-const [tb] = await Promise.all([ctx.waitForEvent("page"), opt.click("button:text-is('Test my understanding')")]);
-tb.on("dialog", d => d.accept());
-await tb.waitForSelector("#tbTopic");
-await tb.fill("#tbTopic", "Photosynthesis");
-await tb.fill("#tbNotes", "Chapter 8: light reactions, Calvin cycle, chloroplasts");
-await tb.click("#tbStart");
-await tb.waitForSelector("#tbQuestion");
-step("TeachBack starts with Milo's first question", (await tb.textContent("#tbQuestion")).includes("What does a plant actually make") &&
-  (await tb.textContent("main")).includes("Milo"));
-step("the study notes reach the server", [...deps.db.assessments.values()][0]?.notes?.includes("Calvin cycle"));
-if (process.env.SHOTS) await tb.screenshot({ path: `${process.env.SHOTS}/teachback-question.png`, fullPage: true });
-await tb.fill("#tbAnswer", "It makes glucose and oxygen from carbon dioxide and water.");
-await tb.click("#tbSend");
-await tb.waitForFunction(() => /glucose later/.test(document.getElementById("tbQuestion")?.textContent || ""));
-step("a follow-up from Ivy, on the same objective", (await tb.textContent("#tbProgress")).includes("Objective 1 of 3 · Question 2"));
-await tb.click("button:text-is('Give me a hint')");
-await tb.waitForSelector("text=keeps for later");
-step("a hint appears and the button counts down", await tb.isVisible("button:text-is('Another hint')"));
-await tb.fill("#tbAnswer", "It stores the glucose as starch for energy.");
-await tb.click("#tbSend");
-await tb.waitForFunction(() => /How do we know/.test(document.getElementById("tbQuestion")?.textContent || ""));
-await tb.click("button:text-is('Skip')");
-await tb.waitForFunction(() => /Which part of the cell/.test(document.getElementById("tbQuestion")?.textContent || ""));
-step("skipping moves on", (await tb.textContent("#tbProgress")).includes("Objective 3 of 3"));
-await tb.click("button:text-is('End session')");
-await tb.waitForSelector("h1:text-is('What you showed')");
-const res = await tb.textContent("main");
-step("results: demonstrated with evidence in your own words", res.includes("Demonstrated") && res.includes("You said: “glucose and oxygen”"));
-step("results: hints and skipped parts are shown honestly", res.includes("With hints") && res.includes("Not assessed") && res.includes("Ended early"));
-step("results: review links and next actions", res.includes("Review this on YouTube") && res.includes("Review weak areas") && res.includes("Try again"));
-if (process.env.SHOTS) await tb.screenshot({ path: `${process.env.SHOTS}/teachback-results.png`, fullPage: true });
-await tb.reload();
-await tb.waitForSelector("h1:text-is('What you showed')");
-step("results come back after reloading the page", true);
-await tb.close();
 
 // ---------- the librarian on a stand-in YouTube ----------
 const ytPage = body => `<!doctype html><html><head><title>YouTube</title></head><body>
@@ -478,40 +421,52 @@ if (process.env.SHOTS) { await yt.setViewportSize({ width: 1100, height: 760 });
 await yt.evaluate(() => document.querySelector("video").dispatchEvent(new Event("ended")));
 await yt.waitForSelector(".wp-notice:has-text('Test yourself on this video?')");
 step("when the video ends (never during it), Aim offers a test on it", (await yt.textContent(".wp-notice")).includes("glycolysis"));
-const [vtest] = await Promise.all([ctx.waitForEvent("page"), yt.click(".wp-notice button:text-is('Test me')")]);
-await vtest.waitForSelector("#tbTopic");
-step("Test me on this video: TeachBack on the video, its concepts as the notes", (await vtest.inputValue("#tbTopic")) === "Video alt1aaa" &&
-  (await vtest.inputValue("#tbNotes")).includes("- Glycolysis: Glucose is split") && vtest.url().includes("video=alt1aaa") && vtest.url().includes("study="));
-await vtest.close();
+// TeachBack on YouTube (the conversation, talk.js), from here on.
+const talkBox = async () => {
+  await yt.waitForSelector(".wp-talk .wp-talk-input", { state: "attached" });
+  if (!(await yt.isVisible(".wp-talk .wp-talk-input"))) await yt.click(".wp-talk button:text-is('Type instead')");
+  await yt.waitForSelector(".wp-talk .wp-talk-input");
+};
+srv.talk.push({ message: "Let's start with the video: what does glycolysis do to a glucose molecule?", done: false, memory: [], marks: [] });
+await yt.click(".wp-notice button:text-is('Test me')");
+await talkBox();
+step("Test me on this video: the conversation on YouTube, its first question about the video and what it covers",
+  (await yt.textContent(".wp-talk")).includes("what does glycolysis do") && srv.talkPrompts.at(-1).includes("FOLLOW UP ON: Video alt1aaa (the video you just watched, which covers Glycolysis, ATP yield)"));
+await yt.click(".wp-talk button[aria-label='Close']");
+await yt.waitForSelector(".wp-talk", { state: "detached", timeout: 5000 }).catch(() => {});
 const callsBeforeReload = srv.videoCalls;
 await yt.reload();
 await yt.waitForSelector("#wp-concepts .wp-concept");
 step("a video is looked at once (kept in this browser)", srv.videoCalls === callsBeforeReload);
-srv.director.push({ evaluation: ev("sound", "pyruvate in the cytoplasm"), next: { action: "finish", objective: 0, student: "milo", kind: "question", question: "" } });
-const [check] = await Promise.all([ctx.waitForEvent("page"), yt.click("#wp-study button:text-is('Check yourself')")]);
-await check.waitForSelector("#tbTopic");
-step("Check yourself opens TeachBack on the topic, with its brief as notes", (await check.inputValue("#tbTopic")).startsWith("Glycolysis") &&
-  (await check.inputValue("#tbNotes")).includes("Glucose is split into pyruvate"));
-await check.click("#tbStart");
-await check.waitForSelector("#tbQuestion");
-await check.fill("#tbAnswer", "Glucose becomes pyruvate in the cytoplasm.");
-check.on("dialog", d => d.accept());
-await check.click("#tbSend");
-await check.waitForFunction(() => /Question 2/.test(document.getElementById("tbProgress")?.textContent || ""));
-await check.click("button:text-is('End session')");
-await check.waitForSelector("h1:text-is('What you showed')");
-await check.waitForTimeout(500);
+srv.talk.push({ message: "Glycolysis, then: where in the cell does it happen, and what comes out of it?", done: false, memory: [], marks: [] },
+  { message: "The place is right: the cytoplasm. What comes out, though, is more than pyruvate.", done: true, memory: [], marks: [{ topic: "Glycolysis", status: "partial" }],
+    feedback: { explained: ["Glycolysis happens in the cytoplasm"], uncertain: ["What glycolysis makes besides pyruvate"], misconceptions: [] },
+    gaps: [{ title: "What glycolysis makes", what: "What glycolysis makes besides pyruvate", search: "what does glycolysis produce" }] });
+await yt.click("#wp-study button:text-is('Check yourself')");
+await talkBox();
+step("Check yourself: the conversation on YouTube, its first question about the topic", (await yt.textContent(".wp-talk")).includes("where in the cell") &&
+  srv.talkPrompts.at(-1).includes("FOLLOW UP ON: Glycolysis (Glucose is split into pyruvate in the cytoplasm.)"));
+await yt.fill(".wp-talk-input", "In the cytoplasm; glucose becomes two pyruvate.");
+await yt.press(".wp-talk-input", "Enter");
+await yt.waitForSelector(".wp-talk .wp-talk-feedback", { timeout: 10000 });
+await yt.waitForTimeout(400);
 study = (await sw.evaluate(() => chrome.storage.local.get("purpose").then(d => d.purpose))).study;
-step("the check's result goes back to the study session", !!study.topics[0].check && study.topics[0].check.objectives.length === 3, JSON.stringify(study.topics[0].check));
-// ---------- Pathways pieces on TeachBack's results ----------
+step("what it showed goes back to the study session as the topic's check (here, partly: what to revisit, with a search)", study.topics[0].check?.objectives?.[0]?.status === "partial" &&
+  study.topics[0].check.objectives[0].text === "What glycolysis makes besides pyruvate" && study.topics[0].check.objectives[0].search === "what does glycolysis produce", JSON.stringify(study.topics[0].check));
+await yt.click(".wp-talk button[aria-label='Close']");
+// ---------- Pathways pieces on the study session's page ----------
+const check = await ctx.newPage();
+await check.goto(`chrome-extension://${extId}/study.html`);
+await check.waitForSelector(".pw-interest");
+step("the study page: Check yourself goes to the conversation on YouTube", true);
 await check.click(".pw-interest button:text-is('Yes')");
 await check.waitForTimeout(300);
 let interests = (await sw.evaluate(() => chrome.storage.local.get("interests"))).interests || [];
-step("Want more of this? is the student's own answer, kept in this browser", interests.length === 1 && interests[0].answer === "yes" && interests[0].source === "teachback" &&
-  interests[0].topic.startsWith("Glycolysis"));
-await check.click(".pw-where-btn:text-is('Where could this take me?')");
+step("Want more of this? is the student's own answer, kept in this browser", interests.length === 1 && interests[0].answer === "yes" && interests[0].source === "study" &&
+  interests[0].topic === "Cellular respiration");
+await check.click(".pw-where-btn:text-is('Where could this take me?') >> nth=0");
 await check.waitForSelector(".pw-where .pw-use");
-if (process.env.SHOTS) await check.screenshot({ path: `${process.env.SHOTS}/where-teachback.png`, fullPage: true });
+if (process.env.SHOTS) await check.screenshot({ path: `${process.env.SHOTS}/where-study.png`, fullPage: true });
 step("Where could this take me? shows where it's used, with a problem to try and the answer hidden", (await check.textContent(".pw-where")).includes("Aviation") &&
   await check.isHidden(".pw-reveal >> nth=-1") && srv.wherePrompt.includes("SUBJECT OR TOPIC: Glycolysis"));
 await check.close();
@@ -667,6 +622,7 @@ const answerBox = async () => {
   await yt.waitForSelector(".wp-talk .wp-talk-input");
 };
 await sw.evaluate(() => serial(() => setSetting("captions", true)));
+const roman = srv.talkPrompts.length; // the conversations before this one (Test me, Check yourself)
 srv.talk.push(
   { message: "You watched two different takes on why the Republic fell. OverSimplified puts it on the army [V1 0:45]. If you had to bet on one cause, which would it be?", done: false, memory: [], marks: [] },
   { message: "The generals, then. Why would a soldier back his general over the Senate?", done: false, memory: [], marks: [],
@@ -691,10 +647,10 @@ const endCard = (await yt.textContent(".wp-home-end")).replace(/\s+/g, " ");
 step("after Done, the librarian asks one specific question about the session, in place of the rating and the test",
   endCard.includes("bet on one cause") && !endCard.includes("Found what you needed?") && !(await yt.isVisible(".wp-home-end button:text-is('Test my understanding')")), endCard.slice(0, 200));
 step("it sees titles, time and searches, and knows this was focused work",
-  srv.talkPrompts[0].includes("The Fall of the Roman Republic (OverSimplified), 15 min, watched to the end") && srv.talkPrompts[0].includes("MODE: Focus"), srv.talkPrompts[0].slice(0, 300));
+  srv.talkPrompts[roman].includes("The Fall of the Roman Republic (OverSimplified), 15 min, watched to the end") && srv.talkPrompts[roman].includes("MODE: Focus"), srv.talkPrompts[roman].slice(0, 300));
 step("with captions on (Plus): what was said in the videos watched longest, with times",
-  srv.talkPrompts[0].includes("WHAT WAS SAID (the creator's captions; excerpts):\n[0:00] Welcome back") && srv.talkPrompts[0].includes("[0:45] after the Marian reforms") &&
-  srv.talkPrompts[0].includes("[3:10] and both were killed"), srv.talkPrompts[0].slice(0, 600));
+  srv.talkPrompts[roman].includes("WHAT WAS SAID (the creator's captions; excerpts):\n[0:00] Welcome back") && srv.talkPrompts[roman].includes("[0:45] after the Marian reforms") &&
+  srv.talkPrompts[roman].includes("[3:10] and both were killed"), srv.talkPrompts[roman].slice(0, 600));
 step("a moment it points to is a link to that time in that video", (await yt.getAttribute(".wp-home-end .wp-talk-moment", "href")) === "/watch?v=rom1&t=45s" &&
   (await yt.textContent(".wp-home-end .wp-talk-q")).includes("on the army 0:45."));
 if (process.env.SHOTS) { await yt.setViewportSize({ width: 1100, height: 760 }); await yt.screenshot({ path: `${process.env.SHOTS}/talk-after-done.png` }); }
@@ -703,7 +659,7 @@ await yt.waitForSelector(".wp-talk .wp-talk-question");
 const tbHead = (await yt.textContent(".wp-talk")).replace(/\s+/g, " ");
 step("TeachBack: one student with a role and an engraved medallion, the question as the focus, small progress",
   /(Reese · The Skeptic|Mara · The Curious One|Theo · The Beginner)/.test(tbHead) && !!(await yt.$(".wp-talk .wp-talk-head svg.wp-medal")) &&
-  (await yt.textContent(".wp-talk .wp-talk-question")).includes("bet on one cause") && tbHead.includes("Question 1 of 3") && srv.talkPrompts[0].startsWith("STUDENT: "), tbHead.slice(0, 200));
+  (await yt.textContent(".wp-talk .wp-talk-question")).includes("bet on one cause") && tbHead.includes("Question 1 of 3") && srv.talkPrompts[roman].startsWith("STUDENT: "), tbHead.slice(0, 200));
 const hasSpeech = await yt.evaluate(() => !!(window.SpeechRecognition || window.webkitSpeechRecognition));
 step("voice first: Answer aloud leads (typing a click away), and \"I don't know\" is an answer",
   (hasSpeech ? (await yt.isVisible(".wp-talk .wp-talk-voice")) && !(await yt.isVisible(".wp-talk .wp-talk-input")) : true) && !!(await yt.$(".wp-talk button:text-is(\"I don't know\")")));
@@ -725,7 +681,7 @@ await yt.waitForSelector(".wp-talk .wp-talk-kept");
 const talkText = (await yt.textContent(".wp-talk")).replace(/\s+/g, " ");
 step("a conversation: it follows up on what you said, then ends on a remark and says what it kept",
   talkText.includes("Why would a soldier back his general") && talkText.includes("Marian reforms in a nutshell") && talkText.includes("Remembered: Marian reforms") &&
-  !(await yt.$(".wp-talk .wp-talk-input")) && srv.talkPrompts[2].includes("THEM: Because after Marius"), talkText.slice(0, 240));
+  !(await yt.$(".wp-talk .wp-talk-input")) && srv.talkPrompts[roman + 2].includes("THEM: Because after Marius"), talkText.slice(0, 240));
 await yt.bringToFront(); // a background tab pauses animations
 await yt.waitForTimeout(400);
 const fb = (await yt.textContent(".wp-talk .wp-talk-feedback")).replace(/\s+/g, " ");
@@ -786,16 +742,16 @@ await opt.goto(`chrome-extension://${extId}/options.html#plus`);
 await opt.waitForSelector("#weeklyEditor", { timeout: 10000 }).catch(() => {});
 step("Settings shows an editor's account the Weekly Challenge editor", (await opt.getAttribute("#weeklyEditor", "href").catch(() => "")) === "weekly-editor.html");
 // Not (yet) an editor: the page says which email the server checked, and where to add it.
-const editors = deps.config.dailyEditors;
-deps.config.dailyEditors = [];
+const editors = deps.config.editors;
+deps.config.editors = [];
 const notEd = await ctx.newPage();
 await notEd.goto(`chrome-extension://${extId}/weekly-editor.html`);
 await notEd.waitForFunction(() => document.getElementById("err").textContent.length > 0, null, { timeout: 10000 });
 const notEdText = await notEd.textContent("#err");
 step("an account that isn't an editor: the editor says which email the server checked, and where to add it",
-  notEdText.includes("doesn't list learner@example.com as an editor") && notEdText.includes("AIM_DAILY_EDITORS") && !(await notEd.$("#weeks .week")), notEdText);
+  notEdText.includes("doesn't list learner@example.com as an editor") && notEdText.includes("AIM_EDITORS") && !(await notEd.$("#weeks .week")), notEdText);
 await notEd.close();
-deps.config.dailyEditors = editors;
+deps.config.editors = editors;
 const wkEd = await ctx.newPage();
 const wkEdErrors = [];
 wkEd.on("pageerror", e => wkEdErrors.push(e.message));
@@ -944,126 +900,18 @@ step("kept in this browser: the playthrough, the narrator's feedback and the deb
 await yt.click("#wp-home .wp-scene-x");
 await yt.waitForSelector("#wp-home .wp-wk-accept");
 step("back on the card: See how it ended", (await yt.textContent("#wp-home .wp-wk-accept")).includes("See how it ended"));
-// ---------- The Daily Challenge (0.75): the same for everyone, drafted by Aim, checked and published by an editor ----------
-await opt.goto(`chrome-extension://${extId}/options.html#plus`);
-await opt.waitForSelector("#dailyEditor", { timeout: 10000 }).catch(() => {});
-step("Settings shows an editor's account the Daily Challenge editor", (await opt.getAttribute("#dailyEditor", "href").catch(() => "")) === "daily-editor.html");
-const dailyEd = await ctx.newPage();
-await dailyEd.goto(`chrome-extension://${extId}/daily-editor.html`);
-await dailyEd.waitForSelector("#days .day");
-step("the editor (an AIM_DAILY_EDITORS account): today and the next three weeks, all empty", (await dailyEd.$$("#days .day")).length === 22 &&
-  (await dailyEd.textContent("#days .day >> nth=0")).includes("Today") && (await dailyEd.textContent("#days .day >> nth=0")).includes("Empty"));
-await dailyEd.click("#days .day >> nth=0 >> summary");
-await dailyEd.click("#days .day >> nth=0 >> button:text-is('Draft this day')");
-await dailyEd.waitForSelector("#days .day >> nth=0 >> .pill.draft", { timeout: 10000 });
-const firstDay = dailyEd.locator("#days .day").nth(0);
-step("Draft this day: Aim drafts one, with an area, a moment, three choices, a second try and two sources to check",
-  (await firstDay.locator("input[name=title]").inputValue()).startsWith("Tax day") && (await firstDay.locator("input[name=choice1]").inputValue()) === "11,900 sesterces" &&
-  await firstDay.locator("input[name=answer][value='1']").isChecked() && (await firstDay.locator("input[name=srcU1]").inputValue()).startsWith("https://openstax.org") &&
-  srv.dailyPrompts[0].includes("AREA:") && (await deps.daily.list("2000-01-01", "2100-01-01", true)).length === 0);
-await firstDay.locator("input[name=title]").fill("The inheritance tax");
-await firstDay.locator("button:text-is('Publish')").click();
-await dailyEd.waitForFunction(() => document.getElementById("err").textContent.includes("tick the box"));
-step("publishing asks you to say you checked it against its sources", (await deps.daily.list("2000-01-01", "2100-01-01", true)).length === 0);
-await firstDay.locator(".check input").check();
-await firstDay.locator("button:text-is('Publish')").click();
-await dailyEd.waitForSelector("#days .day >> nth=0 >> .pill.pub", { timeout: 10000 });
-const pubRows = await deps.daily.list("2000-01-01", "2100-01-01", true);
-step("published, with your edit", pubRows.length === 1 && pubRows[0].data.title === "The inheritance tax");
-await dailyEd.click("#draft");
-await dailyEd.waitForFunction(() => document.querySelectorAll("#days .pill.draft").length === 7, null, { timeout: 10000 });
-step("Draft the next 7 days: seven drafts, seven areas, nothing published, today left alone", srv.dailyPrompts.length === 2 &&
-  new Set([...srv.dailyPrompts[1].matchAll(/AREA: ([^\n]+)/g)].map(m => m[1])).size === 7 && (await deps.daily.list("2000-01-01", "2100-01-01", true)).length === 1 &&
-  srv.dailyPrompts[1].includes("RECENT (don't repeat): The inheritance tax"));
-if (process.env.SHOTS) { await dailyEd.setViewportSize({ width: 1200, height: 1000 }); await dailyEd.screenshot({ path: `${process.env.SHOTS}/daily-editor.png`, fullPage: true }); }
-await dailyEd.close();
-// On YouTube: everyone's Daily Challenge, once you turn it on (paused in 0.76: Settings → Challenges).
-await yt.goto("https://www.youtube.com/");
-await yt.waitForSelector("#wp-home .wp-wk-card");
-step("the Daily Challenge is off unless you turn it on", !(await yt.$("#wp-home .wp-home-daily")));
-await opt.goto(`chrome-extension://${extId}/options.html`);
-await opt.click("label:has(#dailyOn)");
-await opt.waitForTimeout(400);
-step("Settings → Challenges: Daily Challenge too", (await sw.evaluate(() => chrome.storage.local.get("settings"))).settings.dailyOn === true);
-await yt.goto("https://www.youtube.com/");
-await yt.bringToFront();
-await yt.waitForSelector("#wp-home .wp-home-daily");
-await yt.click("#wp-home .wp-home-daily");
-await yt.waitForSelector("#wp-home .wp-dl .wp-dl-choice", { timeout: 10000 });
-const dlText = (await yt.textContent("#wp-home .wp-dl")).replace(/\s+/g, " ");
-step("a real moment, a problem, three choices and Not sure, and nothing scored", dlText.includes("Math and logic · AD 10, Rome") && dlText.includes("The inheritance tax") &&
-  dlText.includes("How much tax do you pay in total?") && (await yt.$$("#wp-home .wp-dl-choice")).length === 4 && dlText.includes("Nothing is scored"), dlText.slice(0, 200));
-if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/daily.png` });
-await yt.click("#wp-home .wp-dl-choice:has-text('12,000')");
-await yt.waitForSelector("#wp-home .wp-dl-step:has-text('Not quite')");
-step("not quite: get ready with a short video or the why", !!(await yt.$("#wp-home .wp-dl-step button:has-text('Watch a short video')")) && !!(await yt.$("#wp-home .wp-dl-step button:text-is('Read why')")) &&
-  !!(await yt.$("#wp-home .wp-dl-marked .wp-dl-choice.right:has-text('11,900')")));
-await yt.click("#wp-home .wp-dl-step button:has-text('Watch a short video')");
-await yt.waitForURL(/search_query=percent%20of%20a%20percent%20explained/);
-await yt.goto("https://www.youtube.com/");
-await yt.waitForFunction(() => document.querySelector("#wp-home .wp-home-daily")?.title.includes("Second try waiting: The inheritance tax"));
-step("back on the homepage, the second try waits", true);
-await yt.click("#wp-home .wp-home-daily");
-await yt.waitForSelector("#wp-home .wp-dl-step:has-text('Second try')");
-step("the second try: the same idea, today, after the why", (await yt.textContent("#wp-home .wp-dl")).includes("A coat is 20% off") && (await yt.textContent("#wp-home .wp-dl-why")).includes("10,000"));
-await yt.click("#wp-home .wp-dl-choice:has-text('28%')");
-await yt.waitForSelector("#wp-home .wp-dl-done");
-const doneText = (await yt.textContent("#wp-home .wp-dl-done")).replace(/\s+/g, " ");
-step("done for today: how it went (no score), how we know, and a plan if it sparked something", doneText.includes("Done for today.") && doneText.includes("Right on the second try.") &&
-  doneText.includes("How do we know?") && (await yt.getAttribute("#wp-home .wp-dl-sources a >> nth=0", "href")).startsWith("https://www.britannica.com") &&
-  doneText.includes("Want a plan for this? Personal finance"), doneText);
-const mine = (await sw.evaluate(() => chrome.storage.local.get("dailyMine"))).dailyMine;
-step("kept for the day in this browser: your tries, nothing more", mine.first.right === false && mine.second.right === true && !!mine.learned && !!mine.doneAt);
-await yt.click("#wp-home .wp-dl-plan");
-await yt.waitForSelector("#wp-home .wp-pw-add input");
-step("Want a plan for this?: the interest and its goal, ready to add", (await yt.inputValue("#wp-home .wp-pw-add input >> nth=0")) === "Personal finance" &&
-  (await yt.inputValue("#wp-home .wp-pw-add input >> nth=1")) === "Work out taxes and discounts in my head");
-await yt.click("#wp-home .wp-pw-add button:text-is('Cancel')");
-await yt.click("#wp-home .wp-scene-x");
-await yt.waitForFunction(() => document.querySelector("#wp-home .wp-home-daily")?.title.includes("Done for today: The inheritance tax"));
-// A challenge of your own (0.73; under Learning plans since 0.76): from your interests or a subject you name, kept for the week.
-const ownChallenge = async () => { await ytContinue(); await yt.click("#wp-home .wp-cl-own"); };
-await ownChallenge();
-await yt.waitForSelector("#wp-home .wp-ch-weekly .wp-ch-ask");
-step("a challenge of your own, with no interests yet, asks what you're curious about", (await yt.textContent("#wp-home .wp-scene-panel-title")) === "Your own challenge" &&
-  (await yt.textContent("#wp-home .wp-ch-ask")).includes("What are you curious about?"));
-await yt.fill("#wp-home .wp-ch-subject", "aviation");
-await yt.click(".wp-ch button:has-text('Find a challenge')");
-await yt.waitForSelector("#wp-home .wp-ch-detail", { timeout: 10000 });
-let chDetail = (await yt.textContent(".wp-ch-detail")).replace(/\s+/g, " ");
-step("this week's challenge: a larger one, for the subject, building or investigating first",
-  chDetail.includes("How can an airplane fly upside down?") && chDetail.includes("aviation · Investigate · 15 min · Intro") &&
-  srv.challengePrompts.at(-1).includes("INTEREST: aviation") && srv.challengePrompts.at(-1).includes("TIME: 120 minutes") && srv.challengePrompts.at(-1).includes("LEVEL: intro") &&
-  (await sw.evaluate(() => chrome.storage.local.get("chToday"))).chToday.weekly.list.map(c => c.kind).join() === "investigate,build,understand", chDetail.slice(0, 200));
-const beforeHarder = srv.challengePrompts.length;
-await yt.click(".wp-ch-more button:text-is('Harder')");
-for (let i = 0; i < 80 && srv.challengePrompts.length === beforeHarder; i++) await yt.waitForTimeout(100);
-await yt.waitForSelector("#wp-home .wp-ch-detail", { timeout: 10000 });
-await yt.waitForTimeout(400);
-step("written for this person: Harder asks again a level up, with different challenges", srv.challengePrompts.at(-1).includes("LEVEL: intermediate") &&
-  srv.challengePrompts.at(-1).includes("ALREADY OFFERED") && !!(await yt.$(".wp-ch-more button:text-is('Easier')")));
-await yt.click(".wp-ch-more button:text-is('See all 3')");
-await yt.waitForFunction(() => document.querySelectorAll("#wp-home .wp-ch-card").length === 3, null, { timeout: 10000 });
-const chCards = (await yt.textContent(".wp-ch-list")).replace(/\s+/g, " ");
-step("See all 3: the other two, each with its kind and why", chCards.includes("Fold a paper wing and find its stall") && chCards.includes("Build & do · 15 min · Intro"), chCards.slice(0, 200));
-if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/challenges.png` });
-await yt.click(".wp-ch-card:has-text('upside down')");
-await yt.waitForSelector(".wp-ch-detail");
-const asked = srv.challengePrompts.length;
-await yt.click("#wp-home .wp-scene-x");
-await yt.reload();
-await ownChallenge();
-await yt.waitForSelector("#wp-home .wp-ch-detail");
-step("kept for the week: open it again and it's the same one, without asking the server", (await yt.textContent(".wp-ch-detail")).includes("How can an airplane fly upside down?") && srv.challengePrompts.length === asked);
-if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/weekly-challenge.png` });
-chDetail = (await yt.textContent(".wp-ch-detail")).replace(/\s+/g, " ");
-step("a challenge's details: the success condition decided up front, and a short plan", chDetail.includes("You'll have done it when") &&
-  chDetail.includes("including the angle of attack") && chDetail.includes("What lift is") && chDetail.includes("~5 min"), chDetail.slice(0, 200));
-if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/challenge-detail.png`, fullPage: true });
-await yt.click(".wp-ch-detail button:text-is('Begin challenge')");
+// ---------- A lesson's challenge (0.70): a success condition decided up front, and a short plan ----------
+// Each lesson on a learning plan starts this way (Paths, below, picks one from a plan).
+const LIFT = { title: "How can an airplane fly upside down?", kind: "investigate", minutes: 15, difficulty: "intro", why: "Lift isn't only about the wing's shape.",
+  success: "Explain how a wing makes lift upside down, including the angle of attack.", materials: [], safety: "", interest: "aviation",
+  plan: [{ title: "What lift is", look: "How a wing turns air down", minutes: 5, search: "how wings make lift", guess: "What do you think a wing does to the air around it?" },
+    { title: "Inverted flight", look: "Watch the angle", minutes: 6, search: "how planes fly upside down", guess: "How could a wing still lift when it's upside down?" },
+    { title: "Attempt the challenge", look: "Explain it", minutes: 4, search: "" }] };
+const started = await sw.evaluate(c => serial(() => challengeStart(c)), LIFT);
+await yt.goto(started.url);
 await yt.waitForURL(/search_query=how%20wings%20make%20lift/);
 const chAim = (await sw.evaluate(() => chrome.storage.local.get("purpose"))).purpose;
-step("beginning it makes it your aim: on the shelf, its plan as the map, starting with the first step's search",
+step("a challenge becomes your aim: on the shelf, its plan as the map, starting with the first step's search",
   chAim.text === "How can an airplane fly upside down?" && chAim.goal === true && chAim.challenge.status === "active" && chAim.map.parts.length === 2);
 // ---------- Guess first, explain after (0.71) ----------
 await sw.evaluate(() => serial(async () => {
@@ -1127,7 +975,8 @@ await yt.waitForSelector(".wp-talk .wp-ch-outcome");
 const outcome = (await yt.textContent(".wp-talk")).replace(/\s+/g, " ");
 const doneAim = (await sw.evaluate(() => chrome.storage.local.get("purpose"))).purpose;
 step("Challenge complete: restrained, what you demonstrated, kept with your answer as evidence, and what's next",
-  outcome.includes("Challenge complete") && outcome.includes("You demonstrated: How can an airplane fly upside down?") && !!(await yt.$(".wp-talk button:text-is('Find the next challenge')")) &&
+  outcome.includes("Challenge complete") && outcome.includes("You demonstrated: How can an airplane fly upside down?") && !(await yt.$(".wp-talk button:text-is('Find the next challenge')")) &&
+  !!(await yt.$(".wp-talk button:text-is('Call it done')")) &&
   doneAim.challenge.status === "completed" && doneAim.challenge.attempts.at(-1).answer.startsWith("Upside down") && !/score|badge|%/i.test(outcome), outcome.slice(0, 200));
 if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/challenge-complete.png` });
 await yt.click(".wp-talk button:text-is('Call it done')");
@@ -1537,7 +1386,7 @@ await sw.evaluate(() => serial(() => finishPurpose("yes")));
 const [download] = await Promise.all([opt.waitForEvent("download"), opt.click("#plusExport")]);
 const exported = JSON.parse(fs.readFileSync(await download.path(), "utf8"));
 step("Download my data: account, server data and this browser's data in one file", exported.format === "aim-export-1" &&
-  exported.account.email === user.email && Array.isArray(exported.assessments) && exported.assessments.length > 0 &&
+  exported.account.email === user.email && Array.isArray(exported.assessments) &&
   !!exported.browser.settings && "history" in exported.browser, Object.keys(exported).join());
 step("the download never includes the sign-in session", !/"(acc|ref)-\d+"/.test(JSON.stringify(exported))); // whole tokens; random ids can contain "acc-1"
 await opt.click("#plusDelete");

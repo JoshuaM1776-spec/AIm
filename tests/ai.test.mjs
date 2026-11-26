@@ -2,8 +2,7 @@
 // accounts, database and Claude. Run: node --experimental-strip-types tests/ai.test.mjs
 import assert from "node:assert";
 import { handle } from "../supabase/functions/ai/handler.ts";
-import { memDaily, memDb, memHs, memSync, memWeekly } from "./helpers/memdb.mjs";
-import { tidyDaily } from "../supabase/functions/ai/daily.ts";
+import { memDb, memHs, memSync, memWeekly } from "./helpers/memdb.mjs";
 import { difficulty } from "../supabase/functions/ai/teachback.ts";
 import { splitCurriculum, mergeBuilt } from "../supabase/functions/ai/homeschool.ts";
 import { checkDoses, checkNumbers, dosesIn, numbersIn, DOSE_PLACEHOLDER, PLACEHOLDER } from "../supabase/functions/ai/scenario.ts";
@@ -580,27 +579,6 @@ const CH = (o = {}) => ({ title: "How can an airplane fly upside down?", kind: "
   success: "Explain how a wing makes lift upside down, including angle of attack.", materials: [{ item: "Paper", required: true }], safety: "",
   plan: [{ title: "What lift is", look: "How a wing turns air down", minutes: 8, search: "how wings make lift", guess: "What pushes a wing up?" }, { title: "Inverted flight", look: "The angle, upside down", minutes: 12, search: "how planes fly upside down" },
     { title: "Attempt the challenge", look: "", minutes: 10, search: "" }], ...o });
-test("challenges: three from an interest and the time, tidied; one from your own words; free accounts a few a day", async () => {
-  const d = talkDeps("free", () => ({ ok: true, model: "m", inputTokens: 30, outputTokens: 20, text: JSON.stringify({ challenges: [CH(), CH({ title: "Cut your first dovetail", kind: "build", minutes: 300 }),
-    CH({ title: "x", success: "?" }), CH({ title: "Why did Rome fall, really?", kind: "investigate", plan: [{ title: "only one", look: "", minutes: 5, search: "a" }] }), CH({ title: "Why do planes stall at any speed?", kind: "understand" })] }) }));
-  const r = await call(d, { task: "challenges-suggest", input: { interest: "aviation", minutes: 30, known: ["Explained: What lift is"], avoid: ["Old one"] } });
-  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
-  assert.deepStrictEqual(r.body.challenges.map(c => c.title), ["How can an airplane fly upside down?", "Cut your first dovetail", "Why do planes stall at any speed?"], "unusable ones are dropped; three at most");
-  assert.strictEqual(r.body.challenges[0].materials.length, 0, "materials only for hands-on ones");
-  assert.strictEqual(r.body.challenges[1].minutes, 30, "never more than the time they have");
-  assert.strictEqual(r.body.challenges[0].plan[0].guess, "What pushes a wing up?", "each step comes with a question to guess at first");
-  assert.match(d.calls[0].prompt, /INTEREST: aviation\nOffer exactly three challenges\.\nTIME: 30 minutes/);
-  assert.match(d.calls[0].prompt, /DONE BEFORE:\n- Explained: What lift is/);
-  assert.match(d.calls[0].prompt, /ALREADY OFFERED \(offer different ones\): Old one/);
-  assert.match(d.calls[0].system, /success condition says exactly what the person will be able to show/);
-  const own = await call(d, { task: "challenges-suggest", input: { custom: "learn to say hello in polish", minutes: 15 } });
-  assert.strictEqual(own.body.challenges.length, 1, "your own challenge comes back as one");
-  assert.match(d.calls[1].prompt, /THEIR OWN CHALLENGE/);
-  assert.strictEqual((await call(d, { task: "challenges-suggest", input: { minutes: 15 } })).status, 400, "something to be curious about");
-  for (let i = 0; i < 4; i++) await call(d, { task: "challenges-suggest", input: { interest: "aviation" } });
-  assert.strictEqual((await call(d, { task: "challenges-suggest", input: { interest: "aviation" } })).status, 429, "free accounts: six a day");
-});
-
 test("the Final Challenge: judged against the success condition; not enough evidence is its own outcome", async () => {
   const d = talkDeps("plus", () => talkReply({ message: "You covered the angle well. Missing: why the pilot pushes forward.", done: true, verdict: "not_enough" }));
   const session = { ...SESSION, challenge: { title: "How can an airplane fly upside down?", success: "Explain inverted lift, including angle of attack.", kind: "investigate" } };
@@ -1418,89 +1396,20 @@ test("deeper: at the floor there's no next question unless they choose to go pas
   assert.strictEqual((await call(d, { task: "deeper-step", input: { topic: "x", root: "y", chain: Array(8).fill({ what: "a", why: "b" }) } })).status, 400, "a chain has a bottom");
 });
 
-// ---------- the Daily Challenge (0.75) ----------
-const dayCh = (title, extra = {}) => ({ area: "Math and logic", title, moment: "AD 10, Rome", scene: "You inherit an estate worth 200,000 sesterces from a friend.",
-  question: "How much tax do you pay in total?", choices: ["12,000", "11,900", "11,000"], answer: 1, why: "5% of 200,000, then 1% of what's left.",
-  explain: "Why isn't it simply 6%?", learn: { search: "percent of a percent", note: "Taking a percent twice" },
-  second: { question: "A 20% sale, then 10% off at the till: how much off?", choices: ["30%", "28%", "25%"], answer: 1, why: "10% of the 80% left is 8%." },
-  sources: [{ title: "Roman inheritance tax (Britannica)", url: "https://www.britannica.com/x" }, { title: "OpenStax: Percents", url: "https://openstax.org/y" }],
-  plan: { interest: "Personal finance", goal: "Work out taxes and discounts in my head" }, ...extra });
-function dailyDeps() {
-  const d = makeDeps({ plan: "free", claude: req => ({ ok: true, model: "m", inputTokens: 50, outputTokens: 50,
-    text: JSON.stringify({ days: [...req.prompt.matchAll(/^DAY \d+: (\S+)/gm)].map(m => dayCh(`Puzzle for ${m[1]}`)) }) }) });
-  d.daily = memDaily();
-  d.config = { ...d.config, limits: { dayCalls: 50, dayTokens: 1e7, minuteCalls: 50 }, dailyEditors: ["a@example.com"] };
-  return d;
-}
-
-test("the Daily Challenge: only editors draft, list, save or publish; their status says so", async () => {
-  const d = dailyDeps();
-  assert.strictEqual((await call(d, { task: "status" })).body.editor, true);
-  d.config.dailyEditors = ["someone@else.org"];
-  assert.strictEqual((await call(d, { task: "status" })).body.editor, false);
-  for (const task of ["daily-draft", "daily-list", "daily-save", "daily-remove"])
-    assert.strictEqual((await call(d, { task, input: {} })).status, 403, `${task} is for editors`);
-  assert.strictEqual(d.calls.length, 0, "no AI for anyone else");
-});
-
-test("the Daily Challenge: drafts a week, never over a day already there, one area each in turn", async () => {
-  const d = dailyDeps();
-  const r = await call(d, { task: "daily-draft", input: { from: "2026-10-17", days: 7 } });
-  assert.strictEqual(r.status, 200);
-  assert.deepStrictEqual(r.body.drafted.map(x => x.day), ["2026-10-17", "2026-10-18", "2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23"]);
-  assert.ok([...d.daily.rows.values()].every(x => x.status === "draft"), "drafts, not published");
-  const areas = [...d.calls[0].prompt.matchAll(/AREA: ([^\n]+)/g)].map(m => m[1]);
-  assert.strictEqual(new Set(areas).size, 7, "seven days, seven areas");
-  assert.match(d.calls[0].system, /two sources/);
-  const again = await call(d, { task: "daily-draft", input: { from: "2026-10-17", days: 3 } });
-  assert.deepStrictEqual(again.body.drafted, [], "days already drafted are left alone");
-  assert.strictEqual(d.calls.length, 1);
-  const redo = await call(d, { task: "daily-draft", input: { day: "2026-10-18" } });
-  assert.strictEqual(redo.body.drafted.length, 1, "redraft one day on purpose");
-  assert.match(d.calls[1].prompt, /RECENT \(don't repeat\): Puzzle for 2026-10-17/);
-  assert.strictEqual((await call(d, { task: "daily-draft", input: { from: "2026-10-01" } })).status, 400, "not in the past");
-});
-
-test("the Daily Challenge: an editor's save is tidied; publishing needs two sources; everyone gets only today's published one, no account needed", async () => {
-  const d = dailyDeps();
-  const bad = await call(d, { task: "daily-save", input: { day: "2026-10-16", challenge: { ...dayCh("Tax"), choices: ["a", "b"] } } });
-  assert.strictEqual(bad.status, 400, "three choices");
-  const thin = await call(d, { task: "daily-save", input: { day: "2026-10-16", status: "published", challenge: dayCh("Tax", { sources: [{ title: "One", url: "https://a.org" }] }) } });
-  assert.strictEqual(thin.status, 400, "two sources before publishing");
-  const pub = await call(d, { task: "daily-save", input: { day: "2026-10-16", status: "published", challenge: dayCh("The inheritance tax", { sources: [...dayCh("x").sources, { title: "Bad", url: "javascript:alert(1)" }] }) } });
-  assert.strictEqual(pub.status, 200);
-  assert.strictEqual(pub.body.challenge.sources[2].url, "", "only https links");
-  await call(d, { task: "daily-save", input: { day: "2026-10-17", challenge: dayCh("Tomorrow's draft") } });
-  // No account: the published day only, and never ahead.
-  const anon = await call(d, { task: "daily-today", input: { day: "2026-10-16" } }, { token: "" });
-  assert.strictEqual(anon.status, 200);
-  assert.strictEqual(anon.body.challenge.title, "The inheritance tax");
-  assert.strictEqual((await call(d, { task: "daily-today", input: { day: "2026-10-17" } }, { token: "" })).body.challenge, null, "a draft isn't out");
-  assert.strictEqual((await call(d, { task: "daily-today", input: { day: "2026-10-20" } }, { token: "" })).status, 400, "no peeking ahead");
-  assert.strictEqual((await call(d, { task: "teachback-start", input: {} }, { token: "" })).status, 401, "everything else still needs an account");
-  const list = await call(d, { task: "daily-list", input: {} });
-  assert.deepStrictEqual(list.body.days.map(x => `${x.day}:${x.status}`), ["2026-10-16:published", "2026-10-17:draft"]);
-  await call(d, { task: "daily-remove", input: { day: "2026-10-17" } });
-  assert.strictEqual(d.daily.rows.size, 1);
-  assert.strictEqual(tidyDaily({ title: "x" }), null);
-  const none = makeDeps();
-  assert.strictEqual((await call(none, { task: "daily-today", input: { day: "2026-10-16" } }, { token: "" })).body.challenge, null, "not set up: nothing today");
-});
-
 // ---------- the Weekly Challenge (0.76) ----------
 const fsW = await import("node:fs");
 const SAMPLE = JSON.parse(fsW.readFileSync(new URL("../weekly-sample.json", import.meta.url), "utf8"));
 function weeklyDeps(claude) {
   const d = makeDeps({ plan: "free", claude });
   d.weekly = memWeekly();
-  d.config = { ...d.config, limits: { dayCalls: 50, dayTokens: 1e7, minuteCalls: 50 }, dailyEditors: ["a@example.com"], maxSyncBytes: 2 * 1024 * 1024 };
+  d.config = { ...d.config, limits: { dayCalls: 50, dayTokens: 1e7, minuteCalls: 50 }, editors: ["a@example.com"], maxSyncBytes: 2 * 1024 * 1024 };
   return d;
 }
 // 2026-10-16 is a Friday; its week starts Monday 2026-10-12.
 test("the Weekly Challenge: editors save drafts as they go; publishing needs everything; everyone gets this week's, no account needed", async () => {
   const d = weeklyDeps();
   for (const task of ["weekly-draft", "weekly-list", "weekly-save", "weekly-remove", "weekly-image"]) {
-    const other = weeklyDeps(); other.config.dailyEditors = ["b@example.com"];
+    const other = weeklyDeps(); other.config.editors = ["b@example.com"];
     assert.strictEqual((await call(other, { task, input: {} })).status, 403, `${task} is for editors`);
   }
   assert.strictEqual((await call(d, { task: "weekly-save", input: { week: "2026-10-13", story: SAMPLE } })).status, 400, "a week starts on a Monday");
@@ -1576,7 +1485,7 @@ test("the Weekly Challenge: the narrator answers from what the team knows, judge
   assert.strictEqual(deb.body.next[0].search, "friction loss in pipes");
   await call(d, { task: "weekly-save", input: { week: "2026-10-19", story: SAMPLE } });
   assert.strictEqual((await call(d, { task: "weekly-turn", input: { week: "2026-10-19", mode: "ask", chapter: "pipe", question: "Pressure?", draft: true } })).status, 200, "an editor playtests a draft");
-  const player = weeklyDeps(); player.weekly = d.weekly; player.config.dailyEditors = [];
+  const player = weeklyDeps(); player.weekly = d.weekly; player.config.editors = [];
   assert.strictEqual((await call(player, { task: "weekly-turn", input: { week: "2026-10-19", mode: "ask", chapter: "pipe", question: "Pressure?", draft: true } })).status, 404, "nobody else sees a draft");
 });
 

@@ -32,7 +32,7 @@ function makeEnv(initial = {}) {
 const VIDEO = { id: "abc123", title: "Feeding a sourdough starter", channel: "Bread Co" };
 const fresh = () => makeEnv({ schemaVersion: 5 });
 const DEFAULTS = { homeCard: true, leisureMin: 60, graceMin: 15, totalMin: 0, purposeLimitMin: 0,
-  hideShorts: true, hideRecs: true, hideFeeds: true, noAutoplay: true, strict: false, learnTopics: [], learnOff: [], learnShorts: false, learnRow: true, librarianMemory: true, spacedReview: true, guessFirst: true, captions: false, dailyOn: false, myTopics: [] };
+  hideShorts: true, hideRecs: true, hideFeeds: true, noAutoplay: true, strict: false, learnTopics: [], learnOff: [], learnShorts: false, librarianMemory: true, spacedReview: true, guessFirst: true, captions: false, myTopics: [] };
 
 const tests = [];
 const test = (name, fn) => tests.push([name, fn]);
@@ -910,18 +910,15 @@ test("gaps: kept with the aim, linked to a video, watched after a minute of it, 
   assert.ok(g.id);
 });
 
-test("quick answers carry their kind, and can be kept in the library by hand", async () => {
+test("quick answers carry their kind, and stay out of the library", async () => {
   const env = fresh();
   await env.run(`startPurpose({ text: "how do I reset my router" })`);
   const p = env.local.purpose; p.librarian = { kind: "lookup" };
   await env.run(`finishPurpose("yes")`);
   env.local.history.at(-1).kind = "lookup";
-  let t = await env.run(`readAll().then(resumable)`);
+  const t = await env.run(`readAll().then(resumable)`);
   assert.strictEqual(t.completed[0].kind, "lookup");
   assert.strictEqual(t.completed[0].keep, false);
-  await env.run(`aimKeep(${JSON.stringify(t.completed[0].id)})`);
-  t = await env.run(`readAll().then(resumable)`);
-  assert.strictEqual(t.completed[0].keep, true);
 });
 
 test("personalizing: groups put channels in one or more topics with a source preference; unwinding means breaks", async () => {
@@ -941,18 +938,6 @@ test("personalizing: groups put channels in one or more topics with a source pre
   await env.run(`setAvoid("/@builder", "Experimental Builds", "prefer", "Aviation")`);
   assert.deepStrictEqual(env.local.avoid["/@builder"].topics, ["Aviation", "Engineering"], "changing one topic from YouTube's menu keeps the others");
   assert.strictEqual(env.local.avoid["/@builder"].source, "normal");
-});
-
-test("personalizing: first aims become books, one current, all kept in the library", async () => {
-  const env = fresh();
-  await env.run(`startPurpose({ text: "Something I was doing" })`);
-  assert.strictEqual((await env.run(`aimsCreate([" ", "x"])`)).result, "error");
-  const r = await env.run(`aimsCreate(["Understand how airplane stalls work", "Learn to sharpen woodworking hand tools"], 1)`);
-  assert.strictEqual(r.created, 2);
-  assert.strictEqual(env.local.purpose.text, "Learn to sharpen woodworking hand tools");
-  assert.ok(env.local.purpose.keep && env.local.purpose.librarian.kind === "learn");
-  const paused = env.local.paused.map(p => p.text);
-  assert.ok(paused.includes("Understand how airplane stalls work") && paused.includes("Something I was doing"), "the other new aim and the one you were on wait on the shelf");
 });
 
 test("spaced review: a week after explaining, once a day at most; remembered waits longer, forgotten comes back soon", async () => {
@@ -997,8 +982,6 @@ test("an aim is a goal: searches stay sessions, goals become books, and a sessio
   assert.strictEqual(await env.run(`suggestGoal("how to cut dovetails")`), "Learn to cut dovetails");
   assert.strictEqual(await env.run(`suggestGoal("Why is the sky blue?")`), "Understand why is the sky blue");
   assert.strictEqual(await env.run(`suggestGoal("roman empire")`), "Understand roman empire");
-  assert.strictEqual(await env.run(`goalName("I want to learn to sharpen my chisels.")`), "Learn to sharpen my chisels");
-  assert.strictEqual(await env.run(`goalName("help me pass my checkride")`), "Pass my checkride");
 
   await env.run(`startPurpose({ text: "roman empire", search: "roman empire" })`);
   const id = env.local.purpose.id;
@@ -1148,24 +1131,6 @@ test("paths: an interest with a goal, an ordered plan, lessons as challenges, an
   assert.strictEqual((await env.run(`pathsView()`)).length, 0);
 });
 
-test("the Daily and Weekly Challenges (0.73): one of each, kept for the day or the week", async () => {
-  const env = fresh();
-  const ch = title => ({ title, kind: "understand", minutes: 10, difficulty: "intro", why: "Why not.", success: "Explain it in a few sentences.", materials: [], safety: "", interest: "aviation",
-    plan: [{ title: "Watch", look: "", minutes: 6, search: "lift", guess: "" }, { title: "Attempt", look: "", minutes: 4, search: "", guess: "" }] });
-  assert.deepStrictEqual(JSON.parse(JSON.stringify(await env.run(`challengeToday()`))), {}, "nothing kept yet");
-  assert.strictEqual((await env.run(`challengeTodaySave("daily", ${JSON.stringify({ interest: "aviation", list: [ch("How can a plane fly upside down?"), ch("Why can a plane stall?"), { title: "x" }], pick: 5 })})`)).result, "applied");
-  let today = JSON.parse(JSON.stringify(await env.run(`challengeToday()`)));
-  assert.ok(today.daily && !today.weekly && today.daily.list.length === 2 && today.daily.pick === 1 && today.daily.interest === "aviation", "kept: the usable ones, and which is showing");
-  assert.strictEqual(today.daily.key, await env.run(`challengePeriod("daily")`));
-  assert.strictEqual((await env.run(`challengeTodaySave("hourly", ${JSON.stringify({ list: [ch("Nope, not hourly")] })})`)).result, "invalid");
-  assert.strictEqual((await env.run(`challengeTodaySave("weekly", ${JSON.stringify({ list: [] })})`)).result, "invalid");
-  assert.strictEqual(await env.run(`challengePeriod("weekly", new Date(2026, 10, 26))`), "2026-11-23", "a week starts on Monday");
-  assert.strictEqual(await env.run(`challengePeriod("weekly", new Date(2026, 10, 23))`), "2026-11-23");
-  assert.strictEqual(await env.run(`challengePeriod("daily", new Date(2026, 10, 26))`), "2026-11-26");
-  env.local.chToday.daily.key = "2026-01-01";
-  assert.ok(!JSON.parse(JSON.stringify(await env.run(`challengeToday()`))).daily, "a new day starts fresh");
-});
-
 test("paths for Continue Learning (0.73): the lesson you're on and a subject for its picture", async () => {
   const env = fresh();
   await env.run(`pathAdd({ interest: "Ancient Rome", goal: "Explain how the Roman Republic worked" })`);
@@ -1178,24 +1143,6 @@ test("paths for Continue Learning (0.73): the lesson you're on and a subject for
   env.local.paths[0].lessons[0].status = "completed";
   [v] = JSON.parse(JSON.stringify(await env.run(`pathsView()`)));
   assert.deepStrictEqual(v.lesson, { n: 2, title: "Why two consuls?" }, "the next lesson, numbered");
-});
-
-test("the Daily Challenge (0.75): today's, cached for the day; your tries kept for the day only", async () => {
-  const env = fresh();
-  const day = await env.run(`localDay()`);
-  let c = JSON.parse(JSON.stringify(await env.run(`dailyCached()`)));
-  assert.ok(c.day === day && !c.fresh && c.challenge === null, "nothing yet: ask the server");
-  await env.run(`dailyCacheSave(${JSON.stringify(day)}, null)`);
-  assert.ok((await env.run(`dailyCached()`)).fresh, "not out yet: asked again within the hour, not every time");
-  await env.run(`dailyCacheSave(${JSON.stringify(day)}, { title: "The inheritance tax" })`);
-  assert.strictEqual((await env.run(`dailyCached()`)).challenge.title, "The inheritance tax");
-  assert.strictEqual((await env.run(`dailyAnswer("2000-01-01", { first: { pick: 1, right: true } })`)).result, "stale", "yesterday's panel can't write today's");
-  await env.run(`dailyAnswer(${JSON.stringify(day)}, { first: { pick: 7, right: false } })`);
-  await env.run(`dailyAnswer(${JSON.stringify(day)}, { learned: true })`);
-  const m = JSON.parse(JSON.stringify((await env.run(`dailyAnswer(${JSON.stringify(day)}, { second: { pick: 1, right: true }, doneAt: true, explain: "x".repeat(900) })`)).mine));
-  assert.ok(m.first.pick === -1 && !m.first.right && m.learned > 0 && m.second.right && m.doneAt > 0 && m.explain.length === 600, JSON.stringify(m));
-  env.local.dailyMine.day = "2000-01-01";
-  assert.deepStrictEqual(JSON.parse(JSON.stringify((await env.run(`dailyCached()`)).mine)), { day }, "a new day starts fresh");
 });
 
 test("the Weekly Challenge (0.76): the story's rules decide every path; this week's story and your playthrough are kept for the week", async () => {

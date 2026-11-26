@@ -104,11 +104,8 @@ html[dark] .wp {
   padding: 8px 0; animation: wp-in .12s ease-out;
 }
 @keyframes wp-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
-.wp-menu-head {
-  display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 8px 16px 12px; background: none; border: 0; text-align: left;
-}
-.wp-menu-head:hover, .wp-menu-item:hover { background: var(--wp-hover); }
+
+.wp-menu-item:hover { background: var(--wp-hover); }
 .wp-menu-block { padding: 12px 16px; border-top: 1px solid var(--wp-divider); }
 .wp-bar { height: 4px; border-radius: 2px; background: var(--wp-tonal); margin-top: 8px; overflow: hidden; }
 .wp-bar i { display: block; height: 100%; background: var(--wp-primary); border-radius: 2px; }
@@ -119,12 +116,6 @@ html[dark] .wp {
 }
 .wp-hint { color: var(--wp-muted); font-size: 12px; margin-left: -8px; }
 .wp-danger { color: var(--wp-text); }
-.wp-suggest {
-  display: flex; gap: 12px; align-items: baseline; margin: 0 -16px; padding: 6px 16px;
-  font-size: 14px; line-height: 20px; color: var(--wp-text); text-decoration: none;
-}
-.wp-suggest:hover { background: var(--wp-hover); }
-.wp-num { color: var(--wp-muted); font-size: 12px; width: 10px; flex: none; }
 
 /* ---------- dialogs ---------- */
 .wp-scrim {
@@ -149,19 +140,18 @@ html[dark] .wp {
 .wp-input:focus { outline: none; border-color: var(--wp-search-focus); box-shadow: inset 0 0 0 1px var(--wp-search-focus); }
 .wp-current { background: var(--wp-tonal); border-radius: 8px; padding: 10px 12px; }
 .wp-row-between { display: flex; justify-content: space-between; align-items: baseline; }
-.wp-radio { display: flex; align-items: center; gap: 12px; font-size: 14px; padding: 4px 0; cursor: pointer; }
-.wp-radio input { accent-color: var(--wp-text); width: 18px; height: 18px; margin: 0; }
+
 .wp-error { color: var(--wp-error); font-size: 12px; min-height: 16px; }
 .wp-error:empty { min-height: 0; }
 
 /* Chips (YouTube's filter chips): time choices and the Focus / Just exploring switch. */
-.wp-chips, .wp-seg { display: flex; gap: 8px; flex-wrap: wrap; }
-.wp-chip, .wp-seg-btn {
+.wp-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.wp-chip {
   height: 32px; padding: 0 12px; border-radius: 8px; border: 0; font-size: 14px; font-weight: 500;
   background: var(--wp-tonal); color: var(--wp-text);
 }
-.wp-chip:hover, .wp-seg-btn:hover { background: var(--wp-tonal-hover); }
-.wp .wp-chip-on, .wp .wp-chip-on:hover, .wp .wp-seg-btn.on, .wp .wp-seg-btn.on:hover { background: var(--wp-primary); color: var(--wp-on-primary); }
+.wp-chip:hover { background: var(--wp-tonal-hover); }
+.wp .wp-chip-on, .wp .wp-chip-on:hover { background: var(--wp-primary); color: var(--wp-on-primary); }
 
 /* Buttons (YouTube's button shapes: filled, tonal, text). */
 .wp-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
@@ -197,7 +187,7 @@ html[dark] .wp {
 .wp-actions-start { justify-content: flex-start; margin-top: 4px; }
 .wp-break-pick { display: flex; flex-direction: column; gap: 6px; }
 .wp-chip:disabled, .wp-chip:disabled:hover { opacity: .45; cursor: default; background: var(--wp-tonal); }
-.wp-menu-first { border-top: 0; }
+
 .wp-home-break-label { margin-top: 12px; }
 
 /* ---------- step D pieces ---------- */
@@ -208,10 +198,6 @@ html[dark] .wp {
 .wp-recent-item { display: flex; align-items: center; gap: 12px; padding: 6px 8px; margin: 0 -8px; border: 0; border-radius: 8px; background: none; font-size: 14px; text-align: left; min-width: 0; }
 .wp-recent-item:hover { background: var(--wp-hover); }
 .wp-recent-item .wp-icon { color: var(--wp-muted); }
-.wp-done-dialog { align-items: center; text-align: center; width: 420px; }
-.wp-done-check { color: var(--wp-text); transform: scale(1.6); margin: 8px 0 4px; }
-.wp-done-check svg path { stroke: var(--wp-raised); }
-.wp-done-actions { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 4px; }
 
 /* ---------- notices (bottom of the page) and toasts (YouTube snackbar) ---------- */
 .wp-notice {
@@ -311,32 +297,25 @@ html.wp-boot ytd-browse[page-subtype="home"] ytd-feed-filter-chip-bar-renderer {
 .wp .wp-home-go, .wp-home-search:focus-within .wp-home-go { background: var(--wp-primary); color: var(--wp-on-primary); }
 .wp .wp-home-go:hover { background: var(--wp-primary-hover); }
 .wp-home-go:disabled { opacity: .6; cursor: progress; }
-.wp-home-examples { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2px 4px; margin-top: -8px; font-size: 13px; }
-.wp .wp-home-example { border: 0; background: none; color: var(--wp-muted); font: 400 13px/18px "Roboto", Arial, sans-serif;
-  padding: 4px 8px; border-radius: 14px; }
-.wp .wp-home-example:hover { background: var(--wp-tonal); color: var(--wp-text); }
+
 .wp-home-hint { margin: -8px 0 0 16px; font-size: 13px; }
-.wp-home-lede { margin: -8px 0 0; font-size: 14px; line-height: 20px; max-width: 560px; }
+
 .wp-home-alt { display: flex; align-items: center; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
 /* "Pick up where you left off": the current aim, then at most two set-aside ones. */
 .wp-home-resume { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .wp-home-current { border: 1px solid var(--wp-divider, rgba(0,0,0,.1)); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 4px; }
 .wp-home-current .wp-home-purpose { margin-top: 0; }
 .wp-home-meta { font-size: 13px; line-height: 18px; }
-.wp-home-sub { margin-top: 8px; }
-.wp-home-recent { display: flex; flex-direction: column; }
-.wp-home-row { display: flex; align-items: center; gap: 16px; padding: 10px 0; border-top: 1px solid var(--wp-divider, rgba(0,0,0,.1)); }
-.wp-home-sub + .wp-home-row { border-top: 0; }
-.wp-home-row-text { flex: 1; min-width: 0; }
+
 /* Thumbnails of what you watched for an aim: the one you'd continue, "See more" of the rest, and a
    small one beside each recent aim. YouTube's shapes; the progress line is Aim coral. */
 .wp-thumb { position: relative; display: block; flex: none; border-radius: 8px; overflow: hidden; background: var(--wp-tonal) center / cover no-repeat; }
 .wp-thumb-lg { width: 168px; height: 94px; }
 .wp-thumb-sm { width: 112px; height: 63px; }
-.wp-thumb-xs { width: 72px; height: 40px; border-radius: 6px; }
+
 .wp-thumb-len { position: absolute; right: 4px; bottom: 6px; background: rgba(0, 0, 0, .8); color: #fff; font-size: 12px; line-height: 16px; font-weight: 500; padding: 0 4px; border-radius: 4px; }
 .wp-thumb-sm .wp-thumb-len { font-size: 11px; line-height: 14px; right: 3px; bottom: 5px; }
-.wp-thumb-xs .wp-thumb-len { display: none; }
+
 .wp-thumb-progress { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255, 255, 255, .45); }
 .wp-thumb-progress i { display: block; height: 100%; background: var(--wp-accent); }
 .wp .wp-home-video { display: flex; align-items: center; gap: 14px; width: 100%; margin: 8px 0 2px; padding: 8px; border: 0; border-radius: 12px; background: var(--wp-tonal); text-align: left; }
@@ -349,8 +328,6 @@ html.wp-boot ytd-browse[page-subtype="home"] ytd-feed-filter-chip-bar-renderer {
 .wp .wp-mini { display: flex; flex-direction: column; gap: 4px; width: 112px; flex: none; padding: 0; border: 0; background: none; text-align: left; }
 .wp .wp-mini:hover .wp-mini-title { color: var(--wp-text); }
 .wp-mini-title { font-size: 12px; line-height: 16px; color: var(--wp-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.wp .wp-home-row-thumb { padding: 0; border: 0; background: none; flex: none; border-radius: 6px; }
-.wp-home-all { align-self: flex-start; margin-left: -12px; }
 
 /* ---------- search results bar ---------- */
 .wp-results-bar {
@@ -370,10 +347,9 @@ html.wp-boot ytd-browse[page-subtype="home"] ytd-feed-filter-chip-bar-renderer {
 .wp-results-bar > .wp-lib { padding: 4px 8px 0 0; }
 .wp-results-bar.wp-rb-pending { padding: 12px 12px 12px 16px; border-radius: 12px; }
 .wp-rb-pending .wp-rb-purpose { flex-direction: column; align-items: flex-start; height: auto; gap: 0; }
-.wp-done-teachback { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--yt-spec-10-percent-layer, rgba(0,0,0,.1)); }
 
 /* ---------- the librarian (signed-in accounts) ---------- */
-.wp-rb-lib { flex-wrap: wrap; }
+
 .wp-lib { flex-basis: 100%; display: flex; flex-direction: column; gap: 10px; padding-top: 4px; }
 .wp-lib-note { font-size: 14px; line-height: 20px; }
 .wp-lib-note:empty { display: none; }
@@ -407,7 +383,7 @@ html.wp-boot ytd-browse[page-subtype="home"] ytd-feed-filter-chip-bar-renderer {
 .wp .wp-btn-accent { background: var(--wp-accent); color: var(--wp-on-accent); }
 .wp .wp-btn-accent:hover { background: var(--wp-accent-hover); }
 .wp-btn-block { width: 100%; height: 44px; border-radius: 22px; font-size: 15px; }
-.wp .wp-chip-on, .wp .wp-chip-on:hover, .wp .wp-seg-btn.on, .wp .wp-seg-btn.on:hover {
+.wp .wp-chip-on, .wp .wp-chip-on:hover {
   background: var(--wp-accent-soft); color: var(--wp-accent); box-shadow: inset 0 0 0 1.5px var(--wp-accent);
 }
 
@@ -445,13 +421,6 @@ html.wp-boot ytd-browse[page-subtype="home"] ytd-feed-filter-chip-bar-renderer {
 .wp-pill-break .wp-pill-label { color: var(--wp-accent); }
 .wp-pill-break .wp-pill-time { color: var(--wp-text); font-weight: 500; font-variant-numeric: tabular-nums; }
 
-/* "Done with this aim?": a green check. */
-.wp .wp-done-check { width: 56px; height: 56px; border-radius: 50%; background: var(--wp-success); color: #fff; display: flex;
-  align-items: center; justify-content: center; transform: none; margin: 4px 0 2px; }
-.wp .wp-done-check .wp-icon { transform: scale(1.4); }
-.wp .wp-done-check svg circle { display: none; }
-.wp .wp-done-check svg path { stroke: #fff; }
-
 /* "Break time is up": the aim you're returning to. */
 .wp-return { display: flex; gap: 12px; align-items: center; width: 100%; padding: 10px; border-radius: 12px;
   border: 1px solid var(--wp-divider); text-align: left; }
@@ -462,7 +431,7 @@ html.wp-boot ytd-browse[page-subtype="home"] ytd-feed-filter-chip-bar-renderer {
   box-shadow: var(--wp-shadow); padding: 32px; margin-top: 8vh; }
 .wp-home-card > .wp-dialog-brand { align-self: center; }
 .wp-home-card .wp-home-title { text-align: center; }
-.wp-home-card .wp-home-lede { text-align: center; align-self: center; margin-top: -10px; }
+
 .wp-home-card .wp-home-hint { text-align: center; margin-left: 0; }
 .wp-home-card .wp-chips { justify-content: center; }
 .wp-home-card > .wp-label:not(.wp-home-break-label) { text-align: center; }
@@ -607,7 +576,7 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 .wp .wp-interest-btn { height: 28px; padding: 0 12px; border-radius: 14px; border: 1px solid var(--wp-divider); background: none; font-size: 13px; font-weight: 500; }
 .wp .wp-interest-btn:hover { background: var(--wp-tonal); }
 .wp .wp-interest-btn.on { background: var(--wp-primary); color: var(--wp-on-primary); border-color: transparent; }
-.wp-done-dialog .wp-interest { justify-content: center; }
+
 .wp .wp-where-link { display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; margin-top: 4px; font-size: 13px; }
 .wp .wp-where-link .wp-icon svg { width: 16px; height: 16px; }
 .wp-where { width: min(560px, 100%); max-height: min(86vh, 100%); }
@@ -684,7 +653,7 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 /* "Still looking?" under the results bar. */
 .wp-rb-still { flex-basis: 100%; display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap; padding: 2px 0; margin-top: 4px;
   font-size: 13px; line-height: 18px; }
-.wp-rb-still .wp-icon-btn, .wp-learn-invite .wp-icon-btn { width: 24px; height: 24px; }
+.wp-rb-still .wp-icon-btn { width: 24px; height: 24px; }
 
 /* A channel you prefer: a small "Your channel" badge on its videos. */
 [data-wp-preferred] { position: relative; }
@@ -706,15 +675,10 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 .wp-study-today-kind.wp-review { color: var(--wp-accent); }
 
 /* "Learn something": six new videos from your topics, or the invitation to pick topics. */
-.wp-learn { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
-.wp-learn-invite { display: flex; flex-direction: row; align-items: center; gap: 10px; padding: 4px 0; font-size: 13px; line-height: 18px; }
-.wp .wp-learn-edit { font-size: 12px; }
+
 .wp-learn-loading { font-size: 13px; }
 .wp-learn-meta { font-size: 11px; line-height: 14px; color: var(--wp-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.wp-learn-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 12px; overflow: visible; }
-.wp .wp-learn-row .wp-learn-item { width: auto; }
-.wp-learn-row .wp-thumb-sm { width: 100%; height: auto; aspect-ratio: 16 / 9; }
-@media (max-width: 560px) { .wp-learn-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
 /* Quick review: Shorts from your topics, upright thumbnails (content/shorts.js). */
 .wp-review { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
 .wp-review-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
@@ -738,14 +702,9 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 .wp-home-end { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-radius: 12px; background: var(--wp-tonal); text-align: left; }
 .wp-home-end .wp-notice-text { flex: 1; }
 .wp-home-end .wp-notice-actions.wp-col { align-items: flex-end; }
-.wp-home-next { font-size: 13px; line-height: 18px; color: var(--wp-text); margin-top: 2px; }
 
 /* Explore: the homepage's one line, and the view it opens in the homepage card. */
-.wp-explore-line { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; font-size: 13px; line-height: 18px; }
-.wp-explore-open { gap: 6px; }
-.wp-explore-top { display: flex; }
-.wp .wp-explore-back { display: inline-flex; align-items: center; gap: 4px; color: var(--wp-muted); font-size: 13px; }
-.wp-explore-lede { text-align: center; font-size: 14px; line-height: 20px; margin-top: -10px; }
+
 .wp-explore-head { display: flex; align-items: center; gap: 4px 10px; flex-wrap: wrap; font-size: 13px; line-height: 18px; }
 .wp-explore-interests { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .wp-explore-body { display: flex; flex-direction: column; gap: 10px; }
@@ -755,7 +714,7 @@ html[dark] .wp-coach { background: var(--wp-menu); }
 @media (max-width: 760px) { .wp-explore-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .wp-explore-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .wp-explore-end { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 6px 0 2px; font-size: 13px; text-align: center; }
-.wp-home-card.wp-explore { width: min(880px, calc(100% - 32px)); }
+
 /* Go deeper: one quiet line at the top of More to explore. */
 .wp-deeper { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 0 10px; font-size: 13px; line-height: 18px; }
 
@@ -765,7 +724,7 @@ html[dark] .wp-coach { background: var(--wp-menu); }
   font-size: 14px; line-height: 20px; color: var(--wp-text); }
 .wp-talk-wait { padding: 14px 16px; }
 .wp-talk-head { display: flex; align-items: center; gap: 10px; padding: 12px 10px 10px 14px; border-bottom: 1px solid var(--wp-divider, rgba(0,0,0,.08)); }
-.wp-talk-mark { display: flex; color: var(--wp-text); }
+
 .wp-talk-who { flex: 1; min-width: 0; }
 .wp-talk-who .wp-muted { font-size: 12px; line-height: 16px; }
 .wp-talk-log { flex: 1; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
@@ -833,11 +792,11 @@ html[dark] .wp-medal { color: #d2b277; }
 .wp-map-next { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 8px; padding-top: 10px;
   border-top: 1px solid var(--wp-divider); font-size: 13px; line-height: 18px; }
 .wp-map-next .wp-btn { flex: none; }
-.wp-explore-kicker { text-align: center; margin-bottom: -10px; }
+
 .wp-explore-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 2px; }
 .wp-explore-chips .wp-chip { border-radius: 16px; }
 .wp .wp-explore-chips .wp-chip-on { background: var(--wp-primary); color: var(--wp-on-primary); box-shadow: none; }
-.wp-talk-mic.on { background: var(--wp-accent, #a5552a); color: var(--wp-on-accent, #fff); }
+
 .wp-talk-actions .wp-row { display: flex; align-items: center; gap: 6px; }
 
 /* "Staying on track": a brief pill on the player when a video plays for your aim. */
@@ -937,11 +896,7 @@ html[dark] .wp-ap-target { color: var(--wp-text); }
 .wp-ap-aimtext { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .wp-ap-label { font-size: 12px; line-height: 16px; color: var(--wp-muted); }
 .wp-ap-aimtext b { font: 600 15px/20px "Roboto", "Arial", sans-serif; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.wp-ap-bar { height: 6px; border-radius: 3px; background: var(--wp-tonal-hover); overflow: hidden; margin-top: 4px; }
-.wp-ap-bar i { display: block; height: 100%; background: var(--wp-primary); border-radius: 3px; }
-.wp-ap-prog { font-size: 12px; line-height: 16px; color: var(--wp-muted); }
-.wp-ap-moment { font-size: 13px; line-height: 18px; padding: 8px 12px; border-radius: 10px; background: var(--wp-accent-soft); }
-.wp-ap-rows { display: flex; flex-direction: column; gap: 6px; }
+
 .wp-ap-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--wp-card-border); background: none;
   color: var(--wp-text); text-align: left; cursor: pointer; font: inherit; }
 .wp-ap-row:hover { background: var(--wp-tonal); }
@@ -951,12 +906,6 @@ html[dark] .wp-ap-row.wp-ap-next { border-color: var(--wp-text); box-shadow: ins
 .wp-ap-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .wp-ap-text b { font-size: 15px; line-height: 20px; font-weight: 500; }
 .wp-ap-text span { font-size: 12px; line-height: 16px; color: var(--wp-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.wp-ap-tag { font-size: 11px; line-height: 18px; padding: 0 8px; border-radius: 9px; background: var(--wp-primary); color: var(--wp-on-primary); flex: none; }
-.wp-ap-foot { display: flex; gap: 6px; }
-.wp-ap-chip { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--wp-card-border); background: none;
-  color: var(--wp-text); font: 500 13px "Roboto", "Arial", sans-serif; cursor: pointer; }
-.wp-ap-chip:hover { background: var(--wp-tonal); }
-.wp-ap-save { margin-left: auto; padding: 0 9px; }
 
 /* The panel's Up next, end-of-video prompt, tiles and More (aimpanel.js, SPEC §5). */
 .wp-ap-label { font-size: 12px; line-height: 16px; color: var(--wp-muted); font-weight: 500; }
@@ -999,29 +948,7 @@ html[dark] .wp-ap-row.wp-ap-next { border-color: var(--wp-text); box-shadow: ins
 .wp .wp-dd-goal { display: block; margin: 8px 0 0; font-size: 13px; }
 .wp .wp-rb-goal { margin-left: 8px; white-space: nowrap; }
 
-/* Challenges (0.70): the finder in the homepage card, a challenge's details, and the Final Challenge's
-   outcome. Modern Explorer: the question in the serif, copper for the kind and the rules. */
-.wp-ch { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--wp-divider); text-align: left; }
-.wp-ch-error { font-size: 13px; }
-.wp-ch-label { font-size: 11px; line-height: 16px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--wp-accent); }
-.wp-ch-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
-.wp .wp-ch-card { display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: 14px; border: 1px solid var(--wp-card-border); background: var(--wp-raised);
-  text-align: left; cursor: pointer; font: inherit; color: var(--wp-text); }
-.wp .wp-ch-card:hover { border-color: var(--wp-accent); }
-.wp-ch-meta { font-size: 12px; line-height: 16px; color: var(--wp-accent); font-weight: 500; }
-.wp-ch-title { font: 500 17px/22px var(--font-serif); color: var(--wp-text); }
-.wp-ch-big { font-size: 22px; line-height: 28px; }
-.wp-ch-why, .wp-ch-mat { font-size: 13px; line-height: 18px; color: var(--wp-muted); }
-.wp-ch-more { gap: 16px; }
-.wp-ch-detail { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 14px; background: var(--wp-tonal); }
-.wp-ch-success { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 10px; background: var(--wp-raised); border-left: 3px solid var(--wp-accent);
-  font: 400 16px/23px var(--font-serif); color: var(--wp-text); }
-.wp-ch-plan { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 20px; color: var(--wp-text); }
-.wp-ch-plan .wp-muted { font-size: 13px; }
-.wp-ch-mats ul { margin: 4px 0 0; padding-left: 18px; font-size: 14px; line-height: 20px; }
-.wp-ch-safety { font-size: 13px; line-height: 18px; padding: 8px 12px; border-radius: 8px; background: var(--wp-accent-soft); color: var(--wp-text); }
-.wp-ch-actions { gap: 8px; }
-.wp-ch-note { font-size: 12px; line-height: 17px; }
+/* A lesson's Final Challenge: its outcome, in the conversation. */
 .wp-ch-outcome { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--wp-card-border); }
 .wp-ch-outcome b { font: 500 20px/26px var(--font-serif); }
 .wp-ch-outcome.won { border-color: var(--wp-accent); background: var(--wp-accent-soft); }
@@ -1059,5 +986,3 @@ html[dark] .wp-ap-row.wp-ap-next { border-color: var(--wp-text); box-shadow: ins
 .wp-pw-note { font-size: 13px; line-height: 19px; }
 .wp-pw-busy { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--wp-muted); }
 .wp-pw-busy .wp-talk-typing { padding: 0; }
-.wp-ch-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; flex: 1 1 100%; }
-.wp-ch-subject { flex: 1; min-width: 180px; height: 34px; }

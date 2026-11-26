@@ -1,13 +1,13 @@
 // Aim — the bar along the top of every Aim page (0.73), the same as on YouTube's homepage: the mark,
 // then Home, Break and Library (YouTube's homepage is Home; Break opens there with a break's lengths),
-// then you: a small menu with Settings, your paths, the learning record and Homeschool. Everything else
+// then you: a small menu with Settings, your paths, the learning record and Pathways. Everything else
 // (an aim's pages, references, TeachBack, study sessions, scenarios) lives inside the Library and opens
 // from where it's needed. The Learning record is a tab of the Library. Colors: aim.css (the reading room).
 (() => {
   const head = document.querySelector(".page-head");
   if (!head || head.querySelector(".places")) return;
   const file = location.pathname.split("/").pop() || "";
-  const YOU = { "pathways.html": "pathways.html", "options.html": "options.html", "plus.html": "options.html", "design.html": "options.html", "daily-editor.html": "options.html", "weekly-editor.html": "options.html" };
+  const YOU = { "pathways.html": "pathways.html", "options.html": "options.html", "plus.html": "options.html", "design.html": "options.html", "weekly-editor.html": "options.html" };
   const mine = YOU[file] || "";
   const node = (tag, props = {}, ...kids) => { const n = Object.assign(document.createElement(tag), props); n.append(...kids.filter(Boolean)); return n; };
   const link = (href, text, current) => {
@@ -22,7 +22,7 @@
   // You: settings and the rest, in a small menu.
   const menu = node("div", { className: "me-menu", hidden: true });
   menu.setAttribute("role", "menu");
-  for (const [text, href] of [["Settings", "options.html"], ["Learning plans", "path.html"], ["Learning record", "record.html"], ["Homeschool", "pathways.html"],
+  for (const [text, href] of [["Settings", "options.html"], ["Learning plans", "path.html"], ["Learning record", "record.html"], ["Pathways", "pathways.html"],
     ["Your subscriptions", "channels.html"], ["References", "references.html"]]) {
     const a = link(href, text, href === mine || (href === "record.html" && file === "record.html"));
     a.setAttribute("role", "menuitem");

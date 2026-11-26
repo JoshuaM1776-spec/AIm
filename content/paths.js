@@ -74,8 +74,6 @@ function pathsWindow() {
   const add = pw.adding ? (() => {
     const i = el("input", { class: "wp-input", type: "text", placeholder: "An interest, like aviation", "aria-label": "Interest", maxlength: "60" });
     const g = el("input", { class: "wp-input", type: "text", placeholder: "The goal behind it, like “earn a private pilot's license”", "aria-label": "Goal", maxlength: "160" });
-    // Filled in from a Daily Challenge's "Want a plan for this?", to edit before adding.
-    if (pw.prefill) { i.value = pw.prefill.interest || ""; g.value = pw.prefill.goal || ""; pw.prefill = null; }
     keepKeys(i, () => g.focus());
     keepKeys(g, () => addInterest(i.value, g.value));
     setTimeout(() => i.focus(), 30);

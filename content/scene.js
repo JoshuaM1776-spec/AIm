@@ -1,8 +1,8 @@
 // Aim — the homepage scene (0.73; dawn, 0.74): YouTube's homepage as one full-screen scene. Along the top: Aim,
 // then Home, Break and Library, then you (a small menu). Under it, two views and three panels:
 //   Home (0.76): this week's challenge (content/weekly.js), the same for everyone, and under it a slim
-//     search and where you left off (Continue Learning: the aim you're on and your learning plans), and
-//     the Daily Challenge if you turned it on. Each opens a panel over the scene.
+//     search and where you left off (Continue Learning: the aim you're on and your learning plans).
+//     Each opens a panel over the scene.
 //   Break: 5, 15 or 30 minutes, then Start Break; further down, something new to explore (picks from
 //     channels that teach well) and what you saved for later.
 //   Library is Aim's own page (targets.html), opened in this tab.
@@ -72,7 +72,7 @@ function sceneYou() {
     menuItem("tool", "Settings", () => send({ type: "open-options" })),
     menuItem("compass", "Learning plans", () => send({ type: "open-path", id: "" })),
     menuItem("chart", "Learning record", () => send({ type: "open-record" })),
-    menuItem("book", "Homeschool", () => send({ type: "open-pathways" })),
+    menuItem("book", "Pathways", () => send({ type: "open-pathways" })),
     menuItem("play", "Subscriptions", () => { location.href = "/feed/subscriptions"; }),
     menuItem("clock", "History", () => { location.href = "/feed/history"; }));
 }
@@ -81,14 +81,7 @@ function sceneYou() {
 const sceneTitle = (text, tag = "h1", cls = "wp-scene-title") => el("div", { class: `wp-scene-titlerow ${cls}-row` },
   el("span", { class: "wp-scene-rule", "aria-hidden": "true" }), el(tag, { class: `${cls}${tag === "h1" ? " wp-home-title" : ""}` }, text), el("span", { class: "wp-scene-rule", "aria-hidden": "true" }));
 
-function sceneCard({ cls, ic, title, sub, glow = false, onclick }) {
-  return el("button", { class: `wp-scene-card ${cls}${glow ? " glow" : ""}`, onclick },
-    el("span", { class: "wp-scene-card-icon" }, icon(ic)),
-    el("span", { class: "wp-scene-card-title" }, title),
-    el("span", { class: "wp-scene-card-sub" }, sub));
-}
-
-// A panel over the scene: Continue Learning, this week's story, or the Daily Challenge.
+// A panel over the scene: Continue Learning, or this week's story.
 function scenePanel({ cls = "", title, sub }, ...body) {
   return el("section", { class: `wp-scene-panel ${cls}`, role: "dialog", "aria-label": title },
     el("button", { class: "wp-scene-x", "aria-label": "Close", title: "Close", onclick: closePanel }, icon("close")),
@@ -111,7 +104,6 @@ function continuePanel(p) {
     p ? currentTargetRow(p) : null,
     pathsWindow(),
     el("div", { class: "wp-cl-foot" },
-      el("button", { class: "wp-link wp-cl-own", onclick: () => openChallengePanel("weekly") }, "Find a challenge of your own"),
       el("button", { class: "wp-link", onclick: () => send({ type: "open-targets", same: true }) }, "Everything in your Library")));
 }
 

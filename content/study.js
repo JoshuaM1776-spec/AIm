@@ -111,7 +111,7 @@ function checkLabel(t) {
 }
 
 function checkTopic(p, st, t) {
-  send({ type: "open-teachback", topic: `${t.title} (${st.title})`, notes: [t.brief, st.notes].filter(Boolean).join("\n\n").slice(0, 3000), study: t.id });
+  openTalk({ aimId: p?.id || null, followUp: { id: t.id, title: t.title, what: t.brief || "" } });
 }
 
 async function goTopic(st, index) {

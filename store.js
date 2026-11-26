@@ -23,8 +23,6 @@ const DEFAULT_SETTINGS = {
   learnTopics: [], learnOff: [],
   // Shorts from your Learn something channels only: a few at a time, as quick reviews of what you've learned.
   learnShorts: false,
-  // The Learn something row on the homepage (off: a clean page, just "What brings you here?").
-  learnRow: true,
   // Your own topics for channels you learn from (the Your channels page).
   myTopics: [],
   // The librarian remembers what you explained to it (Aim Plus; kept in this browser).
@@ -35,9 +33,7 @@ const DEFAULT_SETTINGS = {
   guessFirst: true,
   // The librarian may read captions when it talks a session through (Aim Plus). A preview, off by
   // default until the legal review (docs/ROADMAP.md → Decisions).
-  captions: false,
-  // The Daily Challenge on YouTube's homepage, beside the Weekly Challenge (paused in 0.76: off unless you turn it on).
-  dailyOn: false
+  captions: false
 };
 const GRACE_CHOICES = [0, 5, 10, 15, 30];
 const minutesSetting = max => v => Number.isInteger(v) && v >= 0 && v <= max;
@@ -55,13 +51,11 @@ const SETTING_RULES = {
   learnTopics: v => Array.isArray(v) && v.length <= 20 && v.every(x => typeof x === "string" && /^[a-z]{2,20}$/.test(x)),
   learnOff: v => Array.isArray(v) && v.length <= 200 && v.every(x => typeof x === "string" && /^@[\w.-]{1,60}$/.test(x)),
   learnShorts: v => typeof v === "boolean",
-  learnRow: v => typeof v === "boolean",
   myTopics: v => Array.isArray(v) && v.length <= 30 && v.every(x => typeof x === "string" && x.trim().length >= 1 && x.length <= 40),
   librarianMemory: v => typeof v === "boolean",
   spacedReview: v => typeof v === "boolean",
   guessFirst: v => typeof v === "boolean",
-  captions: v => typeof v === "boolean",
-  dailyOn: v => typeof v === "boolean"
+  captions: v => typeof v === "boolean"
 };
 
 // ---------- write queue ----------
@@ -567,63 +561,8 @@ async function weeklyPlaytestGet() {
   return weeklyPlaytest && Date.now() - weeklyPlaytest.at < 6 * 3600e3 ? weeklyPlaytest : null;
 }
 
-// ---------- The Daily Challenge (0.75): the same for everyone ----------
-// Today's challenge as fetched from Aim's server (dailyCache: kept for the day; while it isn't out
-// yet, asked again at most hourly), and how you're getting on with it (dailyMine): your first pick,
-// your "explain why", whether you looked at the video or the why, your second pick, done. Only the
-// day's; yesterday's goes when today's arrives. Evidence only: right or not yet, nothing scored.
+// The day in the browser's own calendar (YYYY-MM-DD).
 const localDay = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-async function dailyCached() {
-  const { dailyCache, dailyMine } = await chrome.storage.local.get(["dailyCache", "dailyMine"]);
-  const day = localDay();
-  const fresh = dailyCache?.day === day && (dailyCache.challenge || Date.now() - (dailyCache.at || 0) < 3600e3);
-  return { day, fresh, challenge: dailyCache?.day === day ? dailyCache.challenge || null : null, mine: dailyMine?.day === day ? dailyMine : { day } };
-}
-async function dailyCacheSave(day, challenge) {
-  await chrome.storage.local.set({ dailyCache: { day, challenge: challenge || null, at: Date.now() } });
-  return { result: "applied" };
-}
-const DAILY_STEPS = ["first", "explain", "learned", "second", "doneAt"];
-async function dailyAnswer(day, patch = {}) {
-  if (day !== localDay()) return { result: "stale" };
-  const { dailyMine } = await chrome.storage.local.get("dailyMine");
-  const mine = dailyMine?.day === day ? { ...dailyMine } : { day };
-  for (const k of DAILY_STEPS) {
-    if (!(k in patch)) continue;
-    if (k === "first" || k === "second") { const pick = Number(patch[k]?.pick); mine[k] = { pick: pick >= 0 && pick <= 2 ? pick : -1, right: !!patch[k]?.right, at: Date.now() }; }
-    else if (k === "explain") mine.explain = clip(patch.explain, 600);
-    else mine[k] = patch[k] ? Date.now() : null;
-  }
-  await chrome.storage.local.set({ dailyMine: mine });
-  return { result: "applied", mine };
-}
-
-// ---------- The Daily and Weekly Challenges (0.73, content/challenge.js) ----------
-// One of each, kept for the day or the week: the subject, the three the server offered, and which one
-// is showing. A new day (or week, from Monday) starts fresh.
-function challengePeriod(scale, now = new Date()) {
-  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  if (scale === "weekly") d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-async function challengeToday() {
-  const { chToday = {} } = await chrome.storage.local.get("chToday");
-  const out = {};
-  for (const scale of ["daily", "weekly"]) {
-    const rec = chToday[scale];
-    if (rec?.key === challengePeriod(scale) && rec.list?.length) out[scale] = rec;
-  }
-  return out;
-}
-async function challengeTodaySave(scale, rec) {
-  if (!["daily", "weekly"].includes(scale)) return { result: "invalid" };
-  const list = (Array.isArray(rec?.list) ? rec.list : []).slice(0, 3).map(tidyChallengeIn).filter(Boolean);
-  if (!list.length) return { result: "invalid" };
-  const { chToday = {} } = await chrome.storage.local.get("chToday");
-  chToday[scale] = { key: challengePeriod(scale), interest: clip(rec.interest, 120), list, pick: Math.max(0, Math.min(list.length - 1, Math.round(Number(rec.pick) || 0))), at: Date.now() };
-  await chrome.storage.local.set({ chToday });
-  return { result: "applied" };
-}
 
 // ---------- Challenges (0.70, docs/SPEC.md §3–§9, §15) ----------
 // A session challenge lives on an aim: a specific outcome, a success condition decided before
@@ -743,12 +682,6 @@ function goalShaped(text) {
   // "How do I change a tire?": a quick answer, not a goal (docs/SPEC.md §3), unless it says learn.
   if (/^(how (to|do|can|does|did)|what|why|when|where|who|which|is|are|does|can)\b/i.test(t) && !/\b(learn|understand|master)\b/i.test(t)) return false;
   return GOAL_LEADS.test(t) || GOAL_WORDS.test(t);
-}
-// A goal's name for its book: "I want to learn to sharpen my chisels" → "Learn to sharpen my chisels".
-function goalName(text) {
-  const t = String(text || "").trim().replace(/[.!]+$/, "")
-    .replace(/^(i (really )?(want|need|would like|'d like|hope|plan|am trying|'m trying) to|my goal is to|help me( to)?|goal:)\s+/i, "");
-  return clip(t ? t[0].toUpperCase() + t.slice(1) : "", 120);
 }
 // Aims from before 0.67 have no goal flag: a book if it was named as one, or if real work shows.
 function isAim(p) {
@@ -1659,21 +1592,6 @@ async function personalReasons(reasons) {
   return { result: "applied" };
 }
 
-// Your first aims, as books: the first one you picked becomes the current aim, the rest wait on the
-// shelf. Each is kept in the library (they're goals, not quick searches).
-async function aimsCreate(texts, activeIndex = 0) {
-  const list = (Array.isArray(texts) ? texts : []).map(t => clip(String(t || "").replace(/\s+/g, " ").trim(), 300)).filter(t => t.length >= 3).slice(0, 5);
-  if (!list.length) return { result: "error", message: "Write at least one aim." };
-  const s = await readAll();
-  const active = Math.min(Math.max(0, Number(activeIndex) || 0), list.length - 1);
-  const made = list.map((t, i) => ({ ...newPurpose(t, null, 0), keep: true, goal: true, librarian: { kind: "learn" }, ...(i === active ? {} : { pausedAt: Date.now() }) }));
-  if (s.purpose) park(s, s.purpose);
-  const parked = made.filter((_, i) => i !== active);
-  s.paused = [...parked, ...s.paused].slice(0, MAX_PAUSED);
-  await chrome.storage.local.set({ purpose: made[active], paused: s.paused, history: s.history, brk: null });
-  return { result: "applied", purpose: made[active], created: made.length };
-}
-
 // Your YouTube subscriptions, as read from youtube.com/feed/channels (content/subs.js), for the
 // Your channels page. complete: the whole list was read, so channels no longer in it are dropped.
 async function saveSubs(channels, complete) {
@@ -2080,7 +1998,8 @@ async function talkMarks(aimId, marks) {
     for (const m of list) {
       const t = topics?.find(x => x.title === m.topic);
       if (!t || !["demonstrated", "partial", "needs_review"].includes(m.status)) continue;
-      t.check = { assessmentId: "talk", at: Date.now(), endedEarly: false, objectives: [{ text: `Talked through ${t.title}`, status: m.status, search: "" }] };
+      t.check = { assessmentId: "talk", at: Date.now(), endedEarly: false,
+        objectives: [{ text: clip(m.what, 200) || `Talked through ${t.title}`, status: m.status, search: clip(m.search, 150) }] };
       changed = true;
     }
   };
@@ -2205,16 +2124,6 @@ async function gapsUpdate(aimId, { add = [], videoFor = null, resolve = null } =
   rec.gaps = gaps.slice(-6);
   await chrome.storage.local.set({ purpose: d.purpose || null, paused: d.paused || [], history: d.history || [] });
   return { result: "applied", gaps: rec.gaps };
-}
-
-// A quick answer kept in the library by hand (quick answers don't become books on their own).
-async function aimKeep(aimId, keep = true) {
-  const d = await chrome.storage.local.get(["purpose", "paused", "history"]);
-  const rec = [d.purpose, ...(d.paused || []), ...(d.history || [])].find(r => r?.id === aimId);
-  if (!rec) return { result: "error", message: "That aim isn't here." };
-  rec.keep = !!keep;
-  await chrome.storage.local.set({ purpose: d.purpose || null, paused: d.paused || [], history: d.history || [] });
-  return { result: "applied" };
 }
 
 // A finished scenario, kept with its aim: what it was, and the debrief (what was happening, why, what

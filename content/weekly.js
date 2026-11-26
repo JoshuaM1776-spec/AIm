@@ -325,7 +325,7 @@ function wkEnd() {
     next.length ? el("div", { class: "wp-wk-next" }, el("span", { class: "wp-label" }, "Worth learning next"),
       ...next.map(n => el("div", { class: "wp-wk-hint" }, el("span", {}, el("b", {}, n.topic), ` · ${n.why}`),
         n.search ? el("button", { class: "wp-link", onclick: () => goSearch(n.search) }, icon("play"), "Find a video") : null))) : null,
-    s.sources?.length ? el("div", { class: "wp-dl-sources" }, el("span", { class: "wp-label" }, "How do we know?"),
+    s.sources?.length ? el("div", { class: "wp-wk-sources" }, el("span", { class: "wp-label" }, "How do we know?"),
       ...s.sources.map(x => x.url ? el("a", { href: x.url, target: "_blank", rel: "noopener" }, x.title) : el("span", {}, x.title))) : null,
     el("p", { class: "wp-wk-small" }, wk.playtest ? "End of the playtest." : "A new challenge every Monday.")
   ];

@@ -278,14 +278,14 @@ try {
   for (const pg of kid.pages()) if (pg.url().includes("welcome.html")) await pg.close();
   const kopt = await kid.newPage();
   await kopt.goto(`chrome-extension://${extId}/options.html`);
-  await kopt.click("#familyOpen");
-  await kopt.fill("#familyCode", "WRONG-123");
-  await kopt.click("button:text-is('Connect')");
-  await kopt.waitForSelector("#plusMsg:has-text('code')").catch(async e => { console.log("DEBUG", JSON.stringify((await kopt.textContent("#plus").catch(() => "?")).replace(/\s+/g, " ")), JSON.stringify(await kopt.textContent("#plusMsg").catch(() => "?"))); throw e; });
-  step("a wrong code is refused, and leaves no account behind", !(await ksw.evaluate(() => loadSession())));
-  await kopt.click("#familyOpen").catch(() => {});
-  await kopt.fill("#familyCode", pair.code.toLowerCase());
-  await kopt.click("button:text-is('Connect')");
+  // Aim Homeschool is parked (0.77): Settings doesn't offer "Connect to my family", so the student's
+  // Chrome pairs through the same message it would send.
+  const pairWith = code => kopt.evaluate(c => chrome.runtime.sendMessage({ type: "plus-student-pair", code: c }), code);
+  const wrong = await pairWith("WRONG-123");
+  step("a wrong code is refused, and leaves no account behind", !!wrong?.error && !(await ksw.evaluate(() => loadSession())));
+  const paired = await pairWith(pair.code.toLowerCase());
+  step("the right code connects", !paired?.error, JSON.stringify(paired));
+  await kopt.reload();
   await kopt.waitForSelector("text=Connected to Alex's family plan");
   const kidLocal = await ksw.evaluate(() => chrome.storage.local.get(["homeschool", "avoid"]));
   step("the student's Chrome connects with the code: no email, no password; Today's plan arrives", kidLocal.homeschool?.family && kidLocal.homeschool.student === "Alex" &&

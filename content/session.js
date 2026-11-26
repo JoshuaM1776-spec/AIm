@@ -298,26 +298,6 @@ async function fillSwitchList(box) {
     list.length > 4 ? el("button", { class: "wp-link", onclick: () => { closeModal(); send({ type: "open-targets" }); } }, `All ${list.length} in your library`) : null].filter(Boolean));
 }
 
-// Clarifying is not pivoting: same goal, said more precisely.
-function openRefineDialog() {
-  if (!purpose) return;
-  const input = el("textarea", { class: "wp-input", rows: "2" });
-  input.value = purpose.text;
-  keepKeys(input);
-  openModal(el("div", { class: "wp-dialog", role: "dialog", "aria-modal": "true" },
-    el("div", { class: "wp-title" }, "Edit your aim"),
-    el("p", { class: "wp-muted" }, "Say the same goal more precisely. To go somewhere new, use Change my aim."),
-    input,
-    el("div", { class: "wp-actions" },
-      el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Cancel"),
-      el("button", { class: "wp-btn wp-btn-primary", onclick: async () => {
-        await send({ type: "purpose-refine", text: input.value });
-        applyStatus(await send({ type: "status" }));
-        closeModal(); renderChip(); renderResultsBar();
-      } }, "Save"))));
-  setTimeout(() => { input.focus(); input.select(); }, 50);
-}
-
 // Optional time limit for the current purpose.
 function openLimitDialog() {
   closeDropdown();
@@ -353,7 +333,6 @@ async function addPurposeTime(minutes) {
 const isLookup = p => p?.librarian?.kind === "lookup" && !p.study && !p.plan;
 const doneLabel = p => (isLookup(p) ? "Got my answer" : "Done with this aim");
 const doneAction = p => (isLookup(p) ? () => finishPurpose("yes") : () => finishPurpose(null));
-const askDone = () => finishPurpose(null);
 
 // Done never leaves you inside a video: you land back on "What brings you here?",
 // where Aim asks once whether you found what you needed.
@@ -388,12 +367,10 @@ async function showReflection() {
   rated.append(el("span", { class: "wp-muted" }, "Found what you needed?"),
     ...[["yes", "Yes"], ["partly", "Partly"], ["no", "No"]].map(([v, label]) => el("button", { class: "wp-link", onclick: rate(v) }, label)));
   const close = () => { homeEnd?.remove(); homeEnd = null; closeNotice(); };
-  const teach = plus ? el("button", { class: "wp-btn wp-btn-tonal", onclick: () => { close(); send({ type: "open-teachback", topic: s.text }); } }, "Test my understanding") : null;
   const slot = el("div", { class: "wp-end-talk" }, talkable ? el("div", { class: "wp-talk-msg wp-talk-typing", "aria-label": "The librarian is reading your session" }, el("i"), el("i"), el("i")) : rated);
   if (talkable) {
-    if (teach) teach.hidden = true;
     prepareTalk({ aimId: s.id, source: "done" }).then(state => {
-      if (state.error) { slot.replaceChildren(rated); if (teach) teach.hidden = false; return; }
+      if (state.error) { slot.replaceChildren(rated); return; }
       slot.replaceChildren(talkInvite(state, { onEnd: () => slot.replaceChildren() }));
     });
   }
@@ -406,7 +383,6 @@ async function showReflection() {
       // With Pathways on, a learning aim asks once whether you'd like more of it.
       status.pathways && learning ? interestChips({ topic: s.study?.title || s.text, source: "target" }) : null),
     el("div", { class: "wp-notice-actions wp-col" },
-      teach,
       el("button", { class: "wp-link", onclick: () => { close(); resumeTarget(s.id); } }, "Not done? Pick it back up"))];
   // On Aim's homepage it sits at the top of the card, so it never covers anything; elsewhere it's a notice.
   if (location.pathname !== "/" || !settings.homeCard || brk || planOn()) return showNotice(parts);

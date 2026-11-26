@@ -302,9 +302,8 @@ function showTalk(state) {
         el("b", {}, won ? "Challenge complete" : state.challengeOutcome === "partly" ? "Partly there" : "Not enough to tell yet"),
         el("span", {}, won ? `You demonstrated: ${ch.title || state.session.aim}` : state.challengeOutcome === "partly" ? "The feedback below says what's still missing. Learn it, then try again." : "Say a bit more, in your own words, and try again.")));
       foot.replaceChildren(el("div", { class: "wp-talk-actions" }, ...(won ? [
-        // A lesson on a path: straight on to the next one; a one-off challenge: another to explore.
-        activePurpose()?.pathRef ? el("button", { class: "wp-btn wp-btn-text", onclick: () => { closeTalk(); location.href = `/#aim-path=${encodeURIComponent(activePurpose().pathRef.id)}`; } }, "Next lesson")
-          : el("button", { class: "wp-btn wp-btn-text", onclick: () => { closeTalk(); location.href = `/#aim-challenge=${encodeURIComponent(ch.interest || activePurpose()?.challenge?.interest || ch.title || "")}`; } }, "Find the next challenge"),
+        // A lesson on a path: straight on to the next one.
+        activePurpose()?.pathRef ? el("button", { class: "wp-btn wp-btn-text", onclick: () => { closeTalk(); location.href = `/#aim-path=${encodeURIComponent(activePurpose().pathRef.id)}`; } }, "Next lesson") : null,
         el("button", { class: "wp-btn wp-btn-primary", onclick: () => { closeTalk(); if (live) finishPurpose("yes"); } }, live ? "Call it done" : "Close")] : [
         el("button", { class: "wp-btn wp-btn-text", onclick: closeTalk }, "Keep learning"),
         el("button", { class: "wp-btn wp-btn-primary", onclick: () => { closeTalk(); openTalk({ mode: "synthesis", aimId: state.aimId }); } }, "Try again")])));
@@ -355,7 +354,9 @@ function showTalk(state) {
       state.feedback = r.feedback || null;
       if (state.mode === "review" && r.recalled && state.reviewKey) { state.recalled = r.recalled; send({ type: "review-result", key: state.reviewKey, outcome: r.recalled }); }
       if (state.remember && r.memory?.length) { await send({ type: "memory-add", items: r.memory, aimId: state.aimId }); state.kept = r.memory.map(m => m.subject); }
-      if (r.marks?.length) await send({ type: "talk-marks", aimId: state.aimId, marks: r.marks });
+      // A topic not yet shown carries the conversation's first gap: what to revisit, and a search for it.
+      const gap = (r.gaps || []).find(g => g?.search);
+      if (r.marks?.length) await send({ type: "talk-marks", aimId: state.aimId, marks: r.marks.map(m => (m.status !== "demonstrated" && gap ? { ...m, what: gap.what, search: gap.search } : m)) });
       if (r.verdict) {
         state.verdict = r.verdict;
         await send({ type: "talk-verdict", aimId: state.aimId, verdict: r.verdict });
@@ -417,6 +418,16 @@ function talkInvite(state, { onEnd = () => {}, lead = null } = {}) {
         box.remove(); onEnd();
       } }, "Maybe later")));
   return box;
+}
+
+// A lesson's Final Challenge: its outcome, recorded with its evidence (docs/SPEC.md §15).
+const CH_OUTCOME = { solid: "demonstrated", getting_there: "partly", not_enough: "not_enough" };
+function recordChallenge(state, verdict) {
+  const p = activePurpose();
+  if (!state.aimId || !(p?.id === state.aimId ? p.challenge : state.session?.challenge)) return null;
+  const answer = [...state.thread].reverse().find(m => m.role === "person")?.text || "";
+  send({ type: "challenge-result", aimId: state.aimId, outcome: CH_OUTCOME[verdict] || "not_enough", answer, shown: state.feedback?.explained || [] });
+  return CH_OUTCOME[verdict] || "not_enough";
 }
 
 // Exploring, back on the homepage after a real stretch of it: one invitation, now and then (see

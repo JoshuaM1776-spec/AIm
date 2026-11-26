@@ -13,6 +13,7 @@ chrome.runtime.onInstalled.addListener(details => serial(async () => {
     await setOnboarding({});
     await chrome.tabs.create({ url: chrome.runtime.getURL("welcome.html") });
   } else if (details.reason === "update" && !onboarding) await setOnboarding({ seenAll: true });
+  if (details.reason === "update") await chrome.storage.local.remove(["dailyCache", "dailyMine", "chToday"]);
 }));
 
 // Also checked before the first message after the worker starts, in case an update
@@ -74,9 +75,6 @@ const writes = {
   "memory-offered": m => memoryOffered(m.id),
   "review-offered": () => reviewOffered(),
   "goal-answer": m => goalAnswer(m.aimId, m.answer),
-  "challenge-start": m => challengeStart(m.challenge),
-  "challenge-today-save": m => challengeTodaySave(String(m.scale || ""), m.rec),
-  "daily-answer": m => dailyAnswer(String(m.day || ""), m.patch),
   "weekly-play-save": m => weeklyPlaySave(m.state, !!m.playtest),
   "weekly-playtest-set": m => weeklyPlaytestSet(m.week, m.story),
   "path-add": m => pathAdd({ interest: m.interest, goal: m.goal, why: m.why }),
@@ -99,7 +97,6 @@ const writes = {
   "ref-update": m => refUpdate(String(m.id || ""), m.fields || {}),
   "ref-remove": m => refRemove(String(m.id || "")),
   "aim-gaps": m => gapsUpdate(String(m.aimId || ""), { add: m.add, videoFor: m.videoFor, resolve: m.resolve }),
-  "aim-keep": m => aimKeep(String(m.aimId || ""), m.keep !== false),
   "chain-save": m => chainSave(String(m.aimId || ""), m.chain || {}),
   "scenario-save": m => scenarioSave(String(m.aimId || ""), m.scenario || {}),
   "practice-set": m => practiceSet(m.aimId, { practice: m.practice, tried: !!m.tried, note: m.note }),
@@ -122,7 +119,6 @@ const writes = {
   "reflection-clear": () => chrome.storage.local.remove("reflection").then(() => ({ result: "applied" })),
   "avoid": m => setAvoid(m.key, m.name, m.action, m.topic),
   "organize-apply": m => organizeApply({ reasons: m.reasons, groups: m.groups, channels: m.channels }),
-  "aims-create": m => aimsCreate(m.texts, m.active),
   "subs-save": m => saveSubs(m.channels, !!m.complete),
   "design-applied": () => markDesigned(),
   "save": m => saveForLater(m.video || {}),
@@ -169,13 +165,9 @@ const reads = {
   "path-next": m => pathNext(String(m.id || "")),
   "path-context": m => pathContext(String(m.id || "")),
   "challenge-known": m => challengeKnown(String(m.interest || "")),
-  "challenge-today": () => challengeToday(),
-  "daily-get": m => dailyGet(!!m.refresh),
-  "daily-peek": () => dailyCached(),
   "weekly-get": m => weeklyGet(!!m.refresh),
   "weekly-peek": () => weeklyCached(),
   "weekly-playtest": () => weeklyPlaytestGet(),
-  "goal-check": m => ({ goal: goalShaped(String(m.text || "")), name: goalName(String(m.text || "")), suggestion: suggestGoal(String(m.text || "")) }),
   "memory-list": () => memoryList(),
   "captions-stats": () => captionsStats(),
   "aim-get": m => aimGet(String(m.id || "")),
@@ -186,7 +178,6 @@ const reads = {
   "channels-page": () => channelsPage(),
   "open-design": m => chrome.tabs.create({ url: chrome.runtime.getURL("design.html" + (/^(home|shorts|watching)$/.test(m.stage || "") ? `#${m.stage}` : "")) }).then(() => ({ result: "applied" })),
   "open-path": m => chrome.tabs.create({ url: chrome.runtime.getURL(`path.html?id=${encodeURIComponent(String(m.id || ""))}`) }).then(() => ({ result: "applied" })),
-  "open-personalize": () => chrome.tabs.create({ url: chrome.runtime.getURL("welcome.html?again=1") }).then(() => ({ result: "applied" })),
   "open-channels": () => chrome.tabs.create({ url: chrome.runtime.getURL("channels.html") }).then(() => ({ result: "applied" })),
   "review-shorts": m => rankReviewShorts(m.shorts),
   "open-study": () => chrome.tabs.create({ url: chrome.runtime.getURL("study.html") }).then(() => ({ result: "applied" })),
@@ -203,24 +194,12 @@ const reads = {
   "open-targets": (m, sender) => (m.same && sender?.tab?.id ? chrome.tabs.update(sender.tab.id, { url: chrome.runtime.getURL("targets.html") })
     : chrome.tabs.create({ url: chrome.runtime.getURL("targets.html") })).then(() => ({ result: "applied" })),
   "open-scenario": m => chrome.tabs.create({ url: chrome.runtime.getURL(`scenario.html?aim=${encodeURIComponent(String(m.aimId || ""))}`) }).then(() => ({ result: "applied" })),
-  "open-references": () => chrome.tabs.create({ url: chrome.runtime.getURL("references.html") }).then(() => ({ result: "applied" })),
   "open-aim": m => chrome.tabs.create({ url: chrome.runtime.getURL(`aim.html?id=${encodeURIComponent(String(m.id || ""))}`) }).then(() => ({ result: "applied" })),
   "open-record": () => chrome.tabs.create({ url: chrome.runtime.getURL("record.html") }).then(() => ({ result: "applied" })),
-  // YouTube tabs may only learn whether to offer Plus features, and open TeachBack for a topic.
+  // YouTube tabs may only learn whether to offer Plus features.
   "plus-brief": () => plusBrief(),
   // The librarian's two tasks, which YouTube tabs may call for a signed-in account (see plus.js).
-  "librarian": m => plusLibrarian(m.task, m.input),
-  "open-teachback": m => {
-    const q = new URLSearchParams();
-    if (typeof m.topic === "string" && m.topic.trim()) q.set("topic", m.topic.trim().slice(0, 200));
-    if (typeof m.notes === "string" && m.notes.trim()) q.set("notes", m.notes.trim().slice(0, 3000));
-    if (typeof m.study === "string" && /^[\w-]{8,64}$/.test(m.study)) q.set("study", m.study); // a study topic to report back to
-    if (typeof m.plan === "string" && /^[\w-]{1,64}$/.test(m.plan)) q.set("plan", m.plan); // a plan item to mark done
-    if (typeof m.objective === "string" && /^[\w-]{1,12}$/.test(m.objective)) q.set("objective", m.objective); // its curriculum objective
-    if (typeof m.video === "string" && /^[\w-]{6,20}$/.test(m.video)) q.set("video", m.video); // "Test me on this video"
-    const url = chrome.runtime.getURL("teachback.html" + (q.size ? "?" + q : ""));
-    return chrome.tabs.create({ url }).then(() => ({ result: "applied" }));
-  }
+  "librarian": m => plusLibrarian(m.task, m.input)
 };
 
 // Pathways: look for themes in the student's "Want more of this?" answers (Aim Plus, and only once
@@ -250,22 +229,6 @@ async function weeklyGet(refresh = false) {
     if (r.unavailable) return { ...c, unavailable: true };
     await serial(() => weeklyCacheSave(c.week, r.story));
     return { ...c, story: r.story, fresh: true };
-  } catch (e) {
-    return { ...c, error: String(e.message || e) };
-  }
-}
-
-// Today's Daily Challenge for a YouTube tab: the cached one, or fetched from Aim's server (no account
-// needed) when the day changed, or hourly while it isn't out yet. The fetch stays out of serial().
-async function dailyGet(refresh = false) {
-  const c = await dailyCached();
-  // refresh (opening the panel): ask again if it wasn't out when last asked; a day's challenge is kept.
-  if (c.fresh && (c.challenge || !refresh)) return c;
-  try {
-    const r = await plusDailyToday(c.day);
-    if (r.unavailable) return { ...c, unavailable: true };
-    await serial(() => dailyCacheSave(c.day, r.challenge));
-    return { ...c, challenge: r.challenge, fresh: true };
   } catch (e) {
     return { ...c, error: String(e.message || e) };
   }

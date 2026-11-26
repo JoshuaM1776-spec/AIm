@@ -85,17 +85,9 @@ You need a Supabase account, the [Supabase CLI](https://supabase.com/docs/guides
 
 Secrets: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PLUS`. Card details never reach Aim's server.
 
-## The Daily Challenge (0.75)
+## The Daily Challenge (removed in 0.77)
 
-One challenge a day, the same for everyone. Aim drafts them; an editor checks each against its sources and publishes it in the extension's Daily Challenge editor (Settings → Account → Daily Challenge editor, shown only to editors).
-
-| Part | What it does |
-|---|---|
-| `migrations/0006_daily.sql` | `daily_challenges`: one row a day (`draft` or `published`, the challenge as JSON). Row-level security on, no policies: only the server reads and writes it. |
-| `daily-today` (task on `ai`, no sign-in needed) | The published challenge for the day asked (a day or two either side of today, never further ahead), or none. The extension sends only the date. |
-| `daily-draft`, `daily-list`, `daily-save`, `daily-remove` (tasks on `ai`) | Editors only: draft empty days (up to seven at a time, never over a day already there) or redraft one, list three weeks, save or publish an edited one (publishing needs two sources), delete one. Drafting uses `AIM_MODEL` and counts against Plus limits. |
-
-To set it up: run `0006_daily.sql` in the SQL editor, then add the secret `AIM_DAILY_EDITORS` with your account's email (several: comma-separated), and redeploy `ai`.
+The Daily Challenge's tasks are gone from `ai`. Its table, `daily_challenges` (migration 0006), is no longer used; drop it if you like (`drop table if exists public.daily_challenges;`).
 
 ## The Weekly Challenge (0.76)
 
@@ -108,7 +100,7 @@ One story a week, the same for everyone, and the first thing on YouTube's homepa
 | `weekly-turn` (task on `ai`, signed in) | The narrator: answers a question from what the team knows, says what a choice's reasoning weighed and missed, or writes the debrief. The story is read on the server; the player's text is data. A daily cap (40 turns free, 200 Plus); editors may play drafts. |
 | `weekly-draft`, `weekly-list`, `weekly-save`, `weekly-remove`, `weekly-image` (tasks on `ai`) | Editors only: draft a week (optionally from a theme), list ten weeks, save or publish (publishing needs a picture, the topics and two sources), delete, and upload a picture (JPEG, PNG or WebP under 900 KB, into the `weekly` bucket). |
 
-To set it up: run `0007_weekly.sql` in the SQL editor and redeploy `ai`. Editors are the same `AIM_DAILY_EDITORS` accounts.
+To set it up: run `0007_weekly.sql` in the SQL editor, add the secret `AIM_EDITORS` with your account's email (several: comma-separated; the old name `AIM_DAILY_EDITORS` still works), and redeploy `ai`.
 
 ## Before release
 

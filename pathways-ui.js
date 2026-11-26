@@ -1,4 +1,4 @@
-// Aim — Pathways pieces shared by Aim's own pages (TeachBack, study sessions, Pathways):
+// Aim — Pathways pieces shared by Aim's own pages (study sessions, Pathways):
 // "Want more of this?" and "Where could this take me?". The YouTube versions are in
 // content/pathways.js. Each page loads this before its own script.
 

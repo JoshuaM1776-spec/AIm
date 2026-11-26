@@ -316,24 +316,11 @@ async function plusBrief() {
 // The librarian, for YouTube tabs: only its tasks (planning a study session, and "Where could this
 // take me?", which uses nothing about the student), only when signed in. Errors come back as
 // { error, code } so the tab can fall back to a plain YouTube search.
-const LIBRARIAN_TASKS = new Set(["librarian-ask", "librarian-rank", "study-plan", "pathways-where", "video-concepts", "librarian-questions", "librarian-talk", "challenges-suggest", "path-plan", "weekly-turn"]);
+const LIBRARIAN_TASKS = new Set(["librarian-ask", "librarian-rank", "study-plan", "pathways-where", "video-concepts", "librarian-questions", "librarian-talk", "path-plan", "weekly-turn"]);
 async function plusLibrarian(task, input) {
   if (!LIBRARIAN_TASKS.has(task) || !plusConfigured()) return { error: "Unavailable.", code: "unavailable" };
   try { return await plusCall(task, input); }
   catch (e) { return { error: String(e.message || e), code: e.code || "" }; }
-}
-
-// Today's Daily Challenge (0.75): the same for everyone, so no account is needed (the public key only).
-// Null when it isn't out yet; { unavailable } when this build has no server.
-async function plusDailyToday(day) {
-  if (!plusConfigured()) return { challenge: null, unavailable: true };
-  const { res, data } = await plusFetch(`${PLUS.supabaseUrl}/functions/v1/ai`, {
-    method: "POST",
-    headers: { apikey: PLUS.supabaseAnonKey, Authorization: `Bearer ${PLUS.supabaseAnonKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ task: "daily-today", input: { day } })
-  });
-  if (!res.ok || !data.ok) throw new PlusError(data.error?.message || "Aim's server had a problem. Try again.", res.status, data.error?.code || "");
-  return { challenge: data.challenge || null };
 }
 
 // This week's Weekly Challenge (0.76): the same for everyone, no account needed.
@@ -349,10 +336,8 @@ async function plusWeeklyCurrent(day) {
 }
 
 // Aim Plus features Aim's pages may call. Each is a task on Aim's server, which builds the prompts.
-const PLUS_TASKS = new Set(["teachback-start", "teachback-turn", "teachback-finish", "teachback-get",
-  "pathways-themes", "pathways-careers", "pathways-step", "study-apply", "scenario-turn", "deeper-step", "channels-organize", "challenges-suggest", "path-plan",
-  // The Daily Challenge's editors (daily.html); the server checks the account is one.
-  "daily-draft", "daily-list", "daily-save", "daily-remove",
+const PLUS_TASKS = new Set(["pathways-themes", "pathways-careers", "pathways-step", "study-apply", "scenario-turn", "deeper-step", "channels-organize", "path-plan",
+  // The Weekly Challenge's editors (weekly-editor.html); the server checks the account is one.
   "weekly-draft", "weekly-list", "weekly-save", "weekly-remove", "weekly-image"]);
 
 // Messages from Aim's own pages (Settings, TeachBack). Network calls don't go through serial(), so a slow

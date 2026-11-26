@@ -13,11 +13,9 @@ import { talk } from "./talk.ts";
 import { scenarioTurn } from "./scenario.ts";
 import { deeperStep } from "./deeper.ts";
 import { channelsOrganize } from "./organize.ts";
-import { challengesSuggest } from "./challenge.ts";
 import { pathPlan } from "./path.ts";
 import { type SyncStore, SyncError, readSyncInput } from "./sync.ts";
 import { type HsDb, HS_TASKS } from "./homeschool.ts";
-import { type DailyStore, dailyDraft, dailyList, dailyRemove, dailySave, dailyToday } from "./daily.ts";
 import { type WeeklyStore, weeklyCurrent, weeklyDraft, weeklyImage, weeklyList, weeklyRemove, weeklySave, weeklyTurn } from "./weekly.ts";
 
 export type Plan = "free" | "plus" | "homeschool"; // Homeschool includes everything in Plus
@@ -35,7 +33,7 @@ export interface Config {
   freeLimits?: Limits; // free accounts (the librarian only); defaults to a tenth of `limits`
   maxBodyBytes: number;
   maxSyncBytes?: number; // a sync round, a curriculum upload or a whole plan carries more; defaults to maxBodyBytes
-  dailyEditors?: string[]; // accounts (emails, lower case) that draft, check and publish the Daily Challenge
+  editors?: string[]; // accounts (emails, lower case) that draft, check and publish the Weekly Challenge
 }
 
 export type ClaudeResult =
@@ -64,7 +62,6 @@ export interface Deps {
   };
   sync?: SyncStore;   // Plus sync across devices (sync.ts)
   hs?: HsDb;          // Aim Homeschool: the parent website and paired student devices (homeschool.ts)
-  daily?: DailyStore; // the Daily Challenge: drafts and published days (daily.ts)
   weekly?: WeeklyStore; // the Weekly Challenge: drafts, published weeks and their pictures (weekly.ts)
   now(): Date;
   config: Config;
@@ -118,9 +115,6 @@ export const TASKS: Record<string, Task> = {
   "deeper-step": { plan: "plus", run: deeperStep },
   // Personalizing: groups for your subscriptions and first aims. Any signed-in account. See organize.ts.
   "channels-organize": { run: channelsOrganize },
-  // Challenges: a few session challenges from an interest and the time, or one written by the
-  // person, each with a success condition. Any signed-in account. See challenge.ts.
-  "challenges-suggest": { run: challengesSuggest },
   // Paths: an interest and its goal as ordered units, with the next five lessons. See path.ts.
   "path-plan": { run: pathPlan }
 };
@@ -130,10 +124,9 @@ const BIG_TASKS = new Set(["weekly-image", "weekly-save", "sync", "hs-upload-add
   "librarian-talk", "video-concepts", "scenario-turn", "deeper-step", "pathways-themes", "channels-organize", "path-plan"]); // caption excerpts or reference passages (Plus); each task trims them to its own limits
 
 // Handled directly in handle(), without AI.
-const DAILY_TASKS = new Set(["daily-draft", "daily-list", "daily-save", "daily-remove"]);
 const WEEKLY_EDIT_TASKS = new Set(["weekly-draft", "weekly-list", "weekly-save", "weekly-remove", "weekly-image"]);
-const PUBLIC_TASKS = new Set(["daily-today", "weekly-current"]);
-const isEditor = (email: string | undefined, config: Config) => !!email && !!config.dailyEditors?.includes(email.trim().toLowerCase());
+const PUBLIC_TASKS = new Set(["weekly-current"]);
+const isEditor = (email: string | undefined, config: Config) => !!email && !!config.editors?.includes(email.trim().toLowerCase());
 const ACCOUNT_TASKS = new Set(["status", "account-export", "account-delete", "billing-checkout", "billing-portal", "sync", "sync-erase"]);
 
 export function limitsFor(plan: Plan, config: Config): Limits {
@@ -213,15 +206,13 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
   try { body = JSON.parse(raw || "{}"); } catch { return fail(400, "bad_json", "The request isn't valid JSON.", cors); }
   const name = typeof body?.task === "string" ? body.task : "";
   if (size > (BIG_TASKS.has(name) ? cfg.maxSyncBytes || cfg.maxBodyBytes : cfg.maxBodyBytes)) return fail(413, "too_large", "That request is too large.", cors);
-  if (!ACCOUNT_TASKS.has(name) && !Object.hasOwn(TASKS, name) && !Object.hasOwn(HS_TASKS, name) && !DAILY_TASKS.has(name) && !WEEKLY_EDIT_TASKS.has(name) &&
+  if (!ACCOUNT_TASKS.has(name) && !Object.hasOwn(TASKS, name) && !Object.hasOwn(HS_TASKS, name) && !WEEKLY_EDIT_TASKS.has(name) &&
     !PUBLIC_TASKS.has(name) && name !== "weekly-turn")
     return fail(400, "task", "Unknown task.", cors);
 
-  // Today's Daily Challenge and this week's Weekly Challenge: the same for everyone, so no account is
-  // needed. Published ones only.
+  // This week's Weekly Challenge: the same for everyone, so no account is needed. Published ones only.
   if (PUBLIC_TASKS.has(name)) {
     try {
-      if (name === "daily-today") return json(200, { ok: true, ...(deps.daily ? await dailyToday({ input: body.input, now: deps.now(), daily: deps.daily }) : { challenge: null }) }, cors);
       return json(200, { ok: true, ...(deps.weekly ? await weeklyCurrent({ input: body.input, now: deps.now(), weekly: deps.weekly }) : { story: null }) }, cors);
     } catch (e) { if (e instanceof TaskError) return fail(e.status, e.code, e.message, cors); throw e; }
   }
@@ -273,23 +264,6 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
       ai: (taskName: string, r: AiRequest) => useAI(deps, userId, taskName, r, limitsFor(plan, deps.config)) };
     try { return json(200, { ok: true, ...(await weeklyTurn(ctx)) }, cors); }
     catch (e) { if (e instanceof TaskError) return fail(e.status, e.code, e.message, cors); throw e; }
-  }
-
-  // The Daily Challenge's editors: draft, check, edit and publish (daily.ts). Their drafting counts
-  // against Plus limits, whatever their plan.
-  if (DAILY_TASKS.has(name)) {
-    if (!deps.daily) return fail(503, "daily", "The Daily Challenge isn't set up on the server yet.", cors);
-    if (!isEditor(user.email, deps.config)) return fail(403, "editor", "Only Aim's editors can do this.", cors);
-    const userId = user.id;
-    const ctx = { input: body.input, now: deps.now(), daily: deps.daily,
-      ai: (taskName: string, r: AiRequest) => useAI(deps, userId, taskName, r, limitsFor("plus", deps.config)) };
-    try {
-      const run = { "daily-draft": dailyDraft, "daily-list": dailyList, "daily-save": dailySave, "daily-remove": dailyRemove }[name]!;
-      return json(200, { ok: true, ...(await run(ctx)) }, cors);
-    } catch (e) {
-      if (e instanceof TaskError) return fail(e.status, e.code, e.message, cors);
-      throw e;
-    }
   }
 
   // Subscribe, or manage the subscription: a Stripe page for the extension to open.

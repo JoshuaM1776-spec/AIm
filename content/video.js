@@ -85,13 +85,8 @@ function seekTo(t) {
 function testOnVideo() {
   const p = activePurpose();
   const { data, info } = concepts;
-  const notes = [`The video “${info.title}”${info.channel ? ` (${info.channel})` : ""}. From its ${data.basis}, it covers:`,
-    ...data.concepts.map(c => `- ${c.name}: ${c.summary}`),
-    data.references?.length ? `Authoritative references: ${data.references.join("; ")}.` : ""].filter(Boolean).join("\n");
-  const st = activeStudy(p);
-  const topic = st?.topics.find(t => t.videos.some(v => v.id === concepts.id));
   closeNotice();
-  send({ type: "open-teachback", topic: info.title.slice(0, 200), notes: notes.slice(0, 3000), study: topic?.id, plan: p?.plan, video: concepts.id });
+  openTalk({ aimId: p?.id || null, followUp: { id: concepts.id, title: info.title, what: `the video you just watched, which covers ${data.concepts.map(c => c.name).join(", ")}` } });
 }
 
 function conceptRow(c) {

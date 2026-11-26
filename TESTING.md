@@ -455,7 +455,7 @@ The librarian part needs the server redeployed.
 - [ ] Your subscriptions: "Want me to look at the channels you already follow?" Sure opens YouTube's channel list in a tab; when it's read, the conversation carries on by itself. Then the groups as tappable chips (tap to leave one out), Looks good / Suggest better groups (signed in) / Skip this. Saved as before (preferred sources, Unwinding for breaks).
 - [ ] What you're working toward: type it. A goal ("I want to learn to sharpen my chisels") is named cleanly ("Learn to sharpen my chisels"); a topic ("airplane stalls") gets a suggested goal ("Understand airplane stalls"). Make it an aim / Change the wording / Never mind; up to three; the first is where you start. "Nothing specific yet" is fine.
 - [ ] Without an account (where accounts exist): one optional offer of a free account. Then the wrap-up: the Aim button, the pin, Open YouTube, See my library.
-- [ ] The library's **Personalize** (and old personalize.html links) open the same conversation without the welcome and the distraction question.
+- [ ] The library's **Personalize** opens the same conversation without the welcome and the distraction question.
 
 ### 62. Challenges (0.70, docs/SPEC.md Phase 1)
 Needs a signed-in account and the server redeployed.
@@ -484,38 +484,24 @@ Needs a signed-in account and the server redeployed to draft paths.
 - [ ] **Start a challenge**: a small window, not over the page, with each interest, its goal, a progress bar and "x% of the path · n lessons to: <unit>" (or the next step outside Aim), and **+** to add one (interest and goal; its path is drafted at once).
 - [ ] Pick an interest: it starts the next lesson, in order (a challenge: guess first, watch, explain, then the lesson's final challenge), or continues the one in progress. After a lesson's Challenge complete, **Next lesson** goes on. When the detailed lessons run out, Aim writes the next five from what you showed and what's still a gap.
 - [ ] **See the path** (or Library → Your paths): the goal, progress, the units in order with the lessons of the current one, steps outside Aim with Done boxes, and Remove this interest.
-- [ ] **Explore** now has the one-off challenge finder (a subject, 15/30/60 min, Find a challenge) above its channel picks.
 
 ### 65. The reading room (0.73)
 - [ ] YouTube's homepage is one full-screen scene (a library hall): Aim at the left, **Home · Break · Library** in the middle, and you (a person in a circle) at the right. YouTube's own bar and sidebar are under it; nothing behind scrolls.
-- [ ] Home: "Good morning." (afternoon, evening), "Learn, explore, or take on a challenge.", the search, then three cards: **Continue Learning** (glowing; with an aim on, it names it), **Daily Challenge** and **Weekly Challenge**.
 - [ ] Continue Learning opens a panel: the aim you're on first (its last video, its name, where it stands, play; under it the study session, the map, what to try, its videos, Done and Set aside), then your paths (a picture, the interest and its goal, "Lesson n · …", a progress bar with its percent, what's left to the next checkpoint, See the path, play), and Add an interest. × closes it.
-- [ ] Daily Challenge (signed in): today's challenge from one of your interests (a different one each day), about ten minutes, with its success condition and plan, and Begin. Close it and open it again: the same one, all day. Another one, See all 3, Easier, Harder, a different subject, Write my own. Signed out, it says challenges come with an account.
-- [ ] Weekly Challenge: the same, for the week (from Monday), up to two hours, building or investigating first.
 - [ ] Break (garden scene): "Take a Break", the lengths in one glass bar, then **Explore & Learn** (picks from channels that teach well, as cards) and Saved for later.
 - [ ] Library opens Aim's Library in the same tab: "Library" between gold rules, the search, your subjects as picture tiles with how many aims each (a tile shows only that subject's books), then the shelf. Home and Break there go back to YouTube's homepage.
-- [ ] You (on YouTube's homepage) opens Aim's menu (Set aim, Take a Break, Focus or Explore) with your account, Settings, Your paths, Learning record, Homeschool, Subscriptions and History under it.
+- [ ] You (on YouTube's homepage) opens Aim's menu (Set aim, Take a Break, Focus or Explore) with your account, Settings, Learning plans, Learning record, Pathways, Subscriptions and History under it.
 - [ ] Every Aim page has the same bar and the dark library look, whatever Chrome's theme; Settings and the rest are under you.
 
 ### 66. Dawn (0.74)
-- [ ] YouTube's homepage: mountains at dawn, navy glass, bold sans titles. The first card says **Start a challenge** until something's in progress, then **Continue Learning** (naming the aim); its panel's title matches. The three cards are faintly copper, blue and violet; the copper one glows.
+- [ ] YouTube's homepage: mountains at dawn, navy glass, bold sans titles (Home's card is the Weekly Challenge since 0.76).
 - [ ] Break: a lake at dawn. **5 Minutes · 15 Minutes · 30 Minutes** as cards (15 picked to start; longer than today's leisure left can't be picked), then **Start Break**, a Custom length, and further down "Or explore something new" and Saved for later. Breaks everywhere offer 5, 15 and 30 minutes.
 - [ ] Library (0.74.1): a lantern-lit cabin, "Library", "Your personal collection of ideas, lessons, and challenges.", the search (it searches whichever part is open), then **My Library** (the shelf, with All/In progress/Completed), **Learning Plans** (your paths, each with its lesson and percent, opening its whole plan) and **Collections** (your topics as picture tiles, a tile showing that subject's books in My Library; your videos saved for later, watching one a one-video break, with × to remove; and your references). Your aims and Learning record tabs are at the bottom.
 - [ ] Aim's other pages and the toolbar popup: the same navy and copper colors and bold headings; book covers keep their serif.
 - [ ] The pictures are sharp all the way across (0.74.2): mountains behind Home, the lake behind Break, the cabin behind the Library and Aim's other pages.
 
-### 67. The Daily Challenge (0.75)
-Needs the server redeployed, `0006_daily.sql` run, and `AIM_DAILY_EDITORS` set to your account's email.
-- [ ] Settings → Account: **Daily Challenge editor** (only for an editor's account). It lists today and the next three weeks: Empty, Draft or Published.
-- [ ] **Draft the next 7 days** drafts the empty ones (seven different areas); a day already there is left alone. **Draft this day** and **Redraft** do one day.
-- [ ] Open a day: every part is editable (area, moment, title, scene, question, the three choices and which is right, why, the explain-why question, the video search, the second try, sources, the plan). **Publish** needs the "I checked" box and two sources. **Unpublish** takes it back.
-- [ ] On YouTube's homepage, signed in or not: the Daily Challenge card names today's published challenge. Open it: the moment, the scene, the question, A/B/C and Not sure. "Nothing is scored."
-- [ ] Right: one "explain why" (or Skip), then Done for today. Not quite: Watch a short video (a YouTube search) or Read why; back on the homepage the card says Second try waiting; the second try is the same idea in today's world; then Done for today.
-- [ ] Done: how it went in words, How do we know? (the sources, as links), and Want a plan for this?, which opens Start a challenge with the interest and goal filled in.
-- [ ] Nothing published today: "Today's challenge isn't out yet." A copy of Aim without a server: it says it isn't connected.
-
 ### 68. The Weekly Challenge (0.76)
-Needs the server redeployed and `0007_weekly.sql` run (it makes the `weekly_challenges` table and the public `weekly` picture bucket). Editors are the accounts in `AIM_DAILY_EDITORS`.
+Needs the server redeployed and `0007_weekly.sql` run (it makes the `weekly_challenges` table and the public `weekly` picture bucket). Editors are the accounts in `AIM_EDITORS` (the old name, `AIM_DAILY_EDITORS`, still works).
 - [ ] YouTube's homepage opens on this week's challenge, as one card: the picture, **Weekly Challenge · 35–45 min**, the title, the premise, the facts (~200 people · One season · Limited resources), "Be familiar with:" and its topics, "These topics will help you succeed…", **The Impact**, and **Accept Challenge**. Under it, a slim search and **Learning plans** (or **Continue: <your aim>**). No Daily Challenge unless Settings → Challenges → **Daily Challenge too** is on.
 - [ ] Nothing published this week: "This week's challenge is on its way."
 - [ ] **Hints**: a few questions under each topic, each with **Find a video** (a YouTube search). Nothing gives an answer away.
@@ -525,7 +511,14 @@ Needs the server redeployed and `0007_weekly.sql` run (it makes the `weekly_chal
 - [ ] The first story (0.76.1), nine chapters: the spring's flow, the pressure at the bottom, the pipe (PN4, PN6, PN4 with a small open tank halfway down, or steel), the morning rush, where the tank goes, the budget (whatever isn't spent stays in hand), the storm (one route climbs above the spring), and who keeps it running. Choose PN4 and a pressure test appears (**Chapter 7 of 9**): replace the bottom, add the open tank, or run it anyway. Choose PN6 and it never does.
 - [ ] The end: how it ended (the story's rules: running PN4 above its rating splits; out of days, not before the dry season; a tank level with the taps, a trickle; no one to look after it, it works for a while), your decisions in a line each, your debrief (signed in), what's worth learning next with videos, and How do we know?. The card then says **See how it ended**. Next Monday, a new one.
 - [ ] Settings → Account → **Weekly Challenge editor** (editors only): last week, this week and the next eight. Open a week: **Draft with Aim** (a theme if you like) or **Start from the sample story**; every part editable, from the card to the endings; a picture (resized before it's sent); **Check** lists what's missing; **Playtest on YouTube** plays the draft in a new tab, marked as a playtest, kept apart from the real one; **Publish** needs the box ticked, two sources and a picture; **Unpublish**, **Delete**.
-- [ ] A challenge of your own: Learning plans → **Find a challenge of your own** (signed in), as before.
+
+### 69. Cleanup (0.77)
+- [ ] No Daily Challenge anywhere: not on Home, not in Settings (no Challenges card), no editor link under Account.
+- [ ] Learning plans (Home → Learning plans or Continue): your plans and Add an interest; no "Find a challenge of your own".
+- [ ] A lesson's Final Challenge, when you've shown it: Challenge complete, then **Next lesson** and **Call it done**.
+- [ ] TeachBack is on YouTube only. A video watched for a learning aim, when it ends: **Test me** opens the conversation, its first question about that video. A study topic's **Check yourself** (in the watch page's sidebar, or on the study session's page) opens it about that topic; what you show comes back as the topic's check (Checked, or Review).
+- [ ] The card after Done: the friend's question, and no Test my understanding button. Settings → Aim Plus: no Test my understanding button. The Aim Plus page: TeachBack says it's on YouTube.
+- [ ] Settings: no Aim Homeschool preview, and no "A student? Connect to my family" under Account. Aim's menu (You on the homepage, and on Aim's pages): **Pathways** where it said Homeschool.
 
 ## Known issues (not regressions)
 

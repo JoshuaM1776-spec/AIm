@@ -1012,8 +1012,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     await sw.evaluate(() => serial(() => saveSubs([{ key: "/@flighttrainingnetwork", name: "Flight Training Network" }, { key: "/@mzeroa", name: "MzeroA Flight Training" },
       { key: "/@paulsellers", name: "Paul Sellers Woodworking" }, { key: "/@mrbeastgaming", name: "MrBeast Gaming" }], true)));
     const pz = await ctx.newPage();
-    await pz.goto(`chrome-extension://${extId}/personalize.html`);
-    await pz.waitForURL(/welcome\.html\?again=1/);
+    await pz.goto(`chrome-extension://${extId}/welcome.html?again=1`);
     const pzChip = async t => { await pz.waitForSelector(`#composer button:text-is("${t}")`, { timeout: 8000 }); await pz.click(`#composer button:text-is("${t}")`); };
     await pzChip("Learning skills");
     await pzChip("That's it");

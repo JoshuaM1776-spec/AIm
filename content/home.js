@@ -33,18 +33,18 @@ async function renderHome() {
     if (focus?.title) setTimeout(() => openTalk({ mode: "deeper", focus: { title: String(focus.title).slice(0, 120), brief: String(focus.brief || "").slice(0, 200),
       chain: (Array.isArray(focus.chain) ? focus.chain : []).map(String).slice(0, 8) } }), 300);
   }
-  // "Find the next challenge", from a completed one: this week's challenge, on that subject.
-  if (location.hash.startsWith("#aim-challenge=")) {
-    let subject = "";
-    try { subject = decodeURIComponent(location.hash.slice("#aim-challenge=".length)).slice(0, 120); } catch {}
-    history.replaceState(null, "", "/");
-    if (subject) setTimeout(() => openChallengePanel("weekly", subject), 300);
-  }
   // "Next lesson", from a completed one: pick its path up where it left off.
   if (location.hash.startsWith("#aim-path=")) {
     const id = decodeURIComponent(location.hash.slice("#aim-path=".length)).slice(0, 40);
     history.replaceState(null, "", "/");
     if (id) setTimeout(() => openContinue().then(() => pickPath(id)), 300);
+  }
+  // "Check yourself" on a study topic, from its page: the conversation, its first question about the topic.
+  if (location.hash.startsWith("#aim-check=")) {
+    let topic = null;
+    try { topic = JSON.parse(decodeURIComponent(location.hash.slice("#aim-check=".length))); } catch {}
+    history.replaceState(null, "", "/");
+    if (topic?.title) setTimeout(() => openTalk({ followUp: { id: String(topic.id || "").slice(0, 64), title: String(topic.title).slice(0, 120), what: String(topic.what || "").slice(0, 200) } }), 300);
   }
   if (location.hash === "#aim-talk" || location.hash === "#aim-put-together") {
     const mode = location.hash === "#aim-put-together" ? "synthesis" : null;
@@ -66,8 +66,6 @@ async function renderHome() {
   const p = activePurpose();
   // This week's challenge (the card), as this browser has it; fetched in the background if it's a new week.
   if (!status.totalReached) await weeklyLoad();
-  // Today's Daily Challenge, only if you turned it on (Settings → YouTube experience; paused in 0.76).
-  const daily = settings.dailyOn && !status.totalReached ? (await send({ type: "daily-peek" })) || {} : {};
   if (location.pathname !== "/") return;
   exploreOpen = scene.view === "break" && !scene.panel;
   const view = status.totalReached ? "total" : scene.view;
@@ -76,7 +74,7 @@ async function renderHome() {
   const key = scene.panel === "story" ? [view, "story", wk.week, wk.playtest, wk.story?.title || ""].join("|") : [view, scene.panel || "",
     p ? `p|${p.id}|${p.text}|${(p.map?.parts || []).map(x => x.id + x.status).join(".")}${p.map?.synthesis?.verdict || ""}${p.practice ? `${p.practice.title}${p.practice.triedAt || ""}` : ""}|${(status.currentVideos || []).map(v => v.id).join(",")}|${p.study ? `${p.study.current}:${p.study.topics.map(t => t.check?.at || 0).join(".")}:${p.study.apply?.doneAt || 0}` : ""}` : "idle",
     leisureUsedUp(), (status.saved || []).map(v => v.id).join(","), account.on, status.pathways?.offer?.name || "", !!homeEnd,
-    settings.dailyOn ? dailyCardSub(daily) : "", wkStateKey(),
+    wkStateKey(),
     (settings.learnTopics || []).join("+"), (settings.learnOff || []).length].join("|");
   if ($("#wp-home")?.dataset.key === key) return; // don't rebuild while someone is typing
   $("#wp-home")?.remove();
@@ -91,13 +89,10 @@ async function renderHome() {
     main.append(sceneTitle("That's today's YouTube time"),
       el("p", { class: "wp-scene-sub" }, `You set a daily limit of ${settings.totalMin} minutes. It resets at midnight.`));
   } else if (scene.panel === "continue") main.append(continuePanel(p));
-  else if (scene.panel === "daily") main.append(dailyPanel());
   else if (scene.panel === "story") main.append(weeklyPanel());
-  else if (scene.panel === "weekly") main.append(challengePanel(scene.panel)); // your own weekly challenge, from a finished one
   else if (view === "break") breakMain(main);
-  else homeMain(main, p, daily);
+  else homeMain(main, p);
   document.body.append(root);
-  if (settings.dailyOn && view !== "total" && !daily.fresh && !scene.panel) send({ type: "daily-get" }).then(r => { if (r?.challenge && !daily.challenge && alive) renderHome(); });
   if (view === "home" && !scene.panel) {
     showTips();
     maybeOfferTalk(root);
@@ -106,8 +101,8 @@ async function renderHome() {
 }
 
 // Home (0.76): this week's challenge fills the scene; under it, a slim search and where you left off
-// (your aim, or your learning plans), and the Daily Challenge if you turned it on.
-function homeMain(main, p, daily) {
+// (your aim, or your learning plans).
+function homeMain(main, p) {
   const input = el("input", { class: "wp-home-input", type: "text", "aria-label": "Search for videos, topics, or anything you want to learn",
     placeholder: "Search for videos, topics, or anything you want to learn…" });
   const findBtn = el("button", { class: "wp-home-go", "aria-label": "Go", title: "Go" }, icon("right"));
@@ -130,9 +125,7 @@ function homeMain(main, p, daily) {
     el("div", { class: "wp-home-under" },
       el("div", { class: "wp-home-search" }, el("span", { class: "wp-home-search-icon" }, icon("search")), input, findBtn),
       el("button", { class: "wp-home-chip wp-home-continue", onclick: openContinue, title: p ? `Continue: ${p.text}` : "Your learning plans" },
-        icon("playRing"), el("span", {}, p ? `Continue: ${p.text}` : "Learning plans"), icon("right")),
-      settings.dailyOn ? el("button", { class: "wp-home-chip wp-home-daily", onclick: openDaily, title: dailyCardSub(daily) },
-        icon("calendarDots"), el("span", {}, "Today's challenge"), icon("right")) : null),
+        icon("playRing"), el("span", {}, p ? `Continue: ${p.text}` : "Learning plans"), icon("right"))),
     hint,
     el("div", { class: "wp-scene-invites" }),
     themeOfferBlock()].filter(Boolean));
@@ -254,30 +247,6 @@ function currentTargetRow(p) {
       el("button", { class: "wp-btn wp-btn-text", onclick: setAsideTarget }, "Set aside"))));
 }
 
-// What picking this aim up would mean, in a few words: the study topic that needs review or comes
-// next, or the video you stopped partway through.
-function nextStep(t) {
-  if (t.practice && !t.practice.tried) return `Next: try it · ${t.practice.title}`;
-  const u = understandingNext(t.understanding);
-  if (u && !t.study) return u;
-  const n = t.study?.next;
-  if (n) return n.kind === "review" ? `Next: review ${n.title}` : n.kind === "topic" ? `Next: ${n.title}` : "Next: put it to work";
-  const v = t.recent?.[0];
-  if (v?.title && v.d > 0 && v.t > 30 && v.t < v.d * 0.9) return `Next: finish “${v.title}” · ${Math.max(1, Math.round((v.d - v.t) / 60))} min left`;
-  return null;
-}
-
-function pausedTargetRow(t) {
-  const v = t.recent?.[0], next = nextStep(t);
-  return el("div", { class: "wp-home-row" },
-    v ? el("button", { class: "wp-home-row-thumb", title: `Resume: ${v.title}`, onclick: () => resumeTarget(t.id) }, thumb(v, "wp-thumb-xs")) : null,
-    el("div", { class: "wp-home-row-text" },
-      el("div", { class: "wp-strong wp-ellipsis" }, t.text),
-      el("div", { class: "wp-muted wp-home-meta" }, targetMeta(t)),
-      next ? el("div", { class: "wp-home-next wp-ellipsis" }, next) : null),
-    el("button", { class: "wp-btn wp-btn-tonal", onclick: () => resumeTarget(t.id) }, "Resume"));
-}
-
 async function setAsideTarget() {
   closeDropdown();
   const r = await send({ type: "purpose-pause" });
@@ -286,6 +255,6 @@ async function setAsideTarget() {
   if (location.pathname !== "/") location.href = "https://www.youtube.com/";
 }
 
-// Links like "Next lesson" or "Find the next challenge" set the address's #part while you're already
+// Links like "Next lesson" set the address's #part while you're already
 // on the homepage, which doesn't reload it: handle them as they arrive.
 addEventListener("hashchange", () => { if (location.pathname === "/" && /^#aim-/.test(location.hash) && alive) renderHome(); });

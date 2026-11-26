@@ -25,7 +25,8 @@ async function openPlanItem(item) {
     if (r?.result !== "applied") return toast(r?.message || "Couldn't start that. Try again.");
     location.href = r.url;
   } else if (item.kind === "teachback") {
-    send({ type: "open-teachback", topic: item.topic || item.title, plan: item.id, objective: item.objectiveId || undefined });
+    send({ type: "plan-done", id: item.id });
+    openTalk({ followUp: { id: item.id, title: item.topic || item.title, what: "" } });
   } else openPlanGuide(item);
 }
 

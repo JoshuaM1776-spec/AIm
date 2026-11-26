@@ -1,8 +1,8 @@
 /* Aim — the homepage scene (0.73; dawn, 0.74): YouTube's homepage as one full-screen scene
    (content/scene.js). A landscape behind everything (scenes/*.jpg: mountains for Home, a lake for
-   Break), navy glass panels with soft light edges, bold sans titles, and a quiet color for each way
-   in: copper (the main one), blue and violet. While the scene is up, everything Aim draws on the page
-   (dialogs, the talk panel, toasts) takes the same colors, whatever YouTube's theme. */
+   Break), navy glass panels with soft light edges, bold sans titles, cream and copper. While the scene
+   is up, everything Aim draws on the page (dialogs, the talk panel, toasts) takes the same colors,
+   whatever YouTube's theme. */
 
 @font-face { font-family: "Aim Inter"; font-weight: 400; font-display: swap;
   src: url("chrome-extension://__MSG_@@extension_id__/fonts/Inter-Regular.woff2") format("woff2"); }
@@ -44,7 +44,7 @@ html.wp-scene-on .wp {
     var(--wp-scene-img) center / cover no-repeat, #1a1c2b; }
 .wp-scene button { font-family: inherit; }
 /* Icons here are drawn at the size of what holds them, not Aim's usual 24px. */
-.wp-scene :is(.wp-scene-logo, .wp-scene-tab, .wp-scene-card-icon, .wp-home-search-icon, .wp-cl-play, .wp-scene-len, .wp-scene-go) .wp-icon { width: auto; height: auto; }
+
 .wp-scene :focus-visible { outline: 2px solid var(--sc-copper); outline-offset: 3px; }
 
 /* The bar along the top: the mark, the three places, you. */
@@ -77,7 +77,7 @@ html.wp-scene-on .wp-dropdown { border: 1px solid var(--sc-edge); background: va
 .wp .wp-scene-title { margin: 0; font: 700 clamp(40px, 4.7vw, 82px)/1.05 var(--sc-display); letter-spacing: -1.2px; color: #fbf3e8; text-align: center;
   text-shadow: 0 3px 24px rgba(0, 0, 0, .3); }
 .wp .wp-scene-h2 { margin: 0; font: 700 clamp(22px, 2.1vw, 34px)/1.15 var(--sc-display); letter-spacing: -.4px; color: #fbf3e8; text-shadow: 0 2px 16px rgba(0, 0, 0, .4); }
-.wp-scene-h2-row { margin-top: clamp(26px, 6vh, 60px); }
+
 .wp-scene-sub { margin: -6px 0 6px; font-size: clamp(16px, 1.55vw, 26px); line-height: 1.35; color: var(--sc-ink); text-align: center; text-shadow: 0 2px 14px rgba(0, 0, 0, .45); }
 
 /* The search: one glass field. */
@@ -94,21 +94,7 @@ html.wp-scene-on .wp-dropdown { border: 1px solid var(--sc-edge); background: va
 .wp-scene .wp-home-hint:empty { display: none; }
 
 /* The three ways in, each with its own quiet color; the first is the main one. */
-.wp-scene-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(12px, 1.7vw, 28px); width: min(1040px, 100%); margin-top: clamp(8px, 2.4vh, 26px); }
-.wp .wp-scene-card { --tint: rgba(40, 42, 62, .55); --tint-2: rgba(30, 32, 48, .5); --icon: var(--sc-ink);
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(6px, .8vw, 12px); min-height: clamp(180px, 16vw, 262px);
-  padding: clamp(16px, 2vw, 32px) clamp(14px, 1.6vw, 26px); border-radius: clamp(18px, 1.6vw, 26px); border: 1px solid var(--sc-edge);
-  background: linear-gradient(165deg, var(--tint), var(--tint-2)); backdrop-filter: blur(18px) saturate(1.15); color: var(--sc-ink); cursor: pointer; text-align: center;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, .28), inset 0 1px 0 rgba(255, 255, 255, .08); transition: transform .2s, border-color .2s, box-shadow .2s; }
-.wp .wp-scene-card:hover { transform: translateY(-3px); border-color: var(--sc-edge-strong); }
-.wp .wp-scene-card.tint-copper { --tint: rgba(128, 84, 54, .62); --tint-2: rgba(56, 44, 46, .56); --icon: var(--sc-copper); }
-.wp .wp-scene-card.tint-blue { --tint: rgba(56, 66, 92, .6); --tint-2: rgba(34, 38, 56, .55); --icon: var(--sc-blue); }
-.wp .wp-scene-card.tint-violet { --tint: rgba(76, 66, 104, .6); --tint-2: rgba(42, 38, 60, .55); --icon: var(--sc-violet); }
-.wp .wp-scene-card.glow { border: 1.5px solid var(--sc-copper-edge); box-shadow: 0 0 30px var(--sc-copper-glow), 0 14px 40px rgba(0, 0, 0, .28), inset 0 1px 0 rgba(255, 255, 255, .1); }
-.wp-scene-card-icon { display: flex; color: var(--icon); }
-.wp-scene-card-icon svg { width: clamp(40px, 3.8vw, 64px); height: clamp(40px, 3.8vw, 64px); }
-.wp-scene-card-title { font: 700 clamp(20px, 2.1vw, 34px)/1.15 var(--sc-display); letter-spacing: -.4px; color: #fbf3e8; }
-.wp-scene-card-sub { font-size: clamp(13px, 1.15vw, 19px); line-height: 1.4; color: var(--sc-ink-2); max-width: 20em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
 .wp-scene-invites { display: flex; flex-direction: column; gap: 12px; width: min(720px, 100%); }
 .wp-scene-invites:empty { display: none; }
 .wp-scene .wp-home-end, .wp-scene .wp-theme-offer { width: min(720px, 100%); box-sizing: border-box; padding: 18px 20px; border-radius: 20px; border: 1px solid var(--sc-edge);
@@ -166,27 +152,6 @@ html.wp-scene-on .wp-dropdown { border: 1px solid var(--sc-edge); background: va
 .wp-scene .wp-pw-add { padding: 16px; border-radius: 16px; border: 1px solid var(--sc-edge); background: rgba(16, 18, 30, .38); }
 .wp-cl-foot { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 24px; margin-top: 4px; }
 
-/* Challenges, in the panel. */
-.wp-scene .wp-ch { margin: 0; padding: clamp(22px, 2.6vw, 42px) clamp(16px, 3vw, 48px); border-top: 1px solid var(--sc-edge); gap: 14px; text-align: left; }
-.wp-scene .wp-ch-detail { gap: 12px; padding: clamp(16px, 1.8vw, 26px); border-radius: 18px; background: rgba(16, 18, 30, .38); border: 1px solid var(--sc-edge); }
-.wp-scene .wp-ch-title { font-family: var(--sc-display); font-weight: 700; letter-spacing: -.3px; }
-.wp-scene .wp-ch-big { font-size: clamp(22px, 2.2vw, 34px); line-height: 1.2; color: #fbf3e8; }
-.wp-scene .wp-ch-meta, .wp-scene .wp-ch-label { color: var(--wp-gold); }
-.wp-scene .wp-ch-why { font-size: clamp(14px, 1.2vw, 18px); line-height: 1.45; color: var(--sc-ink-2); }
-.wp-scene .wp-ch-success { background: rgba(255, 255, 255, .06); border-left-color: var(--sc-copper); }
-.wp-scene .wp-ch-success span:last-child { font-family: var(--sc-sans); }
-.wp-scene .wp-ch-plan { font-size: 15px; line-height: 22px; }
-.wp-scene .wp-ch-card { background: rgba(16, 18, 30, .38); border-color: var(--sc-edge); text-align: left; cursor: pointer; }
-.wp-scene .wp-ch-card.on { border-color: var(--sc-copper-edge); }
-.wp-ch-ask { display: flex; flex-direction: column; gap: 4px; text-align: center; }
-.wp-ch-ask b { font: 700 22px/1.2 var(--sc-display); }
-.wp-scene .wp-ch-more { display: flex; flex-direction: column; gap: 12px; padding-top: 12px; border-top: 1px solid var(--wp-divider); }
-.wp-ch-links { flex-wrap: wrap; gap: 6px 18px; }
-.wp-scene .wp-ch-row { flex-wrap: nowrap; }
-.wp-scene .wp-ch-subject { height: 42px; border-radius: 21px; padding: 0 16px; background: rgba(16, 18, 30, .45); border: 1px solid var(--sc-edge); color: var(--sc-ink); }
-.wp-scene .wp-ch-subject::placeholder { color: var(--sc-ink-3); }
-.wp-scene .wp-ch-actions { align-items: center; flex-wrap: wrap; gap: 10px 16px; }
-
 /* Buttons on the scene. */
 .wp-scene .wp-btn { font-family: var(--sc-sans); }
 .wp-scene .wp-btn-primary { background: var(--sc-cream); color: var(--sc-on-cream); }
@@ -240,42 +205,10 @@ html.wp-scene-on .wp-dropdown { border: 1px solid var(--sc-edge); background: va
 @media (max-width: 860px) {
   .wp-scene-top { grid-template-columns: 1fr auto; }
   .wp-scene-nav { grid-column: 1 / -1; grid-row: 2; justify-self: center; }
-  .wp-scene-cards { grid-template-columns: 1fr; }
-  .wp .wp-scene-card { min-height: 0; flex-direction: row; justify-content: flex-start; text-align: left; flex-wrap: wrap; }
   .wp-scene-explore .wp-explore-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .wp-cl-row { grid-template-columns: 96px minmax(0, 1fr) auto; }
 }
-@media (prefers-reduced-motion: reduce) { .wp .wp-scene-card, .wp .wp-scene-len, .wp .wp-scene-explore .wp-learn-item { transition: none; transform: none !important; } }
-
-/* ---------- the Daily Challenge (0.75, content/daily.js) ---------- */
-.wp-dl-head { display: flex; flex-direction: column; gap: 6px; }
-.wp-dl-meta { color: var(--sc-blue); font-size: 13px; letter-spacing: .02em; }
-.wp-dl-title { font: 700 clamp(22px, 2.2vw, 34px)/1.2 var(--sc-display); letter-spacing: -.4px; color: #fbf3e8; }
-.wp-dl-scene { margin: 0; font-size: clamp(15px, 1.25vw, 19px); line-height: 1.55; color: var(--sc-ink); }
-.wp-dl-ask { display: flex; flex-direction: column; gap: 12px; }
-.wp-dl-q { font: 600 clamp(16px, 1.35vw, 20px)/1.4 var(--sc-display); color: #fbf3e8; }
-.wp-dl-choices { display: flex; flex-direction: column; gap: 8px; }
-.wp .wp-dl-choice { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 10px 16px; box-sizing: border-box; border-radius: 14px;
-  border: 1px solid var(--sc-edge); background: rgba(16, 18, 30, .4); color: var(--sc-ink); font: 500 clamp(15px, 1.2vw, 18px)/1.35 var(--sc-sans); text-align: left; cursor: pointer; }
-.wp .wp-dl-choice:hover { border-color: var(--sc-edge-strong); background: rgba(30, 32, 50, .55); }
-.wp .wp-dl-unsure { justify-content: center; border-style: dashed; color: var(--sc-ink-2); }
-.wp-dl-letter { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 50%; background: rgba(255, 255, 255, .1); font-size: 13px; font-weight: 600; }
-.wp-dl-marked .wp-dl-choice { cursor: default; }
-.wp .wp-dl-marked .wp-dl-choice:hover { border-color: var(--sc-edge); background: rgba(16, 18, 30, .4); }
-.wp .wp-dl-marked .wp-dl-choice.right, .wp .wp-dl-marked .wp-dl-choice.right:hover { border-color: rgba(143, 214, 162, .75); background: rgba(143, 214, 162, .1); }
-.wp-dl-choice.right .wp-dl-letter { background: rgba(143, 214, 162, .35); }
-.wp .wp-dl-marked .wp-dl-choice.missed { border-color: rgba(246, 178, 112, .6); }
-.wp-dl-you { margin-left: auto; font-size: 12px; color: var(--sc-ink-3); }
-.wp-dl-small, .wp-dl-note { font-size: 13px; color: var(--sc-ink-2); margin: 0; }
-.wp-dl-note { font-size: 15px; }
-.wp-dl-step { display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; border-radius: 16px; border: 1px solid var(--sc-edge); background: rgba(16, 18, 30, .38); }
-.wp-dl-step b { font: 600 17px/1.35 var(--sc-display); color: #fbf3e8; }
-.wp-scene .wp-dl-explain { width: 100%; box-sizing: border-box; min-height: 76px; padding: 10px 12px; border-radius: 12px; font: 400 15px/1.45 var(--sc-sans); resize: vertical; }
-.wp-dl-why { display: flex; flex-direction: column; gap: 4px; padding: 12px 16px; border-left: 3px solid var(--sc-copper); border-radius: 4px 12px 12px 4px; background: rgba(255, 255, 255, .05); font-size: 15px; line-height: 1.5; }
-.wp-dl-done { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding-top: 6px; }
-.wp-dl-done > b { font: 700 22px/1.2 var(--sc-display); color: #fbf3e8; }
-.wp-dl-sources { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; font-size: 13px; }
-.wp-dl-sources a { color: var(--wp-link); }
+@media (prefers-reduced-motion: reduce) { .wp .wp-scene-len, .wp .wp-scene-explore .wp-learn-item { transition: none; transform: none !important; } }
 
 /* ---------- the Weekly Challenge (0.76, content/weekly.js): the card on Home, then the story ---------- */
 .wp-wk-card { display: flex; flex-direction: column; width: min(1180px, 100%); box-sizing: border-box; padding: clamp(16px, 1.7vw, 28px);
@@ -343,7 +276,7 @@ html.wp-scene-on .wp-dropdown { border: 1px solid var(--sc-edge); background: va
 .wp .wp-home-chip.wp-home-continue { border-color: var(--sc-copper-edge); }
 .wp-home-chip .wp-icon { width: auto; height: auto; color: var(--sc-copper); }
 .wp-home-chip svg { width: 22px; height: 22px; }
-.wp-home-chip.wp-home-daily .wp-icon { color: var(--sc-blue); }
+
 .wp-home-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 32em; }
 
 /* The story, in the panel. */
@@ -410,3 +343,5 @@ html.wp-scene-on .wp-dropdown { border: 1px solid var(--sc-edge); background: va
   .wp-wk-foot, .wp-wk-impact { flex-direction: column; align-items: flex-start; }
   .wp-wk-impact-label { border-right: 0; padding-right: 0; }
 }
+.wp-wk-sources { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; font-size: 13px; }
+.wp-wk-sources a { color: var(--wp-link); }

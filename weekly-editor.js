@@ -2,7 +2,7 @@
 // start its story (from the sample, or drafted by Aim with an optional theme), edit every part of it,
 // from the card everyone sees to the rules that decide what happens, add its picture, check it,
 // playtest it on YouTube, and publish it (or take it back). Everything goes through Aim's server,
-// which lets in only the accounts listed in AIM_DAILY_EDITORS (supabase/functions/ai/weekly.ts).
+// which lets in only the accounts listed in AIM_EDITORS (supabase/functions/ai/weekly.ts).
 // The story's shape and its checks are content/weekly-shared.js, the same rules the player uses.
 
 const send = msg => chrome.runtime.sendMessage(msg).catch(() => null);
@@ -36,10 +36,10 @@ async function fail(e) {
   busy("");
   const who = e.code === "editor" ? (await send({ type: "plus-status" }))?.email || "" : "";
   $("err").textContent = e.code === "editor"
-    ? `Aim's server doesn't list ${who || "this account"} as an editor. In Supabase, open Edge Functions → Secrets and set AIM_DAILY_EDITORS to ${who ? "exactly that email" : "the email you sign in to Aim with"} (several: separated by commas). Then reload this page.`
+    ? `Aim's server doesn't list ${who || "this account"} as an editor. In Supabase, open Edge Functions → Secrets and set AIM_EDITORS to ${who ? "exactly that email" : "the email you sign in to Aim with"} (several: separated by commas). Then reload this page.`
     : e.code === "auth" ? "Sign in to Aim first (Settings → Account), then reload this page."
     : e.code === "task" ? "Aim's server is running older code than this page. In Supabase, paste the latest server code into the ai function and deploy it, then reload this page."
-    : e.code === "weekly" || e.code === "daily" || e.code === "server" ? "Aim's server couldn't open the challenges. If you haven't yet, run the SQL from the server code page in Supabase's SQL Editor, then reload this page."
+    : e.code === "weekly" || e.code === "server" ? "Aim's server couldn't open the challenges. If you haven't yet, run the SQL from the server code page in Supabase's SQL Editor, then reload this page."
     : e.message;
 }
 

@@ -10,6 +10,8 @@ function node(tag, props = {}, ...kids) {
 }
 const plusMsg = text => ($("plusMsg").textContent = text || "");
 const isPlus = st => st.plan === "plus" || st.plan === "homeschool"; // Homeschool includes Plus
+// Aim Homeschool is parked (0.77): a student's "Connect to my family" stays in the code, not offered.
+const HOMESCHOOL = false;
 
 // Runs an account action with the buttons disabled, and shows its error if it fails.
 async function plusDo(msg) {
@@ -40,7 +42,7 @@ function emailForm() {
     plus.step = "code";
     renderPlus();
   };
-  return [node("p", { className: "note", textContent: "Sign in to get AI-guided learning paths when Aim Plus launches. Aim Free stays free and keeps working the same, with or without an account." }), form, familyForm()];
+  return [node("p", { className: "note", textContent: "Sign in to get AI-guided learning paths when Aim Plus launches. Aim Free stays free and keeps working the same, with or without an account." }), form, HOMESCHOOL ? familyForm() : null];
 }
 
 // A student in a family using Aim Homeschool: connect this browser with the code from the parent's
@@ -109,14 +111,11 @@ function accountView(st) {
       node("b", { textContent: "Aim Plus" }),
       node("div", { textContent: "Study sessions built from your syllabus, TeachBack checks, Put it into practice, Pathways, and the librarian with a bigger daily allowance." })));
   }
-  // Aim's editors (AIM_DAILY_EDITORS on the server): the pages where they check and publish the challenges.
+  // Aim's editors (AIM_EDITORS on the server): the page where they check and publish the Weekly Challenge.
   if (st.editor) {
     lines.push(node("div", { className: "setting" }, node("div", { className: "what" }, node("b", { textContent: "Weekly Challenge editor" }),
       node("span", { textContent: "Draft, check, playtest and publish the story everyone gets each week." })),
       node("a", { className: "btn tonal", href: "weekly-editor.html", textContent: "Open", id: "weeklyEditor" })));
-    lines.push(node("div", { className: "setting" }, node("div", { className: "what" }, node("b", { textContent: "Daily Challenge editor" }),
-      node("span", { textContent: "Draft, check and publish the challenge everyone gets each day." })),
-      node("a", { className: "btn tonal", href: "daily-editor.html", textContent: "Open", id: "dailyEditor" })));
   }
   if (isPlus(st) && st.usage && st.limits) {
     lines.push(node("div", { className: "setting" }, node("div", { className: "what" }, node("b", { textContent: "AI use, last 24 hours" }),
@@ -136,9 +135,6 @@ function accountView(st) {
     buttons.append(mg);
   }
   if (isPlus(st)) {
-    const tb = node("button", { className: "btn", type: "button", textContent: "Test my understanding" });
-    tb.onclick = () => chrome.tabs.create({ url: chrome.runtime.getURL("teachback.html") });
-    buttons.append(tb);
     const pw = node("button", { className: "btn tonal", type: "button", textContent: "Pathways" });
     pw.onclick = () => chrome.tabs.create({ url: chrome.runtime.getURL("pathways.html") });
     buttons.append(pw);
@@ -237,7 +233,7 @@ async function renderPlus(keepMsg = false) {
   plus.signedIn = !!st.signedIn;
   if (st.signedIn) plus.step = "email"; // signing out later starts from the email form
   const body = st.student ? studentView(st) : st.signedIn ? accountView(st) : plus.step === "code" ? codeForm() : emailForm();
-  $("plusBody").replaceChildren(...body);
+  $("plusBody").replaceChildren(...body.filter(Boolean));
   if (location.hash === "#plus" && !renderPlus.scrolled) { renderPlus.scrolled = true; $("plus").scrollIntoView({ block: "start" }); }
 }
 

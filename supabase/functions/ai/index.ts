@@ -8,7 +8,6 @@ import { type ClaudeResult, corsHeaders, type Deps, handle } from "./handler.ts"
 import type { AiRequest, Assessment, TeachbackDb, Turn } from "./teachback.ts";
 import type { SyncStore } from "./sync.ts";
 import type { HsDb } from "./homeschool.ts";
-import type { DailyStore } from "./daily.ts";
 import type { WeeklyStore } from "./weekly.ts";
 import { type BillingConfig, checkoutUrl, deleteCustomer, portalUrl, stripeApi } from "./billing.ts";
 
@@ -261,20 +260,6 @@ const hsDb: HsDb = {
   }
 };
 
-// The Daily Challenge: one row a day, a draft until an editor publishes it (migrations/0006_daily.sql).
-const daily: DailyStore = {
-  async list(from, to, publishedOnly) {
-    let q = admin.from("daily_challenges").select("day, status, data, updated_at").gte("day", from).lte("day", to).order("day");
-    if (publishedOnly) q = q.eq("status", "published");
-    return must(await q)!.map(r => ({ day: r.day, status: r.status, data: r.data, updatedAt: r.updated_at }));
-  },
-  async save(day, status, data) {
-    const now = new Date().toISOString();
-    must(await admin.from("daily_challenges").upsert({ day, status, data, updated_at: now, published_at: status === "published" ? now : null }));
-  },
-  async remove(day) { must(await admin.from("daily_challenges").delete().eq("day", day)); }
-};
-
 // The Weekly Challenge: one row a week (migrations/0007_weekly.sql), its picture in the public "weekly" bucket.
 const weekly: WeeklyStore = {
   async list(from, to, publishedOnly) {
@@ -336,7 +321,6 @@ const deps: Deps = {
   billing,
   sync,
   hs: hsDb,
-  daily,
   weekly,
   now: () => new Date(),
   config: {
@@ -353,9 +337,10 @@ const deps: Deps = {
       dayTokens: num("AIM_FREE_DAY_TOKENS", 80_000),
       minuteCalls: num("AIM_FREE_MINUTE_CALLS", 10)
     },
-    // Who drafts, checks and publishes the Daily and Weekly Challenges: account emails, comma-separated (a
-    // secret, not in code). Read forgivingly: semicolons or spaces work too, and stray quotes or <> are ignored.
-    dailyEditors: env("AIM_DAILY_EDITORS").split(/[,;\s]+/).map(s => s.replace(/^["'<]+|["'>]+$/g, "").trim().toLowerCase()).filter(Boolean),
+    // Who drafts, checks and publishes the Weekly Challenge: account emails, comma-separated (a secret, not
+    // in code; AIM_DAILY_EDITORS, its old name, still works). Read forgivingly: semicolons or spaces work
+    // too, and stray quotes or <> are ignored.
+    editors: (env("AIM_EDITORS") || env("AIM_DAILY_EDITORS")).split(/[,;\s]+/).map(s => s.replace(/^["'<]+|["'>]+$/g, "").trim().toLowerCase()).filter(Boolean),
     maxBodyBytes: 24 * 1024, // a pasted study guide can run to a few pages
     maxSyncBytes: 1024 * 1024
   }

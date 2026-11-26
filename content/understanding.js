@@ -50,16 +50,6 @@ function understandingBlock(p) {
     foot);
 }
 
-// For a set-aside or finished aim on the homepage: its next step, in a few words.
-function understandingNext(u) {
-  if (!u?.parts?.length) return null;
-  if (u.solid) return "You put it together";
-  if (u.ready) return "Next: put it together";
-  const next = u.parts.find(x => x.status === "new") || u.parts.find(x => x.status === "explored");
-  const done = u.parts.filter(x => x.status === "explained").length;
-  return next ? `Next: ${next.title} · ${done} of ${u.parts.length} explained` : null;
-}
-
 // ---------- Put it into practice ----------
 // The librarian's suggestion of one small way to use what you learned, with a project video to follow.
 // "I tried it" is your word for it (no proof asked); a note on how it went comes up next time you talk.
