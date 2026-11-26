@@ -502,6 +502,7 @@ Needs a signed-in account and the server redeployed to draft paths.
 - [ ] Break: a lake at dawn. **5 Minutes · 15 Minutes · 30 Minutes** as cards (15 picked to start; longer than today's leisure left can't be picked), then **Start Break**, a Custom length, and further down "Or explore something new" and Saved for later. Breaks everywhere offer 5, 15 and 30 minutes.
 - [ ] Library (0.74.1): a lantern-lit cabin, "Library", "Your personal collection of ideas, lessons, and challenges.", the search (it searches whichever part is open), then **My Library** (the shelf, with All/In progress/Completed), **Learning Plans** (your paths, each with its lesson and percent, opening its whole plan) and **Collections** (your topics as picture tiles, a tile showing that subject's books in My Library; your videos saved for later, watching one a one-video break, with × to remove; and your references). Your aims and Learning record tabs are at the bottom.
 - [ ] Aim's other pages and the toolbar popup: the same navy and copper colors and bold headings; book covers keep their serif.
+- [ ] The pictures are sharp all the way across (0.74.2): mountains behind Home, the lake behind Break, the cabin behind the Library and Aim's other pages.
 
 ## Known issues (not regressions)
 
