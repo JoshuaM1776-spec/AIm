@@ -8,15 +8,15 @@
   /* Fonts and colors: tokens.css (shared with Aim's pages). Aim coral is an accent only: Resume,
      Back to my aim and the time ring. The popup's compact layout has its own small rules here. */
   :root { --hover: var(--tonal); }
-  /* The reading room (0.73), as on Aim's pages (aim.css): dark wood, cream and candlelight gold. */
+  /* The homepage's look (0.74), as on Aim's pages (aim.css): navy dusk, cream and copper. */
   :root { color-scheme: dark;
-    --bg: #1a120b; --surface: rgba(40, 28, 18, .9); --text: #f6ead5; --muted: rgba(246, 234, 213, .72);
-    --divider: rgba(233, 196, 140, .18); --card-border: rgba(233, 196, 140, .3); --tonal: rgba(246, 225, 190, .08); --tonal-hover: rgba(246, 225, 190, .15);
-    --field: rgba(18, 12, 7, .6); --field-border: rgba(233, 196, 140, .38); --focus: #ebc58c; --link: #f0c98a;
-    --primary: #f1dfbd; --primary-hover: #fff0d4; --on-primary: #24160b; --accent: #e8ab6a; --accent-hover: #f3bd82; --on-accent: #24160b;
-    --shadow: 0 10px 30px rgba(0, 0, 0, .35); }
-  body { background: radial-gradient(120% 80% at 50% 0%, #2a1c11, #140e09 70%); }
-  .brand { font: 500 21px var(--font-serif); letter-spacing: 0; }
+    --bg: #1a1c2b; --surface: rgba(34, 36, 56, .92); --text: #f8f1e7; --muted: rgba(248, 241, 231, .72);
+    --divider: rgba(255, 255, 255, .12); --card-border: rgba(255, 255, 255, .16); --tonal: rgba(255, 255, 255, .07); --tonal-hover: rgba(255, 255, 255, .13);
+    --field: rgba(16, 18, 30, .6); --field-border: rgba(255, 255, 255, .22); --focus: #f4a862; --link: #f6c38f;
+    --primary: #f6dfbd; --primary-hover: #fff0da; --on-primary: #1e1b2c; --accent: #f4a862; --accent-hover: #f8bb80; --on-accent: #1e1b2c;
+    --shadow: 0 10px 30px rgba(0, 0, 0, .3); }
+  body { background: linear-gradient(#232539, #1a1c2b 45%, #2b2433); }
+  .brand { font: 700 19px var(--font-display); letter-spacing: -.3px; }
   * { box-sizing: border-box; }
   body { width: 340px; margin: 0; padding: 8px 0; background: var(--bg); color: var(--text); font: 14px/20px var(--font); -webkit-font-smoothing: antialiased; }
   .brand { display:flex; align-items:center; gap:8px; font: 700 17px var(--font-display); letter-spacing: -.2px; padding: 6px 12px 10px 16px; }

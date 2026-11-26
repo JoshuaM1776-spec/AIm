@@ -22,7 +22,7 @@
   // You: settings and the rest, in a small menu.
   const menu = node("div", { className: "me-menu", hidden: true });
   menu.setAttribute("role", "menu");
-  for (const [text, href] of [["Settings", "options.html"], ["Your paths", "path.html"], ["Learning record", "record.html"], ["Homeschool", "pathways.html"],
+  for (const [text, href] of [["Settings", "options.html"], ["Learning plans", "path.html"], ["Learning record", "record.html"], ["Homeschool", "pathways.html"],
     ["Your subscriptions", "channels.html"], ["References", "references.html"]]) {
     const a = link(href, text, href === mine || (href === "record.html" && file === "record.html"));
     a.setAttribute("role", "menuitem");

@@ -1,6 +1,9 @@
-// Aim — Your library: your subjects as tiles (a picture, the subject, how many aims), then every aim as
-// a book on the shelf: All, In progress (what you're on, set aside or exploring) and Completed, with a
-// search. A tile shows only that subject's books. Opening a book shows that aim's page (aim.html).
+// Aim — the Library (0.74): three cards, each opening its part underneath (#aims, #plans, #collections).
+//   My Library: every aim as a book on the shelf: All, In progress (what you're on, set aside or
+//     exploring) and Completed, with a search. Opening a book shows that aim's page (aim.html).
+//   Learning Plans: your paths (an interest and the goal behind it), each with the lesson you're on and
+//     progress; opening one shows the whole plan (path.html).
+//   Collections: your subjects as picture tiles with how many aims each; a tile shows that subject's books.
 
 const BRAND = chrome.runtime.getManifest().name;
 for (const n of document.querySelectorAll("[data-brand]")) n.textContent = BRAND;
@@ -76,7 +79,7 @@ function tiles(books) {
   document.getElementById("tiles").replaceChildren(...list.map(s => {
     const art = SUBJECT_ART.includes(s.id);
     const b = node("button", { type: "button", className: `tile${art ? "" : " drawn"}`, title: only === s.id ? "Show every subject" : `Only ${s.name}`,
-      onclick: () => { only = only === s.id ? null : s.id; render(); } },
+      onclick: () => { only = s.id; showSec("aims"); render(); } },
       art ? null : (() => { const e = coverEmblem(s.id); e.setAttribute("class", "book-emblem big"); return e; })(),
       node("span", { className: "tile-row" }, coverEmblem(s.id), node("span", { className: "tile-name", textContent: s.name }),
         node("span", { className: "tile-n" }, BOOK_ICON(), String(s.n))));
@@ -84,6 +87,41 @@ function tiles(books) {
     b.setAttribute("aria-pressed", String(only === s.id));
     return b;
   }));
+  document.getElementById("nCollections").textContent = list.length ? `${list.length} subject${list.length === 1 ? "" : "s"}` : "";
+  document.getElementById("tiles").replaceChildren(...(list.length ? [...document.getElementById("tiles").childNodes]
+    : [node("p", { className: "plans-empty", textContent: "Your subjects collect here as you add aims." })]));
+}
+
+// The three parts of the Library, one at a time.
+const SECS = ["aims", "plans", "collections"];
+function showSec(sec) {
+  if (!SECS.includes(sec)) sec = "aims";
+  for (const k of SECS) document.getElementById(`sec-${k}`).hidden = k !== sec;
+  for (const b of document.querySelectorAll(".hub-card")) b.setAttribute("aria-selected", String(b.dataset.sec === sec));
+  history.replaceState(null, "", sec === "aims" ? location.pathname : `#${sec}`);
+}
+for (const b of document.querySelectorAll(".hub-card")) b.addEventListener("click", () => { showSec(b.dataset.sec); if (b.dataset.sec === "aims") { only = null; render(); } });
+
+// Learning Plans: each path, where it stands, and a way into the whole plan.
+const nextText = pr => !pr ? "No plan yet: pick it up on YouTube's homepage and Aim lays it out"
+  : pr.next ? (pr.next.outside ? `Next checkpoint: ${pr.next.title} (outside Aim)` : `${pr.next.left} lesson${pr.next.left === 1 ? "" : "s"} to: ${pr.next.title}`) : "Every unit done";
+async function plans() {
+  const list = (await send({ type: "paths" })) || [];
+  document.getElementById("nPlans").textContent = list.length ? `${list.length} plan${list.length === 1 ? "" : "s"}` : "";
+  document.getElementById("plans").replaceChildren(...(list.length ? list.map(x => {
+    const art = SUBJECT_ART.includes(x.subject), pct = x.progress?.percent || 0;
+    const pic = node("span", { className: `pic${art ? "" : " drawn"}` }, art ? null : coverEmblem(x.subject || "general"));
+    if (art) pic.style.backgroundImage = `url("scenes/subjects/${x.subject}.jpg")`;
+    return node("a", { className: "plan", href: `path.html?id=${encodeURIComponent(x.id)}` }, pic,
+      node("span", { className: "txt" },
+        node("span", { className: "name", textContent: x.interest }),
+        node("span", { className: "goal", textContent: x.goal }),
+        node("span", { className: "at", textContent: x.lesson ? `Lesson ${x.lesson.n} · ${x.lesson.title}` : "" }),
+        x.progress ? node("span", { className: "bar" }, node("i", {}, Object.assign(node("b"), { style: `width:${pct}%` })), `${pct}%`) : null,
+        node("span", { className: "next", textContent: nextText(x.progress) })),
+      node("span", { className: "open", textContent: "See the plan" }));
+  }) : [node("p", { className: "plans-empty" }, "No learning plans yet. Add what you're curious about, and the goal behind it, under Start a challenge on ",
+    node("a", { href: "https://www.youtube.com/", textContent: "YouTube's homepage" }), ".")]));
 }
 let data = null;
 async function render() {
@@ -97,7 +135,11 @@ async function render() {
   const live = [data.current, ...data.paused].filter(t => t && book(t));
   const completed = data.completed.filter(book);
   tiles([...live, ...completed]);
+  document.getElementById("nAims").textContent = `${live.length + completed.length} aim${live.length + completed.length === 1 ? "" : "s"}`;
   const inSubject = t => !only || (t.subject?.id || "general") === only;
+  const filter = document.getElementById("filter"), named = [...live, ...completed].find(t => (t.subject?.id || "general") === only)?.subject?.name;
+  filter.hidden = !only;
+  filter.replaceChildren(...(only ? [node("span", { textContent: `Only ${named || "this subject"}` }), node("button", { type: "button", textContent: "Show everything", onclick: () => { only = null; render(); } })] : []));
   const groups = { all: [...live, ...completed].filter(inSubject), progress: live.filter(inSubject), completed: completed.filter(inSubject) };
   const q = query.trim().toLowerCase();
   const shown = groups[tab].filter(t => !q || t.text.toLowerCase().includes(q) || t.subject?.name.toLowerCase().includes(q));
@@ -128,4 +170,6 @@ async function render() {
 }
 
 document.getElementById("search").addEventListener("input", e => { query = e.target.value; render(); });
+showSec(location.hash.slice(1));
 render();
+plans();

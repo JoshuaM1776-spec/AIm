@@ -497,6 +497,12 @@ Needs a signed-in account and the server redeployed to draft paths.
 - [ ] You (on YouTube's homepage) opens Aim's menu (Set aim, Take a Break, Focus or Explore) with your account, Settings, Your paths, Learning record, Homeschool, Subscriptions and History under it.
 - [ ] Every Aim page has the same bar and the dark library look, whatever Chrome's theme; Settings and the rest are under you.
 
+### 66. Dawn (0.74)
+- [ ] YouTube's homepage: mountains at dawn, navy glass, bold sans titles. The first card says **Start a challenge** until something's in progress, then **Continue Learning** (naming the aim); its panel's title matches. The three cards are faintly copper, blue and violet; the copper one glows.
+- [ ] Break: a lake at dawn. **5 Minutes · 15 Minutes · 30 Minutes** as cards (15 picked to start; longer than today's leisure left can't be picked), then **Start Break**, a Custom length, and further down "Or explore something new" and Saved for later. Breaks everywhere offer 5, 15 and 30 minutes.
+- [ ] Library: a cabin window on the mountains, "Library", "Your collection of knowledge and progress.", then **My Library** (the shelf, with All/In progress/Completed and the search), **Learning Plans** (your paths, each with its lesson and percent, opening its whole plan) and **Collections** (your subjects as picture tiles; a tile shows that subject's books in My Library). Your aims and Learning record tabs are at the bottom.
+- [ ] Aim's other pages and the toolbar popup: the same navy and copper colors and bold headings; book covers keep their serif.
+
 ## Known issues (not regressions)
 
 - In this test environment, "opening a video in YouTube's one page plays that video" (tests/browser.test.js) sometimes fails on timing alone; it passes on a rerun and fails the same way on 0.71.

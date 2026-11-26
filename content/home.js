@@ -123,11 +123,12 @@ function homeMain(main, p, today) {
     el("div", { class: "wp-home-search" }, el("span", { class: "wp-home-search-icon" }, icon("search")), input, findBtn),
     hint,
     el("div", { class: "wp-scene-cards" },
-      sceneCard({ cls: "wp-home-continue", ic: "playRing", title: "Continue Learning", glow: true, onclick: openContinue,
-        sub: p ? `Pick up: ${p.text}` : "Resume a learning plan or journey." }),
-      sceneCard({ cls: "wp-home-daily", ic: "calendarDots", title: "Daily Challenge", onclick: () => openChallengePanel("daily"),
-        sub: pick("daily") ? `Today: ${pick("daily").title}` : "A focused problem to solve today." }),
-      sceneCard({ cls: "wp-home-weekly", ic: "users", title: "Weekly Challenge", onclick: () => openChallengePanel("weekly"),
+      // Start a challenge until something's in progress; then it's where you pick it up.
+      sceneCard({ cls: "wp-home-continue tint-copper", ic: "playRing", title: p ? "Continue Learning" : "Start a challenge", glow: true, onclick: openContinue,
+        sub: p ? `Pick up: ${p.text}` : "Pick up a learning plan, or start a new one." }),
+      sceneCard({ cls: "wp-home-daily tint-blue", ic: "calendarDots", title: "Daily Challenge", onclick: () => openChallengePanel("daily"),
+        sub: pick("daily") ? `Today: ${pick("daily").title}` : "A new problem to solve each day." }),
+      sceneCard({ cls: "wp-home-weekly tint-violet", ic: "users", title: "Weekly Challenge", onclick: () => openChallengePanel("weekly"),
         sub: pick("weekly") ? `This week: ${pick("weekly").title}` : "A larger goal to build real understanding." })),
     el("div", { class: "wp-scene-invites" }),
     themeOfferBlock()].filter(Boolean));

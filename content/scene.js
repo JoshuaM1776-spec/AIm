@@ -1,10 +1,11 @@
-// Aim — the reading room (0.73): YouTube's homepage as one full-screen scene. Along the top: Aim,
+// Aim — the homepage scene (0.73; dawn, 0.74): YouTube's homepage as one full-screen scene. Along the top: Aim,
 // then Home, Break and Library, then you (a small menu). Under it, two views and three panels:
-//   Home: a greeting, the search, and three cards: Continue Learning (the aim you're on and your
-//     paths), the Daily Challenge (one focused problem, kept for the day) and the Weekly Challenge (a
-//     larger one, kept for the week). Each card opens a panel over the scene.
-//   Break: a break's length, then Explore & Learn (picks from channels that teach well) and what
-//     you saved for later.
+//   Home: a greeting, the search, and three cards: Start a challenge, or Continue Learning once
+//     something's in progress (the aim you're on and your learning plans), the Daily Challenge (one
+//     focused problem, kept for the day) and the Weekly Challenge (a larger one, kept for the week).
+//     Each card opens a panel over the scene.
+//   Break: 5, 15 or 30 minutes, then Start Break; further down, something new to explore (picks from
+//     channels that teach well) and what you saved for later.
 //   Library is Aim's own page (targets.html), opened in this tab.
 // The pictures are scenes/*.jpg (see scenes/README.md); the colors are content/scene.css.
 
@@ -19,7 +20,9 @@ Object.assign(ICON, {
   calendarDots: [30, ["rect", { x: "3.8", y: "5.3", width: "16.4", height: "14.7", rx: "2.2", fill: "none", stroke: "currentColor", "stroke-width": "1.3" }],
     ["path", { d: "M3.8 9.6h16.4M8.3 3.4v3.8M15.7 3.4v3.8", fill: "none", stroke: "currentColor", "stroke-width": "1.3", "stroke-linecap": "round" }],
     ["path", { d: "M7.6 12.6h.01M10.5 12.6h.01M13.5 12.6h.01M16.4 12.6h.01M7.6 15.8h.01M10.5 15.8h.01M13.5 15.8h.01", fill: "none", stroke: "currentColor", "stroke-width": "1.7", "stroke-linecap": "round" }]],
-  playSolid: [22, ["path", { d: "M9 6.8l8.2 5.2L9 17.2z", fill: "currentColor" }]]
+  playSolid: [22, ["path", { d: "M9 6.8l8.2 5.2L9 17.2z", fill: "currentColor" }]],
+  mountain: [30, ["path", { d: "M2.5 19l6.2-9.6 3.6 5 2.5-3.4 6.7 8", fill: "none", stroke: "currentColor", "stroke-width": "1.4", "stroke-linecap": "round", "stroke-linejoin": "round" }],
+    ["path", { d: "M7 11.6l1.7 1.3 1.2-1.1", fill: "none", stroke: "currentColor", "stroke-width": "1.2", "stroke-linecap": "round", "stroke-linejoin": "round" }]]
 });
 
 let scene = { view: "home", panel: null };
@@ -68,7 +71,7 @@ function sceneYou() {
     el("div", { class: "wp-dd-you-who wp-muted" }, account.on ? (account.plus ? "Signed in · Aim Plus" : "Signed in to Aim") : "Not signed in"),
     menuItem("user", account.on ? "Your account" : "Sign in", () => send({ type: "open-options", section: "account" })),
     menuItem("tool", "Settings", () => send({ type: "open-options" })),
-    menuItem("compass", "Your paths", () => send({ type: "open-path", id: "" })),
+    menuItem("compass", "Learning plans", () => send({ type: "open-path", id: "" })),
     menuItem("chart", "Learning record", () => send({ type: "open-record" })),
     menuItem("book", "Homeschool", () => send({ type: "open-pathways" })),
     menuItem("play", "Subscriptions", () => { location.href = "/feed/subscriptions"; }),
@@ -105,23 +108,45 @@ async function openContinue() {
   pwRedraw();
 }
 function continuePanel(p) {
-  return scenePanel({ cls: "wp-cl", title: "Continue Learning", sub: "Pick up where you left off." },
+  return scenePanel({ cls: "wp-cl", title: p ? "Continue Learning" : "Start a challenge", sub: p ? "Pick up where you left off." : "Pick up a learning plan, or add a new one." },
     p ? currentTargetRow(p) : null,
     pathsWindow(),
     el("div", { class: "wp-cl-foot" },
       el("button", { class: "wp-link", onclick: () => send({ type: "open-targets", same: true }) }, "Everything in your Library")));
 }
 
-// ---------- Break: a break's length, then something new to explore ----------
+// ---------- Break: how long, then Start Break; something new to explore further down ----------
+const BREAK_LENS = [[5, "coffee"], [15, "leaf"], [30, "mountain"]];
+let breakLen = 15;
 function breakMain(main) {
-  const lengths = breakChips(takeBreak);
-  lengths.querySelector(".wp-chip")?.prepend(icon("coffee"));
+  const used = leisureUsedUp(), left = status.leisureLeftMin;
+  // A length longer than what's left today can't be picked (the shortest always can: it's capped).
+  const fits = m => !used && (left == null || left >= m || m === BREAK_LENS[0][0]);
+  if (!fits(breakLen)) breakLen = BREAK_LENS[0][0];
+  const lens = el("div", { class: "wp-scene-lens", role: "group", "aria-label": "How long" });
+  const draw = () => lens.replaceChildren(...BREAK_LENS.map(([m, ic]) => el("button", { class: "wp-scene-len", "aria-pressed": String(breakLen === m), disabled: !fits(m),
+    onclick: () => { breakLen = m; draw(); } }, icon(ic), `${m} Minutes`)));
+  draw();
+  const note = el("div", { class: "wp-scene-break-note" });
+  const drawNote = () => note.replaceChildren(...[
+    el("span", {}, used ? "Today's leisure time is used up. It resets at midnight." : left != null ? `${left} min of leisure time left today.` : ""),
+    used ? null : el("button", { class: "wp-link", onclick: custom }, "Custom length")].filter(Boolean));
+  // Custom: the note turns into "[ 20 ] min  Start".
+  const custom = () => {
+    const input = el("input", { class: "wp-input wp-custom-min", type: "number", min: "1", max: String(left ?? 600), value: String(Math.min(20, left ?? 20)), "aria-label": "Break length in minutes" });
+    const go = () => { const m = parseInt(input.value, 10); if (m > 0) takeBreak({ minutes: m }); };
+    keepKeys(input, go);
+    note.replaceChildren(input, el("span", {}, "min"), el("button", { class: "wp-btn wp-btn-primary", onclick: go }, "Start"), el("button", { class: "wp-link", onclick: drawNote }, "Cancel"));
+    setTimeout(() => { input.focus(); input.select(); }, 0);
+  };
+  drawNote();
   const explore = el("div", { class: "wp-scene-explore" });
   main.append(...[
     sceneTitle("Take a Break"),
-    el("p", { class: "wp-scene-sub" }, activePurpose() ? "A break from your aim. Rest, explore something new, or return refreshed." : "Rest, explore something new, or return refreshed."),
-    el("div", { class: "wp-scene-lengths wp-home-break" }, lengths),
-    sceneTitle("Explore & Learn", "h2", "wp-scene-h2"),
+    el("p", { class: "wp-scene-sub" }, activePurpose() ? "A break from your aim. Rest, reset, and return with focus." : "Rest, reset, and return with focus."),
+    el("div", { class: "wp-home-break" }, lens,
+      el("button", { class: "wp-scene-go", disabled: used, onclick: () => takeBreak({ minutes: breakLen }) }, icon("playSolid"), "Start Break"), note),
+    sceneTitle("Or explore something new", "h2", "wp-scene-h2"),
     explore,
     savedBlock()].filter(Boolean));
   exploreView(explore);

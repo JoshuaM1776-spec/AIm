@@ -78,7 +78,7 @@ function showTips() {
   const chip = $("#wp-home.wp-scene .wp-home-continue") || $("#wp-chip .wp-pill");
   if (chip && tipSeen("home") && !tipSeen("chip") && location.pathname === "/") {
     return showCoach(chip, { title: "Your aim lives here", step: 2, of: 2, primary: "Got it",
-      body: "Continue Learning picks up your aim and your paths. On a video, the Aim button at the top does it: take a break, change your aim, or say you're done.",
+      body: "This card picks up your aim and your learning plans. On a video, the Aim button at the top does it: take a break, change your aim, or say you're done.",
       onPrimary: async () => { await markTip("chip"); closeCoach(); } });
   }
 }

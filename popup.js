@@ -113,7 +113,7 @@ function breakControls() {
   return el("div", {},
     el("div", { class: "muted" }, used ? "Today's leisure time is used up." : left !== null ? `${left} min of leisure time left today.` : "Take a break:"),
     el("div", { class: "chips" },
-      ...[15, 30, 60].map(m => el("button", { class: "chip", disabled: used, onclick: () => act({ type: "break-start", minutes: m }) }, m === 60 ? "1h" : `${m}m`)),
+      ...[5, 15, 30].map(m => el("button", { class: "chip", disabled: used, onclick: () => act({ type: "break-start", minutes: m }) }, `${m}m`)),
       used ? null : custom,
       used ? null : el("button", { class: "chip", onclick: () => custom.value && act({ type: "break-start", minutes: parseInt(custom.value, 10) }) }, "Start"),
       el("button", { class: "link", onclick: () => { open = null; renderCurrent(); } }, "Cancel")));

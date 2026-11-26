@@ -94,7 +94,7 @@ function menuTools() {
   const used = leisureUsedUp();
   return el("div", { class: "wp-dd-tools" },
     el("button", { class: "wp-dd-tool", disabled: used, onclick: menuAct(openBreakDialog) }, icon("hourglass"), "Take a Break",
-      el("small", {}, used ? "None today" : "5–60 min")),
+      el("small", {}, used ? "None today" : "5–30 min")),
     account.on ? el("button", { class: "wp-dd-tool", onclick: menuAct(() => openTalk()) }, icon("talk"), "Librarian", el("small", {}, "Talk it through")) : null,
     el("button", { class: "wp-dd-tool", onclick: menuAct(() => send({ type: "open-targets" })) }, icon("library"), "My Library", el("small", {}, "Every aim")));
 }

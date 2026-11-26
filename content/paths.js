@@ -81,9 +81,9 @@ function pathsWindow() {
       el("button", { class: "wp-btn wp-btn-primary", onclick: () => addInterest(i.value, g.value) }, "Add"),
       el("button", { class: "wp-btn wp-btn-text", onclick: () => { pw.adding = false; pw.error = ""; pwRedraw(); } }, "Cancel")));
   })() : null;
-  pwHost = el("div", { class: "wp-pw", "aria-label": "Your paths" },
+  pwHost = el("div", { class: "wp-pw", "aria-label": "Your learning plans" },
     el("div", { class: "wp-pw-head" },
-      el("span", { class: "wp-label" }, "Your paths"),
+      el("span", { class: "wp-label" }, "Your learning plans"),
       el("button", { class: "wp-link wp-pw-plus", title: "Add an interest", onclick: () => { pw.adding = true; pw.error = ""; pwRedraw(); } }, icon("plus"), "Add an interest")),
     pw.list === null ? el("div", { class: "wp-muted wp-pw-note" }, "Loading…")
       : rows.length ? el("div", { class: "wp-pw-list" }, ...rows)

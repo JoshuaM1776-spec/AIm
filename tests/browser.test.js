@@ -319,7 +319,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     /^Good (morning|afternoon|evening)\.$/.test(await text("#wp-home .wp-home-title")) &&
     (await p.getAttribute("#wp-home .wp-home-input", "placeholder")) === "Search for videos, topics, or anything you want to learn…" && !card0.includes("Search YouTube") &&
     (await p.$$eval("#wp-home .wp-scene-tab", b => b.map(x => x.textContent).join())) === "Home,Break,Library" && !!(await p.$("#wp-home .wp-scene-tab.on:has-text('Home')")) &&
-    (await p.$$eval("#wp-home .wp-scene-card-title", b => b.map(x => x.textContent).join())) === "Continue Learning,Daily Challenge,Weekly Challenge" &&
+    (await p.$$eval("#wp-home .wp-scene-card-title", b => b.map(x => x.textContent).join())) === "Start a challenge,Daily Challenge,Weekly Challenge" &&
     (await sceneImg()).includes("scenes/home.jpg"), card0.slice(0, 160));
   step("the scene covers YouTube's own bar, and the page under it doesn't scroll", await p.evaluate(() => {
     const r = document.querySelector("#wp-home").getBoundingClientRect();
@@ -328,15 +328,16 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   if (process.env.SHOTS) await p.screenshot({ path: `${process.env.SHOTS}/home-first.png` });
   await p.click("#wp-home .wp-scene-tab:has-text('Break')");
   await p.waitForSelector("#wp-home .wp-home-break");
-  step("Break: a break's lengths, then Explore & Learn, in the garden", (await text("#wp-home .wp-home-break")).includes("15m") &&
-    (await text("#wp-home .wp-home-break")).includes("Custom") && (await text("#wp-home")).includes("Take a Break") && (await text("#wp-home")).includes("Explore & Learn") &&
-    (await sceneImg()).includes("scenes/break.jpg"));
+  step("Break (0.74): 5, 15 or 30 minutes (15 picked), Start Break, a custom length, and something new to explore further down, by the lake",
+    (await p.$$eval("#wp-home .wp-scene-len", b => b.map(x => x.textContent + (x.getAttribute("aria-pressed") === "true" ? "*" : "")).join())) === "5 Minutes,15 Minutes*,30 Minutes" &&
+    !!(await p.$("#wp-home .wp-scene-go:has-text('Start Break')")) && (await text("#wp-home .wp-home-break")).includes("Custom length") &&
+    (await text("#wp-home")).includes("Take a Break") && (await text("#wp-home")).includes("Or explore something new") && (await sceneImg()).includes("scenes/break.jpg"));
   await p.click("#wp-home .wp-scene-tab:has-text('Home')");
   await p.waitForFunction(() => !document.querySelector("#wp-home .wp-home-break"));
   await p.click("#wp-home .wp-home-continue");
   await p.waitForSelector("#wp-home .wp-pw");
   const pwText = await text("#wp-home .wp-pw");
-  step("Continue Learning: a panel with your paths, their progress, and Add an interest", (await text("#wp-home .wp-scene-panel-title")) === "Continue Learning" && pwText.includes("Your paths") && pwText.includes("Aviation") &&
+  step("Continue Learning: a panel with your paths, their progress, and Add an interest", (await text("#wp-home .wp-scene-panel-title")) === "Start a challenge" && pwText.includes("Your learning plans") && pwText.includes("Aviation") &&
     pwText.includes("Earn a private pilot's license") && pwText.includes("No path yet") && !!(await p.$("#wp-home .wp-pw-plus")), pwText.slice(0, 200));
   await p.click("#wp-home .wp-pw-plus");
   await p.fill("#wp-home .wp-pw-add input >> nth=0", "Woodworking");
@@ -742,6 +743,22 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("a book's cover: its subject, its name in a serif, and where it stands",
     (await all.textContent(".slot:has-text('Study for my biology exam') .book-subject")) === "Science" &&
     (await all.textContent(".slot:has-text('Study for my biology exam') .where")).startsWith("Set aside"));
+  step("the Library (0.74): My Library, Learning Plans and Collections; My Library is open",
+    (await all.$$eval(".hub-card b", b => b.map(x => x.textContent).join())) === "My Library,Learning Plans,Collections" &&
+    (await all.getAttribute(".hub-card[data-sec='aims']", "aria-selected")) === "true" && !(await all.isVisible("#sec-collections")) && (await all.textContent("#nAims")).includes(" aim"));
+  await all.click(".hub-card[data-sec='collections']");
+  await all.waitForSelector("#tiles .tile");
+  const firstTile = (await all.textContent("#tiles .tile .tile-name")).trim();
+  await all.click("#tiles .tile >> nth=0");
+  await all.waitForSelector("#filter:not([hidden])");
+  step("Collections: your subjects as picture tiles; one shows only its books", await all.isVisible("#sec-aims") &&
+    (await all.textContent("#filter")).includes(`Only ${firstTile}`) && (await all.$$("#list .book")).length >= 1, firstTile);
+  await all.click("#filter button");
+  await all.click(".hub-card[data-sec='plans']");
+  await all.waitForSelector("#plans .plan, #plans .plans-empty");
+  step("Learning Plans: your paths, each opening its whole plan", (await all.textContent("#plans")).includes("Aviation") &&
+    (await all.getAttribute("#plans .plan", "href")).startsWith("path.html?id=") && all.url().endsWith("#plans"));
+  await all.click(".hub-card[data-sec='aims']");
   await all.fill("#search", "truck");
   step("search the library", (await all.$$("#list .book")).length === 1);
   await all.fill("#search", "");
@@ -832,8 +849,10 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.goto("https://www.youtube.com/");
   await breakTab();
   await p.waitForSelector("#wp-home .wp-home-saved");
-  await p.click('#wp-home .wp-home-break .wp-chip:has-text("15m")');
+  await p.click('#wp-home .wp-scene-len:has-text("30 Minutes")');
+  await p.click('#wp-home .wp-scene-go');
   await p.waitForSelector(".wp-notice .wp-saved-row");
+  step("picking 30 Minutes then Start Break starts a 30-minute break", (await store()).brk?.durationMin === 30);
   step("starting a break offers what you saved", (await text(".wp-notice")).includes("You saved a video for later") && (await p.$$(".wp-notice .wp-mini-play")).length === 1);
   await p.click('.wp-notice button[aria-label="Dismiss"]');
   await sw.evaluate(() => serial(() => endBreak()));

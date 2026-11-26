@@ -207,4 +207,4 @@ function applyStatus(r) {
 }
 
 const minLabel = m => (m >= 60 ? `${m / 60}h` : `${m}m`);
-const BREAK_CHOICES = [15, 30, 60];
+const BREAK_CHOICES = [5, 15, 30];

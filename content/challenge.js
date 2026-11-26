@@ -10,7 +10,7 @@
 const CH_KIND = { understand: "Understand", build: "Build & do", investigate: "Investigate" };
 const CH_LEVEL = { intro: "Intro", intermediate: "Intermediate", advanced: "Advanced" };
 const CH_SCALE = {
-  daily: { minutes: 10, title: "Daily Challenge", sub: "A focused problem to solve today.", noun: "today's challenge" },
+  daily: { minutes: 10, title: "Daily Challenge", sub: "A new problem to solve each day.", noun: "today's challenge" },
   weekly: { minutes: 120, title: "Weekly Challenge", sub: "A larger goal to build real understanding.", noun: "this week's challenge" }
 };
 // The panel redraws itself in place, so the rest of the scene isn't rebuilt on every click.
