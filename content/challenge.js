@@ -1,16 +1,14 @@
-// Aim — the Daily and Weekly Challenges (0.73), on YouTube's homepage (content/scene.js). The Daily
-// Challenge is one focused problem for today, about ten minutes; the Weekly Challenge a larger one for
-// the week, up to a couple of hours, building or investigating where it can. Each is drawn from your
-// interests (your paths first, a different one each day or week) and kept until the day or the week
-// ends: open the panel again and it's the same one (store.js → challengeToday). Ask for another, go
-// easier or harder, try a different subject, or write your own. Begin makes it your aim: its plan steps
+// Aim — the Weekly Challenge (0.73), on YouTube's homepage (content/scene.js): a larger challenge for
+// the week, up to a couple of hours, building or investigating where it can. It's drawn from your
+// interests (your paths first, a different one each week) and kept until the week ends: open the panel
+// again and it's the same one (store.js → challengeToday). Ask for another, go easier or harder, try a
+// different subject, or write your own. (The Daily Challenge is the same for everyone: content/daily.js.) Begin makes it your aim: its plan steps
 // become what Up next works through, and its last step is the Final Challenge (docs/SPEC.md §7–§9).
 // Signed-in accounts (Aim's server writes challenges).
 
 const CH_KIND = { understand: "Understand", build: "Build & do", investigate: "Investigate" };
 const CH_LEVEL = { intro: "Intro", intermediate: "Intermediate", advanced: "Advanced" };
 const CH_SCALE = {
-  daily: { minutes: 10, title: "Daily Challenge", sub: "A new problem to solve each day.", noun: "today's challenge" },
   weekly: { minutes: 120, title: "Weekly Challenge", sub: "A larger goal to build real understanding.", noun: "this week's challenge" }
 };
 // The panel redraws itself in place, so the rest of the scene isn't rebuilt on every click.
@@ -18,7 +16,7 @@ let chHost = null;
 function chRedraw() { if (chHost?.isConnected) chHost.replaceWith(challengePanel(chFind.scale)); }
 // What's on screen. level: what the evidence suggests (from the background); shift: Easier or Harder.
 const chFresh = scale => ({ scale, view: "loading", interest: "", listFor: "", list: [], pick: 0, busy: false, error: "", offered: [], level: "intro", shift: 0, own: false });
-let chFind = chFresh("daily");
+let chFind = chFresh("weekly");
 const CH_LEVELS = ["intro", "intermediate", "advanced"];
 const chLevel = () => CH_LEVELS[Math.max(0, Math.min(2, CH_LEVELS.indexOf(chFind.level) + chFind.shift))];
 const chSave = () => send({ type: "challenge-today-save", scale: chFind.scale, rec: { interest: chFind.listFor, list: chFind.list, pick: chFind.pick } });
@@ -35,6 +33,7 @@ async function chSubject(scale) {
 }
 
 async function openChallengePanel(scale, subject = "") {
+  if (scale === "daily") return openDaily(); // the same for everyone (content/daily.js)
   scene.panel = scale; pw.open = false;
   chFind = chFresh(scale);
   if (!account.on) chFind.view = "signin";

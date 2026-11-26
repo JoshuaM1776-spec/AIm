@@ -76,6 +76,7 @@ const writes = {
   "goal-answer": m => goalAnswer(m.aimId, m.answer),
   "challenge-start": m => challengeStart(m.challenge),
   "challenge-today-save": m => challengeTodaySave(String(m.scale || ""), m.rec),
+  "daily-answer": m => dailyAnswer(String(m.day || ""), m.patch),
   "path-add": m => pathAdd({ interest: m.interest, goal: m.goal, why: m.why }),
   "path-remove": m => pathRemove(String(m.id || "")),
   "path-plan-save": m => pathPlanSave(String(m.id || ""), m.plan),
@@ -167,6 +168,8 @@ const reads = {
   "path-context": m => pathContext(String(m.id || "")),
   "challenge-known": m => challengeKnown(String(m.interest || "")),
   "challenge-today": () => challengeToday(),
+  "daily-get": m => dailyGet(!!m.refresh),
+  "daily-peek": () => dailyCached(),
   "goal-check": m => ({ goal: goalShaped(String(m.text || "")), name: goalName(String(m.text || "")), suggestion: suggestGoal(String(m.text || "")) }),
   "memory-list": () => memoryList(),
   "captions-stats": () => captionsStats(),
@@ -230,6 +233,22 @@ function refreshThemes(force = false) {
     return { result: "applied", themes: Array.isArray(r?.themes) ? r.themes.length : 0 };
   })().finally(() => { themesRunning = null; });
   return force ? themesRunning : (themesRunning.catch(() => {}), { result: "started" });
+}
+
+// Today's Daily Challenge for a YouTube tab: the cached one, or fetched from Aim's server (no account
+// needed) when the day changed, or hourly while it isn't out yet. The fetch stays out of serial().
+async function dailyGet(refresh = false) {
+  const c = await dailyCached();
+  // refresh (opening the panel): ask again if it wasn't out when last asked; a day's challenge is kept.
+  if (c.fresh && (c.challenge || !refresh)) return c;
+  try {
+    const r = await plusDailyToday(c.day);
+    if (r.unavailable) return { ...c, unavailable: true };
+    await serial(() => dailyCacheSave(c.day, r.challenge));
+    return { ...c, challenge: r.challenge, fresh: true };
+  } catch (e) {
+    return { ...c, error: String(e.message || e) };
+  }
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {

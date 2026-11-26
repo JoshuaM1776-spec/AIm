@@ -504,6 +504,16 @@ Needs a signed-in account and the server redeployed to draft paths.
 - [ ] Aim's other pages and the toolbar popup: the same navy and copper colors and bold headings; book covers keep their serif.
 - [ ] The pictures are sharp all the way across (0.74.2): mountains behind Home, the lake behind Break, the cabin behind the Library and Aim's other pages.
 
+### 67. The Daily Challenge (0.75)
+Needs the server redeployed, `0006_daily.sql` run, and `AIM_DAILY_EDITORS` set to your account's email.
+- [ ] Settings → Account: **Daily Challenge editor** (only for an editor's account). It lists today and the next three weeks: Empty, Draft or Published.
+- [ ] **Draft the next 7 days** drafts the empty ones (seven different areas); a day already there is left alone. **Draft this day** and **Redraft** do one day.
+- [ ] Open a day: every part is editable (area, moment, title, scene, question, the three choices and which is right, why, the explain-why question, the video search, the second try, sources, the plan). **Publish** needs the "I checked" box and two sources. **Unpublish** takes it back.
+- [ ] On YouTube's homepage, signed in or not: the Daily Challenge card names today's published challenge. Open it: the moment, the scene, the question, A/B/C and Not sure. "Nothing is scored."
+- [ ] Right: one "explain why" (or Skip), then Done for today. Not quite: Watch a short video (a YouTube search) or Read why; back on the homepage the card says Second try waiting; the second try is the same idea in today's world; then Done for today.
+- [ ] Done: how it went in words, How do we know? (the sources, as links), and Want a plan for this?, which opens Start a challenge with the interest and goal filled in.
+- [ ] Nothing published today: "Today's challenge isn't out yet." A copy of Aim without a server: it says it isn't connected.
+
 ## Known issues (not regressions)
 
 - In this test environment, "opening a video in YouTube's one page plays that video" (tests/browser.test.js) sometimes fails on timing alone; it passes on a rerun and fails the same way on 0.71.

@@ -33,12 +33,12 @@ async function renderHome() {
     if (focus?.title) setTimeout(() => openTalk({ mode: "deeper", focus: { title: String(focus.title).slice(0, 120), brief: String(focus.brief || "").slice(0, 200),
       chain: (Array.isArray(focus.chain) ? focus.chain : []).map(String).slice(0, 8) } }), 300);
   }
-  // "Find the next challenge", from a completed one: today's challenge, on that subject.
+  // "Find the next challenge", from a completed one: this week's challenge, on that subject.
   if (location.hash.startsWith("#aim-challenge=")) {
     let subject = "";
     try { subject = decodeURIComponent(location.hash.slice("#aim-challenge=".length)).slice(0, 120); } catch {}
     history.replaceState(null, "", "/");
-    if (subject) setTimeout(() => openChallengePanel("daily", subject), 300);
+    if (subject) setTimeout(() => openChallengePanel("weekly", subject), 300);
   }
   // "Next lesson", from a completed one: pick its path up where it left off.
   if (location.hash.startsWith("#aim-path=")) {
@@ -65,13 +65,15 @@ async function renderHome() {
   }
   const p = activePurpose();
   const today = account.on && !status.totalReached ? (await send({ type: "challenge-today" })) || {} : {};
+  // Today's Daily Challenge, as this browser has it; fetched in the background if it's a new day.
+  const daily = status.totalReached ? {} : (await send({ type: "daily-peek" })) || {};
   if (location.pathname !== "/") return;
   exploreOpen = scene.view === "break" && !scene.panel;
   const view = status.totalReached ? "total" : scene.view;
   const key = [view, scene.panel || "",
     p ? `p|${p.id}|${p.text}|${(p.map?.parts || []).map(x => x.id + x.status).join(".")}${p.map?.synthesis?.verdict || ""}${p.practice ? `${p.practice.title}${p.practice.triedAt || ""}` : ""}|${(status.currentVideos || []).map(v => v.id).join(",")}|${p.study ? `${p.study.current}:${p.study.topics.map(t => t.check?.at || 0).join(".")}:${p.study.apply?.doneAt || 0}` : ""}` : "idle",
     leisureUsedUp(), (status.saved || []).map(v => v.id).join(","), account.on, status.pathways?.offer?.name || "", !!homeEnd,
-    today.daily?.list?.[today.daily.pick]?.title || "", today.weekly?.list?.[today.weekly.pick]?.title || "",
+    dailyCardSub(daily), today.weekly?.list?.[today.weekly.pick]?.title || "",
     (settings.learnTopics || []).join("+"), (settings.learnOff || []).length].join("|");
   if ($("#wp-home")?.dataset.key === key) return; // don't rebuild while someone is typing
   $("#wp-home")?.remove();
@@ -86,10 +88,12 @@ async function renderHome() {
     main.append(sceneTitle("That's today's YouTube time"),
       el("p", { class: "wp-scene-sub" }, `You set a daily limit of ${settings.totalMin} minutes. It resets at midnight.`));
   } else if (scene.panel === "continue") main.append(continuePanel(p));
-  else if (scene.panel === "daily" || scene.panel === "weekly") main.append(challengePanel(scene.panel));
+  else if (scene.panel === "daily") main.append(dailyPanel());
+  else if (scene.panel === "weekly") main.append(challengePanel(scene.panel));
   else if (view === "break") breakMain(main);
-  else homeMain(main, p, today);
+  else homeMain(main, p, today, daily);
   document.body.append(root);
+  if (view !== "total" && !daily.fresh && !scene.panel) send({ type: "daily-get" }).then(r => { if (r?.challenge && !daily.challenge && alive) renderHome(); });
   if (view === "home" && !scene.panel) {
     showTips();
     maybeOfferTalk(root);
@@ -98,7 +102,7 @@ async function renderHome() {
 }
 
 // Home: a greeting, the search, and the three ways in.
-function homeMain(main, p, today) {
+function homeMain(main, p, today, daily) {
   const input = el("input", { class: "wp-home-input", type: "text", "aria-label": "Search for videos, topics, or anything you want to learn",
     placeholder: "Search for videos, topics, or anything you want to learn…" });
   const findBtn = el("button", { class: "wp-home-go", "aria-label": "Go", title: "Go" }, icon("right"));
@@ -126,8 +130,7 @@ function homeMain(main, p, today) {
       // Start a challenge until something's in progress; then it's where you pick it up.
       sceneCard({ cls: "wp-home-continue tint-copper", ic: "playRing", title: p ? "Continue Learning" : "Start a challenge", glow: true, onclick: openContinue,
         sub: p ? `Pick up: ${p.text}` : "Pick up a learning plan, or start a new one." }),
-      sceneCard({ cls: "wp-home-daily tint-blue", ic: "calendarDots", title: "Daily Challenge", onclick: () => openChallengePanel("daily"),
-        sub: pick("daily") ? `Today: ${pick("daily").title}` : "A new problem to solve each day." }),
+      sceneCard({ cls: "wp-home-daily tint-blue", ic: "calendarDots", title: "Daily Challenge", onclick: openDaily, sub: dailyCardSub(daily) }),
       sceneCard({ cls: "wp-home-weekly tint-violet", ic: "users", title: "Weekly Challenge", onclick: () => openChallengePanel("weekly"),
         sub: pick("weekly") ? `This week: ${pick("weekly").title}` : "A larger goal to build real understanding." })),
     el("div", { class: "wp-scene-invites" }),

@@ -1180,6 +1180,24 @@ test("paths for Continue Learning (0.73): the lesson you're on and a subject for
   assert.deepStrictEqual(v.lesson, { n: 2, title: "Why two consuls?" }, "the next lesson, numbered");
 });
 
+test("the Daily Challenge (0.75): today's, cached for the day; your tries kept for the day only", async () => {
+  const env = fresh();
+  const day = await env.run(`localDay()`);
+  let c = JSON.parse(JSON.stringify(await env.run(`dailyCached()`)));
+  assert.ok(c.day === day && !c.fresh && c.challenge === null, "nothing yet: ask the server");
+  await env.run(`dailyCacheSave(${JSON.stringify(day)}, null)`);
+  assert.ok((await env.run(`dailyCached()`)).fresh, "not out yet: asked again within the hour, not every time");
+  await env.run(`dailyCacheSave(${JSON.stringify(day)}, { title: "The inheritance tax" })`);
+  assert.strictEqual((await env.run(`dailyCached()`)).challenge.title, "The inheritance tax");
+  assert.strictEqual((await env.run(`dailyAnswer("2000-01-01", { first: { pick: 1, right: true } })`)).result, "stale", "yesterday's panel can't write today's");
+  await env.run(`dailyAnswer(${JSON.stringify(day)}, { first: { pick: 7, right: false } })`);
+  await env.run(`dailyAnswer(${JSON.stringify(day)}, { learned: true })`);
+  const m = JSON.parse(JSON.stringify((await env.run(`dailyAnswer(${JSON.stringify(day)}, { second: { pick: 1, right: true }, doneAt: true, explain: "x".repeat(900) })`)).mine));
+  assert.ok(m.first.pick === -1 && !m.first.right && m.learned > 0 && m.second.right && m.doneAt > 0 && m.explain.length === 600, JSON.stringify(m));
+  env.local.dailyMine.day = "2000-01-01";
+  assert.deepStrictEqual(JSON.parse(JSON.stringify((await env.run(`dailyCached()`)).mine)), { day }, "a new day starts fresh");
+});
+
 test("subjects: EMS and medications read as health", async () => {
   const env = fresh();
   assert.strictEqual((await env.run(`aimSubject({ text: "Understand how airplane stalls work" })`)).id, "aviation", "airplane is aviation, not just plane");

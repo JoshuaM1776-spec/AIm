@@ -7,7 +7,7 @@
   const head = document.querySelector(".page-head");
   if (!head || head.querySelector(".places")) return;
   const file = location.pathname.split("/").pop() || "";
-  const YOU = { "pathways.html": "pathways.html", "options.html": "options.html", "plus.html": "options.html", "design.html": "options.html" };
+  const YOU = { "pathways.html": "pathways.html", "options.html": "options.html", "plus.html": "options.html", "design.html": "options.html", "daily-editor.html": "options.html" };
   const mine = YOU[file] || "";
   const node = (tag, props = {}, ...kids) => { const n = Object.assign(document.createElement(tag), props); n.append(...kids.filter(Boolean)); return n; };
   const link = (href, text, current) => {

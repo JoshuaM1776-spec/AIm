@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="light dark">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily Challenge editor</title>
+<link rel="stylesheet" href="aim.css">
+<style>
+  /* The Daily Challenge editor (0.75): the coming days, each empty, a draft or published. Open one to
+     check it against its sources, edit it, and publish it. Only editors' accounts get in. */
+  .days { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+  .day { border: 1px solid var(--card-border); border-radius: 16px; background: var(--surface); backdrop-filter: blur(16px); }
+  .day > summary { display: flex; align-items: center; gap: 14px; padding: 14px 18px; cursor: pointer; list-style: none; }
+  .day > summary::-webkit-details-marker { display: none; }
+  .day .when { min-width: 130px; font-weight: 600; }
+  .day .when small { display: block; font-weight: 400; color: var(--muted); }
+  .day .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .day .t.none { color: var(--muted); }
+  .pill.pub { background: var(--ok-soft); color: var(--ok); font-weight: 600; }
+  .pill.draft { background: rgba(244, 168, 98, .16); color: #f4a862; font-weight: 600; }
+  .day form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; padding: 4px 18px 18px; }
+  .day form .full { grid-column: 1 / -1; }
+  .day label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+  .day label > input, .day label > textarea, .day label > select { color: var(--text); font-size: 14px; }
+  .day textarea { min-height: 64px; }
+  .choices { display: flex; flex-direction: column; gap: 6px; }
+  .choice { display: flex; align-items: center; gap: 8px; }
+  .choice input[type=radio] { width: 18px; height: 18px; accent-color: #8fd6a2; flex: none; }
+  .group-h { grid-column: 1 / -1; margin: 10px 0 0; padding-top: 10px; border-top: 1px solid var(--divider); font: 700 15px var(--font-display); }
+  .actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; }
+  .actions .msg { margin: 0; }
+  .check { grid-column: 1 / -1; }
+  @media (max-width: 760px) { .day form { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main class="page wide">
+  <header class="page-head">
+    <img class="for-light" src="icons/48.png" alt=""><img class="for-dark" src="icons/light/48.png" alt="">
+    <span class="brand" data-brand>Aim</span><span class="crumb">Daily Challenge editor</span>
+  </header>
+  <h1>Daily Challenges</h1>
+  <p class="lede">The challenge everyone gets each day. Aim drafts them; nothing reaches anyone until you publish it. Before publishing, check every fact against its sources, and that the right answer really is right.</p>
+  <div class="row">
+    <button class="btn" type="button" id="draft">Draft the next 7 days</button>
+    <span class="busy" id="busy"></span>
+  </div>
+  <p class="error" id="err"></p>
+  <div class="days" id="days"></div>
+</main>
+<div id="toast" role="status"></div>
+<script src="nav.js"></script>
+<script src="daily-editor.js"></script>
+</body>
+</html>

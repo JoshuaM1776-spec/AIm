@@ -271,7 +271,7 @@ async function plusStatus() {
     }
     const sy = await syncState();
     return { configured: true, signedIn: true, email: st.email || s.email, plan: st.plan, usage: st.usage, limits: st.limits, billing: st.billing || null,
-      sync: { available: !!st.sync, on: sy.on, lastAt: sy.lastAt, error: sy.error } };
+      sync: { available: !!st.sync, on: sy.on, lastAt: sy.lastAt, error: sy.error }, editor: !!st.editor };
   } catch (e) {
     if (e.code === "auth") return { configured: true, signedIn: false, error: e.message };
     return { configured: true, signedIn: true, email: s.email, offline: true, error: e.message };
@@ -323,9 +323,24 @@ async function plusLibrarian(task, input) {
   catch (e) { return { error: String(e.message || e), code: e.code || "" }; }
 }
 
+// Today's Daily Challenge (0.75): the same for everyone, so no account is needed (the public key only).
+// Null when it isn't out yet; { unavailable } when this build has no server.
+async function plusDailyToday(day) {
+  if (!plusConfigured()) return { challenge: null, unavailable: true };
+  const { res, data } = await plusFetch(`${PLUS.supabaseUrl}/functions/v1/ai`, {
+    method: "POST",
+    headers: { apikey: PLUS.supabaseAnonKey, Authorization: `Bearer ${PLUS.supabaseAnonKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ task: "daily-today", input: { day } })
+  });
+  if (!res.ok || !data.ok) throw new PlusError(data.error?.message || "Aim's server had a problem. Try again.", res.status, data.error?.code || "");
+  return { challenge: data.challenge || null };
+}
+
 // Aim Plus features Aim's pages may call. Each is a task on Aim's server, which builds the prompts.
 const PLUS_TASKS = new Set(["teachback-start", "teachback-turn", "teachback-finish", "teachback-get",
-  "pathways-themes", "pathways-careers", "pathways-step", "study-apply", "scenario-turn", "deeper-step", "channels-organize", "challenges-suggest", "path-plan"]);
+  "pathways-themes", "pathways-careers", "pathways-step", "study-apply", "scenario-turn", "deeper-step", "channels-organize", "challenges-suggest", "path-plan",
+  // The Daily Challenge's editors (daily.html); the server checks the account is one.
+  "daily-draft", "daily-list", "daily-save", "daily-remove"]);
 
 // Messages from Aim's own pages (Settings, TeachBack). Network calls don't go through serial(), so a slow
 // server never holds up the timer.

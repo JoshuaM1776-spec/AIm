@@ -122,3 +122,17 @@ export function memHs(db, { now = () => new Date(), videos = {} } = {}) {
   };
   return hs;
 }
+
+// The Daily Challenge's days (daily.ts DailyStore), in memory.
+export function memDaily() {
+  const rows = new Map();
+  return {
+    rows,
+    async list(from, to, publishedOnly) {
+      return [...rows.values()].filter(r => r.day >= from && r.day <= to && (!publishedOnly || r.status === "published")).sort((a, b) => a.day.localeCompare(b.day))
+        .map(r => ({ ...r, data: JSON.parse(JSON.stringify(r.data)) }));
+    },
+    async save(day, status, data) { rows.set(day, { day, status, data: JSON.parse(JSON.stringify(data)), updatedAt: new Date().toISOString() }); },
+    async remove(day) { rows.delete(day); }
+  };
+}

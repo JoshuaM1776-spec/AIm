@@ -527,6 +527,37 @@ async function pathGet(id) {
   return path ? { result: "applied", path, progress: path.plan ? pathProgress(path) : null } : { result: "error", message: "That interest isn't here any more." };
 }
 
+// ---------- The Daily Challenge (0.75): the same for everyone ----------
+// Today's challenge as fetched from Aim's server (dailyCache: kept for the day; while it isn't out
+// yet, asked again at most hourly), and how you're getting on with it (dailyMine): your first pick,
+// your "explain why", whether you looked at the video or the why, your second pick, done. Only the
+// day's; yesterday's goes when today's arrives. Evidence only: right or not yet, nothing scored.
+const localDay = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+async function dailyCached() {
+  const { dailyCache, dailyMine } = await chrome.storage.local.get(["dailyCache", "dailyMine"]);
+  const day = localDay();
+  const fresh = dailyCache?.day === day && (dailyCache.challenge || Date.now() - (dailyCache.at || 0) < 3600e3);
+  return { day, fresh, challenge: dailyCache?.day === day ? dailyCache.challenge || null : null, mine: dailyMine?.day === day ? dailyMine : { day } };
+}
+async function dailyCacheSave(day, challenge) {
+  await chrome.storage.local.set({ dailyCache: { day, challenge: challenge || null, at: Date.now() } });
+  return { result: "applied" };
+}
+const DAILY_STEPS = ["first", "explain", "learned", "second", "doneAt"];
+async function dailyAnswer(day, patch = {}) {
+  if (day !== localDay()) return { result: "stale" };
+  const { dailyMine } = await chrome.storage.local.get("dailyMine");
+  const mine = dailyMine?.day === day ? { ...dailyMine } : { day };
+  for (const k of DAILY_STEPS) {
+    if (!(k in patch)) continue;
+    if (k === "first" || k === "second") { const pick = Number(patch[k]?.pick); mine[k] = { pick: pick >= 0 && pick <= 2 ? pick : -1, right: !!patch[k]?.right, at: Date.now() }; }
+    else if (k === "explain") mine.explain = clip(patch.explain, 600);
+    else mine[k] = patch[k] ? Date.now() : null;
+  }
+  await chrome.storage.local.set({ dailyMine: mine });
+  return { result: "applied", mine };
+}
+
 // ---------- The Daily and Weekly Challenges (0.73, content/challenge.js) ----------
 // One of each, kept for the day or the week: the subject, the three the server offered, and which one
 // is showing. A new day (or week, from Monday) starts fresh.

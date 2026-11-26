@@ -10,7 +10,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { handle } from "../supabase/functions/ai/handler.ts";
-import { memDb, memSync } from "./helpers/memdb.mjs";
+import { memDaily, memDb, memSync } from "./helpers/memdb.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT || "playwright");
@@ -65,6 +65,14 @@ const deps = {
     const props = Object.keys(req.schema?.properties || {});
     const reply = !req.schema ? "ready" : JSON.stringify(
       props.includes("marks") ? (srv.talkPrompts.push(req.prompt), srv.talk.shift())
+      : props.includes("days") ? (srv.dailyPrompts = [...(srv.dailyPrompts || []), req.prompt], { days: [...req.prompt.matchAll(/^DAY \d+: (\S+)/gm)].map(m => ({
+          area: "Math and logic", title: `Tax day ${m[1]}`, moment: "AD 10, Rome", scene: "You inherit an estate worth 200,000 sesterces from a friend. First the 5% inheritance tax comes out, then a 1% sales tax on what's left when you sell it.",
+          question: "How much tax do you pay in total?", choices: ["12,000 sesterces", "11,900 sesterces", "11,000 sesterces"], answer: 1,
+          why: "5% of 200,000 is 10,000. The 1% is taken from the 190,000 left: 1,900. Together, 11,900.", explain: "Why isn't it simply 6% of 200,000?",
+          learn: { search: "percent of a percent explained", note: "Watch how a second percent is taken from what's left." },
+          second: { question: "A coat is 20% off, then 10% more at the till. How much off in all?", choices: ["30%", "28%", "25%"], answer: 1, why: "10% of the 80% left is 8%, so 28%." },
+          sources: [{ title: "Vicesima hereditatium (Britannica)", url: "https://www.britannica.com/topic/vicesima" }, { title: "OpenStax Prealgebra: Percents", url: "https://openstax.org/books/prealgebra/percents" }],
+          plan: { interest: "Personal finance", goal: "Work out taxes and discounts in my head" } })) })
       : props.includes("units") ? (srv.pathPrompts = [...(srv.pathPrompts || []), req.prompt], (srv.pathPrompts.length === 1 ? {
           title: "Earn a private pilot's license", scope: "The ground knowledge for a private pilot certificate; flying needs an instructor.", measure: "Ground knowledge",
           confirm: "Requirements change: confirm them with your flight instructor and the FAA.",
@@ -143,8 +151,9 @@ const deps = {
     close: async customer => { srv.closedCustomers = [...(srv.closedCustomers || []), customer]; }
   },
   sync: memSync(),
+  daily: memDaily(),
   now: () => new Date(),
-  config: { origins: [], limits: { dayCalls: 300, dayTokens: 400000, minuteCalls: 20 }, maxBodyBytes: 16384, maxSyncBytes: 1024 * 1024 }
+  config: { origins: [], limits: { dayCalls: 300, dayTokens: 400000, minuteCalls: 20 }, maxBodyBytes: 16384, maxSyncBytes: 1024 * 1024, dailyEditors: ["learner@example.com"] }
 };
 
 const server = http.createServer(async (req, res) => {
@@ -761,22 +770,89 @@ step("Forget removes it", ((await sw.evaluate(() => chrome.storage.local.get("me
 await sw.evaluate(() => serial(() => setSetting("captions", false)));
 const fetchesBefore = srv.captionFetches;
 // ---------- Challenges (0.70): find, choose, begin, attempt, complete ----------
-// The Daily Challenge (0.73): one for today, from your interests or a subject you name, kept for the day.
+// ---------- The Daily Challenge (0.75): the same for everyone, drafted by Aim, checked and published by an editor ----------
+await opt.goto(`chrome-extension://${extId}/options.html#plus`);
+await opt.waitForSelector("#dailyEditor", { timeout: 10000 }).catch(() => {});
+step("Settings shows an editor's account the Daily Challenge editor", (await opt.getAttribute("#dailyEditor", "href").catch(() => "")) === "daily-editor.html");
+const dailyEd = await ctx.newPage();
+await dailyEd.goto(`chrome-extension://${extId}/daily-editor.html`);
+await dailyEd.waitForSelector("#days .day");
+step("the editor (an AIM_DAILY_EDITORS account): today and the next three weeks, all empty", (await dailyEd.$$("#days .day")).length === 22 &&
+  (await dailyEd.textContent("#days .day >> nth=0")).includes("Today") && (await dailyEd.textContent("#days .day >> nth=0")).includes("Empty"));
+await dailyEd.click("#days .day >> nth=0 >> summary");
+await dailyEd.click("#days .day >> nth=0 >> button:text-is('Draft this day')");
+await dailyEd.waitForSelector("#days .day >> nth=0 >> .pill.draft", { timeout: 10000 });
+const firstDay = dailyEd.locator("#days .day").nth(0);
+step("Draft this day: Aim drafts one, with an area, a moment, three choices, a second try and two sources to check",
+  (await firstDay.locator("input[name=title]").inputValue()).startsWith("Tax day") && (await firstDay.locator("input[name=choice1]").inputValue()) === "11,900 sesterces" &&
+  await firstDay.locator("input[name=answer][value='1']").isChecked() && (await firstDay.locator("input[name=srcU1]").inputValue()).startsWith("https://openstax.org") &&
+  srv.dailyPrompts[0].includes("AREA:") && (await deps.daily.list("2000-01-01", "2100-01-01", true)).length === 0);
+await firstDay.locator("input[name=title]").fill("The inheritance tax");
+await firstDay.locator("button:text-is('Publish')").click();
+await dailyEd.waitForFunction(() => document.getElementById("err").textContent.includes("tick the box"));
+step("publishing asks you to say you checked it against its sources", (await deps.daily.list("2000-01-01", "2100-01-01", true)).length === 0);
+await firstDay.locator(".check input").check();
+await firstDay.locator("button:text-is('Publish')").click();
+await dailyEd.waitForSelector("#days .day >> nth=0 >> .pill.pub", { timeout: 10000 });
+const pubRows = await deps.daily.list("2000-01-01", "2100-01-01", true);
+step("published, with your edit", pubRows.length === 1 && pubRows[0].data.title === "The inheritance tax");
+await dailyEd.click("#draft");
+await dailyEd.waitForFunction(() => document.querySelectorAll("#days .pill.draft").length === 7, null, { timeout: 10000 });
+step("Draft the next 7 days: seven drafts, seven areas, nothing published, today left alone", srv.dailyPrompts.length === 2 &&
+  new Set([...srv.dailyPrompts[1].matchAll(/AREA: ([^\n]+)/g)].map(m => m[1])).size === 7 && (await deps.daily.list("2000-01-01", "2100-01-01", true)).length === 1 &&
+  srv.dailyPrompts[1].includes("RECENT (don't repeat): The inheritance tax"));
+if (process.env.SHOTS) { await dailyEd.setViewportSize({ width: 1200, height: 1000 }); await dailyEd.screenshot({ path: `${process.env.SHOTS}/daily-editor.png`, fullPage: true }); }
+await dailyEd.close();
+// On YouTube: everyone's Daily Challenge.
 await yt.goto("https://www.youtube.com/");
 await yt.bringToFront();
 await yt.waitForSelector("#wp-home .wp-home-daily");
 await yt.click("#wp-home .wp-home-daily");
-await yt.waitForSelector("#wp-home .wp-ch-daily .wp-ch-ask");
-step("the Daily Challenge, with no interests yet, asks what you're curious about", (await yt.textContent("#wp-home .wp-scene-panel-title")) === "Daily Challenge" &&
+await yt.waitForSelector("#wp-home .wp-dl .wp-dl-choice", { timeout: 10000 });
+const dlText = (await yt.textContent("#wp-home .wp-dl")).replace(/\s+/g, " ");
+step("a real moment, a problem, three choices and Not sure, and nothing scored", dlText.includes("Math and logic · AD 10, Rome") && dlText.includes("The inheritance tax") &&
+  dlText.includes("How much tax do you pay in total?") && (await yt.$$("#wp-home .wp-dl-choice")).length === 4 && dlText.includes("Nothing is scored"), dlText.slice(0, 200));
+if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/daily.png` });
+await yt.click("#wp-home .wp-dl-choice:has-text('12,000')");
+await yt.waitForSelector("#wp-home .wp-dl-step:has-text('Not quite')");
+step("not quite: get ready with a short video or the why", !!(await yt.$("#wp-home .wp-dl-step button:has-text('Watch a short video')")) && !!(await yt.$("#wp-home .wp-dl-step button:text-is('Read why')")) &&
+  !!(await yt.$("#wp-home .wp-dl-marked .wp-dl-choice.right:has-text('11,900')")));
+await yt.click("#wp-home .wp-dl-step button:has-text('Watch a short video')");
+await yt.waitForURL(/search_query=percent%20of%20a%20percent%20explained/);
+await yt.goto("https://www.youtube.com/");
+await yt.waitForFunction(() => document.querySelector("#wp-home .wp-home-daily")?.textContent.includes("Second try waiting: The inheritance tax"));
+step("back on the homepage, the second try waits", true);
+await yt.click("#wp-home .wp-home-daily");
+await yt.waitForSelector("#wp-home .wp-dl-step:has-text('Second try')");
+step("the second try: the same idea, today, after the why", (await yt.textContent("#wp-home .wp-dl")).includes("A coat is 20% off") && (await yt.textContent("#wp-home .wp-dl-why")).includes("10,000"));
+await yt.click("#wp-home .wp-dl-choice:has-text('28%')");
+await yt.waitForSelector("#wp-home .wp-dl-done");
+const doneText = (await yt.textContent("#wp-home .wp-dl-done")).replace(/\s+/g, " ");
+step("done for today: how it went (no score), how we know, and a plan if it sparked something", doneText.includes("Done for today.") && doneText.includes("Right on the second try.") &&
+  doneText.includes("How do we know?") && (await yt.getAttribute("#wp-home .wp-dl-sources a >> nth=0", "href")).startsWith("https://www.britannica.com") &&
+  doneText.includes("Want a plan for this? Personal finance"), doneText);
+const mine = (await sw.evaluate(() => chrome.storage.local.get("dailyMine"))).dailyMine;
+step("kept for the day in this browser: your tries, nothing more", mine.first.right === false && mine.second.right === true && !!mine.learned && !!mine.doneAt);
+await yt.click("#wp-home .wp-dl-plan");
+await yt.waitForSelector("#wp-home .wp-pw-add input");
+step("Want a plan for this?: the interest and its goal, ready to add", (await yt.inputValue("#wp-home .wp-pw-add input >> nth=0")) === "Personal finance" &&
+  (await yt.inputValue("#wp-home .wp-pw-add input >> nth=1")) === "Work out taxes and discounts in my head");
+await yt.click("#wp-home .wp-pw-add button:text-is('Cancel')");
+await yt.click("#wp-home .wp-scene-x");
+await yt.waitForFunction(() => document.querySelector("#wp-home .wp-home-daily")?.textContent.includes("Done for today: The inheritance tax"));
+// The Weekly Challenge (0.73): your own, from your interests or a subject you name, kept for the week.
+await yt.click("#wp-home .wp-home-weekly");
+await yt.waitForSelector("#wp-home .wp-ch-weekly .wp-ch-ask");
+step("the Weekly Challenge, with no interests yet, asks what you're curious about", (await yt.textContent("#wp-home .wp-scene-panel-title")) === "Weekly Challenge" &&
   (await yt.textContent("#wp-home .wp-ch-ask")).includes("What are you curious about?"));
-const chAsked = (srv.challengePrompts || []).length;
 await yt.fill("#wp-home .wp-ch-subject", "aviation");
 await yt.click(".wp-ch button:has-text('Find a challenge')");
 await yt.waitForSelector("#wp-home .wp-ch-detail", { timeout: 10000 });
 let chDetail = (await yt.textContent(".wp-ch-detail")).replace(/\s+/g, " ");
-step("today's challenge: one, for the subject and about ten minutes, with what makes it interesting",
-  chDetail.includes("How can an airplane fly upside down?") && chDetail.includes("aviation · Investigate · 10 min · Intro") &&
-  srv.challengePrompts.at(-1).includes("INTEREST: aviation") && srv.challengePrompts.at(-1).includes("TIME: 10 minutes") && srv.challengePrompts.at(-1).includes("LEVEL: intro"), chDetail.slice(0, 200));
+step("this week's challenge: a larger one, for the subject, building or investigating first",
+  chDetail.includes("How can an airplane fly upside down?") && chDetail.includes("aviation · Investigate · 15 min · Intro") &&
+  srv.challengePrompts.at(-1).includes("INTEREST: aviation") && srv.challengePrompts.at(-1).includes("TIME: 120 minutes") && srv.challengePrompts.at(-1).includes("LEVEL: intro") &&
+  (await sw.evaluate(() => chrome.storage.local.get("chToday"))).chToday.weekly.list.map(c => c.kind).join() === "investigate,build,understand", chDetail.slice(0, 200));
 const beforeHarder = srv.challengePrompts.length;
 await yt.click(".wp-ch-more button:text-is('Harder')");
 for (let i = 0; i < 80 && srv.challengePrompts.length === beforeHarder; i++) await yt.waitForTimeout(100);
@@ -787,32 +863,19 @@ step("written for this person: Harder asks again a level up, with different chal
 await yt.click(".wp-ch-more button:text-is('See all 3')");
 await yt.waitForFunction(() => document.querySelectorAll("#wp-home .wp-ch-card").length === 3, null, { timeout: 10000 });
 const chCards = (await yt.textContent(".wp-ch-list")).replace(/\s+/g, " ");
-step("See all 3: the other two, each with its kind and why", chCards.includes("Fold a paper wing and find its stall") && chCards.includes("Build & do · 10 min · Intro"), chCards.slice(0, 200));
+step("See all 3: the other two, each with its kind and why", chCards.includes("Fold a paper wing and find its stall") && chCards.includes("Build & do · 15 min · Intro"), chCards.slice(0, 200));
 if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/challenges.png` });
 await yt.click(".wp-ch-card:has-text('upside down')");
 await yt.waitForSelector(".wp-ch-detail");
 const asked = srv.challengePrompts.length;
 await yt.click("#wp-home .wp-scene-x");
-await yt.waitForSelector("#wp-home .wp-home-daily");
-step("kept for the day: the homepage card names today's challenge", (await yt.textContent("#wp-home .wp-home-daily")).includes("Today: How can an airplane fly upside down?"));
+await yt.waitForSelector("#wp-home .wp-home-weekly");
+step("kept for the week: the homepage card names this week's challenge", (await yt.textContent("#wp-home .wp-home-weekly")).includes("This week: How can an airplane fly upside down?"));
 await yt.reload();
-await yt.click("#wp-home .wp-home-daily");
+await yt.click("#wp-home .wp-home-weekly");
 await yt.waitForSelector("#wp-home .wp-ch-detail");
 step("open it again and it's the same one, without asking the server", (await yt.textContent(".wp-ch-detail")).includes("How can an airplane fly upside down?") && srv.challengePrompts.length === asked);
-// The Weekly Challenge: a larger one, building or investigating first.
-await yt.click("#wp-home .wp-scene-x");
-await yt.click("#wp-home .wp-home-weekly");
-await yt.waitForSelector("#wp-home .wp-ch-weekly .wp-ch-ask");
-await yt.fill("#wp-home .wp-ch-subject", "aviation");
-await yt.click(".wp-ch button:has-text('Find a challenge')");
-await yt.waitForSelector("#wp-home .wp-ch-weekly .wp-ch-detail", { timeout: 10000 });
-step("the Weekly Challenge: a larger one, up to two hours, building or investigating before explaining", srv.challengePrompts.at(-1).includes("TIME: 120 minutes") &&
-  (await yt.textContent("#wp-home .wp-scene-panel-title")) === "Weekly Challenge" &&
-  (await sw.evaluate(() => chrome.storage.local.get("chToday"))).chToday.weekly.list.map(c => c.kind).join() === "investigate,build,understand");
 if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/weekly-challenge.png` });
-await yt.click("#wp-home .wp-scene-x");
-await yt.click("#wp-home .wp-home-daily");
-await yt.waitForSelector(".wp-ch-detail");
 chDetail = (await yt.textContent(".wp-ch-detail")).replace(/\s+/g, " ");
 step("a challenge's details: the success condition decided up front, and a short plan", chDetail.includes("You'll have done it when") &&
   chDetail.includes("including the angle of attack") && chDetail.includes("What lift is") && chDetail.includes("~5 min"), chDetail.slice(0, 200));

@@ -246,3 +246,33 @@ html.wp-scene-on .wp-dropdown { border: 1px solid var(--sc-edge); background: va
   .wp-cl-row { grid-template-columns: 96px minmax(0, 1fr) auto; }
 }
 @media (prefers-reduced-motion: reduce) { .wp .wp-scene-card, .wp .wp-scene-len, .wp .wp-scene-explore .wp-learn-item { transition: none; transform: none !important; } }
+
+/* ---------- the Daily Challenge (0.75, content/daily.js) ---------- */
+.wp-dl-head { display: flex; flex-direction: column; gap: 6px; }
+.wp-dl-meta { color: var(--sc-blue); font-size: 13px; letter-spacing: .02em; }
+.wp-dl-title { font: 700 clamp(22px, 2.2vw, 34px)/1.2 var(--sc-display); letter-spacing: -.4px; color: #fbf3e8; }
+.wp-dl-scene { margin: 0; font-size: clamp(15px, 1.25vw, 19px); line-height: 1.55; color: var(--sc-ink); }
+.wp-dl-ask { display: flex; flex-direction: column; gap: 12px; }
+.wp-dl-q { font: 600 clamp(16px, 1.35vw, 20px)/1.4 var(--sc-display); color: #fbf3e8; }
+.wp-dl-choices { display: flex; flex-direction: column; gap: 8px; }
+.wp .wp-dl-choice { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 10px 16px; box-sizing: border-box; border-radius: 14px;
+  border: 1px solid var(--sc-edge); background: rgba(16, 18, 30, .4); color: var(--sc-ink); font: 500 clamp(15px, 1.2vw, 18px)/1.35 var(--sc-sans); text-align: left; cursor: pointer; }
+.wp .wp-dl-choice:hover { border-color: var(--sc-edge-strong); background: rgba(30, 32, 50, .55); }
+.wp .wp-dl-unsure { justify-content: center; border-style: dashed; color: var(--sc-ink-2); }
+.wp-dl-letter { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 50%; background: rgba(255, 255, 255, .1); font-size: 13px; font-weight: 600; }
+.wp-dl-marked .wp-dl-choice { cursor: default; }
+.wp .wp-dl-marked .wp-dl-choice:hover { border-color: var(--sc-edge); background: rgba(16, 18, 30, .4); }
+.wp .wp-dl-marked .wp-dl-choice.right, .wp .wp-dl-marked .wp-dl-choice.right:hover { border-color: rgba(143, 214, 162, .75); background: rgba(143, 214, 162, .1); }
+.wp-dl-choice.right .wp-dl-letter { background: rgba(143, 214, 162, .35); }
+.wp .wp-dl-marked .wp-dl-choice.missed { border-color: rgba(246, 178, 112, .6); }
+.wp-dl-you { margin-left: auto; font-size: 12px; color: var(--sc-ink-3); }
+.wp-dl-small, .wp-dl-note { font-size: 13px; color: var(--sc-ink-2); margin: 0; }
+.wp-dl-note { font-size: 15px; }
+.wp-dl-step { display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; border-radius: 16px; border: 1px solid var(--sc-edge); background: rgba(16, 18, 30, .38); }
+.wp-dl-step b { font: 600 17px/1.35 var(--sc-display); color: #fbf3e8; }
+.wp-scene .wp-dl-explain { width: 100%; box-sizing: border-box; min-height: 76px; padding: 10px 12px; border-radius: 12px; font: 400 15px/1.45 var(--sc-sans); resize: vertical; }
+.wp-dl-why { display: flex; flex-direction: column; gap: 4px; padding: 12px 16px; border-left: 3px solid var(--sc-copper); border-radius: 4px 12px 12px 4px; background: rgba(255, 255, 255, .05); font-size: 15px; line-height: 1.5; }
+.wp-dl-done { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding-top: 6px; }
+.wp-dl-done > b { font: 700 22px/1.2 var(--sc-display); color: #fbf3e8; }
+.wp-dl-sources { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; font-size: 13px; }
+.wp-dl-sources a { color: var(--wp-link); }

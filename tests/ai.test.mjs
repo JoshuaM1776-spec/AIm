@@ -2,7 +2,8 @@
 // accounts, database and Claude. Run: node --experimental-strip-types tests/ai.test.mjs
 import assert from "node:assert";
 import { handle } from "../supabase/functions/ai/handler.ts";
-import { memDb, memHs, memSync } from "./helpers/memdb.mjs";
+import { memDaily, memDb, memHs, memSync } from "./helpers/memdb.mjs";
+import { tidyDaily } from "../supabase/functions/ai/daily.ts";
 import { difficulty } from "../supabase/functions/ai/teachback.ts";
 import { splitCurriculum, mergeBuilt } from "../supabase/functions/ai/homeschool.ts";
 import { checkDoses, checkNumbers, dosesIn, numbersIn, DOSE_PLACEHOLDER, PLACEHOLDER } from "../supabase/functions/ai/scenario.ts";
@@ -96,7 +97,7 @@ test("status reports plan, usage and limits without calling the AI", async () =>
   const deps = makeDeps({ plan: "free" });
   const r = await call(deps, { task: "status" });
   assert.deepStrictEqual(r.body, { ok: true, email: "a@example.com", plan: "free", usage: { calls: 0, tokens: 0 }, billing: { available: false, status: null, renewsAt: null, cancelAtPeriodEnd: false, manage: false }, sync: false,
-    limits: { dayCalls: 1, dayTokens: 100, minuteCalls: 1 } }, "free accounts get a tenth of the Plus allowance");
+    limits: { dayCalls: 1, dayTokens: 100, minuteCalls: 1 }, editor: false }, "free accounts get a tenth of the Plus allowance");
   assert.strictEqual(deps.calls.length, 0);
 });
 
@@ -1413,6 +1414,75 @@ test("deeper: at the floor there's no next question unless they choose to go pas
   assert.strictEqual(past.body.next, "Why does IgE do that?");
   assert.match(d.calls[1].prompt, /go past the useful floor/);
   assert.strictEqual((await call(d, { task: "deeper-step", input: { topic: "x", root: "y", chain: Array(8).fill({ what: "a", why: "b" }) } })).status, 400, "a chain has a bottom");
+});
+
+// ---------- the Daily Challenge (0.75) ----------
+const dayCh = (title, extra = {}) => ({ area: "Math and logic", title, moment: "AD 10, Rome", scene: "You inherit an estate worth 200,000 sesterces from a friend.",
+  question: "How much tax do you pay in total?", choices: ["12,000", "11,900", "11,000"], answer: 1, why: "5% of 200,000, then 1% of what's left.",
+  explain: "Why isn't it simply 6%?", learn: { search: "percent of a percent", note: "Taking a percent twice" },
+  second: { question: "A 20% sale, then 10% off at the till: how much off?", choices: ["30%", "28%", "25%"], answer: 1, why: "10% of the 80% left is 8%." },
+  sources: [{ title: "Roman inheritance tax (Britannica)", url: "https://www.britannica.com/x" }, { title: "OpenStax: Percents", url: "https://openstax.org/y" }],
+  plan: { interest: "Personal finance", goal: "Work out taxes and discounts in my head" }, ...extra });
+function dailyDeps() {
+  const d = makeDeps({ plan: "free", claude: req => ({ ok: true, model: "m", inputTokens: 50, outputTokens: 50,
+    text: JSON.stringify({ days: [...req.prompt.matchAll(/^DAY \d+: (\S+)/gm)].map(m => dayCh(`Puzzle for ${m[1]}`)) }) }) });
+  d.daily = memDaily();
+  d.config = { ...d.config, limits: { dayCalls: 50, dayTokens: 1e7, minuteCalls: 50 }, dailyEditors: ["a@example.com"] };
+  return d;
+}
+
+test("the Daily Challenge: only editors draft, list, save or publish; their status says so", async () => {
+  const d = dailyDeps();
+  assert.strictEqual((await call(d, { task: "status" })).body.editor, true);
+  d.config.dailyEditors = ["someone@else.org"];
+  assert.strictEqual((await call(d, { task: "status" })).body.editor, false);
+  for (const task of ["daily-draft", "daily-list", "daily-save", "daily-remove"])
+    assert.strictEqual((await call(d, { task, input: {} })).status, 403, `${task} is for editors`);
+  assert.strictEqual(d.calls.length, 0, "no AI for anyone else");
+});
+
+test("the Daily Challenge: drafts a week, never over a day already there, one area each in turn", async () => {
+  const d = dailyDeps();
+  const r = await call(d, { task: "daily-draft", input: { from: "2026-10-17", days: 7 } });
+  assert.strictEqual(r.status, 200);
+  assert.deepStrictEqual(r.body.drafted.map(x => x.day), ["2026-10-17", "2026-10-18", "2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23"]);
+  assert.ok([...d.daily.rows.values()].every(x => x.status === "draft"), "drafts, not published");
+  const areas = [...d.calls[0].prompt.matchAll(/AREA: ([^\n]+)/g)].map(m => m[1]);
+  assert.strictEqual(new Set(areas).size, 7, "seven days, seven areas");
+  assert.match(d.calls[0].system, /two sources/);
+  const again = await call(d, { task: "daily-draft", input: { from: "2026-10-17", days: 3 } });
+  assert.deepStrictEqual(again.body.drafted, [], "days already drafted are left alone");
+  assert.strictEqual(d.calls.length, 1);
+  const redo = await call(d, { task: "daily-draft", input: { day: "2026-10-18" } });
+  assert.strictEqual(redo.body.drafted.length, 1, "redraft one day on purpose");
+  assert.match(d.calls[1].prompt, /RECENT \(don't repeat\): Puzzle for 2026-10-17/);
+  assert.strictEqual((await call(d, { task: "daily-draft", input: { from: "2026-10-01" } })).status, 400, "not in the past");
+});
+
+test("the Daily Challenge: an editor's save is tidied; publishing needs two sources; everyone gets only today's published one, no account needed", async () => {
+  const d = dailyDeps();
+  const bad = await call(d, { task: "daily-save", input: { day: "2026-10-16", challenge: { ...dayCh("Tax"), choices: ["a", "b"] } } });
+  assert.strictEqual(bad.status, 400, "three choices");
+  const thin = await call(d, { task: "daily-save", input: { day: "2026-10-16", status: "published", challenge: dayCh("Tax", { sources: [{ title: "One", url: "https://a.org" }] }) } });
+  assert.strictEqual(thin.status, 400, "two sources before publishing");
+  const pub = await call(d, { task: "daily-save", input: { day: "2026-10-16", status: "published", challenge: dayCh("The inheritance tax", { sources: [...dayCh("x").sources, { title: "Bad", url: "javascript:alert(1)" }] }) } });
+  assert.strictEqual(pub.status, 200);
+  assert.strictEqual(pub.body.challenge.sources[2].url, "", "only https links");
+  await call(d, { task: "daily-save", input: { day: "2026-10-17", challenge: dayCh("Tomorrow's draft") } });
+  // No account: the published day only, and never ahead.
+  const anon = await call(d, { task: "daily-today", input: { day: "2026-10-16" } }, { token: "" });
+  assert.strictEqual(anon.status, 200);
+  assert.strictEqual(anon.body.challenge.title, "The inheritance tax");
+  assert.strictEqual((await call(d, { task: "daily-today", input: { day: "2026-10-17" } }, { token: "" })).body.challenge, null, "a draft isn't out");
+  assert.strictEqual((await call(d, { task: "daily-today", input: { day: "2026-10-20" } }, { token: "" })).status, 400, "no peeking ahead");
+  assert.strictEqual((await call(d, { task: "teachback-start", input: {} }, { token: "" })).status, 401, "everything else still needs an account");
+  const list = await call(d, { task: "daily-list", input: {} });
+  assert.deepStrictEqual(list.body.days.map(x => `${x.day}:${x.status}`), ["2026-10-16:published", "2026-10-17:draft"]);
+  await call(d, { task: "daily-remove", input: { day: "2026-10-17" } });
+  assert.strictEqual(d.daily.rows.size, 1);
+  assert.strictEqual(tidyDaily({ title: "x" }), null);
+  const none = makeDeps();
+  assert.strictEqual((await call(none, { task: "daily-today", input: { day: "2026-10-16" } }, { token: "" })).body.challenge, null, "not set up: nothing today");
 });
 
 let failed = 0;

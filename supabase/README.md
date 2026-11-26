@@ -85,6 +85,18 @@ You need a Supabase account, the [Supabase CLI](https://supabase.com/docs/guides
 
 Secrets: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PLUS`. Card details never reach Aim's server.
 
+## The Daily Challenge (0.75)
+
+One challenge a day, the same for everyone. Aim drafts them; an editor checks each against its sources and publishes it in the extension's Daily Challenge editor (Settings → Account → Daily Challenge editor, shown only to editors).
+
+| Part | What it does |
+|---|---|
+| `migrations/0006_daily.sql` | `daily_challenges`: one row a day (`draft` or `published`, the challenge as JSON). Row-level security on, no policies: only the server reads and writes it. |
+| `daily-today` (task on `ai`, no sign-in needed) | The published challenge for the day asked (a day or two either side of today, never further ahead), or none. The extension sends only the date. |
+| `daily-draft`, `daily-list`, `daily-save`, `daily-remove` (tasks on `ai`) | Editors only: draft empty days (up to seven at a time, never over a day already there) or redraft one, list three weeks, save or publish an edited one (publishing needs two sources), delete one. Drafting uses `AIM_MODEL` and counts against Plus limits. |
+
+To set it up: run `0006_daily.sql` in the SQL editor, then add the secret `AIM_DAILY_EDITORS` with your account's email (several: comma-separated), and redeploy `ai`.
+
 ## Before release
 
 - Filling in `config.js` changes what Aim sends off the device, so update `PRIVACY.md` and the store listing's privacy answers at the same time (see the notes in both).
