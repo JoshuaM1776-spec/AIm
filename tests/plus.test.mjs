@@ -800,7 +800,7 @@ await wkEd.waitForSelector("#weeks .week >> nth=1 >> .pill.draft", { timeout: 15
 const wkWeek = [...deps.weekly.rows.keys()][0];
 const wkTitle = thisWk.locator("label:has-text('Title') input").first();
 step("Draft with Aim: the whole story in the form, from the card to the endings, as a draft", (await wkTitle.inputValue()) === "A Resilient Water System" &&
-  (await thisWk.locator(".item-head:has-text('Chapter')").count()) === 5 && (await thisWk.locator(".item-head:has-text('Ending')").count()) === 4 &&
+  (await thisWk.locator(".item-head:has-text('Chapter')").count()) === 9 && (await thisWk.locator(".item-head:has-text('Ending')").count()) === 6 &&
   srv.weeklyPrompts.at(-1).includes("THEME: water in the mountains") && deps.weekly.rows.get(wkWeek).status === "draft" && new Date(`${wkWeek}T12:00:00Z`).getUTCDay() === 1);
 await wkTitle.fill("Water for the Valley");
 await thisWk.locator("input[type=file]").setInputFiles(path.join(ROOT, "scenes", "weekly", "water-system.jpg"));
@@ -835,7 +835,7 @@ await thisWk.locator("button:text-is('Publish')").click();
 await wkEd.waitForSelector("#weeks .week >> nth=1 >> .pill.pub", { timeout: 10000 });
 const wkPub = await deps.weekly.list("2000-01-03", "2100-01-01", true);
 step("published, with your edits and its picture", wkPub.length === 1 && wkPub[0].data.title === "Water for the Valley" && wkPub[0].data.image.startsWith("https://") &&
-  wkPub[0].data.chapters.length === 5 && !wkEdErrors.length, wkEdErrors.join(" | "));
+  wkPub[0].data.chapters.length === 9 && wkPub[0].data.chapters[6].when?.flags?.[0] === "underRated" && !wkEdErrors.length, wkEdErrors.join(" | "));
 if (process.env.SHOTS) { await wkEd.setViewportSize({ width: 1200, height: 1000 }); await wkEd.screenshot({ path: `${process.env.SHOTS}/weekly-editor.png` }); }
 await wkEd.close();
 // On YouTube: everyone's Weekly Challenge, signed in, so the narrator talks it through.
@@ -849,7 +849,7 @@ step("on YouTube: this week's challenge as published, with what to be familiar w
 await yt.click("#wp-home .wp-wk-hints-btn");
 const hintsText = await yt.textContent("#wp-home .wp-wk-hints");
 step("Hints: a few questions worth looking into, each with a video, never the answers", hintsText.includes("How do you turn a flow in liters per second into liters per day?") &&
-  (await yt.$$("#wp-home .wp-wk-hint button")).length === 8 && !hintsText.includes("6,912") && !hintsText.includes("441"));
+  (await yt.$$("#wp-home .wp-wk-hint button")).length === 10 && !hintsText.includes("6,912") && !hintsText.includes("441"));
 if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/weekly-card.png` });
 await yt.click("#wp-home .wp-wk-hint button >> nth=0");
 await yt.waitForURL(/search_query=flow%20rate%20unit%20conversion/);
@@ -858,7 +858,7 @@ await yt.waitForSelector("#wp-home .wp-wk-accept");
 await yt.click("#wp-home .wp-wk-accept");
 await yt.waitForSelector("#wp-home .wp-wk-panel .wp-wk-num");
 let wkText = (await yt.textContent("#wp-home .wp-wk-panel")).replace(/\s+/g, " ");
-step("Accept: chapter 1, the scene, what's given, and the budget and days the rules keep", wkText.includes("Chapter 1 of 5 · Mathematics") && wkText.includes("Is the spring enough?") &&
+step("Accept: chapter 1, the scene, what's given, and the budget and days the rules keep", wkText.includes("Chapter 1 of 8 · Mathematics") && wkText.includes("Is the spring enough?") &&
   wkText.includes("Budget: $40,000") && wkText.includes("Days to the dry season: 90") && wkText.includes("250 seconds"), wkText.slice(0, 200));
 await yt.fill("#wp-home .wp-wk-num", "6000");
 await yt.click("#wp-home .wp-wk-submit");
@@ -876,7 +876,7 @@ await yt.click("#wp-home .wp-wk-next-btn");
 await yt.waitForSelector("#wp-home .wp-wk-option");
 await yt.reload();
 await yt.waitForSelector("#wp-home .wp-wk-accept");
-step("a save point between chapters: the card picks up at chapter 3", (await yt.textContent("#wp-home .wp-wk-accept")).includes("Continue · Chapter 3 of 5"));
+step("a save point between chapters: the card picks up at chapter 3", (await yt.textContent("#wp-home .wp-wk-accept")).includes("Continue · Chapter 3 of 8"));
 await yt.click("#wp-home .wp-wk-accept");
 await yt.waitForSelector("#wp-home .wp-wk-option");
 await yt.click("#wp-home .wp-wk-team summary");
@@ -895,15 +895,30 @@ step("the rules decide what happened; the narrator reads your reasoning: what it
   srv.weeklyPrompts.at(-1).includes("THEIR REASONING: 6 bar is well above the 4.4 bar") && srv.weeklyPrompts.at(-1).includes("GOOD REASONING WEIGHS"), wkText.slice(0, 200));
 if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/weekly-feedback.png` });
 await yt.click("#wp-home .wp-wk-next-btn");
+// The morning rush, then where the tank goes.
+await yt.fill("#wp-home .wp-wk-num", "1224");
+await yt.click("#wp-home .wp-wk-submit");
+await yt.waitForSelector("#wp-home .wp-wk-ok");
+await yt.click("#wp-home .wp-wk-next-btn");
+await yt.click("#wp-home .wp-wk-option:has-text('On the knoll')");
+await yt.fill("#wp-home .wp-wk-why", "Above the taps, so gravity pushes the water out, and the long pipe can run all night.");
+await yt.click("#wp-home .wp-wk-decide");
+await yt.waitForSelector("#wp-home .wp-wk-said", { timeout: 10000 });
+await yt.click("#wp-home .wp-wk-next-btn");
 await yt.waitForSelector("#wp-home .wp-wk-bucket input");
 wkText = (await yt.textContent("#wp-home .wp-wk-panel")).replace(/\s+/g, " ");
 step("the budget: an event first, then share out what's left", wkText.includes("prices are up 25%") && wkText.includes("Budget: $28,000"));
-for (const [i, v] of [10000, 6000, 8000, 2000].entries()) await yt.fill(`#wp-home .wp-wk-bucket input >> nth=${i}`, String(v));
-await yt.fill("#wp-home .wp-wk-why", "Kept three days of storage and a reserve.");
+for (const [i, v] of [10000, 6000, 8000].entries()) await yt.fill(`#wp-home .wp-wk-bucket input >> nth=${i}`, String(v));
+await yt.fill("#wp-home .wp-wk-why", "Funded all three in full and kept $4,000 back.");
 await yt.click("#wp-home .wp-wk-commit");
 await yt.waitForSelector("#wp-home .wp-wk-said", { timeout: 10000 });
 await yt.click("#wp-home .wp-wk-next-btn");
+step("PN6 holds the pressure, so no pressure test: straight on to the storm", (await yt.textContent("#wp-home .wp-wk-panel")).includes("Chapter 7 of 8 · Judgment"));
 await yt.click("#wp-home .wp-wk-option:has-text('Stop and secure')");
+await yt.click("#wp-home .wp-wk-decide");
+await yt.waitForSelector("#wp-home .wp-wk-said", { timeout: 10000 });
+await yt.click("#wp-home .wp-wk-next-btn");
+await yt.click("#wp-home .wp-wk-option:has-text('Train two caretakers')");
 await yt.click("#wp-home .wp-wk-decide");
 await yt.waitForSelector("#wp-home .wp-wk-said", { timeout: 10000 });
 await yt.click("#wp-home .wp-wk-next-btn:has-text('See how it ends')");
@@ -914,7 +929,7 @@ step("the end: how it ended (by the rules), each decision, the debrief, what to 
   wkText.includes("How do we know?") && srv.weeklyPrompts.at(-1).includes("ENDING: Water before the dry season") && srv.weeklyPrompts.at(-1).includes("right on the second try"), wkText.slice(0, 300));
 if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/weekly-end.png`, fullPage: true });
 const wkPlay = (await sw.evaluate(() => chrome.storage.local.get("weeklyPlay"))).weeklyPlay;
-step("kept in this browser: the playthrough, the narrator's feedback and the debrief", wkPlay.play.done && wkPlay.play.log.length === 5 && !!wkPlay.feedback.pipe?.said && !!wkPlay.debrief?.summary);
+step("kept in this browser: the playthrough, the narrator's feedback and the debrief", wkPlay.play.done && wkPlay.play.log.length === 8 && !!wkPlay.feedback.pipe?.said && !!wkPlay.debrief?.summary);
 await yt.click("#wp-home .wp-scene-x");
 await yt.waitForSelector("#wp-home .wp-wk-accept");
 step("back on the card: See how it ended", (await yt.textContent("#wp-home .wp-wk-accept")).includes("See how it ended"));

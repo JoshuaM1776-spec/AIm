@@ -82,8 +82,8 @@ function weeklyCard() {
           : "A new story every Monday, where what you know is your equipment. Check back soon.")));
     return wkHost;
   }
-  const p = wk.state?.play, n = s.chapters.length;
-  const action = !p ? "Accept Challenge" : p.done ? "See how it ended" : `Continue · Chapter ${Math.min(n, p.chapter + 1)} of ${n}`;
+  const p = wk.state?.play, at = p && wkProgress(s, p);
+  const action = !p ? "Accept Challenge" : p.done ? "See how it ended" : `Continue · Chapter ${at.n} of ${at.of}`;
   const withHints = s.topics.filter(t => t.hints?.length);
   wkHost = el("section", { class: `wp-wk-card${wk.playtest ? " wp-wk-playtest" : ""}`, "aria-label": "This week's challenge" },
     wk.playtest ? el("div", { class: "wp-wk-banner" }, "Playtest of a draft. Only you see it, and it's kept apart from the real challenge.",
@@ -204,10 +204,10 @@ function wkDecide(act) {
 }
 
 function wkChapterView(ch) {
-  const p = wk.state.play, n = wk.story.chapters.length;
+  const p = wk.state.play, at = wkProgress(wk.story, p);
   const body = [
     el("div", { class: "wp-wk-ch-head" },
-      el("span", { class: "wp-wk-ch-n" }, `Chapter ${p.chapter + 1} of ${n}${ch.area ? ` · ${ch.area}` : ""}`),
+      el("span", { class: "wp-wk-ch-n" }, `Chapter ${at.n} of ${at.of}${ch.area ? ` · ${ch.area}` : ""}`),
       el("h3", { class: "wp-wk-ch-title" }, ch.title)),
     wkBar(p),
     ch.event ? el("div", { class: "wp-wk-event" }, icon("bulb"), el("span", {}, ch.event.text)) : null,

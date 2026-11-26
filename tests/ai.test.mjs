@@ -1512,7 +1512,8 @@ test("the Weekly Challenge: editors save drafts as they go; publishing needs eve
   assert.match(noPic.body.error.message, /A picture/);
   const pub = await call(d, { task: "weekly-save", input: { week: "2026-10-12", status: "published", story: SAMPLE } });
   assert.strictEqual(pub.status, 200);
-  assert.strictEqual(pub.body.story.chapters.length, 5);
+  assert.strictEqual(pub.body.story.chapters.length, 9);
+  assert.deepStrictEqual(pub.body.story.chapters[6].when, { flags: ["underRated"] }, "a chapter that happens only after a choice keeps its condition");
   const anon = await call(d, { task: "weekly-current", input: { day: "2026-10-16" } }, { token: "" });
   assert.strictEqual(anon.status, 200);
   assert.ok(anon.body.week === "2026-10-12" && anon.body.story.title === "A Resilient Water System");
@@ -1546,8 +1547,8 @@ test("the Weekly Challenge: Aim drafts a whole story in the rules' shape for an 
   assert.match(d.calls[0].prompt, /RECENT STORIES \(make this one different\): The Crossing/);
   assert.match(d.calls[0].system, /Never invent a source/);
   const st = d.weekly.rows.get("2026-10-19");
-  assert.ok(st.status === "draft" && st.data.chapters[4].event.text.startsWith("A storm") && !st.data.chapters[0].event, "events back in the story's shape");
-  assert.ok(st.data.endings[3].when === null && st.data.endings[1].when.maxDays === -1, "the default ending has no conditions");
+  assert.ok(st.status === "draft" && st.data.chapters[7].event.text.startsWith("A storm") && !st.data.chapters[0].event, "events back in the story's shape");
+  assert.ok(st.data.endings[5].when === null && st.data.endings[1].when.maxDays === -1, "the default ending has no conditions");
   await call(d, { task: "weekly-save", input: { week: "2026-10-19", status: "published", story: SAMPLE } });
   assert.strictEqual((await call(d, { task: "weekly-draft", input: { week: "2026-10-19" } })).status, 409, "not over a published week");
 });

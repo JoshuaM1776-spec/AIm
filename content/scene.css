@@ -367,6 +367,7 @@ html.wp-scene-on .wp-dropdown { border: 1px solid var(--sc-edge); background: va
 .wp-wk-small { margin: 0; font-size: 13px; color: var(--sc-ink-2); }
 .wp-wk-again { padding: 8px 12px; border-radius: 10px; background: rgba(244, 168, 98, .12); color: #f6c38f; font-size: 14px; }
 .wp-wk-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.wp-wk-options:has(> :nth-child(4):last-child) { grid-template-columns: repeat(auto-fit, minmax(max(240px, calc(50% - 5px)), 1fr)); }
 .wp .wp-wk-option { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--sc-edge);
   background: rgba(16, 18, 30, .4); color: var(--sc-ink); font: 400 14px/1.45 var(--sc-sans); text-align: left; cursor: pointer; }
 .wp .wp-wk-option b { font: 600 16px/1.3 var(--sc-display); color: #fbf3e8; }

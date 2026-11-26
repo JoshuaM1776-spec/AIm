@@ -2384,18 +2384,28 @@ export async function dailyToday(ctx: { input: unknown; now: Date; daily: DailyS
 // A story: { title, premise, minutes, impact, image, facts[], topics[{ name, icon, hints[{ q, search }] }],
 //   start: { budget, days }, labels: { budget, days }, chapters[], endings[], sources[] }
 // A chapter: { id, area, title, scene, kind: "calculate" | "choose" | "allocate", event?: { text, effects },
+//   when? (the chapter happens only if this holds, judged as you reach it: a consequence of earlier choices),
 //   data[] (what the team knows), rubric[] (what good reasoning weighs), explain (the reasoning prompt),
 //   calculate: question, givens[], answer, unit, tolerance (a fraction), method, right/wrong: { text, effects },
 //   choose: options[{ id, label, detail, effects, outcome }], allocate: buckets[{ id, label, need, short, effects }]
 //   (a part given less than its need: flag short-<id>, and its effects) }
-// Effects: { budget?: number (+/-), days?: number (+/-), flag?: string }. An ending matches when all its
-// `when` holds: flags (all), anyFlags, noFlags, minDays, maxDays, minBudget; the last one is the default.
+// Effects: { budget?: number (+/-), days?: number (+/-), flag?: string }. A `when` holds when all of it
+// does: flags (all), anyFlags, noFlags, minDays, maxDays, minBudget. An ending matches when its `when`
+// holds; the last one is the default.
+
+const WK_MAX_CHAPTERS = 10;
+
+function wkHolds(w, play) {
+  return !w || ((w.flags || []).every(f => play.flags.includes(f)) && (!w.anyFlags?.length || w.anyFlags.some(f => play.flags.includes(f))) &&
+    !(w.noFlags || []).some(f => play.flags.includes(f)) && (w.minDays == null || play.vars.days >= w.minDays) && (w.maxDays == null || play.vars.days <= w.maxDays) &&
+    (w.minBudget == null || play.vars.budget >= w.minBudget));
+}
 
 const WK_KINDS = ["calculate", "choose", "allocate"];
 
 // A new playthrough: the story's starting budget and time, nothing decided yet.
 function wkStart(story) {
-  return { chapter: 0, vars: { budget: Number(story?.start?.budget) || 0, days: Number(story?.start?.days) || 0 }, flags: [], log: [], entered: -1, tries: 0, done: false };
+  return wkSkip(story, { chapter: 0, vars: { budget: Number(story?.start?.budget) || 0, days: Number(story?.start?.days) || 0 }, flags: [], log: [], entered: -1, tries: 0, done: false });
 }
 const wkCopy = play => JSON.parse(JSON.stringify(play));
 function wkApply(play, effects) {
@@ -2419,11 +2429,24 @@ function wkEnter(story, play) {
 const wkCost = effects => Math.max(0, -(Number(effects?.budget) || 0));
 const wkAffordable = (play, option) => wkCost(option.effects) <= play.vars.budget;
 
+// Past the chapters that don't happen on this path, to the next one that does (or the end).
+function wkSkip(story, play) {
+  const chs = story?.chapters || [];
+  while (play.chapter < chs.length && chs[play.chapter].when && !wkHolds(chs[play.chapter].when, play)) play.chapter += 1;
+  if (play.chapter >= chs.length) play.done = true;
+  return play;
+}
 function wkNext(story, play) {
   play.chapter += 1;
   play.tries = 0;
-  if (play.chapter >= (story.chapters || []).length) play.done = true;
-  return play;
+  return wkSkip(story, play);
+}
+// "Chapter n of m": the chapters played so far, and those still ahead on this path as it stands.
+function wkProgress(story, play) {
+  const done = (play.log || []).length;
+  if (play.done) return { n: done, of: done };
+  const ahead = (story?.chapters || []).slice(play.chapter).filter(c => !c.when || wkHolds(c.when, play)).length;
+  return { n: done + 1, of: done + ahead };
 }
 
 // A calculation: right within its tolerance; one more try; then the answer and its method, and the
@@ -2474,10 +2497,7 @@ function wkAllocate(story, play, amounts = {}, explanation = "") {
 // How it ends: the first ending whose conditions hold, else the last.
 function wkEnding(story, play) {
   const ends = story?.endings || [];
-  const holds = w => !w || ((w.flags || []).every(f => play.flags.includes(f)) && (!w.anyFlags?.length || w.anyFlags.some(f => play.flags.includes(f))) &&
-    !(w.noFlags || []).some(f => play.flags.includes(f)) && (w.minDays == null || play.vars.days >= w.minDays) && (w.maxDays == null || play.vars.days <= w.maxDays) &&
-    (w.minBudget == null || play.vars.budget >= w.minBudget));
-  return ends.find((e, i) => i < ends.length - 1 && e.when && holds(e.when)) || ends[ends.length - 1] || null;
+  return ends.find((e, i) => i < ends.length - 1 && e.when && wkHolds(e.when, play)) || ends[ends.length - 1] || null;
 }
 
 // A story, tidied and bounded (the editor's save and the server both check stories the same way);
@@ -2494,6 +2514,12 @@ function wkTidy(x, { forPublish = false } = {}) {
     return Object.keys(o).length ? o : null;
   };
   const list = (v, n, len) => (Array.isArray(v) ? v : []).map(s => t(s, len)).filter(Boolean).slice(0, n);
+  const when = w => {
+    const o = { flags: list(w?.flags, 6, 40), anyFlags: list(w?.anyFlags, 6, 40), noFlags: list(w?.noFlags, 6, 40),
+      minDays: num(w?.minDays), maxDays: num(w?.maxDays), minBudget: num(w?.minBudget) };
+    for (const k of Object.keys(o)) if (o[k] == null || (Array.isArray(o[k]) && !o[k].length)) delete o[k];
+    return Object.keys(o).length ? o : null;
+  };
   const s = x && typeof x === "object" ? x : {};
   const story = {
     title: t(s.title, 80), premise: t(s.premise, 300), minutes: t(s.minutes, 20), impact: t(s.impact, 300),
@@ -2507,7 +2533,7 @@ function wkTidy(x, { forPublish = false } = {}) {
     sources: (Array.isArray(s.sources) ? s.sources : []).map(r => ({ title: t(r?.title, 140), url: /^https:\/\/[^\s"'<>]+$/.test(t(r?.url, 300)) ? t(r.url, 300) : "" })).filter(r => r.title).slice(0, 6)
   };
   const ids = new Set();
-  for (const [i, c] of (Array.isArray(s.chapters) ? s.chapters : []).slice(0, 8).entries()) {
+  for (const [i, c] of (Array.isArray(s.chapters) ? s.chapters : []).slice(0, WK_MAX_CHAPTERS).entries()) {
     const kind = WK_KINDS.includes(c?.kind) ? c.kind : null;
     let id = t(c?.id, 24).replace(/[^\w-]/g, "") || `c${i + 1}`;
     while (ids.has(id)) id += "x";
@@ -2516,6 +2542,9 @@ function wkTidy(x, { forPublish = false } = {}) {
       data: list(c?.data, 10, 300), rubric: list(c?.rubric, 6, 200), explain: t(c?.explain, 200) };
     const evText = t(c?.event?.text, 600);
     if (evText) ch.event = { text: evText, effects: eff(c.event.effects) };
+    // Only if: never the first chapter, which everyone plays.
+    const only = i ? when(c?.when) : null;
+    if (only) ch.when = only;
     if (kind === "calculate") {
       Object.assign(ch, { question: t(c.question, 400), givens: list(c.givens, 8, 200), answer: num(c.answer), unit: t(c.unit, 20),
         tolerance: Math.min(0.2, Math.max(0.001, num(c.tolerance) ?? 0.02)), method: t(c.method, 600),
@@ -2538,13 +2567,8 @@ function wkTidy(x, { forPublish = false } = {}) {
     if (!ch.title || !ch.scene) problems.push(`Chapter ${i + 1}: a title and a scene.`);
     story.chapters.push(ch);
   }
-  story.endings = (Array.isArray(s.endings) ? s.endings : []).map(e => {
-    const w = e?.when || {};
-    const when = { flags: list(w.flags, 6, 40), anyFlags: list(w.anyFlags, 6, 40), noFlags: list(w.noFlags, 6, 40),
-      minDays: num(w.minDays), maxDays: num(w.maxDays), minBudget: num(w.minBudget) };
-    for (const k of Object.keys(when)) if (when[k] == null || (Array.isArray(when[k]) && !when[k].length)) delete when[k];
-    return { title: t(e?.title, 80), text: t(e?.text, 900), when: Object.keys(when).length ? when : null };
-  }).filter(e => e.title).slice(0, 6);
+  story.endings = (Array.isArray(s.endings) ? s.endings : []).map(e => ({ title: t(e?.title, 80), text: t(e?.text, 900), when: when(e?.when) }))
+    .filter(e => e.title).slice(0, 6);
   if (!story.title || !story.premise) problems.push("A title and a premise.");
   if (story.chapters.length < 2) problems.push("At least two chapters.");
   if (!story.endings.length) problems.push("At least one ending.");
@@ -2673,7 +2697,7 @@ const WEEKLY_SCHEMA = {
 const WEEKLY_DRAFT_SYSTEM = `You draft the Weekly Challenge for Aim, which helps people learn on YouTube: an interactive story, about 40 minutes, where real knowledge is the equipment. Everyone plays the same story; an editor checks every fact and number before anyone sees it, so accuracy matters more than anything.
 
 The story's rules decide what happens, so write them exactly:
-- 4 to 6 chapters, each a different kind of thinking from a different area (mathematics, physics, engineering, economics, biology, history, judgment...). Each chapter: a title, a scene (2 to 4 sentences of story), and one decision.
+- 6 to 8 chapters, each a different kind of thinking from a different area (mathematics, physics, engineering, economics, biology, history, judgment...). Each chapter: a title, a scene (2 to 4 sentences of story), and one decision.
 - kind "calculate": a question with one numeric answer, its unit, the givens (data needed, stated plainly), the answer computed exactly (do the arithmetic carefully), a tolerance (0.02 to 0.05), the method in one or two sentences, and what happens when right and when wrong (text and effects).
 - kind "choose": 2 or 3 options, each with a label, a detail (what it costs in money and days, in the text), effects (budget and days as negative numbers for costs; a flag naming a consequence that matters later, or ""), and an outcome sentence. Exactly one option should be clearly sound to someone who knows the topic; the others plausible mistakes.
 - kind "allocate": 3 or 4 parts to share the budget across, each with the least it needs (need), what happens if it gets less (short), and effects if short (e.g. days lost).

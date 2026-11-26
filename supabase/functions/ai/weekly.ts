@@ -107,7 +107,7 @@ const WEEKLY_SCHEMA = {
 const WEEKLY_DRAFT_SYSTEM = `You draft the Weekly Challenge for Aim, which helps people learn on YouTube: an interactive story, about 40 minutes, where real knowledge is the equipment. Everyone plays the same story; an editor checks every fact and number before anyone sees it, so accuracy matters more than anything.
 
 The story's rules decide what happens, so write them exactly:
-- 4 to 6 chapters, each a different kind of thinking from a different area (mathematics, physics, engineering, economics, biology, history, judgment...). Each chapter: a title, a scene (2 to 4 sentences of story), and one decision.
+- 6 to 8 chapters, each a different kind of thinking from a different area (mathematics, physics, engineering, economics, biology, history, judgment...). Each chapter: a title, a scene (2 to 4 sentences of story), and one decision.
 - kind "calculate": a question with one numeric answer, its unit, the givens (data needed, stated plainly), the answer computed exactly (do the arithmetic carefully), a tolerance (0.02 to 0.05), the method in one or two sentences, and what happens when right and when wrong (text and effects).
 - kind "choose": 2 or 3 options, each with a label, a detail (what it costs in money and days, in the text), effects (budget and days as negative numbers for costs; a flag naming a consequence that matters later, or ""), and an outcome sentence. Exactly one option should be clearly sound to someone who knows the topic; the others plausible mistakes.
 - kind "allocate": 3 or 4 parts to share the budget across, each with the least it needs (need), what happens if it gets less (short), and effects if short (e.g. days lost).

@@ -1203,38 +1203,62 @@ test("the Weekly Challenge (0.76): the story's rules decide every path; this wee
   const sample = fs.readFileSync(path.join(__dirname, "..", "weekly-sample.json"), "utf8");
   const r = (code) => JSON.parse(JSON.stringify(env.run(code)));
   env.run(`var S = wkTidy(${sample}, { forPublish: true }).story;`);
-  assert.ok(env.run("S") && env.run("S.chapters.length") === 5, "the sample story is ready to publish");
+  assert.ok(env.run("S") && env.run("S.chapters.length") === 9 && env.run("S.sources.length") === 6, "the first story is ready to publish");
   // A calculation: two tries, then the answer and its method; a wrong one costs what the story says.
   env.run("var P = wkEnter(S, wkStart(S));");
+  assert.deepStrictEqual(r("wkProgress(S, P)"), { n: 1, of: 8 }, "eight chapters, unless a choice adds one");
   let x = r("wkCalculate(S, P, 'lots')");
   assert.ok(x.error, "not a number");
   x = r("(P = wkCalculate(S, P, 5000).play, wkCalculate(S, P, 6000))");
   assert.ok(!x.right && x.answer === 6912 && /0\.08/.test(x.method) && x.play.vars.days === 85 && x.play.chapter === 1, JSON.stringify(x));
   env.run("P = wkCalculate(S, wkEnter(S, wkStart(S)), '6,912').play");
   assert.ok(env.run("P.log[0].right && P.vars.days === 90"), "right the first time, with a comma");
-  // A choice can't spend money you don't have; the PN4 pipe leads to the burst, whatever else you do.
+  // A choice can't spend money you don't have.
   env.run("P = wkCalculate(S, wkEnter(S, P), 441).play");
   env.run("var Q = wkCopy(P); Q.vars.budget = 1000;");
   assert.ok(r("wkChoose(S, wkEnter(S, Q), 'pn6', 'x')").error, "too expensive");
-  env.run("P = wkChoose(S, wkEnter(S, P), 'pn4', 'cheapest').play");
+  // PN4 brings a chapter of its own: the pressure test, where it can still be put right.
+  env.run("var B = wkChoose(S, wkEnter(S, P), 'pn6').play; P = wkChoose(S, wkEnter(S, P), 'pn4', 'cheapest').play;");
   assert.ok(env.run("P.flags.includes('underRated') && P.vars.budget === 31000 && P.vars.days === 55"));
-  // The budget: the event raises the tank's price; over the budget is refused; a part left short is flagged.
+  assert.deepStrictEqual(r("wkProgress(S, P)"), { n: 4, of: 9 }, "PN4: the pressure test is ahead");
+  assert.deepStrictEqual(r("wkProgress(S, B)"), { n: 4, of: 8 }, "PN6: it isn't");
+  // The morning rush, then where the tank goes.
+  env.run("P = wkCalculate(S, wkEnter(S, P), 1224).play; P = wkChoose(S, wkEnter(S, P), 'knoll').play;");
+  // The budget: over what's left is refused; a part left short is flagged; what isn't spent stays in hand.
   env.run("P = wkEnter(S, P)");
   assert.ok(r("wkAllocate(S, P, { tank: 40000 })").error, "more than what's left");
-  x = r("wkAllocate(S, P, { tank: 10000, taps: 6000, labor: 4000, reserve: 2000 }, 'cut labor')");
-  assert.ok(x.short.length === 1 && x.short[0].id === "labor" && x.play.vars.days === 40 && x.play.flags.includes("short-labor"), JSON.stringify(x.short));
-  env.run(`P = wkAllocate(S, P, { tank: 10000, taps: 6000, labor: 4000, reserve: 2000 }).play; P = wkChoose(S, wkEnter(S, P), "secure").play;`);
-  assert.ok(env.run("P.done") && env.run("wkEnding(S, P).title") === "A burst at the bottom", "the first ending that holds");
-  // The good path: every part covered, the right pipe, the site secured.
-  env.run(`P = wkStart(S); P = wkCalculate(S, wkEnter(S, P), 6912).play; P = wkCalculate(S, wkEnter(S, P), 441.45).play;
-    P = wkChoose(S, wkEnter(S, P), "pn6").play; P = wkAllocate(S, wkEnter(S, P), { tank: 10000, taps: 6000, labor: 8000, reserve: 2000 }).play;
-    P = wkChoose(S, wkEnter(S, P), "secure").play;`);
-  assert.strictEqual(env.run("wkEnding(S, P).title"), "Water before the dry season");
-  // A recount, the steel pipe, too few hands and a storm push it past the dry season.
+  x = r("wkAllocate(S, P, { tank: 10000, taps: 6000, labor: 4000 }, 'cut labor')");
+  assert.ok(x.short.length === 1 && x.short[0].id === "labor" && x.play.vars.days === 40 && x.play.vars.budget === 11000 && x.play.flags.includes("short-labor"), JSON.stringify(x.short));
+  env.run("P = wkAllocate(S, P, { tank: 10000, taps: 6000, labor: 8000 }).play;");
+  assert.strictEqual(env.run("wkChapterOf(S, P).id"), "test", "PN4: the pressure test comes next");
+  assert.strictEqual(env.run("wkChapterOf(S, wkAllocate(S, wkEnter(S, wkChoose(S, wkEnter(S, wkCalculate(S, wkEnter(S, B), 1224).play), 'knoll').play), { tank: 10000, taps: 6000, labor: 8000 }).play).id"), "storm",
+    "PN6: straight on to the storm");
+  // Put right with an open tank halfway down: the best ending is still there.
+  env.run(`var F = wkChoose(S, wkEnter(S, P), "breaktank").play; F = wkChoose(S, wkEnter(S, F), "secure").play; F = wkChoose(S, wkEnter(S, F), "caretakers").play;`);
+  assert.ok(env.run("F.done") && env.run("wkEnding(S, F).title") === "Water before the dry season" && env.run("F.vars.budget") === 4700);
+  // Run above its rating: it splits, whatever else goes well.
+  env.run(`var R = wkChoose(S, wkEnter(S, P), "run").play; R = wkChoose(S, wkEnter(S, R), "secure").play; R = wkChoose(S, wkEnter(S, R), "caretakers").play;`);
+  assert.strictEqual(env.run("wkEnding(S, R).title"), "A split at the bottom", "the first ending that holds");
+  // Over the ridge: water can't climb above its source; nearly four weeks lost.
+  env.run(`var G = wkChoose(S, wkEnter(S, wkAllocate(S, wkEnter(S, wkChoose(S, wkEnter(S, wkCalculate(S, wkEnter(S, B), 1224).play), "knoll").play), { tank: 10000, taps: 6000, labor: 8000 }).play), "ridge").play;`);
+  assert.ok(env.run("G.vars.days") === 31 && env.run("G.flags.includes('overRidge')"));
+  // A tank level with the taps, and no one to look after it.
+  env.run(`var L = wkChoose(S, wkEnter(S, wkCalculate(S, wkEnter(S, B), 1224).play), "square").play; L = wkAllocate(S, wkEnter(S, L), { tank: 10000, taps: 6000, labor: 8000 }).play;
+    L = wkChoose(S, wkEnter(S, L), "secure").play;`);
+  assert.strictEqual(env.run("wkEnding(S, wkChoose(S, wkEnter(S, L), 'caretakers').play).title"), "Water at a trickle");
+  env.run(`var K = wkChoose(S, wkEnter(S, wkCalculate(S, wkEnter(S, B), 1224).play), "knoll").play; K = wkAllocate(S, wkEnter(S, K), { tank: 10000, taps: 6000, labor: 8000 }).play;
+    K = wkChoose(S, wkEnter(S, K), "secure").play;`);
+  assert.strictEqual(env.run("wkEnding(S, wkChoose(S, wkEnter(S, K), 'leave').play).title"), "It worked, for a while");
+  // A recount, steel, too few hands and a storm push it past the dry season.
   env.run(`P = wkStart(S); P = wkCalculate(S, wkEnter(S, P), 1).play; P = wkCalculate(S, wkEnter(S, P), 1).play; P = wkCalculate(S, wkEnter(S, P), 441.45).play;
-    P = wkChoose(S, wkEnter(S, P), "steel").play; P = wkAllocate(S, wkEnter(S, P), { tank: 4000, taps: 0, labor: 0, reserve: 0 }).play;
-    P = wkChoose(S, wkEnter(S, P), "push").play;`);
+    P = wkChoose(S, wkEnter(S, P), "steel").play; P = wkCalculate(S, wkEnter(S, P), 1224).play; P = wkChoose(S, wkEnter(S, P), "knoll").play;
+    P = wkAllocate(S, wkEnter(S, P), { tank: 10000, taps: 4000, labor: 0 }).play; P = wkChoose(S, wkEnter(S, P), "push").play;`);
+  assert.ok(r("wkAffordable(P, S.chapters[8].options[0])") === false, "nothing left for caretakers");
+  env.run(`P = wkChoose(S, wkEnter(S, P), "district").play;`);
   assert.strictEqual(env.run("wkEnding(S, P).title"), "Not before the dry season");
+  // Only if: the first chapter is for everyone; a later one keeps its condition.
+  const only = r(`wkTidy({ ...S, chapters: S.chapters.map((c, i) => i === 0 ? { ...c, when: { flags: ["x"] } } : c) })`).draft;
+  assert.ok(!only.chapters[0].when && only.chapters[6].when.flags[0] === "underRated");
   // Checking a story: what's missing is listed; a picture and two sources only to publish.
   const t = r(`wkTidy({ title: "T", premise: "P", chapters: [{ kind: "choose", title: "a", scene: "b", options: [{ label: "x" }] }], endings: [] }, { forPublish: true })`);
   assert.ok(!t.story && t.problems.some(p => /two options/.test(p)) && t.problems.some(p => /ending/.test(p)) && t.problems.some(p => /picture/.test(p)), JSON.stringify(t.problems));

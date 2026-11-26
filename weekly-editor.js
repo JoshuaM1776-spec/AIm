@@ -148,7 +148,11 @@ function chapterPart(c) {
     field(c, "area", "Area (Mathematics, Physics…)"), field(c, "title", "Title"),
     field(c, "scene", "Scene", { area: true, full: true }),
     field(c.event, "text", "Event when the chapter starts (optional: a price rises, a storm comes)", { area: true, full: true }));
-  const parts = [kind, effects(c.event, "effects", "Event")];
+  c.when = c.when || {};
+  const parts = [kind, effects(c.event, "effects", "Event"),
+    node("div", { className: "grid three" }, words(c.when, "flags", "Only if all of these flags"), words(c.when, "anyFlags", "Only if any of these flags"),
+      words(c.when, "noFlags", "Only if none of these flags")),
+    node("p", { className: "hint", textContent: "Leave the three above empty for a chapter everyone plays. A chapter that depends on flags is a consequence of earlier choices (the first chapter never is)." })];
   if (c.kind === "calculate") {
     parts.push(node("div", { className: "grid" },
       lines(c, "givens", "Givens (one per line)"), field(c, "question", "Question", { area: true, full: true }),
@@ -178,7 +182,7 @@ function rulesPart(s) {
     node("div", { className: "grid four" },
       field(s.start, "budget", "Starting budget", { num: true }), field(s.labels, "budget", "Called"),
       field(s.start, "days", "Starting days", { num: true }), field(s.labels, "days", "Called")),
-    many(s.chapters, { title: "Chapter", max: 8, make: () => shape({ chapters: [{ kind: "choose" }] }).chapters[0], render: c => chapterPart(c) }),
+    many(s.chapters, { title: "Chapter", max: WK_MAX_CHAPTERS, make: () => shape({ chapters: [{ kind: "choose" }] }).chapters[0], render: c => chapterPart(c) }),
     node("h3", { className: "sec-h", textContent: "Endings" }),
     node("p", { className: "hint", textContent: "The first ending whose conditions all hold is the one that happens; the last is the default, so leave its conditions empty." }),
     many(s.endings, { title: "Ending", max: 6, make: () => ({ title: "", text: "", when: {} }),
