@@ -9,6 +9,7 @@ import type { AiRequest, Assessment, TeachbackDb, Turn } from "./teachback.ts";
 import type { SyncStore } from "./sync.ts";
 import type { HsDb } from "./homeschool.ts";
 import type { DailyStore } from "./daily.ts";
+import type { WeeklyStore } from "./weekly.ts";
 import { type BillingConfig, checkoutUrl, deleteCustomer, portalUrl, stripeApi } from "./billing.ts";
 
 const env = (k: string, d = "") => Deno.env.get(k) ?? d;
@@ -274,6 +275,26 @@ const daily: DailyStore = {
   async remove(day) { must(await admin.from("daily_challenges").delete().eq("day", day)); }
 };
 
+// The Weekly Challenge: one row a week (migrations/0007_weekly.sql), its picture in the public "weekly" bucket.
+const weekly: WeeklyStore = {
+  async list(from, to, publishedOnly) {
+    let q = admin.from("weekly_challenges").select("week, status, data, updated_at").gte("week", from).lte("week", to).order("week");
+    if (publishedOnly) q = q.eq("status", "published");
+    return must(await q)!.map(r => ({ week: r.week, status: r.status, data: r.data, updatedAt: r.updated_at }));
+  },
+  async save(week, status, data) {
+    const now = new Date().toISOString();
+    must(await admin.from("weekly_challenges").upsert({ week, status, data, updated_at: now, published_at: status === "published" ? now : null }));
+  },
+  async remove(week) { must(await admin.from("weekly_challenges").delete().eq("week", week)); },
+  async putImage(week, bytes, type) {
+    const path = `${week}-${Date.now()}.${type.split("/")[1].replace("jpeg", "jpg")}`;
+    const { error } = await admin.storage.from("weekly").upload(path, bytes, { contentType: type, upsert: true });
+    if (error) throw error;
+    return admin.storage.from("weekly").getPublicUrl(path).data.publicUrl;
+  }
+};
+
 const deps: Deps = {
   async getUser(token) {
     const { data, error } = await admin.auth.getUser(token);
@@ -316,6 +337,7 @@ const deps: Deps = {
   sync,
   hs: hsDb,
   daily,
+  weekly,
   now: () => new Date(),
   config: {
     origins: env("AIM_EXTENSION_ORIGINS").split(",").map(s => s.trim()).filter(Boolean),

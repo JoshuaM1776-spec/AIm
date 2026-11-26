@@ -109,8 +109,11 @@ function accountView(st) {
       node("b", { textContent: "Aim Plus" }),
       node("div", { textContent: "Study sessions built from your syllabus, TeachBack checks, Put it into practice, Pathways, and the librarian with a bigger daily allowance." })));
   }
-  // Aim's editors (AIM_DAILY_EDITORS on the server): the page where they check and publish the Daily Challenge.
+  // Aim's editors (AIM_DAILY_EDITORS on the server): the pages where they check and publish the challenges.
   if (st.editor) {
+    lines.push(node("div", { className: "setting" }, node("div", { className: "what" }, node("b", { textContent: "Weekly Challenge editor" }),
+      node("span", { textContent: "Draft, check, playtest and publish the story everyone gets each week." })),
+      node("a", { className: "btn tonal", href: "weekly-editor.html", textContent: "Open", id: "weeklyEditor" })));
     lines.push(node("div", { className: "setting" }, node("div", { className: "what" }, node("b", { textContent: "Daily Challenge editor" }),
       node("span", { textContent: "Draft, check and publish the challenge everyone gets each day." })),
       node("a", { className: "btn tonal", href: "daily-editor.html", textContent: "Open", id: "dailyEditor" })));

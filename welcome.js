@@ -276,8 +276,8 @@ async function interests() {
       await say(`Then Explore is for ${interest}: good channels and one-off challenges, no plan needed.`);
     } else {
       const r = await send({ type: "path-add", interest, goal: g.text });
-      if (r?.result === "applied") { S.added.push(r.path); await say(`Got it: ${interest}, toward “${r.path.goal}”. I'll lay out a path for it, in order, and you pick it up from Start a challenge.`); }
-      else await say(r?.message || "I couldn't keep that one. You can add it later from Start a challenge.");
+      if (r?.result === "applied") { S.added.push(r.path); await say(`Got it: ${interest}, toward “${r.path.goal}”. I'll lay out a path for it, in order, and you pick it up from Learning plans.`); }
+      else await say(r?.message || "I couldn't keep that one. You can add it later from Learning plans.");
     }
     await say("Anything else you're curious about?");
   }
@@ -288,13 +288,13 @@ async function firstPath() {
   const path = S.added[0];
   if (!path) return;
   const st = await send({ type: "plus-status" });
-  if (!st?.signedIn) return say(`When you've signed in, open Start a challenge on YouTube's homepage and pick ${path.interest}: I'll draft the path then.`);
+  if (!st?.signedIn) return say(`When you've signed in, open Learning plans on YouTube's homepage and pick ${path.interest}: I'll draft the path then.`);
   await say(`Let's lay out your path toward “${path.goal}”. This takes a moment.`);
   const ctx = await send({ type: "path-context", id: path.id });
   let r;
   try { r = await chrome.runtime.sendMessage({ type: "plus-call", task: "path-plan", input: ctx }); } catch { r = null; }
   const saved = r && !r.error ? await send({ type: "path-plan-save", id: path.id, plan: r }) : null;
-  if (!saved || saved.result !== "applied") return say(`${r?.error || "I couldn't draft it just now."} Pick ${path.interest} from Start a challenge on YouTube and I'll try again.`);
+  if (!saved || saved.result !== "applied") return say(`${r?.error || "I couldn't draft it just now."} Pick ${path.interest} from Learning plans on YouTube and I'll try again.`);
   const plan = saved.path.plan, first = saved.path.lessons[0];
   await say("Here's the big picture, in order. Each part builds on the one before; I've written the first lessons in detail and I'll write the rest as you go.",
     node("ol", { className: "path-units" }, ...plan.units.map(u => node("li", {}, node("b", { textContent: u.title }), u.about ? node("span", { textContent: ` · ${u.about}` }) : null))),
@@ -312,7 +312,7 @@ async function account() {
 
 async function wrapUp() {
   composer.replaceChildren();
-  await say(S.first ? "You're set. Start your first lesson whenever you're ready." : "You're set. On YouTube's homepage, say what you're here for, or press Start a challenge.",
+  await say(S.first ? "You're set. Start your first lesson whenever you're ready." : "You're set. On YouTube's homepage, take on this week's challenge, or open Learning plans.",
     node("ul", { className: "done-list" },
       node("li", { textContent: "Your aim, breaks and time live in the Aim button at the top of YouTube." }),
       node("li", { textContent: "I'll point out a couple of things the first time you use them." })),

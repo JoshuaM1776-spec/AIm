@@ -35,7 +35,9 @@ const DEFAULT_SETTINGS = {
   guessFirst: true,
   // The librarian may read captions when it talks a session through (Aim Plus). A preview, off by
   // default until the legal review (docs/ROADMAP.md → Decisions).
-  captions: false
+  captions: false,
+  // The Daily Challenge on YouTube's homepage, beside the Weekly Challenge (paused in 0.76: off unless you turn it on).
+  dailyOn: false
 };
 const GRACE_CHOICES = [0, 5, 10, 15, 30];
 const minutesSetting = max => v => Number.isInteger(v) && v >= 0 && v <= max;
@@ -58,7 +60,8 @@ const SETTING_RULES = {
   librarianMemory: v => typeof v === "boolean",
   spacedReview: v => typeof v === "boolean",
   guessFirst: v => typeof v === "boolean",
-  captions: v => typeof v === "boolean"
+  captions: v => typeof v === "boolean",
+  dailyOn: v => typeof v === "boolean"
 };
 
 // ---------- write queue ----------
@@ -525,6 +528,43 @@ async function pathsView() {
 async function pathGet(id) {
   const path = (await pathsAll()).find(x => x.id === id);
   return path ? { result: "applied", path, progress: path.plan ? pathProgress(path) : null } : { result: "error", message: "That interest isn't here any more." };
+}
+
+// ---------- The Weekly Challenge (0.76): one story a week, the same for everyone ----------
+// This week's story as fetched (weeklyCache, kept for the week; while it isn't out, asked again at
+// most hourly), and your playthrough (weeklyPlay: the rules' state from content/weekly-shared.js, the
+// outcome on screen, the narrator's feedback, your debrief). A new week starts fresh. An editor's
+// playtest of a draft (weeklyPlaytest) keeps its own playthrough, apart from the real one.
+async function weeklyCached() {
+  const { weeklyCache, weeklyPlay } = await chrome.storage.local.get(["weeklyCache", "weeklyPlay"]);
+  const week = wkWeekOf(localDay());
+  const mine = weeklyCache?.week === week;
+  const fresh = mine && (weeklyCache.story || Date.now() - (weeklyCache.at || 0) < 3600e3);
+  return { week, fresh, story: mine ? weeklyCache.story || null : null, state: weeklyPlay?.week === week ? weeklyPlay : null };
+}
+async function weeklyCacheSave(week, story) {
+  await chrome.storage.local.set({ weeklyCache: { week, story: story || null, at: Date.now() } });
+  return { result: "applied" };
+}
+// The playthrough as the page has it, kept as is (it's this browser's own record), within reason.
+async function weeklyPlaySave(state, playtest = false) {
+  if (!state || typeof state !== "object" || !/^\d{4}-\d{2}-\d{2}$/.test(String(state.week || ""))) return { result: "invalid" };
+  if (JSON.stringify(state).length > 60000) return { result: "too-large" };
+  if (playtest) {
+    const { weeklyPlaytest } = await chrome.storage.local.get("weeklyPlaytest");
+    if (!weeklyPlaytest) return { result: "invalid" };
+    await chrome.storage.local.set({ weeklyPlaytest: { ...weeklyPlaytest, state } });
+  } else await chrome.storage.local.set({ weeklyPlay: state });
+  return { result: "applied" };
+}
+async function weeklyPlaytestSet(week, story) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(week || "")) || !story || typeof story !== "object") return { result: "invalid" };
+  await chrome.storage.local.set({ weeklyPlaytest: { week, story, state: null, at: Date.now() } });
+  return { result: "applied" };
+}
+async function weeklyPlaytestGet() {
+  const { weeklyPlaytest } = await chrome.storage.local.get("weeklyPlaytest");
+  return weeklyPlaytest && Date.now() - weeklyPlaytest.at < 6 * 3600e3 ? weeklyPlaytest : null;
 }
 
 // ---------- The Daily Challenge (0.75): the same for everyone ----------

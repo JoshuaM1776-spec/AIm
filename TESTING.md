@@ -514,6 +514,18 @@ Needs the server redeployed, `0006_daily.sql` run, and `AIM_DAILY_EDITORS` set t
 - [ ] Done: how it went in words, How do we know? (the sources, as links), and Want a plan for this?, which opens Start a challenge with the interest and goal filled in.
 - [ ] Nothing published today: "Today's challenge isn't out yet." A copy of Aim without a server: it says it isn't connected.
 
+### 68. The Weekly Challenge (0.76)
+Needs the server redeployed and `0007_weekly.sql` run (it makes the `weekly_challenges` table and the public `weekly` picture bucket). Editors are the accounts in `AIM_DAILY_EDITORS`.
+- [ ] YouTube's homepage opens on this week's challenge, as one card: the picture, **Weekly Challenge · 35–45 min**, the title, the premise, the facts (~200 people · One season · Limited resources), "Be familiar with:" and its topics, "These topics will help you succeed…", **The Impact**, and **Accept Challenge**. Under it, a slim search and **Learning plans** (or **Continue: <your aim>**). No Daily Challenge unless Settings → Challenges → **Daily Challenge too** is on.
+- [ ] Nothing published this week: "This week's challenge is on its way."
+- [ ] **Hints**: a few questions under each topic, each with **Find a video** (a YouTube search). Nothing gives an answer away.
+- [ ] Accept: chapter 1 of 5, its area, the budget and days, the scene. A calculation: a wrong answer gets one more try; a second miss shows the answer and how it's worked out, and costs what the story says. A choice can't be made without the money for it. The budget: the total against what's left; going over is refused; a part given less than it needs shows what that costs.
+- [ ] Signed in: **What your team knows** → Ask the narrator answers only from what the team knows. After a choice or a budget, the narrator says what your reasoning weighed and what it missed (signed out: "A strong answer weighs" and its points).
+- [ ] Close it between chapters and reload: the card says **Continue · Chapter n of 5**, and it picks up there.
+- [ ] The end: how it ended (the story's rules: the PN4 pipe always bursts; running out of days, not before the dry season), your decisions in a line each, your debrief (signed in), what's worth learning next with videos, and How do we know?. The card then says **See how it ended**. Next Monday, a new one.
+- [ ] Settings → Account → **Weekly Challenge editor** (editors only): last week, this week and the next eight. Open a week: **Draft with Aim** (a theme if you like) or **Start from the sample story**; every part editable, from the card to the endings; a picture (resized before it's sent); **Check** lists what's missing; **Playtest on YouTube** plays the draft in a new tab, marked as a playtest, kept apart from the real one; **Publish** needs the box ticked, two sources and a picture; **Unpublish**, **Delete**.
+- [ ] A challenge of your own: Learning plans → **Find a challenge of your own** (signed in), as before.
+
 ## Known issues (not regressions)
 
 - In this test environment, "opening a video in YouTube's one page plays that video" (tests/browser.test.js) sometimes fails on timing alone; it passes on a rerun and fails the same way on 0.71.

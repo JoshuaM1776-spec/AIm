@@ -2,7 +2,7 @@
 // Aim Free uses no AI and talks to no server. Aim Plus (plus.js) talks to Aim's server only
 // after the user signs in, and only when config.js names a server.
 
-importScripts("content/guess-shared.js", "store.js", "config.js", "plus.js", "sync.js");
+importScripts("content/guess-shared.js", "content/weekly-shared.js", "store.js", "config.js", "plus.js", "sync.js");
 
 // Fires on first install and on every update or reload of the extension. A new install opens the
 // welcome tour; an update from before onboarding existed skips it (see setOnboarding in store.js).
@@ -77,6 +77,8 @@ const writes = {
   "challenge-start": m => challengeStart(m.challenge),
   "challenge-today-save": m => challengeTodaySave(String(m.scale || ""), m.rec),
   "daily-answer": m => dailyAnswer(String(m.day || ""), m.patch),
+  "weekly-play-save": m => weeklyPlaySave(m.state, !!m.playtest),
+  "weekly-playtest-set": m => weeklyPlaytestSet(m.week, m.story),
   "path-add": m => pathAdd({ interest: m.interest, goal: m.goal, why: m.why }),
   "path-remove": m => pathRemove(String(m.id || "")),
   "path-plan-save": m => pathPlanSave(String(m.id || ""), m.plan),
@@ -170,6 +172,9 @@ const reads = {
   "challenge-today": () => challengeToday(),
   "daily-get": m => dailyGet(!!m.refresh),
   "daily-peek": () => dailyCached(),
+  "weekly-get": m => weeklyGet(!!m.refresh),
+  "weekly-peek": () => weeklyCached(),
+  "weekly-playtest": () => weeklyPlaytestGet(),
   "goal-check": m => ({ goal: goalShaped(String(m.text || "")), name: goalName(String(m.text || "")), suggestion: suggestGoal(String(m.text || "")) }),
   "memory-list": () => memoryList(),
   "captions-stats": () => captionsStats(),
@@ -233,6 +238,21 @@ function refreshThemes(force = false) {
     return { result: "applied", themes: Array.isArray(r?.themes) ? r.themes.length : 0 };
   })().finally(() => { themesRunning = null; });
   return force ? themesRunning : (themesRunning.catch(() => {}), { result: "started" });
+}
+
+// This week's Weekly Challenge for a YouTube tab: cached for the week, asked again hourly while it isn't
+// out yet; the same story for everyone, so no account is needed. The fetch stays out of serial().
+async function weeklyGet(refresh = false) {
+  const c = await weeklyCached();
+  if (c.fresh && (c.story || !refresh)) return c;
+  try {
+    const r = await plusWeeklyCurrent(localDay());
+    if (r.unavailable) return { ...c, unavailable: true };
+    await serial(() => weeklyCacheSave(c.week, r.story));
+    return { ...c, story: r.story, fresh: true };
+  } catch (e) {
+    return { ...c, error: String(e.message || e) };
+  }
 }
 
 // Today's Daily Challenge for a YouTube tab: the cached one, or fetched from Aim's server (no account

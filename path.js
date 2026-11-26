@@ -91,7 +91,7 @@ async function render() {
 async function renderList(page) {
   const list = (await send({ type: "paths" })) || [];
   page.replaceChildren(...[node("section", { className: "path-head" }, node("div", { className: "eyebrow", textContent: "Your paths" }), node("h1", { textContent: "What you're working toward" }),
-    node("p", { className: "lede", textContent: "Each interest, the goal behind it, and how far along its path you are. Add one from Start a challenge on YouTube's homepage." })),
+    node("p", { className: "lede", textContent: "Each interest, the goal behind it, and how far along its path you are. Add one from Learning plans on YouTube's homepage." })),
     list.length ? node("div", { className: "list" }, ...list.map(x => node("a", { className: "card", href: `path.html?id=${encodeURIComponent(x.id)}` },
       node("div", { className: "eyebrow", textContent: x.interest }), node("h2", { textContent: x.title, style: "font: 500 22px/28px var(--font-serif); margin: 4px 0" }),
       node("div", { className: "progress" }, node("div", { className: "bar" }, node("i", { style: `width:${x.progress?.percent || 0}%` })),

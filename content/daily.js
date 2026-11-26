@@ -92,7 +92,7 @@ function dailyPanel() {
   return dlHost;
 }
 
-// "Want a plan for this?": the interest and its goal, ready to add under Start a challenge.
+// "Want a plan for this?": the interest and its goal, ready to add under Learning plans.
 async function planFromDaily(plan) {
   await openContinue();
   pw.adding = true;

@@ -136,3 +136,18 @@ export function memDaily() {
     async remove(day) { rows.delete(day); }
   };
 }
+
+// The Weekly Challenge's weeks and pictures (weekly.ts WeeklyStore), in memory.
+export function memWeekly() {
+  const rows = new Map(), images = [];
+  return {
+    rows, images,
+    async list(from, to, publishedOnly) {
+      return [...rows.values()].filter(r => r.week >= from && r.week <= to && (!publishedOnly || r.status === "published")).sort((a, b) => a.week.localeCompare(b.week))
+        .map(r => ({ ...r, data: JSON.parse(JSON.stringify(r.data)) }));
+    },
+    async save(week, status, data) { rows.set(week, { week, status, data: JSON.parse(JSON.stringify(data)), updatedAt: new Date().toISOString() }); },
+    async remove(week) { rows.delete(week); },
+    async putImage(week, bytes, type) { images.push({ week, bytes: bytes.length, type }); return `https://x.supabase.co/storage/v1/object/public/weekly/${week}-${images.length}.jpg`; }
+  };
+}

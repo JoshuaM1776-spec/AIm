@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="light dark">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weekly Challenge editor</title>
+<link rel="stylesheet" href="aim.css">
+<style>
+  /* The Weekly Challenge editor (0.76): last week, this week and the next eight, each empty, a draft or
+     published. Open one to write or check its story, playtest it on YouTube, and publish it. Only
+     editors' accounts get in (AIM_DAILY_EDITORS on the server). */
+  .weeks { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+  .week { border: 1px solid var(--card-border); border-radius: 16px; background: var(--surface); backdrop-filter: blur(16px); }
+  .week > summary { display: flex; align-items: center; gap: 14px; padding: 14px 18px; cursor: pointer; list-style: none; }
+  .week > summary::-webkit-details-marker { display: none; }
+  .week .when { min-width: 150px; font-weight: 600; }
+  .week .when small { display: block; font-weight: 400; color: var(--muted); }
+  .week .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .week .t.none { color: var(--muted); }
+  .pill.pub { background: var(--ok-soft); color: var(--ok); font-weight: 600; }
+  .pill.draft { background: rgba(244, 168, 98, .16); color: #f4a862; font-weight: 600; }
+  .edit { display: flex; flex-direction: column; gap: 14px; padding: 4px 18px 18px; }
+  .start { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .start input { flex: 1 1 260px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
+  .grid .full { grid-column: 1 / -1; }
+  .grid.three { grid-template-columns: repeat(3, 1fr); }
+  .grid.four { grid-template-columns: repeat(4, 1fr); }
+  .edit label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+  .edit label > input, .edit label > textarea, .edit label > select { color: var(--text); font-size: 14px; }
+  .edit textarea { min-height: 60px; }
+  .edit fieldset { margin: 0; padding: 12px 14px 14px; border: 1px solid var(--divider); border-radius: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .edit legend { padding: 0 6px; font: 700 14px var(--font-display); }
+  .sec-h { margin: 8px 0 0; padding-top: 12px; border-top: 1px solid var(--divider); font: 700 16px var(--font-display); }
+  .sub-h { margin: 4px 0 0; font-size: 13px; font-weight: 600; }
+  .item { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 12px; background: var(--tonal, rgba(127, 127, 127, .08)); }
+  .item-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 600; }
+  .pic { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .pic img { width: 140px; height: 140px; object-fit: cover; border-radius: 12px; background: rgba(127, 127, 127, .15); }
+  .pic .none { width: 140px; height: 140px; border-radius: 12px; display: grid; place-items: center; background: rgba(127, 127, 127, .12); color: var(--muted); font-size: 13px; }
+  .problems { margin: 0; padding: 10px 14px 10px 30px; border-radius: 12px; background: rgba(244, 168, 98, .12); font-size: 14px; }
+  .problems.ok { list-style: none; padding-left: 14px; background: var(--ok-soft); color: var(--ok); }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; }
+  .check { flex-direction: row !important; align-items: center; color: var(--text) !important; font-size: 14px !important; }
+  .hint { margin: 0; font-size: 13px; color: var(--muted); }
+  @media (max-width: 760px) { .grid, .grid.three, .grid.four { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main class="page wide">
+  <header class="page-head">
+    <img class="for-light" src="icons/48.png" alt=""><img class="for-dark" src="icons/light/48.png" alt="">
+    <span class="brand" data-brand>Aim</span><span class="crumb">Weekly Challenge editor</span>
+  </header>
+  <h1>Weekly Challenges</h1>
+  <p class="lede">The story everyone gets each week, from Monday. Nothing reaches anyone until you publish it. Before publishing, check every fact and number against its sources, then playtest it: every path should be fair, and the story's rules (what each choice costs, and which ending follows) should match the facts.</p>
+  <div class="row"><span class="busy" id="busy"></span></div>
+  <p class="error" id="err"></p>
+  <div class="weeks" id="weeks"></div>
+</main>
+<div id="toast" role="status"></div>
+<script src="nav.js"></script>
+<script src="content/weekly-shared.js"></script>
+<script src="weekly-editor.js"></script>
+</body>
+</html>

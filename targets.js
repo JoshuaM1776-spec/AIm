@@ -123,7 +123,7 @@ async function plans() {
         node("span", { className: "next", textContent: nextText(x.progress) })),
       node("span", { className: "open", textContent: "See the plan" }));
   }) : [all.length ? node("p", { className: "plans-empty", textContent: `No learning plan matches “${query}”.` })
-    : node("p", { className: "plans-empty" }, "No learning plans yet. Add what you're curious about, and the goal behind it, under Start a challenge on ",
+    : node("p", { className: "plans-empty" }, "No learning plans yet. Add what you're curious about, and the goal behind it, under Learning plans on ",
       node("a", { href: "https://www.youtube.com/", textContent: "YouTube's homepage" }), ".")]));
 }
 

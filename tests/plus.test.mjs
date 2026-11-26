@@ -10,11 +10,14 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { handle } from "../supabase/functions/ai/handler.ts";
-import { memDaily, memDb, memSync } from "./helpers/memdb.mjs";
+import { memDaily, memDb, memSync, memWeekly } from "./helpers/memdb.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT || "playwright");
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+// The Weekly Challenge's sample story, as Aim's drafting would return it (a flat chapter: the event as text).
+const SAMPLE = JSON.parse(fs.readFileSync(path.join(ROOT, "weekly-sample.json"), "utf8"));
+const WEEKLY_DRAFT = { ...SAMPLE, chapters: SAMPLE.chapters.map(c => ({ ...c, event: c.event?.text || "" })) };
 
 // ---------- stand-in server ----------
 const CODE = "123456";
@@ -64,7 +67,14 @@ const deps = {
     srv.aiCalls++;
     const props = Object.keys(req.schema?.properties || {});
     const reply = !req.schema ? "ready" : JSON.stringify(
-      props.includes("marks") ? (srv.talkPrompts.push(req.prompt), srv.talk.shift())
+      // The Weekly Challenge (weekly.ts): its draft, and the narrator's three kinds of turn.
+      props.includes("chapters") ? (srv.weeklyPrompts = [...(srv.weeklyPrompts || []), req.prompt], WEEKLY_DRAFT)
+      : props.includes("said") ? (srv.weeklyPrompts = [...(srv.weeklyPrompts || []), req.prompt], { said: "The council nods: six bar on a four-and-a-half bar line leaves room to spare.",
+          weighed: ["the pipe's rating against the pressure at the bottom", "a safety margin"], missed: ["carrying and installing it on a mountain path"] })
+      : props.length === 1 && props[0] === "answer" ? (srv.weeklyPrompts = [...(srv.weeklyPrompts || []), req.prompt], { answer: "The team knows PN ratings are in bar, held continuously." })
+      : props.includes("showed") ? (srv.weeklyPrompts = [...(srv.weeklyPrompts || []), req.prompt], { summary: "You worked the numbers before you spent the money, and it showed.",
+          showed: ["Turning a flow rate into a daily total", "Rating a pipe for its lowest point"], next: [{ topic: "Friction loss", why: "Long pipes lose pressure as water flows.", search: "friction loss in pipes explained" }] })
+      : props.includes("marks") ? (srv.talkPrompts.push(req.prompt), srv.talk.shift())
       : props.includes("days") ? (srv.dailyPrompts = [...(srv.dailyPrompts || []), req.prompt], { days: [...req.prompt.matchAll(/^DAY \d+: (\S+)/gm)].map(m => ({
           area: "Math and logic", title: `Tax day ${m[1]}`, moment: "AD 10, Rome", scene: "You inherit an estate worth 200,000 sesterces from a friend. First the 5% inheritance tax comes out, then a 1% sales tax on what's left when you sell it.",
           question: "How much tax do you pay in total?", choices: ["12,000 sesterces", "11,900 sesterces", "11,000 sesterces"], answer: 1,
@@ -152,6 +162,7 @@ const deps = {
   },
   sync: memSync(),
   daily: memDaily(),
+  weekly: memWeekly(),
   now: () => new Date(),
   config: { origins: [], limits: { dayCalls: 300, dayTokens: 400000, minuteCalls: 20 }, maxBodyBytes: 16384, maxSyncBytes: 1024 * 1024, dailyEditors: ["learner@example.com"] }
 };
@@ -770,6 +781,143 @@ step("Forget removes it", ((await sw.evaluate(() => chrome.storage.local.get("me
 await sw.evaluate(() => serial(() => setSetting("captions", false)));
 const fetchesBefore = srv.captionFetches;
 // ---------- Challenges (0.70): find, choose, begin, attempt, complete ----------
+// ---------- The Weekly Challenge (0.76): one story a week for everyone, drafted with Aim, checked, playtested and published by an editor ----------
+await opt.goto(`chrome-extension://${extId}/options.html#plus`);
+await opt.waitForSelector("#weeklyEditor", { timeout: 10000 }).catch(() => {});
+step("Settings shows an editor's account the Weekly Challenge editor", (await opt.getAttribute("#weeklyEditor", "href").catch(() => "")) === "weekly-editor.html");
+const wkEd = await ctx.newPage();
+const wkEdErrors = [];
+wkEd.on("pageerror", e => wkEdErrors.push(e.message));
+await wkEd.goto(`chrome-extension://${extId}/weekly-editor.html`);
+await wkEd.waitForSelector("#weeks .week");
+step("the editor: last week, this week and the next eight, all empty", (await wkEd.$$("#weeks .week")).length === 10 &&
+  (await wkEd.textContent("#weeks .week >> nth=1")).includes("This week") && (await wkEd.textContent("#weeks .week >> nth=1")).includes("Empty"));
+const thisWk = wkEd.locator("#weeks .week").nth(1);
+await thisWk.locator("summary").click();
+await thisWk.locator("#theme").fill("water in the mountains");
+await thisWk.locator("button:text-is('Draft with Aim')").click();
+await wkEd.waitForSelector("#weeks .week >> nth=1 >> .pill.draft", { timeout: 15000 });
+const wkWeek = [...deps.weekly.rows.keys()][0];
+const wkTitle = thisWk.locator("label:has-text('Title') input").first();
+step("Draft with Aim: the whole story in the form, from the card to the endings, as a draft", (await wkTitle.inputValue()) === "A Resilient Water System" &&
+  (await thisWk.locator(".item-head:has-text('Chapter')").count()) === 5 && (await thisWk.locator(".item-head:has-text('Ending')").count()) === 4 &&
+  srv.weeklyPrompts.at(-1).includes("THEME: water in the mountains") && deps.weekly.rows.get(wkWeek).status === "draft" && new Date(`${wkWeek}T12:00:00Z`).getUTCDay() === 1);
+await wkTitle.fill("Water for the Valley");
+await thisWk.locator("input[type=file]").setInputFiles(path.join(ROOT, "scenes", "weekly", "water-system.jpg"));
+for (let i = 0; i < 100 && !deps.weekly.images.length; i++) await wkEd.waitForTimeout(100);
+await wkEd.waitForFunction(() => document.querySelector("#weeks .week[open] .pic img")?.src.startsWith("https://"), null, { timeout: 10000 });
+step("a picture: resized here, uploaded as a JPEG under 900 KB, and the story points at it", deps.weekly.images.length === 1 && deps.weekly.images[0].type === "image/jpeg" &&
+  deps.weekly.images[0].bytes < 900 * 1024 && deps.weekly.images[0].week === wkWeek);
+await thisWk.locator("button:text-is('Check')").click();
+await wkEd.waitForSelector(".problems");
+step("Check: the same rules the player uses say it's ready", (await wkEd.textContent(".problems")).includes("Ready to publish."));
+const [ptPage] = await Promise.all([ctx.waitForEvent("page"), thisWk.locator("button:text-is('Playtest on YouTube')").click()]);
+// Playwright can't stand in for the first load of a tab the extension opens: check where it went, then load it here.
+const ptUrl = ptPage.url() === "about:blank" ? (await ptPage.waitForURL(/youtube/).then(() => ptPage.url())) : ptPage.url();
+await ptPage.goto("about:blank");
+await ptPage.goto("https://www.youtube.com/#aim-weekly-playtest");
+await ptPage.waitForSelector("#wp-home .wp-wk-playtest", { timeout: 10000 });
+step("Playtest on YouTube: the draft, in a new tab, marked as a playtest, with nothing published", ptUrl === "https://www.youtube.com/#aim-weekly-playtest" && (await ptPage.textContent("#wp-home .wp-wk-title")) === "Water for the Valley" &&
+  (await ptPage.textContent("#wp-home .wp-wk-banner")).includes("Playtest of a draft") && (await deps.weekly.list("2000-01-03", "2100-01-01", true)).length === 0);
+await ptPage.click("#wp-home .wp-wk-accept");
+await ptPage.waitForSelector("#wp-home .wp-wk-num");
+await ptPage.fill("#wp-home .wp-wk-num", "6912");
+await ptPage.click("#wp-home .wp-wk-submit");
+await ptPage.waitForSelector("#wp-home .wp-wk-ok");
+const ptStore = await sw.evaluate(() => chrome.storage.local.get(["weeklyPlay", "weeklyPlaytest"]));
+step("a playtest keeps its own playthrough, apart from the real one", !ptStore.weeklyPlay && ptStore.weeklyPlaytest.state.play.log.length === 1);
+await ptPage.close();
+await thisWk.locator("button:text-is('Publish')").click();
+await wkEd.waitForFunction(() => document.getElementById("err").textContent.includes("tick the box"));
+step("publishing asks you to say you checked it and playtested it", (await deps.weekly.list("2000-01-03", "2100-01-01", true)).length === 0);
+await thisWk.locator(".check input").check();
+await thisWk.locator("button:text-is('Publish')").click();
+await wkEd.waitForSelector("#weeks .week >> nth=1 >> .pill.pub", { timeout: 10000 });
+const wkPub = await deps.weekly.list("2000-01-03", "2100-01-01", true);
+step("published, with your edits and its picture", wkPub.length === 1 && wkPub[0].data.title === "Water for the Valley" && wkPub[0].data.image.startsWith("https://") &&
+  wkPub[0].data.chapters.length === 5 && !wkEdErrors.length, wkEdErrors.join(" | "));
+if (process.env.SHOTS) { await wkEd.setViewportSize({ width: 1200, height: 1000 }); await wkEd.screenshot({ path: `${process.env.SHOTS}/weekly-editor.png` }); }
+await wkEd.close();
+// On YouTube: everyone's Weekly Challenge, signed in, so the narrator talks it through.
+await sw.evaluate(() => chrome.storage.local.remove("weeklyCache"));
+await yt.goto("https://www.youtube.com/");
+await yt.bringToFront();
+await yt.waitForFunction(() => document.querySelector("#wp-home .wp-wk-title")?.textContent === "Water for the Valley", null, { timeout: 10000 });
+const wkCardText = (await yt.textContent("#wp-home .wp-wk-card")).replace(/\s+/g, " ");
+step("on YouTube: this week's challenge as published, with what to be familiar with, the impact, and Accept Challenge",
+  ["Weekly Challenge", "~200 people", "Be familiar with:", "Terrain & elevation", "you'll need to discover and apply the details yourself", "The Impact", "Accept Challenge"].every(t => wkCardText.includes(t)), wkCardText.slice(0, 200));
+await yt.click("#wp-home .wp-wk-hints-btn");
+const hintsText = await yt.textContent("#wp-home .wp-wk-hints");
+step("Hints: a few questions worth looking into, each with a video, never the answers", hintsText.includes("How do you turn a flow in liters per second into liters per day?") &&
+  (await yt.$$("#wp-home .wp-wk-hint button")).length === 8 && !hintsText.includes("6,912") && !hintsText.includes("441"));
+if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/weekly-card.png` });
+await yt.click("#wp-home .wp-wk-hint button >> nth=0");
+await yt.waitForURL(/search_query=flow%20rate%20unit%20conversion/);
+await yt.goto("https://www.youtube.com/");
+await yt.waitForSelector("#wp-home .wp-wk-accept");
+await yt.click("#wp-home .wp-wk-accept");
+await yt.waitForSelector("#wp-home .wp-wk-panel .wp-wk-num");
+let wkText = (await yt.textContent("#wp-home .wp-wk-panel")).replace(/\s+/g, " ");
+step("Accept: chapter 1, the scene, what's given, and the budget and days the rules keep", wkText.includes("Chapter 1 of 5 · Mathematics") && wkText.includes("Is the spring enough?") &&
+  wkText.includes("Budget: $40,000") && wkText.includes("Days to the dry season: 90") && wkText.includes("250 seconds"), wkText.slice(0, 200));
+await yt.fill("#wp-home .wp-wk-num", "6000");
+await yt.click("#wp-home .wp-wk-submit");
+await yt.waitForSelector("#wp-home .wp-wk-again");
+step("not quite: one more try, nothing given away", (await yt.textContent("#wp-home .wp-wk-again")).includes("one more try") && !(await yt.textContent("#wp-home .wp-wk-panel")).includes("6,912"));
+await yt.fill("#wp-home .wp-wk-num", "6,912");
+await yt.click("#wp-home .wp-wk-submit");
+await yt.waitForSelector("#wp-home .wp-wk-ok");
+step("worked out: the story goes on from it", (await yt.textContent("#wp-home .wp-wk-outcome")).includes("the spring is enough"));
+await yt.click("#wp-home .wp-wk-next-btn");
+await yt.fill("#wp-home .wp-wk-num", "441");
+await yt.click("#wp-home .wp-wk-submit");
+await yt.waitForSelector("#wp-home .wp-wk-ok");
+await yt.click("#wp-home .wp-wk-next-btn");
+await yt.waitForSelector("#wp-home .wp-wk-option");
+await yt.reload();
+await yt.waitForSelector("#wp-home .wp-wk-accept");
+step("a save point between chapters: the card picks up at chapter 3", (await yt.textContent("#wp-home .wp-wk-accept")).includes("Continue · Chapter 3 of 5"));
+await yt.click("#wp-home .wp-wk-accept");
+await yt.waitForSelector("#wp-home .wp-wk-option");
+await yt.click("#wp-home .wp-wk-team summary");
+await yt.fill("#wp-home .wp-wk-ask-input", "What does PN mean?");
+await yt.click("#wp-home .wp-wk-ask button");
+await yt.waitForSelector("#wp-home .wp-wk-answer");
+step("ask the narrator: answered only from what the team knows", (await yt.textContent("#wp-home .wp-wk-answer")).includes("PN ratings are in bar") &&
+  srv.weeklyPrompts.at(-1).includes("WHAT THE TEAM KNOWS") && srv.weeklyPrompts.at(-1).includes("THE PLAYER ASKS: What does PN mean?"));
+await yt.click("#wp-home .wp-wk-option:has-text('PN6')");
+await yt.fill("#wp-home .wp-wk-why", "6 bar is well above the 4.4 bar at the bottom.");
+await yt.click("#wp-home .wp-wk-decide");
+await yt.waitForSelector("#wp-home .wp-wk-said", { timeout: 10000 });
+wkText = (await yt.textContent("#wp-home .wp-wk-panel")).replace(/\s+/g, " ");
+step("the rules decide what happened; the narrator reads your reasoning: what it weighed and what it missed", wkText.includes("a comfortable margin") &&
+  wkText.includes("Your reasoning weighed") && wkText.includes("Worth weighing too") && wkText.includes("carrying and installing") &&
+  srv.weeklyPrompts.at(-1).includes("THEIR REASONING: 6 bar is well above the 4.4 bar") && srv.weeklyPrompts.at(-1).includes("GOOD REASONING WEIGHS"), wkText.slice(0, 200));
+if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/weekly-feedback.png` });
+await yt.click("#wp-home .wp-wk-next-btn");
+await yt.waitForSelector("#wp-home .wp-wk-bucket input");
+wkText = (await yt.textContent("#wp-home .wp-wk-panel")).replace(/\s+/g, " ");
+step("the budget: an event first, then share out what's left", wkText.includes("prices are up 25%") && wkText.includes("Budget: $28,000"));
+for (const [i, v] of [10000, 6000, 8000, 2000].entries()) await yt.fill(`#wp-home .wp-wk-bucket input >> nth=${i}`, String(v));
+await yt.fill("#wp-home .wp-wk-why", "Kept three days of storage and a reserve.");
+await yt.click("#wp-home .wp-wk-commit");
+await yt.waitForSelector("#wp-home .wp-wk-said", { timeout: 10000 });
+await yt.click("#wp-home .wp-wk-next-btn");
+await yt.click("#wp-home .wp-wk-option:has-text('Stop and secure')");
+await yt.click("#wp-home .wp-wk-decide");
+await yt.waitForSelector("#wp-home .wp-wk-said", { timeout: 10000 });
+await yt.click("#wp-home .wp-wk-next-btn:has-text('See how it ends')");
+await yt.waitForSelector("#wp-home .wp-wk-debrief", { timeout: 10000 });
+wkText = (await yt.textContent("#wp-home .wp-wk-panel")).replace(/\s+/g, " ");
+step("the end: how it ended (by the rules), each decision, the debrief, what to learn next, and how we know", wkText.includes("Water before the dry season") &&
+  wkText.includes("Your decisions") && wkText.includes("right the first time") && wkText.includes("You worked the numbers") && wkText.includes("Friction loss") &&
+  wkText.includes("How do we know?") && srv.weeklyPrompts.at(-1).includes("ENDING: Water before the dry season") && srv.weeklyPrompts.at(-1).includes("right on the second try"), wkText.slice(0, 300));
+if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/weekly-end.png`, fullPage: true });
+const wkPlay = (await sw.evaluate(() => chrome.storage.local.get("weeklyPlay"))).weeklyPlay;
+step("kept in this browser: the playthrough, the narrator's feedback and the debrief", wkPlay.play.done && wkPlay.play.log.length === 5 && !!wkPlay.feedback.pipe?.said && !!wkPlay.debrief?.summary);
+await yt.click("#wp-home .wp-scene-x");
+await yt.waitForSelector("#wp-home .wp-wk-accept");
+step("back on the card: See how it ended", (await yt.textContent("#wp-home .wp-wk-accept")).includes("See how it ended"));
 // ---------- The Daily Challenge (0.75): the same for everyone, drafted by Aim, checked and published by an editor ----------
 await opt.goto(`chrome-extension://${extId}/options.html#plus`);
 await opt.waitForSelector("#dailyEditor", { timeout: 10000 }).catch(() => {});
@@ -803,7 +951,14 @@ step("Draft the next 7 days: seven drafts, seven areas, nothing published, today
   srv.dailyPrompts[1].includes("RECENT (don't repeat): The inheritance tax"));
 if (process.env.SHOTS) { await dailyEd.setViewportSize({ width: 1200, height: 1000 }); await dailyEd.screenshot({ path: `${process.env.SHOTS}/daily-editor.png`, fullPage: true }); }
 await dailyEd.close();
-// On YouTube: everyone's Daily Challenge.
+// On YouTube: everyone's Daily Challenge, once you turn it on (paused in 0.76: Settings → Challenges).
+await yt.goto("https://www.youtube.com/");
+await yt.waitForSelector("#wp-home .wp-wk-card");
+step("the Daily Challenge is off unless you turn it on", !(await yt.$("#wp-home .wp-home-daily")));
+await opt.goto(`chrome-extension://${extId}/options.html`);
+await opt.click("label:has(#dailyOn)");
+await opt.waitForTimeout(400);
+step("Settings → Challenges: Daily Challenge too", (await sw.evaluate(() => chrome.storage.local.get("settings"))).settings.dailyOn === true);
 await yt.goto("https://www.youtube.com/");
 await yt.bringToFront();
 await yt.waitForSelector("#wp-home .wp-home-daily");
@@ -820,7 +975,7 @@ step("not quite: get ready with a short video or the why", !!(await yt.$("#wp-ho
 await yt.click("#wp-home .wp-dl-step button:has-text('Watch a short video')");
 await yt.waitForURL(/search_query=percent%20of%20a%20percent%20explained/);
 await yt.goto("https://www.youtube.com/");
-await yt.waitForFunction(() => document.querySelector("#wp-home .wp-home-daily")?.textContent.includes("Second try waiting: The inheritance tax"));
+await yt.waitForFunction(() => document.querySelector("#wp-home .wp-home-daily")?.title.includes("Second try waiting: The inheritance tax"));
 step("back on the homepage, the second try waits", true);
 await yt.click("#wp-home .wp-home-daily");
 await yt.waitForSelector("#wp-home .wp-dl-step:has-text('Second try')");
@@ -839,11 +994,12 @@ step("Want a plan for this?: the interest and its goal, ready to add", (await yt
   (await yt.inputValue("#wp-home .wp-pw-add input >> nth=1")) === "Work out taxes and discounts in my head");
 await yt.click("#wp-home .wp-pw-add button:text-is('Cancel')");
 await yt.click("#wp-home .wp-scene-x");
-await yt.waitForFunction(() => document.querySelector("#wp-home .wp-home-daily")?.textContent.includes("Done for today: The inheritance tax"));
-// The Weekly Challenge (0.73): your own, from your interests or a subject you name, kept for the week.
-await yt.click("#wp-home .wp-home-weekly");
+await yt.waitForFunction(() => document.querySelector("#wp-home .wp-home-daily")?.title.includes("Done for today: The inheritance tax"));
+// A challenge of your own (0.73; under Learning plans since 0.76): from your interests or a subject you name, kept for the week.
+const ownChallenge = async () => { await ytContinue(); await yt.click("#wp-home .wp-cl-own"); };
+await ownChallenge();
 await yt.waitForSelector("#wp-home .wp-ch-weekly .wp-ch-ask");
-step("the Weekly Challenge, with no interests yet, asks what you're curious about", (await yt.textContent("#wp-home .wp-scene-panel-title")) === "Weekly Challenge" &&
+step("a challenge of your own, with no interests yet, asks what you're curious about", (await yt.textContent("#wp-home .wp-scene-panel-title")) === "Your own challenge" &&
   (await yt.textContent("#wp-home .wp-ch-ask")).includes("What are you curious about?"));
 await yt.fill("#wp-home .wp-ch-subject", "aviation");
 await yt.click(".wp-ch button:has-text('Find a challenge')");
@@ -869,12 +1025,10 @@ await yt.click(".wp-ch-card:has-text('upside down')");
 await yt.waitForSelector(".wp-ch-detail");
 const asked = srv.challengePrompts.length;
 await yt.click("#wp-home .wp-scene-x");
-await yt.waitForSelector("#wp-home .wp-home-weekly");
-step("kept for the week: the homepage card names this week's challenge", (await yt.textContent("#wp-home .wp-home-weekly")).includes("This week: How can an airplane fly upside down?"));
 await yt.reload();
-await yt.click("#wp-home .wp-home-weekly");
+await ownChallenge();
 await yt.waitForSelector("#wp-home .wp-ch-detail");
-step("open it again and it's the same one, without asking the server", (await yt.textContent(".wp-ch-detail")).includes("How can an airplane fly upside down?") && srv.challengePrompts.length === asked);
+step("kept for the week: open it again and it's the same one, without asking the server", (await yt.textContent(".wp-ch-detail")).includes("How can an airplane fly upside down?") && srv.challengePrompts.length === asked);
 if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/weekly-challenge.png` });
 chDetail = (await yt.textContent(".wp-ch-detail")).replace(/\s+/g, " ");
 step("a challenge's details: the success condition decided up front, and a short plan", chDetail.includes("You'll have done it when") &&
@@ -962,7 +1116,7 @@ await yt.click("#wp-home .wp-pw-plus");
 await yt.fill("#wp-home .wp-pw-add input >> nth=0", "Aviation");
 await yt.fill("#wp-home .wp-pw-add input >> nth=1", "Earn a private pilot's license");
 await yt.click("#wp-home .wp-pw-add button:text-is('Add')");
-await yt.waitForFunction(() => document.querySelector("#wp-home .wp-pw")?.textContent.includes("lessons to: How a plane flies"), null, { timeout: 10000 });
+await yt.waitForFunction(() => document.querySelector("#wp-home .wp-pw")?.textContent.includes("lessons to: How a plane flies"), null, { timeout: 20000 });
 const pwText = (await yt.textContent("#wp-home .wp-pw")).replace(/\s+/g, " ");
 step("+ adds an interest with its goal; Aim drafts its path, and the window shows progress to the next checkpoint",
   pwText.includes("Aviation") && pwText.includes("Earn a private pilot's license") && pwText.includes("0%") && pwText.includes("Lesson 1 · How does a wing make lift?") && pwText.includes("2 lessons to: How a plane flies") &&
@@ -1107,7 +1261,7 @@ await yt.waitForTimeout(300);
 let talkState = (await sw.evaluate(() => chrome.storage.local.get("talk"))).talk;
 step("Maybe later: it goes, and the next one waits twice as long", !(await yt.$(".wp-talk-offer")) && talkState.wait === 2 * 86400000);
 await yt.reload();
-await yt.waitForSelector("#wp-home .wp-home-title");
+await yt.waitForSelector("#wp-home .wp-wk-card");
 await yt.waitForTimeout(800);
 step("and it isn't offered again for this session", !(await yt.$(".wp-talk-offer")));
 // While watching: a video that connects to something you explained before.

@@ -3,7 +3,7 @@
 // Run: node tests/store.test.js
 const fs = require("fs"), path = require("path"), vm = require("vm"), assert = require("assert");
 // The shared pure helpers come first, as in background.js.
-const SRC = fs.readFileSync(path.join(__dirname, "..", "content", "guess-shared.js"), "utf8") + "\n" + fs.readFileSync(path.join(__dirname, "..", "store.js"), "utf8");
+const SRC = ["content/guess-shared.js", "content/weekly-shared.js", "store.js"].map(f => fs.readFileSync(path.join(__dirname, "..", f), "utf8")).join("\n");
 const MIN = 60 * 1000;
 
 function makeEnv(initial = {}) {
@@ -32,7 +32,7 @@ function makeEnv(initial = {}) {
 const VIDEO = { id: "abc123", title: "Feeding a sourdough starter", channel: "Bread Co" };
 const fresh = () => makeEnv({ schemaVersion: 5 });
 const DEFAULTS = { homeCard: true, leisureMin: 60, graceMin: 15, totalMin: 0, purposeLimitMin: 0,
-  hideShorts: true, hideRecs: true, hideFeeds: true, noAutoplay: true, strict: false, learnTopics: [], learnOff: [], learnShorts: false, learnRow: true, librarianMemory: true, spacedReview: true, guessFirst: true, captions: false, myTopics: [] };
+  hideShorts: true, hideRecs: true, hideFeeds: true, noAutoplay: true, strict: false, learnTopics: [], learnOff: [], learnShorts: false, learnRow: true, librarianMemory: true, spacedReview: true, guessFirst: true, captions: false, dailyOn: false, myTopics: [] };
 
 const tests = [];
 const test = (name, fn) => tests.push([name, fn]);
@@ -1196,6 +1196,78 @@ test("the Daily Challenge (0.75): today's, cached for the day; your tries kept f
   assert.ok(m.first.pick === -1 && !m.first.right && m.learned > 0 && m.second.right && m.doneAt > 0 && m.explain.length === 600, JSON.stringify(m));
   env.local.dailyMine.day = "2000-01-01";
   assert.deepStrictEqual(JSON.parse(JSON.stringify((await env.run(`dailyCached()`)).mine)), { day }, "a new day starts fresh");
+});
+
+test("the Weekly Challenge (0.76): the story's rules decide every path; this week's story and your playthrough are kept for the week", async () => {
+  const env = fresh();
+  const sample = fs.readFileSync(path.join(__dirname, "..", "weekly-sample.json"), "utf8");
+  const r = (code) => JSON.parse(JSON.stringify(env.run(code)));
+  env.run(`var S = wkTidy(${sample}, { forPublish: true }).story;`);
+  assert.ok(env.run("S") && env.run("S.chapters.length") === 5, "the sample story is ready to publish");
+  // A calculation: two tries, then the answer and its method; a wrong one costs what the story says.
+  env.run("var P = wkEnter(S, wkStart(S));");
+  let x = r("wkCalculate(S, P, 'lots')");
+  assert.ok(x.error, "not a number");
+  x = r("(P = wkCalculate(S, P, 5000).play, wkCalculate(S, P, 6000))");
+  assert.ok(!x.right && x.answer === 6912 && /0\.08/.test(x.method) && x.play.vars.days === 85 && x.play.chapter === 1, JSON.stringify(x));
+  env.run("P = wkCalculate(S, wkEnter(S, wkStart(S)), '6,912').play");
+  assert.ok(env.run("P.log[0].right && P.vars.days === 90"), "right the first time, with a comma");
+  // A choice can't spend money you don't have; the PN4 pipe leads to the burst, whatever else you do.
+  env.run("P = wkCalculate(S, wkEnter(S, P), 441).play");
+  env.run("var Q = wkCopy(P); Q.vars.budget = 1000;");
+  assert.ok(r("wkChoose(S, wkEnter(S, Q), 'pn6', 'x')").error, "too expensive");
+  env.run("P = wkChoose(S, wkEnter(S, P), 'pn4', 'cheapest').play");
+  assert.ok(env.run("P.flags.includes('underRated') && P.vars.budget === 31000 && P.vars.days === 55"));
+  // The budget: the event raises the tank's price; over the budget is refused; a part left short is flagged.
+  env.run("P = wkEnter(S, P)");
+  assert.ok(r("wkAllocate(S, P, { tank: 40000 })").error, "more than what's left");
+  x = r("wkAllocate(S, P, { tank: 10000, taps: 6000, labor: 4000, reserve: 2000 }, 'cut labor')");
+  assert.ok(x.short.length === 1 && x.short[0].id === "labor" && x.play.vars.days === 40 && x.play.flags.includes("short-labor"), JSON.stringify(x.short));
+  env.run(`P = wkAllocate(S, P, { tank: 10000, taps: 6000, labor: 4000, reserve: 2000 }).play; P = wkChoose(S, wkEnter(S, P), "secure").play;`);
+  assert.ok(env.run("P.done") && env.run("wkEnding(S, P).title") === "A burst at the bottom", "the first ending that holds");
+  // The good path: every part covered, the right pipe, the site secured.
+  env.run(`P = wkStart(S); P = wkCalculate(S, wkEnter(S, P), 6912).play; P = wkCalculate(S, wkEnter(S, P), 441.45).play;
+    P = wkChoose(S, wkEnter(S, P), "pn6").play; P = wkAllocate(S, wkEnter(S, P), { tank: 10000, taps: 6000, labor: 8000, reserve: 2000 }).play;
+    P = wkChoose(S, wkEnter(S, P), "secure").play;`);
+  assert.strictEqual(env.run("wkEnding(S, P).title"), "Water before the dry season");
+  // A recount, the steel pipe, too few hands and a storm push it past the dry season.
+  env.run(`P = wkStart(S); P = wkCalculate(S, wkEnter(S, P), 1).play; P = wkCalculate(S, wkEnter(S, P), 1).play; P = wkCalculate(S, wkEnter(S, P), 441.45).play;
+    P = wkChoose(S, wkEnter(S, P), "steel").play; P = wkAllocate(S, wkEnter(S, P), { tank: 4000, taps: 0, labor: 0, reserve: 0 }).play;
+    P = wkChoose(S, wkEnter(S, P), "push").play;`);
+  assert.strictEqual(env.run("wkEnding(S, P).title"), "Not before the dry season");
+  // Checking a story: what's missing is listed; a picture and two sources only to publish.
+  const t = r(`wkTidy({ title: "T", premise: "P", chapters: [{ kind: "choose", title: "a", scene: "b", options: [{ label: "x" }] }], endings: [] }, { forPublish: true })`);
+  assert.ok(!t.story && t.problems.some(p => /two options/.test(p)) && t.problems.some(p => /ending/.test(p)) && t.problems.some(p => /picture/.test(p)), JSON.stringify(t.problems));
+  assert.ok(!r(`wkTidy({ ...S, image: "javascript:alert(1)" })`).draft.image, "only https or bundled pictures");
+  assert.strictEqual(env.run(`wkWeekOf("2026-11-26")`), "2026-11-23", "a Thursday's week starts Monday");
+  assert.strictEqual(env.run(`wkWeekOf("2026-11-23")`), "2026-11-23");
+  // This week's story, cached for the week; while it isn't out, asked again at most hourly.
+  const week = env.run("wkWeekOf(localDay())");
+  let c = JSON.parse(JSON.stringify(await env.run("weeklyCached()")));
+  assert.ok(c.week === week && !c.fresh && c.story === null && c.state === null);
+  await env.run(`weeklyCacheSave(${JSON.stringify(week)}, null)`);
+  assert.ok((await env.run("weeklyCached()")).fresh, "not out yet: asked again within the hour");
+  env.advance(61 * MIN);
+  assert.ok(!(await env.run("weeklyCached()")).fresh, "an hour later, ask again");
+  await env.run(`weeklyCacheSave(${JSON.stringify(week)}, S)`);
+  c = JSON.parse(JSON.stringify(await env.run("weeklyCached()")));
+  assert.ok(c.fresh && c.story.title === "A Resilient Water System");
+  // Your playthrough: kept for the week, within reason; a new week starts fresh.
+  assert.strictEqual((await env.run(`weeklyPlaySave({ week: "nope" })`)).result, "invalid");
+  assert.strictEqual((await env.run(`weeklyPlaySave({ week: ${JSON.stringify(week)}, big: "x".repeat(70000) })`)).result, "too-large");
+  await env.run(`weeklyPlaySave({ week: ${JSON.stringify(week)}, ids: "flow", play: P })`);
+  assert.ok((await env.run("weeklyCached()")).state.play.done);
+  env.local.weeklyPlay.week = "2000-01-03"; env.local.weeklyCache.week = "2000-01-03";
+  c = JSON.parse(JSON.stringify(await env.run("weeklyCached()")));
+  assert.ok(c.state === null && c.story === null && !c.fresh, "a new week starts fresh");
+  // An editor's playtest: kept apart from the real playthrough, for six hours.
+  assert.strictEqual((await env.run(`weeklyPlaySave({ week: ${JSON.stringify(week)}, play: P }, true)`)).result, "invalid", "no playtest to save into");
+  await env.run(`weeklyPlaytestSet(${JSON.stringify(week)}, S)`);
+  await env.run(`weeklyPlaySave({ week: ${JSON.stringify(week)}, play: P }, true)`);
+  const pt = JSON.parse(JSON.stringify(await env.run("weeklyPlaytestGet()")));
+  assert.ok(pt.story.title && pt.state.play.done && env.local.weeklyPlay.week === "2000-01-03", "the real playthrough wasn't touched");
+  env.advance(7 * 60 * MIN);
+  assert.strictEqual(await env.run("weeklyPlaytestGet()"), null, "a playtest lasts six hours");
 });
 
 test("subjects: EMS and medications read as health", async () => {

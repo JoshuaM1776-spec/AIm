@@ -1,9 +1,8 @@
 // Aim — the homepage scene (0.73; dawn, 0.74): YouTube's homepage as one full-screen scene. Along the top: Aim,
 // then Home, Break and Library, then you (a small menu). Under it, two views and three panels:
-//   Home: a greeting, the search, and three cards: Start a challenge, or Continue Learning once
-//     something's in progress (the aim you're on and your learning plans), the Daily Challenge (one
-//     focused problem, kept for the day) and the Weekly Challenge (a larger one, kept for the week).
-//     Each card opens a panel over the scene.
+//   Home (0.76): this week's challenge (content/weekly.js), the same for everyone, and under it a slim
+//     search and where you left off (Continue Learning: the aim you're on and your learning plans), and
+//     the Daily Challenge if you turned it on. Each opens a panel over the scene.
 //   Break: 5, 15 or 30 minutes, then Start Break; further down, something new to explore (picks from
 //     channels that teach well) and what you saved for later.
 //   Library is Aim's own page (targets.html), opened in this tab.
@@ -89,7 +88,7 @@ function sceneCard({ cls, ic, title, sub, glow = false, onclick }) {
     el("span", { class: "wp-scene-card-sub" }, sub));
 }
 
-// A panel over the scene: Continue Learning, the Daily or the Weekly Challenge.
+// A panel over the scene: Continue Learning, this week's story, or the Daily Challenge.
 function scenePanel({ cls = "", title, sub }, ...body) {
   return el("section", { class: `wp-scene-panel ${cls}`, role: "dialog", "aria-label": title },
     el("button", { class: "wp-scene-x", "aria-label": "Close", title: "Close", onclick: closePanel }, icon("close")),
@@ -108,10 +107,11 @@ async function openContinue() {
   pwRedraw();
 }
 function continuePanel(p) {
-  return scenePanel({ cls: "wp-cl", title: p ? "Continue Learning" : "Start a challenge", sub: p ? "Pick up where you left off." : "Pick up a learning plan, or add a new one." },
+  return scenePanel({ cls: "wp-cl", title: p ? "Continue Learning" : "Learning plans", sub: p ? "Pick up where you left off." : "Pick up a learning plan, or add a new one." },
     p ? currentTargetRow(p) : null,
     pathsWindow(),
     el("div", { class: "wp-cl-foot" },
+      el("button", { class: "wp-link wp-cl-own", onclick: () => openChallengePanel("weekly") }, "Find a challenge of your own"),
       el("button", { class: "wp-link", onclick: () => send({ type: "open-targets", same: true }) }, "Everything in your Library")));
 }
 

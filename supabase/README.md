@@ -97,6 +97,19 @@ One challenge a day, the same for everyone. Aim drafts them; an editor checks ea
 
 To set it up: run `0006_daily.sql` in the SQL editor, then add the secret `AIM_DAILY_EDITORS` with your account's email (several: comma-separated), and redeploy `ai`.
 
+## The Weekly Challenge (0.76)
+
+One story a week, the same for everyone, and the first thing on YouTube's homepage. Aim drafts it (or the editor starts from the sample); an editor checks every fact and number, adds its picture, playtests it and publishes it in the extension's Weekly Challenge editor (Settings → Account, shown only to editors). The story's rules are `weekly-rules.ts`, written from the extension's `content/weekly-shared.js` by `tools/bundle-ai.mjs`, so the server checks stories exactly as the player plays them.
+
+| Part | What it does |
+|---|---|
+| `migrations/0007_weekly.sql` | `weekly_challenges`: one row a week, keyed by its Monday (`draft` or `published`, the story as JSON). Row-level security on, no policies: only the server reads and writes it. Also the public storage bucket `weekly` for the stories' pictures. |
+| `weekly-current` (task on `ai`, no sign-in needed) | This week's published story for the date asked (a day or two either side of today), or none. The extension sends only the date. |
+| `weekly-turn` (task on `ai`, signed in) | The narrator: answers a question from what the team knows, says what a choice's reasoning weighed and missed, or writes the debrief. The story is read on the server; the player's text is data. A daily cap (40 turns free, 200 Plus); editors may play drafts. |
+| `weekly-draft`, `weekly-list`, `weekly-save`, `weekly-remove`, `weekly-image` (tasks on `ai`) | Editors only: draft a week (optionally from a theme), list ten weeks, save or publish (publishing needs a picture, the topics and two sources), delete, and upload a picture (JPEG, PNG or WebP under 900 KB, into the `weekly` bucket). |
+
+To set it up: run `0007_weekly.sql` in the SQL editor and redeploy `ai`. Editors are the same `AIM_DAILY_EDITORS` accounts.
+
 ## Before release
 
 - Filling in `config.js` changes what Aim sends off the device, so update `PRIVACY.md` and the store listing's privacy answers at the same time (see the notes in both).

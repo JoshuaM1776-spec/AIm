@@ -1,15 +1,16 @@
-// Aim — the Weekly Challenge (0.73), on YouTube's homepage (content/scene.js): a larger challenge for
-// the week, up to a couple of hours, building or investigating where it can. It's drawn from your
-// interests (your paths first, a different one each week) and kept until the week ends: open the panel
-// again and it's the same one (store.js → challengeToday). Ask for another, go easier or harder, try a
-// different subject, or write your own. (The Daily Challenge is the same for everyone: content/daily.js.) Begin makes it your aim: its plan steps
-// become what Up next works through, and its last step is the Final Challenge (docs/SPEC.md §7–§9).
-// Signed-in accounts (Aim's server writes challenges).
+// Aim — a challenge of your own (0.73; under Learning plans since 0.76), on YouTube's homepage
+// (content/scene.js): a larger challenge for the week, up to a couple of hours, building or
+// investigating where it can. It's drawn from your interests (your paths first, a different one each
+// week) and kept until the week ends: open the panel again and it's the same one (store.js →
+// challengeToday). Ask for another, go easier or harder, try a different subject, or write your own.
+// (The Weekly Challenge everyone gets is content/weekly.js; the Daily, content/daily.js.) Begin makes it
+// your aim: its plan steps become what Up next works through, and its last step is the Final Challenge
+// (docs/SPEC.md §7–§9). Signed-in accounts (Aim's server writes challenges).
 
 const CH_KIND = { understand: "Understand", build: "Build & do", investigate: "Investigate" };
 const CH_LEVEL = { intro: "Intro", intermediate: "Intermediate", advanced: "Advanced" };
 const CH_SCALE = {
-  weekly: { minutes: 120, title: "Weekly Challenge", sub: "A larger goal to build real understanding.", noun: "this week's challenge" }
+  weekly: { minutes: 120, title: "Your own challenge", sub: "A larger goal of your own for the week, to build real understanding.", noun: "a challenge" }
 };
 // The panel redraws itself in place, so the rest of the scene isn't rebuilt on every click.
 let chHost = null;
@@ -129,7 +130,7 @@ function challengePanel(scale) {
   } else if (chFind.view === "loading") body.push(busyLine);
   else if (chFind.view === "ask") {
     body.push(el("div", { class: "wp-ch-ask" }, el("b", {}, "What are you curious about?"),
-      el("span", { class: "wp-muted" }, "Add your interests under Continue Learning, and Aim picks from them each time.")));
+      el("span", { class: "wp-muted" }, "Add your interests under Learning plans, and Aim picks from them each time.")));
   } else if (chFind.view === "list") {
     body.push(el("div", { class: "wp-ch-label" }, `Challenges in ${chFind.listFor}`),
       el("div", { class: "wp-ch-list" }, ...chFind.list.map((x, i) => el("button", { class: `wp-ch-card${i === chFind.pick ? " on" : ""}`,

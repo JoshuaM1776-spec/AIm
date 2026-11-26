@@ -231,11 +231,11 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     design.on("pageerror", e => errors.push("design: " + e.message));
     await design.waitForSelector(".yt");
     const prev = () => design.textContent("#preview");
-    step("Design your YouTube: step 1 of 3, with a live preview of the homepage", (await design.textContent(".panel .count")) === "Step 1 of 3" && (await prev()).includes("Good morning."));
+    step("Design your YouTube: step 1 of 3, with a live preview of the homepage", (await design.textContent(".panel .count")) === "Step 1 of 3" && (await prev()).includes("This week's challenge"));
     await design.click(".opt:has-text('The regular YouTube feed')");
-    step("choosing YouTube's feed changes the preview at once", !(await prev()).includes("Good morning.") && (await prev()).includes("Recommended for you"));
+    step("choosing YouTube's feed changes the preview at once", !(await prev()).includes("This week's challenge") && (await prev()).includes("Recommended for you"));
     await design.click(".opt:has-text('A clean page with my aim')");
-    step("a clean page: the greeting and the three ways in, with Explore under Break, no videos", (await prev()).includes("Good morning.") && (await prev()).includes("Explore") &&
+    step("a clean page: this week's challenge and Continue Learning, with Explore under Break, no videos", (await prev()).includes("This week's challenge") && (await prev()).includes("Explore") &&
       !(await prev()).includes("Learn something"));
     step("the Home stage has two choices, not three", (await design.$$(".panel .opt")).length === 2);
     await design.click("#next");
@@ -275,7 +275,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     await sw.evaluate(() => serial(async () => { await setSetting("learnTopics", []); await setSetting("learnShorts", false); }));
     await welcome.click("#composer .chip:text-is('Done')");
     await welcome.waitForSelector("#composer #open");
-    step("without an account, the path waits until you sign in; then what's next, how to pin Aim, Open YouTube", (await welcome.textContent("#thread")).includes("When you've signed in, open Start a challenge") &&
+    step("without an account, the path waits until you sign in; then what's next, how to pin Aim, Open YouTube", (await welcome.textContent("#thread")).includes("When you've signed in, open Learning plans") &&
       (await welcome.textContent("#thread")).includes("Keep me one click away") && !(await welcome.$("#composer .chip")) && !(await welcome.isVisible("#skip")));
     await welcome.click("#open");
     await welcome.waitForURL("https://www.youtube.com/");
@@ -315,11 +315,11 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("early hide hands over to the card", await p.evaluate(() =>
     !document.documentElement.classList.contains("wp-boot") && document.documentElement.classList.contains("wp-home")));
   const sceneImg = () => p.evaluate(() => getComputedStyle(document.querySelector("#wp-home .wp-scene-bg")).backgroundImage);
-  step("homepage (0.73): the reading room. Home, Break and Library at the top, a greeting, the search, then Continue Learning, the Daily and the Weekly Challenge",
-    /^Good (morning|afternoon|evening)\.$/.test(await text("#wp-home .wp-home-title")) &&
+  step("homepage (0.76): Home, Break and Library at the top, this week's challenge (on its way: none is published here), then the search and Learning plans; no Daily unless it's on",
+    (await text("#wp-home .wp-wk-title")) === "This week's challenge is on its way" &&
     (await p.getAttribute("#wp-home .wp-home-input", "placeholder")) === "Search for videos, topics, or anything you want to learn…" && !card0.includes("Search YouTube") &&
     (await p.$$eval("#wp-home .wp-scene-tab", b => b.map(x => x.textContent).join())) === "Home,Break,Library" && !!(await p.$("#wp-home .wp-scene-tab.on:has-text('Home')")) &&
-    (await p.$$eval("#wp-home .wp-scene-card-title", b => b.map(x => x.textContent).join())) === "Start a challenge,Daily Challenge,Weekly Challenge" &&
+    (await text("#wp-home .wp-home-continue")) === "Learning plans" && !(await p.$("#wp-home .wp-home-daily")) &&
     (await sceneImg()).includes("scenes/home.jpg"), card0.slice(0, 160));
   step("the scene covers YouTube's own bar, and the page under it doesn't scroll", await p.evaluate(() => {
     const r = document.querySelector("#wp-home").getBoundingClientRect();
@@ -337,7 +337,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.click("#wp-home .wp-home-continue");
   await p.waitForSelector("#wp-home .wp-pw");
   const pwText = await text("#wp-home .wp-pw");
-  step("Continue Learning: a panel with your paths, their progress, and Add an interest", (await text("#wp-home .wp-scene-panel-title")) === "Start a challenge" && pwText.includes("Your learning plans") && pwText.includes("Aviation") &&
+  step("Continue Learning: a panel with your paths, their progress, and Add an interest", (await text("#wp-home .wp-scene-panel-title")) === "Learning plans" && pwText.includes("Your learning plans") && pwText.includes("Aviation") &&
     pwText.includes("Earn a private pilot's license") && pwText.includes("No path yet") && !!(await p.$("#wp-home .wp-pw-plus")), pwText.slice(0, 200));
   await p.click("#wp-home .wp-pw-plus");
   await p.fill("#wp-home .wp-pw-add input >> nth=0", "Woodworking");
@@ -510,15 +510,15 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("Done is one tap; a light card follows at the top of the homepage card: time, found it?, and a way back in", !(await p.$(".wp-done-dialog")) &&
     ["min on Learn how sourdough", "Found what you needed?", "Yes", "Partly", "Not done? Pick it back up"].every(t => endText.includes(t)), endText.slice(0, 160));
   if (process.env.SHOTS) { await p.waitForTimeout(600); await p.screenshot({ path: `${process.env.SHOTS}/after-done.png` }); }
-  step("the card sits inside the homepage card, above the question, covering nothing", await p.evaluate(() => {
-    const end = document.querySelector(".wp-home-end").getBoundingClientRect(), h = document.querySelector(".wp-home-title").getBoundingClientRect();
+  step("the card sits on the homepage, above this week's challenge, covering nothing", await p.evaluate(() => {
+    const end = document.querySelector(".wp-home-end").getBoundingClientRect(), h = document.querySelector(".wp-wk-card").getBoundingClientRect();
     return end.bottom <= h.top && !document.querySelector(".wp-notice");
   }));
   await p.click('.wp-home-end .wp-end-rate button:text-is("Yes")');
   await p.waitForTimeout(400);
   step("answering is quiet: the card says thanks in place", (await text(".wp-home-end")).includes("Nice work"));
   await p.click('.wp-home-end [aria-label="Dismiss"]');
-  step("dismissing it leaves the homepage card as usual", !(await p.$(".wp-home-end")) && !!(await p.$("#wp-home .wp-home-title")));
+  step("dismissing it leaves the homepage card as usual", !(await p.$(".wp-home-end")) && !!(await p.$("#wp-home .wp-wk-card")));
   await aimMenu();
   await p.click('.wp-dropdown .wp-dd-actions button:text-is("Set aim")');
   await p.waitForSelector(".wp-dialog .wp-recent", { timeout: 3000 });
@@ -671,7 +671,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await sw.evaluate(() => serial(() => startPurpose({ text: "Fix my truck's AC", search: "truck ac recharge" })));
   await p.goto("https://www.youtube.com/");
   await p.waitForSelector("#wp-home .wp-home-continue");
-  step("home: Continue Learning names the aim you're on", (await text("#wp-home .wp-home-continue")).includes("Pick up: Fix my truck's AC"));
+  step("home: Continue names the aim you're on", (await text("#wp-home .wp-home-continue")) === "Continue: Fix my truck's AC");
   await openContinue();
   await p.waitForSelector("#wp-home .wp-home-resume");
   let home = await text("#wp-home");
@@ -962,7 +962,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("what you watched isn't offered again, and a channel you took out is gone", !exIds3.includes("tbobvid1") && !exIds3.some(id => id.startsWith("numb")), exIds3.join());
   await p.click("#wp-home .wp-scene-tab:has-text('Home')");
   await p.waitForFunction(() => !document.querySelector("#wp-home .wp-explore-head"));
-  step("Home returns to the greeting", /^Good (morning|afternoon|evening)\.$/.test(await text("#wp-home .wp-home-title")) && (await p.getAttribute("#wp-home", "data-view")) === "home");
+  step("Home returns to this week's challenge", !!(await p.$("#wp-home .wp-wk-card")) && (await p.getAttribute("#wp-home", "data-view")) === "home");
   await sw.evaluate(() => serial(async () => { await startPurpose({ text: "fix a leaky faucet" }); }));
   await p.goto("https://www.youtube.com/");
   await p.waitForSelector("#wp-home .wp-home-continue");

@@ -18,6 +18,7 @@ import { pathPlan } from "./path.ts";
 import { type SyncStore, SyncError, readSyncInput } from "./sync.ts";
 import { type HsDb, HS_TASKS } from "./homeschool.ts";
 import { type DailyStore, dailyDraft, dailyList, dailyRemove, dailySave, dailyToday } from "./daily.ts";
+import { type WeeklyStore, weeklyCurrent, weeklyDraft, weeklyImage, weeklyList, weeklyRemove, weeklySave, weeklyTurn } from "./weekly.ts";
 
 export type Plan = "free" | "plus" | "homeschool"; // Homeschool includes everything in Plus
 
@@ -64,6 +65,7 @@ export interface Deps {
   sync?: SyncStore;   // Plus sync across devices (sync.ts)
   hs?: HsDb;          // Aim Homeschool: the parent website and paired student devices (homeschool.ts)
   daily?: DailyStore; // the Daily Challenge: drafts and published days (daily.ts)
+  weekly?: WeeklyStore; // the Weekly Challenge: drafts, published weeks and their pictures (weekly.ts)
   now(): Date;
   config: Config;
 }
@@ -124,11 +126,13 @@ export const TASKS: Record<string, Task> = {
 };
 
 // Requests that may carry more than a few pages: up to maxSyncBytes.
-const BIG_TASKS = new Set(["sync", "hs-upload-add", "hs-curriculum-build", "hs-curriculum-save", "hs-week-save",
+const BIG_TASKS = new Set(["weekly-image", "weekly-save", "sync", "hs-upload-add", "hs-curriculum-build", "hs-curriculum-save", "hs-week-save",
   "librarian-talk", "video-concepts", "scenario-turn", "deeper-step", "pathways-themes", "channels-organize", "path-plan"]); // caption excerpts or reference passages (Plus); each task trims them to its own limits
 
 // Handled directly in handle(), without AI.
 const DAILY_TASKS = new Set(["daily-draft", "daily-list", "daily-save", "daily-remove"]);
+const WEEKLY_EDIT_TASKS = new Set(["weekly-draft", "weekly-list", "weekly-save", "weekly-remove", "weekly-image"]);
+const PUBLIC_TASKS = new Set(["daily-today", "weekly-current"]);
 const isEditor = (email: string | undefined, config: Config) => !!email && !!config.dailyEditors?.includes(email.trim().toLowerCase());
 const ACCOUNT_TASKS = new Set(["status", "account-export", "account-delete", "billing-checkout", "billing-portal", "sync", "sync-erase"]);
 
@@ -209,14 +213,17 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
   try { body = JSON.parse(raw || "{}"); } catch { return fail(400, "bad_json", "The request isn't valid JSON.", cors); }
   const name = typeof body?.task === "string" ? body.task : "";
   if (size > (BIG_TASKS.has(name) ? cfg.maxSyncBytes || cfg.maxBodyBytes : cfg.maxBodyBytes)) return fail(413, "too_large", "That request is too large.", cors);
-  if (!ACCOUNT_TASKS.has(name) && !Object.hasOwn(TASKS, name) && !Object.hasOwn(HS_TASKS, name) && !DAILY_TASKS.has(name) && name !== "daily-today")
+  if (!ACCOUNT_TASKS.has(name) && !Object.hasOwn(TASKS, name) && !Object.hasOwn(HS_TASKS, name) && !DAILY_TASKS.has(name) && !WEEKLY_EDIT_TASKS.has(name) &&
+    !PUBLIC_TASKS.has(name) && name !== "weekly-turn")
     return fail(400, "task", "Unknown task.", cors);
 
-  // Today's Daily Challenge: the same for everyone, so no account is needed. Published days only.
-  if (name === "daily-today") {
-    if (!deps.daily) return json(200, { ok: true, challenge: null }, cors);
-    try { return json(200, { ok: true, ...(await dailyToday({ input: body.input, now: deps.now(), daily: deps.daily })) }, cors); }
-    catch (e) { if (e instanceof TaskError) return fail(e.status, e.code, e.message, cors); throw e; }
+  // Today's Daily Challenge and this week's Weekly Challenge: the same for everyone, so no account is
+  // needed. Published ones only.
+  if (PUBLIC_TASKS.has(name)) {
+    try {
+      if (name === "daily-today") return json(200, { ok: true, ...(deps.daily ? await dailyToday({ input: body.input, now: deps.now(), daily: deps.daily }) : { challenge: null }) }, cors);
+      return json(200, { ok: true, ...(deps.weekly ? await weeklyCurrent({ input: body.input, now: deps.now(), weekly: deps.weekly }) : { story: null }) }, cors);
+    } catch (e) { if (e instanceof TaskError) return fail(e.status, e.code, e.message, cors); throw e; }
   }
 
   const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
@@ -240,6 +247,32 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
       cancelAtPeriodEnd: !!b?.cancelAtPeriodEnd, manage: !!b?.customer };
     return json(200, { ok: true, email: user.email ?? null, plan, usage, limits: limitsFor(plan, deps.config), billing, sync: !!deps.sync,
       editor: isEditor(user.email, deps.config) }, cors);
+  }
+
+  // The Weekly Challenge's editors (the same accounts): draft, check, playtest and publish (weekly.ts).
+  if (WEEKLY_EDIT_TASKS.has(name)) {
+    if (!deps.weekly) return fail(503, "weekly", "The Weekly Challenge isn't set up on the server yet.", cors);
+    if (!isEditor(user.email, deps.config)) return fail(403, "editor", "Only Aim's editors can do this.", cors);
+    const userId = user.id;
+    const ctx = { input: body.input, now: deps.now(), weekly: deps.weekly,
+      ai: (taskName: string, r: AiRequest) => useAI(deps, userId, taskName, r, limitsFor("plus", deps.config)) };
+    try {
+      const run = { "weekly-draft": weeklyDraft, "weekly-list": weeklyList, "weekly-save": weeklySave, "weekly-remove": weeklyRemove, "weekly-image": weeklyImage }[name]!;
+      return json(200, { ok: true, ...(await run(ctx)) }, cors);
+    } catch (e) {
+      if (e instanceof TaskError) return fail(e.status, e.code, e.message, cors);
+      throw e;
+    }
+  }
+  // Playing it, signed in: the narrator answers, gives feedback on reasoning, and writes the debrief.
+  if (name === "weekly-turn") {
+    if (!deps.weekly) return fail(503, "weekly", "The Weekly Challenge isn't set up on the server yet.", cors);
+    const userId = user.id;
+    const ctx = { input: body.input, now: deps.now(), weekly: deps.weekly, editor: isEditor(user.email, deps.config), plan,
+      usage: deps.taskCountSince ? { countSince: (t: string, since: Date) => deps.taskCountSince!(userId, t, since) } : undefined,
+      ai: (taskName: string, r: AiRequest) => useAI(deps, userId, taskName, r, limitsFor(plan, deps.config)) };
+    try { return json(200, { ok: true, ...(await weeklyTurn(ctx)) }, cors); }
+    catch (e) { if (e instanceof TaskError) return fail(e.status, e.code, e.message, cors); throw e; }
   }
 
   // The Daily Challenge's editors: draft, check, edit and publish (daily.ts). Their drafting counts

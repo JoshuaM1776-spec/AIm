@@ -1,5 +1,5 @@
-// Aim — YouTube's homepage, replaced by the reading room (content/scene.js): Home, Break and the
-// panels. This file draws it and keeps the pieces the panels share: the aim you're on, its videos,
+// Aim — YouTube's homepage, replaced by the scene (content/scene.js): Home (this week's challenge,
+// content/weekly.js), Break and the panels. This file draws it and keeps the pieces the panels share: the aim you're on, its videos,
 // and what you saved for later.
 
 // Example requests, said the way you'd ask a librarian.
@@ -64,16 +64,19 @@ async function renderHome() {
     return renderToday(host);
   }
   const p = activePurpose();
-  const today = account.on && !status.totalReached ? (await send({ type: "challenge-today" })) || {} : {};
-  // Today's Daily Challenge, as this browser has it; fetched in the background if it's a new day.
-  const daily = status.totalReached ? {} : (await send({ type: "daily-peek" })) || {};
+  // This week's challenge (the card), as this browser has it; fetched in the background if it's a new week.
+  if (!status.totalReached) await weeklyLoad();
+  // Today's Daily Challenge, only if you turned it on (Settings → YouTube experience; paused in 0.76).
+  const daily = settings.dailyOn && !status.totalReached ? (await send({ type: "daily-peek" })) || {} : {};
   if (location.pathname !== "/") return;
   exploreOpen = scene.view === "break" && !scene.panel;
   const view = status.totalReached ? "total" : scene.view;
-  const key = [view, scene.panel || "",
+  // While the story is open, it redraws itself (wkRedraw); nothing else on the page should rebuild it
+  // under someone writing their reasoning.
+  const key = scene.panel === "story" ? [view, "story", wk.week, wk.playtest, wk.story?.title || ""].join("|") : [view, scene.panel || "",
     p ? `p|${p.id}|${p.text}|${(p.map?.parts || []).map(x => x.id + x.status).join(".")}${p.map?.synthesis?.verdict || ""}${p.practice ? `${p.practice.title}${p.practice.triedAt || ""}` : ""}|${(status.currentVideos || []).map(v => v.id).join(",")}|${p.study ? `${p.study.current}:${p.study.topics.map(t => t.check?.at || 0).join(".")}:${p.study.apply?.doneAt || 0}` : ""}` : "idle",
     leisureUsedUp(), (status.saved || []).map(v => v.id).join(","), account.on, status.pathways?.offer?.name || "", !!homeEnd,
-    dailyCardSub(daily), today.weekly?.list?.[today.weekly.pick]?.title || "",
+    settings.dailyOn ? dailyCardSub(daily) : "", wkStateKey(),
     (settings.learnTopics || []).join("+"), (settings.learnOff || []).length].join("|");
   if ($("#wp-home")?.dataset.key === key) return; // don't rebuild while someone is typing
   $("#wp-home")?.remove();
@@ -89,11 +92,12 @@ async function renderHome() {
       el("p", { class: "wp-scene-sub" }, `You set a daily limit of ${settings.totalMin} minutes. It resets at midnight.`));
   } else if (scene.panel === "continue") main.append(continuePanel(p));
   else if (scene.panel === "daily") main.append(dailyPanel());
-  else if (scene.panel === "weekly") main.append(challengePanel(scene.panel));
+  else if (scene.panel === "story") main.append(weeklyPanel());
+  else if (scene.panel === "weekly") main.append(challengePanel(scene.panel)); // your own weekly challenge, from a finished one
   else if (view === "break") breakMain(main);
-  else homeMain(main, p, today, daily);
+  else homeMain(main, p, daily);
   document.body.append(root);
-  if (view !== "total" && !daily.fresh && !scene.panel) send({ type: "daily-get" }).then(r => { if (r?.challenge && !daily.challenge && alive) renderHome(); });
+  if (settings.dailyOn && view !== "total" && !daily.fresh && !scene.panel) send({ type: "daily-get" }).then(r => { if (r?.challenge && !daily.challenge && alive) renderHome(); });
   if (view === "home" && !scene.panel) {
     showTips();
     maybeOfferTalk(root);
@@ -101,8 +105,9 @@ async function renderHome() {
   }
 }
 
-// Home: a greeting, the search, and the three ways in.
-function homeMain(main, p, today, daily) {
+// Home (0.76): this week's challenge fills the scene; under it, a slim search and where you left off
+// (your aim, or your learning plans), and the Daily Challenge if you turned it on.
+function homeMain(main, p, daily) {
   const input = el("input", { class: "wp-home-input", type: "text", "aria-label": "Search for videos, topics, or anything you want to learn",
     placeholder: "Search for videos, topics, or anything you want to learn…" });
   const findBtn = el("button", { class: "wp-home-go", "aria-label": "Go", title: "Go" }, icon("right"));
@@ -119,20 +124,16 @@ function homeMain(main, p, today, daily) {
   };
   findBtn.onclick = submit;
   keepKeys(input, submit);
-  const pick = s => today[s]?.list?.[today[s].pick];
   main.append(...[
     homeEnd,
-    sceneTitle(`${greeting()}.`),
-    el("p", { class: "wp-scene-sub" }, "Learn, explore, or take on a challenge."),
-    el("div", { class: "wp-home-search" }, el("span", { class: "wp-home-search-icon" }, icon("search")), input, findBtn),
+    weeklyCard(),
+    el("div", { class: "wp-home-under" },
+      el("div", { class: "wp-home-search" }, el("span", { class: "wp-home-search-icon" }, icon("search")), input, findBtn),
+      el("button", { class: "wp-home-chip wp-home-continue", onclick: openContinue, title: p ? `Continue: ${p.text}` : "Your learning plans" },
+        icon("playRing"), el("span", {}, p ? `Continue: ${p.text}` : "Learning plans"), icon("right")),
+      settings.dailyOn ? el("button", { class: "wp-home-chip wp-home-daily", onclick: openDaily, title: dailyCardSub(daily) },
+        icon("calendarDots"), el("span", {}, "Today's challenge"), icon("right")) : null),
     hint,
-    el("div", { class: "wp-scene-cards" },
-      // Start a challenge until something's in progress; then it's where you pick it up.
-      sceneCard({ cls: "wp-home-continue tint-copper", ic: "playRing", title: p ? "Continue Learning" : "Start a challenge", glow: true, onclick: openContinue,
-        sub: p ? `Pick up: ${p.text}` : "Pick up a learning plan, or start a new one." }),
-      sceneCard({ cls: "wp-home-daily tint-blue", ic: "calendarDots", title: "Daily Challenge", onclick: openDaily, sub: dailyCardSub(daily) }),
-      sceneCard({ cls: "wp-home-weekly tint-violet", ic: "users", title: "Weekly Challenge", onclick: () => openChallengePanel("weekly"),
-        sub: pick("weekly") ? `This week: ${pick("weekly").title}` : "A larger goal to build real understanding." })),
     el("div", { class: "wp-scene-invites" }),
     themeOfferBlock()].filter(Boolean));
 }
