@@ -1001,6 +1001,16 @@ await yt.click("#wp-home .wp-pw-row:has-text('Aviation') .wp-pw-pick");
 await yt.waitForURL(/search_query=how%20does%20a%20wing%20make%20lift/);
 let pathAim = (await sw.evaluate(() => chrome.storage.local.get("purpose"))).purpose;
 step("picking it up starts the first lesson, in order, as a challenge", pathAim.text === "How does a wing make lift?" && !!pathAim.pathRef && pathAim.challenge.status === "active");
+if (process.env.SHOTS) { // the lesson on YouTube, as someone sees it (screenshots only)
+  await yt.waitForTimeout(1200);
+  await yt.screenshot({ path: `${process.env.SHOTS}/lesson-results.png` });
+  await yt.goto("https://www.youtube.com/watch?v=alt2bbb");
+  await yt.waitForSelector("#wp-aimpanel", { timeout: 10000 }).catch(() => {});
+  await yt.setViewportSize({ width: 1100, height: 760 });
+  await yt.addStyleTag({ content: "ytd-watch-flexy{display:grid;grid-template-columns:1fr 380px;gap:24px;padding:24px} #movie_player{aspect-ratio:16/9;background:#000;border-radius:12px} #secondary{grid-column:2;grid-row:1/4}" });
+  await yt.waitForTimeout(1200);
+  await yt.screenshot({ path: `${process.env.SHOTS}/lesson-watch.png` });
+}
 srv.talk.push({ message: "Okay: explain how a wing makes lift.", done: false, memory: [], marks: [] },
   { message: "Yes: the wing turns air down and the air pushes it up.", done: true, memory: [], marks: [], verdict: "solid", feedback: { explained: ["A wing turns air down"], uncertain: [], misconceptions: [] } });
 await yt.goto("https://www.youtube.com/#aim-put-together");
