@@ -481,11 +481,14 @@ async function connectionLine(host) {
   if (!m || currentId !== id) return;
   send({ type: "memory-offered", id: m.id });
   connectFound = { id, m };
-  showConnection($("#wp-upnext") || host, m);
+  showConnection(host, m);
 }
 function showConnection(host, m) {
-  if (!host?.isConnected || host.querySelector(".wp-connect")) return;
-  host.querySelector(".wp-upnext-head")?.after(el("div", { class: "wp-deeper wp-connect" },
+  // The panel may have been drawn again while the match was looked up: use the one on the page.
+  if (!host?.isConnected) host = $("#wp-aimpanel");
+  const slot = host?.querySelector?.(".wp-ap-connect");
+  if (!slot?.isConnected || slot.querySelector(".wp-connect")) return;
+  slot.append(el("div", { class: "wp-deeper wp-connect" },
     el("span", { class: "wp-muted" }, `This connects to something you were into: ${m.subject}.`),
     el("button", { class: "wp-link", onclick: () => openTalk({ connect: m }) }, "Talk about it")));
 }

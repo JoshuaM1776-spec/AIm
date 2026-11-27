@@ -34,7 +34,6 @@ function release(id) {
   holding = false;
   closePlayerCard();
   resume(id);
-  if (activePurpose() && !brk) onTrackPill();
 }
 // Play the video Aim held. YouTube may still be swapping the new video in (or showing an ad), so
 // check again for a few seconds; stop as soon as it plays, if you pause it yourself, or if you leave.
@@ -58,20 +57,6 @@ function resume(id) {
   for (const v of document.querySelectorAll("video")) if (pausedByAim.has(v) && v !== getVideoEl()) pausedByAim.delete(v);
 }
 
-// "Staying on track": a small pill on the player for a few seconds when a video plays for your aim.
-// Quiet confirmation, never in the way; tap it for Aim's menu.
-function onTrackPill() {
-  const host = playerHost();
-  if (!host || $(".wp-ontrack", host)) return;
-  const p = activePurpose();
-  const pill = el("button", { class: "wp wp-ontrack", title: "Aim's menu", onclick: e => { e.stopPropagation(); pill.remove(); openDropdown(); } },
-    el("span", { class: "wp-icon" }, svgIcon("logo")), el("b", {}, BRAND),
-    el("span", { class: "wp-ontrack-text" }, el("span", {}, "Staying on track"),
-      el("span", { class: "wp-ontrack-aim" }, p.learn ? `Exploring: ${p.learn}` : `${purposeIsGoal() ? "Learning" : "Searching"}: ${p.text}`)), icon("right"));
-  host.append(pill);
-  setTimeout(() => pill.classList.add("wp-ontrack-out"), 3500);
-  setTimeout(() => pill.remove(), 4000);
-}
 function goBack() {
   holding = false;
   closeModal();

@@ -1,7 +1,7 @@
 // Aim — study sessions on YouTube (Aim Plus). Offered when the librarian sees a learning goal:
 // Aim breaks the aim into topics, the librarian picks a video for each from YouTube's own
-// results, and TeachBack checks understanding topic by topic. On the watch page the study plan
-// takes the place of "Up next"; on a topic's results page it heads the results bar.
+// results, and TeachBack checks understanding topic by topic. On the watch page its topics are the
+// panel's steps; on a topic's results page it heads the results bar.
 
 const activeStudy = p => (p?.study && !p.study.endedAt ? p.study : null);
 
@@ -120,11 +120,11 @@ async function goTopic(st, index) {
 }
 
 // The topic in focus: its brief, its videos, and the next step.
-function topicBlock(p, st, t) {
+function topicBlock(p, st, t, inPanel = false) {
   const i = st.topics.indexOf(t);
   const last = i === st.topics.length - 1;
   return el("div", { class: "wp-study-topic" },
-    el("div", { class: "wp-label" }, `Topic ${i + 1} of ${st.topics.length}`),
+    inPanel ? null : el("div", { class: "wp-label" }, `Topic ${i + 1} of ${st.topics.length}`), // the panel's first line says it
     el("div", { class: "wp-strong" }, t.title),
     t.brief ? el("div", { class: "wp-study-brief" }, t.brief) : null,
     whereLink(t.title, st.title),
@@ -134,29 +134,16 @@ function topicBlock(p, st, t) {
         : el("button", { class: "wp-btn wp-btn-text", onclick: () => goTopic(st, i + 1) }, "Next topic", icon("right"))));
 }
 
-// The watch page's sidebar during a study session.
-function renderStudyPanel(p, host) {
+// Inside the panel beside the video during a study session: the topic in focus, its actions, and its
+// other videos. The topics themselves are the panel's steps (panelPlace in aimpanel.js).
+function studySection(p) {
   const st = activeStudy(p);
+  if (!st) return null;
   const t = studyTopic(st);
-  const key = JSON.stringify([currentId, st.id, st.current, st.topics.map(x => [x.videos.length, x.watched.length, !!x.check])]);
-  const existing = $("#wp-study");
-  if (existing && existing.parentElement === host && existing.dataset.key === key) return;
-  existing?.remove();
-  $("#wp-upnext")?.remove();
-  host.prepend(el("div", { id: "wp-study", class: "wp wp-study", "data-key": key },
-    el("div", { class: "wp-row-between" },
-      el("div", {}, el("div", { class: "wp-label" }, "Study session"), el("div", { class: "wp-strong" }, st.title)),
-      el("button", { class: "wp-link", onclick: () => send({ type: "open-study" }) }, "Overview")),
-    topicBlock(p, st, t),
-    t.videos.length ? el("div", { class: "wp-study-videos" }, ...t.videos.filter(v => v.id !== currentId).map(v =>
-      el("a", { class: "wp-upnext-item", href: `/watch?v=${encodeURIComponent(v.id)}`, title: v.title || "" },
-        el("div", { class: "wp-upnext-thumb", style: `background-image: url("https://i.ytimg.com/vi/${encodeURIComponent(v.id)}/mqdefault.jpg")` },
-            v.length ? el("span", { class: "wp-upnext-len" }, v.length) : null),
-        el("div", { class: "wp-upnext-text" }, el("div", { class: "wp-upnext-title" }, v.title || "Video"),
-          v.reason ? el("div", { class: "wp-muted" }, v.reason) : null)))) : null,
-    el("ol", { class: "wp-study-list" }, ...st.topics.map((x, i) => el("li", { class: x === t ? "wp-study-here" : "" },
-      el("button", { class: "wp-link", onclick: () => goTopic(st, i) }, x.title),
-      checkLabel(x) ? el("span", { class: "wp-muted" }, ` · ${checkLabel(x)}`) : null)))));
+  const others = t.videos.filter(v => v.id !== currentId);
+  return el("div", { id: "wp-study", class: "wp-study" },
+    topicBlock(p, st, t, true),
+    others.length ? el("div", { class: "wp-study-videos" }, ...others.map(v => videoRow(v, v.reason || ""))) : null);
 }
 
 // On a topic's results page, the results bar leads with the topic.

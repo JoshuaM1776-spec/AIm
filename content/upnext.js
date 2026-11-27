@@ -1,5 +1,5 @@
-// Aim — "Up next from your search": during a purpose, the watch page's sidebar shows what your
-// own searches found, in place of YouTube's recommendations. No AI: your search, YouTube's ranking.
+// Aim — "More from your search": during an aim, what your own searches found, in place of YouTube's
+// recommendations, folded into the panel beside the video. No AI: your search, YouTube's ranking.
 
 function upNextItems(p) {
   // Untitled entries are sponsored slots captured before Aim knew to skip them.
@@ -10,39 +10,12 @@ function upNextItems(p) {
   return (fromLast.length >= 3 ? fromLast : pool.slice().reverse()).slice(0, 12);
 }
 
+// The watch page's sidebar: the one panel (aimpanel.js), with More from your search folded into it;
+// a themed break has its own panel (relax.js), and a parked Homeschool day its plan (plan.js).
 function renderUpNext() {
-  renderUpNextList();
-  renderAimPanel(); // above it: the aim, and Learn / Explain / Apply (aimpanel.js)
-}
-
-function renderUpNextList() {
   renderThemePanel();
-  const existing = $("#wp-upnext");
   const p = activePurpose();
   const host = p && !brk && location.pathname === "/watch" ? sidebarHost() : null;
-  if (!host) { existing?.remove(); $("#wp-study")?.remove(); $("#wp-plan-panel")?.remove(); return; }
-  if (p.plan && planOn()) return renderPlanPanel(p, host);
-  $("#wp-plan-panel")?.remove();
-  if (activeStudy(p)) return renderStudyPanel(p, host);
-  $("#wp-study")?.remove();
-  const items = upNextItems(p);
-  const lastQ = p.searches?.[p.searches.length - 1]?.q;
-  const key = `${currentId}|${lastQ}|${p.learn || ""}|${currentInfo?.title || ""}|${items.map(v => v.id).join(",")}`;
-  if (existing && existing.parentElement === host && existing.dataset.key === key) return;
-  existing?.remove();
-  host.prepend(el("div", { id: "wp-upnext", class: "wp wp-upnext", "data-key": key },
-    el("div", { class: "wp-upnext-head" },
-      el("div", { class: "wp-strong" }, p.learn && !lastQ ? "More to explore" : "Up next from your search"),
-      el("div", { class: "wp-muted wp-ellipsis" }, lastQ ? `“${lastQ}”` : p.learn ? "Today's picks" : p.text)),
-    goDeeperRow(p),
-    ...(items.length
-      ? items.map(v => el("a", { class: "wp-upnext-item", href: `/watch?v=${encodeURIComponent(v.id)}`, title: v.title || "" },
-          // A background image: if the thumbnail can't load, a grey box remains, not a broken-image icon.
-          el("div", { class: "wp-upnext-thumb", style: `background-image: url("https://i.ytimg.com/vi/${encodeURIComponent(v.id)}/mqdefault.jpg")` },
-            v.length ? el("span", { class: "wp-upnext-len" }, v.length) : null),
-          el("div", { class: "wp-upnext-text" },
-            el("div", { class: "wp-upnext-title" }, v.title || "Video"),
-            v.channel ? el("div", { class: "wp-muted" }, v.channel) : null)))
-      : [el("div", { class: "wp-muted wp-upnext-empty" }, "Search toward your aim, and what you find shows up here.")])));
-  connectionLine($("#wp-upnext"));
+  if (host && p.plan && planOn()) renderPlanPanel(p, host); else $("#wp-plan-panel")?.remove();
+  renderAimPanel();
 }

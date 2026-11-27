@@ -393,12 +393,15 @@ await yt.waitForTimeout(400);
 let study = (await sw.evaluate(() => chrome.storage.local.get("purpose").then(d => d.purpose))).study;
 step("the librarian's picks become the topic's videos", study.topics[0].videos.map(v => v.id).join() === "alt1aaa,alt2bbb", JSON.stringify(study.topics[0].videos));
 await yt.goto("https://www.youtube.com/watch?v=alt1aaa");
-await yt.waitForSelector("#wp-study");
-const panel = await yt.textContent("#wp-study");
-step("on the video, the study plan replaces Up next", panel.includes("Study session") && panel.includes("Topic 1 of 2") && panel.includes("Krebs cycle") &&
-  !(await yt.$("#wp-upnext")));
-// ---------- In this video ----------
-await yt.waitForSelector("#wp-concepts .wp-concept");
+await yt.waitForSelector("#wp-aimpanel #wp-study");
+const panel = await yt.textContent("#wp-aimpanel");
+step("on the video, one panel (0.78): the study session's topic in focus, its topics as the steps, Check yourself, and no list from the search",
+  panel.includes("Study session · Topic 1 of 2") && panel.includes("Glycolysis") && panel.includes("Krebs cycle") && !!(await yt.$("#wp-aimpanel .wp-ap-step.now")) &&
+  !!(await yt.$("#wp-study button:text-is('Check yourself')")) && !(await yt.$("#wp-upnext")) && !(await yt.$("#secondary > #wp-study")), panel.slice(0, 200));
+// ---------- In this video (What this video covers, folded into the panel) ----------
+await yt.waitForSelector("#wp-aimpanel #wp-concepts .wp-concept", { state: "attached" });
+step("What this video covers is folded into the panel", !(await yt.$eval("#wp-concepts", d => d.open)));
+await yt.click("#wp-concepts summary");
 const conceptsText = await yt.textContent("#wp-concepts");
 step("In this video: the concepts, from the title, description and chapters", conceptsText.includes("Glycolysis") && conceptsText.includes("2:15") &&
   conceptsText.includes("not what was said") && conceptsText.includes("likely") && srv.videoPrompt.includes("1. 2:15 Glucose comes in") && srv.videoPrompt.includes("THE STUDENT'S GOAL:"));
@@ -436,7 +439,7 @@ await yt.click(".wp-talk button[aria-label='Close']");
 await yt.waitForSelector(".wp-talk", { state: "detached", timeout: 5000 }).catch(() => {});
 const callsBeforeReload = srv.videoCalls;
 await yt.reload();
-await yt.waitForSelector("#wp-concepts .wp-concept");
+await yt.waitForSelector("#wp-concepts .wp-concept", { state: "attached" });
 step("a video is looked at once (kept in this browser)", srv.videoCalls === callsBeforeReload);
 srv.talk.push({ message: "Glycolysis, then: where in the cell does it happen, and what comes out of it?", done: false, memory: [], marks: [] },
   { message: "The place is right: the cytoplasm. What comes out, though, is more than pyruvate.", done: true, memory: [], marks: [{ topic: "Glycolysis", status: "partial" }],
@@ -1001,11 +1004,17 @@ await yt.click("#wp-home .wp-pw-row:has-text('Aviation') .wp-pw-pick");
 await yt.waitForURL(/search_query=how%20does%20a%20wing%20make%20lift/);
 let pathAim = (await sw.evaluate(() => chrome.storage.local.get("purpose"))).purpose;
 step("picking it up starts the first lesson, in order, as a challenge", pathAim.text === "How does a wing make lift?" && !!pathAim.pathRef && pathAim.challenge.status === "active");
-if (process.env.SHOTS) { // the lesson on YouTube, as someone sees it (screenshots only)
-  await yt.waitForTimeout(1200);
-  await yt.screenshot({ path: `${process.env.SHOTS}/lesson-results.png` });
-  await yt.goto("https://www.youtube.com/watch?v=alt2bbb");
-  await yt.waitForSelector("#wp-aimpanel", { timeout: 10000 }).catch(() => {});
+// On the lesson's video (0.78): one panel, with the plan on it.
+await yt.waitForTimeout(800);
+if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/lesson-results.png` });
+await yt.goto("https://www.youtube.com/watch?v=alt2bbb");
+await yt.waitForSelector("#wp-aimpanel .wp-ap-steps", { timeout: 10000 });
+const lessonPanel = (await yt.textContent("#wp-aimpanel")).replace(/\s+/g, " ");
+step("on a lesson's video, one panel with the plan on it: where the lesson sits, its steps with the one you're on, and the lesson after",
+  lessonPanel.includes("Aviation · Unit 1 · Lesson 1 of about 5") && lessonPanel.includes("How does a wing make lift?") && lessonPanel.includes("Show it: the Final Challenge") &&
+  lessonPanel.includes("Then: Why can a plane stall at any speed?") && !!(await yt.$("#wp-aimpanel .wp-ap-step.now")) &&
+  (await yt.evaluate(() => [...document.querySelector("#secondary").children].filter(n => n.classList.contains("wp")).length)) === 1, lessonPanel.slice(0, 300));
+if (process.env.SHOTS) {
   await yt.setViewportSize({ width: 1100, height: 760 });
   await yt.addStyleTag({ content: "ytd-watch-flexy{display:grid;grid-template-columns:1fr 380px;gap:24px;padding:24px} #movie_player{aspect-ratio:16/9;background:#000;border-radius:12px} #secondary{grid-column:2;grid-row:1/4}" });
   await yt.waitForTimeout(1200);
@@ -1158,7 +1167,7 @@ await sw.evaluate(() => serial(async () => {
   await chrome.storage.local.set({ memory, purpose });
 }));
 await yt.goto("https://www.youtube.com/watch?v=conc9");
-await yt.waitForSelector("#wp-upnext .wp-connect", { timeout: 8000 });
+await yt.waitForSelector("#wp-aimpanel .wp-connect", { timeout: 8000 });
 step("while watching: one quiet line when a video connects to something you explained before", (await yt.textContent(".wp-connect")).includes("Roman concrete"));
 await sw.evaluate(() => serial(() => finishPurpose("yes")));
 await yt.close();

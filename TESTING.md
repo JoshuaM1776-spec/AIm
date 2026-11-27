@@ -75,7 +75,7 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 ### 4. Purpose
 
 - [ ] Search with no aim: your search becomes the aim, with no time limit. The results bar is one compact row: Aim, a small **Change** link and a check (Done with this aim). No time left unless you set a limit.
-- [ ] Click a result: it plays. The sidebar shows **Up next from your search** with the other results (thumbnails, titles, channels) instead of YouTube's recommendations.
+- [ ] Click a result: it plays. The sidebar shows Aim's one panel; **More from your search** (folded into it) lists the other results (thumbnails, titles, channels) instead of YouTube's recommendations.
 - [ ] Scroll the results further, then open one from far down: it plays too (results are captured as they load).
 - [ ] A playlist in the results: its videos play.
 - [ ] Open a video your searches didn't find (a link in a description, a channel page, a pasted URL): "Part of your aim?" on the player: **Back to my aim**, **Yes, it's part of it** (plays it and keeps it with the aim; strict mode asks why first), Change my aim. A search box, Save for later and break options sit under **More options**. A video from a channel you've already watched for this aim, or whose title shares a word with it, plays without asking (not in strict mode).
@@ -120,7 +120,7 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] Homepage with no aims: "What brings you here?", one rounded field ("Tell me what you're looking for…") with a small arrow inside, three example requests, and no big Search YouTube button. Enter and the arrow both work.
 - [ ] Popup with an aim: Resume (red), Take a Break, Done, then small Change my aim · Set aside · All aims links. It shows "N min so far" (time left only with a limit). **Resume** on a YouTube tab goes to the last video at the moment you left; on another site it opens a new tab instead. "Your activity" is folded.
 - [ ] Results after a plain search, signed in: the librarian is folded behind the speech-bubble icon; clicking it opens the ask box. After a request it opens by itself.
-- [ ] Up next from your search shows each video's length on its thumbnail, and no untitled "Video" entries (sponsored results are skipped).
+- [ ] More from your search shows each video's length on its thumbnail, and no untitled "Video" entries (sponsored results are skipped).
 - [ ] Recent in the popup (under Your activity) shows the aim (with its pivots), minutes, number of videos and your answer.
 
 ### 9. Step D details
@@ -229,9 +229,9 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] After a few "Yes"/"Maybe" answers: a theme appears on the Pathways page, and once on YouTube's homepage (or Today) as "You've been exploring … Want to see …?". Not now and Don't suggest this both stop it showing.
 - [ ] Turn off Pathways and delete its data: everything goes, including the answers.
 
-### 20. In this video (Aim Plus, a learning aim)
+### 20. What this video covers (Aim Plus, a learning aim)
 
-- [ ] Watch a video with chapters for a learning aim (or a study session or Today lesson): "In this video" appears beside it, says it's from the title, description and chapters, and lists the concepts. Chapter times jump the video; "likely" marks concepts not named on the page.
+- [ ] Watch a video with chapters for a learning aim (or a study session or Today lesson): **What this video covers** is folded at the bottom of the panel beside it; opened, it says it's from the title, description and chapters, and lists the concepts. Chapter times jump the video; "likely" marks concepts not named on the page.
 - [ ] Open a concept: a one-line summary and "See it in another context" searches, which open in a new tab.
 - [ ] A regulated subject (a private pilot oral exam video) names its references (the FAA's Airman Certification Standards, the Pilot's Handbook of Aeronautical Knowledge) and says Aim doesn't replace a certified instructor.
 - [ ] Nothing appears for music or entertainment, or without a learning aim.
@@ -240,7 +240,7 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 
 ### 21. Relax with a theme, and notes (signed in)
 
-- [ ] With an aim, type "I just want to enjoy some engineering videos" on the homepage: a 30-minute break starts (the Aim button reads "Relax: …"), the aim waits, and the results have a slim "Relaxing" bar with the librarian's note and other searches. No study offers, no picks to work through, no "In this video".
+- [ ] With an aim, type "I just want to enjoy some engineering videos" on the homepage: a 30-minute break starts (the Aim button reads "Relax: …"), the aim waits, and the results have a slim "Relaxing" bar with the librarian's note and other searches. No study offers, no picks to work through, no What this video covers.
 - [ ] A vague request ("engineering videos") leans toward recent aims, and the note says so.
 - [ ] Beside a video: "More on <theme>" from the theme's searches, above YouTube's own suggestions (which show, as on any break). It counts against leisure time; Add 15 minutes works.
 - [ ] During any break, the Aim menu lists set-aside aims as "Resume: …".
@@ -249,8 +249,8 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 
 ### 22. YouTube's own AI
 
-- [ ] "In this video" → open a concept → **Ask YouTube about this**: the question is copied. With YouTube's Ask button under the video, it's outlined for a few seconds; without it, the search bar is, and the question names the video. Paste it in: YouTube answers.
-- [ ] On an aim, use Ask in the search bar. Videos in its answer play without "Is this part of your aim?", and show up in Up next from your search. If Ask YouTube opens a page of its own, a video picked there plays too. Note the page's address and what Aim did, for selectors.
+- [ ] What this video covers → open a concept → **Ask YouTube about this**: the question is copied. With YouTube's Ask button under the video, it's outlined for a few seconds; without it, the search bar is, and the question names the video. Paste it in: YouTube answers.
+- [ ] On an aim, use Ask in the search bar. Videos in its answer play without "Is this part of your aim?", and show up in More from your search. If Ask YouTube opens a page of its own, a video picked there plays too. Note the page's address and what Aim did, for selectors.
 - [ ] A video from the homepage feed, a channel page or the sidebar still asks first.
 
 ### 23. Sync and reload
@@ -346,7 +346,7 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 
 ### 36. Design your YouTube (0.48)
 - [ ] The welcome tour's Make it yours screen offers **Customize with a preview** (Design your YouTube); it opens at Step 1 of 3 with a preview of YouTube's homepage.
-- [ ] Every choice changes the preview at once. Home: **A clean page with my aim** (no videos), **Videos from channels I choose** (topic picks appear under it; real thumbnails once they've loaded on YouTube), **The regular YouTube feed**. Shorts: **Hide**, **Only from selected channels** (asks for channels if none), **Show all**. Watching: the watch page, with Up next from your search or recommendations, and autoplay. (Time limits aren't a stage for now; they're in More settings.)
+- [ ] Every choice changes the preview at once. Home: **A clean page with my aim** (no videos), **Videos from channels I choose** (topic picks appear under it; real thumbnails once they've loaded on YouTube), **The regular YouTube feed**. Shorts: **Hide**, **Only from selected channels** (asks for channels if none), **Show all**. Watching: the watch page, with More from your search or recommendations, and autoplay. (Time limits aren't a stage for now; they're in More settings.)
 - [ ] After applying **A clean page**, YouTube's homepage shows only What brings you here?, even with topics picked.
 - [ ] **Before** shows YouTube as it was. Nothing changes on YouTube until **Apply to YouTube** on the before-and-after; then YouTube matches the design.
 - [ ] Settings → **Design your YouTube**, and its Jump to links, open a stage directly. Clicking a part of the preview opens its stage. A change shows **Changes not applied yet**, with Undo.
@@ -409,8 +409,8 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] A finished book has a small gilt star on its spine, on the shelf and on its page.
 
 ### 56. The aim panel on YouTube (0.63)
-- [ ] Watching a video for an aim: the top of YouTube's sidebar shows Aim's panel: your aim with how far you've got (parts explained, or study topics checked; otherwise how many videos you've watched, never a progress bar for watching), then Learn, Explain and Apply, one marked Next, then Notes, Library and Save. Up next from your search follows under it.
-- [ ] Learn goes to the next part to explore (a search), or to Up next. Explain opens the librarian (or Put it together when you're ready; signed out: sign in). Apply opens the practice, or a scenario for medical, flight and emergency aims.
+- [ ] Watching a video for an aim: the top of YouTube's sidebar shows Aim's panel: your aim with how far you've got (parts explained, or study topics checked; otherwise how many videos you've watched, never a progress bar for watching), then Learn, Explain and Apply, one marked Next, then Notes, Library and Save. More from your search is folded in at the bottom (0.78: one panel, see §70).
+- [ ] Learn goes to the next part to explore (a search), or to the next step. Explain opens the librarian (or Put it together when you're ready; signed out: sign in). Apply opens the practice, or a scenario for medical, flight and emergency aims.
 - [ ] When the video ends, a line says now is when explaining sticks, and Explain is marked Next. The arrow at the top opens the aim's page; Change changes the aim.
 - [ ] Not shown on a break, or for a Homeschool student's plan.
 
@@ -520,6 +520,14 @@ Needs the server redeployed and `0007_weekly.sql` run (it makes the `weekly_chal
 - [ ] The card after Done: the friend's question, and no Test my understanding button. Settings → Aim Plus: no Test my understanding button. The Aim Plus page: TeachBack says it's on YouTube.
 - [ ] Settings: no Aim Homeschool preview, and no "A student? Connect to my family" under Account. Aim's menu (You on the homepage, and on Aim's pages): **Pathways** where it said Homeschool.
 
+### 70. One panel beside the video (0.78)
+- [ ] Any video watched for an aim: one Aim panel at the top of YouTube's sidebar, and nothing else of Aim's there (no separate Up next list, study panel or In this video; no pill on the player).
+- [ ] A lesson on a learning plan: the panel's first line says where it sits (**Aviation · Unit 1 · Lesson 1 of about 5**), then the lesson, its steps with the one you're on highlighted and **Show it: the Final Challenge** last, and **Then:** the next lesson. **Next step** is the next part's video.
+- [ ] A study session: **Study session · Topic n of m**, the session's title, its topics as the steps (Checked or Review beside each), the topic in focus with Check yourself and Next topic, and its other videos. Overview opens the summary.
+- [ ] A learning aim with a map: its parts as the steps, then Put it together.
+- [ ] **What this video covers** (Aim Plus, a learning aim) and **More from your search** are folded at the bottom; open one and it stays open for the next video.
+- [ ] Exploring: the Go deeper line sits in the panel, above the tiles; a video that connects to something you explained shows "This connects to…" there too.
+
 ## Known issues (not regressions)
 
 - In this test environment, "opening a video in YouTube's one page plays that video" (tests/browser.test.js) sometimes fails on timing alone; it passes on a rerun and fails the same way on 0.71.
@@ -581,7 +589,6 @@ Needs a signed-in account and the server redeployed (the librarian's map and tal
 - [ ] Explore: "Good morning/afternoon/evening." with subject chips (All, then each subject in today's picks) that filter the picks.
 - [ ] Welcome: "Make YouTube work for you." then "What would you like to change?" with four switches on and **Set a daily time limit** off (checking it shows how long).
 - [ ] The librarian's panel: a microphone next to Send (Chrome asks for the microphone once); what you say appears in the reply box.
-- [ ] A video playing for your aim shows a small **Staying on track** pill on the player for a few seconds; tapping it opens Aim's menu.
 
 ### 43. Captions for the librarian (0.54, Aim Plus, preview)
 Needs Aim Plus and the server redeployed.
@@ -589,7 +596,7 @@ Needs Aim Plus and the server redeployed.
 - [ ] Watch two or three videos with captions for a learning aim, then Done: the librarian's question can mention what a video said, with a time that's a link ("… 0:45"). Clicking it opens that video at that moment (or jumps there, if it's the one playing).
 - [ ] A video without captions: the conversation still works, from titles.
 - [ ] Settings now says "Captions were there for N of the last M videos it looked at." Note what it says after a week of normal use: that's how often this can help.
-- [ ] "In this video" on a captioned video: it says "From the video's captions, title, description…", and concepts have times even without chapters.
+- [ ] What this video covers on a captioned video: it says "From the video's captions, title, description…", and concepts have times even without chapters.
 - [ ] Turn it off: no caption requests at all (DevTools → Network on YouTube: no `timedtext`).
 
 ### 44. Put it into practice (0.55)
@@ -611,7 +618,6 @@ Needs a signed-in account and the server redeployed.
 
 ### 46. Popup, pill and suggested videos (0.57)
 - [ ] Popup: your aim with its book (as on the library shelf), Resume / Done, and tiles for **Take a Break**, **Librarian** (signed in; opens the conversation on your YouTube tab) and **My Library**. With a time limit: "Session · 32 of 90 minutes" and a bar.
-- [ ] The Staying on track pill on the player also names the aim ("Learning: …", or "Exploring: History").
 - [ ] Talking it through: sometimes, after you reply, the librarian suggests a video ("A visual explanation", "A simpler explanation", "A different perspective", "Going deeper") with why. The card is a real video (YouTube's top result for its search). Clicking it plays it as part of your aim. It never says it will draw or show something itself.
 
 ### 47. Book covers (0.57.1)

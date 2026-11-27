@@ -446,6 +446,18 @@ function pathProgress(path) {
     : ui >= 0 ? { title: units[ui].title, outside: false, left: units[ui].lessons - doneIn(ui), unit: ui + 1 } : null;
   return { percent, done: done.length, total, next, unitIndex: ui, measure: path.plan?.measure || "" };
 }
+// Where a lesson sits in its plan, for the panel beside the video (0.78): the interest, the unit,
+// "Lesson n of about m" (the plan's own estimate), and the lesson after it.
+async function lessonContext(ref) {
+  if (!ref?.id) return null;
+  const path = (await pathsAll()).find(x => x.id === ref.id);
+  const lessons = path?.lessons || [];
+  const i = lessons.findIndex(l => l.id === ref.lessonId);
+  if (i < 0) return null;
+  const lesson = lessons[i], next = lessons.slice(i + 1).find(l => l.status !== "completed");
+  return { pathId: path.id, lessonId: lesson.id, interest: path.interest, unit: lesson.unit || 1,
+    unitTitle: path.plan?.units?.[(lesson.unit || 1) - 1]?.title || "", n: i + 1, of: Math.max(i + 1, path.plan ? pathProgress(path).total : lessons.length), next: next?.title || "" };
+}
 // What picking an interest up means: the lesson in progress (its aim, if it's still there), else the
 // next lesson, else "needs more lessons" (the page then asks the server for the next five).
 async function pathNext(id) {

@@ -1,4 +1,5 @@
-// Aim Plus — "In this video": beside a video watched for a learning aim, the concepts it covers,
+// Aim Plus — "What this video covers" (In this video), folded into the panel beside a video watched for a
+// learning aim (0.78): the concepts it covers,
 // each with a jump to its chapter and a couple of places to see the same idea in another context;
 // and "Test me on this video", offered when it ends. Aim works the concepts out from what the page
 // shows (title, description, chapters) and, with captions on (content/captions.js), what was said;
@@ -125,36 +126,31 @@ async function askYouTubeAbout(c) {
     : `Ask YouTube: “${question}”`);
 }
 
+// Loads what this video covers when it's wanted; the panel shows it (aimpanel.js).
 function renderConcepts() {
-  const existing = $("#wp-concepts");
   const p = activePurpose();
   if (!account.checkedAt && location.pathname === "/watch") { librarianOn().then(() => { if (account.checkedAt) renderConcepts(); }); return; }
-  const host = location.pathname === "/watch" && conceptsWanted(p) ? sidebarHost() : null;
-  if (!host || !currentId) { existing?.remove(); return; }
-  if (concepts?.id !== currentId) { existing?.remove(); loadConcepts(currentId, p); return; }
+  if (location.pathname !== "/watch" || !currentId || !conceptsWanted(p) || (p.plan && planOn())) return;
+  if (concepts?.id !== currentId) { loadConcepts(currentId, p); return; }
+  renderAimPanel();
+}
+
+// "What this video covers", folded into the panel: the concepts, each with a jump to its chapter, and
+// Test me on this video.
+function conceptsSection() {
   const d = concepts.data;
-  if (concepts.state === "ready" && !d.concepts.length) { existing?.remove(); return; } // not an educational video
-  const key = `${concepts.id}|${concepts.state}`;
-  if (existing && existing.dataset.key === key && existing.parentElement === host) return;
-  existing?.remove();
-  const panel = el("div", { id: "wp-concepts", class: "wp wp-concepts", "data-key": key },
-    el("div", { class: "wp-row-between" },
-      el("div", { class: "wp-strong" }, "In this video"),
-      concepts.state === "ready" ? el("span", { class: "wp-muted" }, `${d.concepts.length} concepts`) : null),
-    ...(concepts.state === "loading" ? [el("div", { class: "wp-muted" }, `${BRAND} is looking at what this video covers…`)]
-      : concepts.state === "error" ? [el("div", { class: "wp-muted" }, concepts.message, " ",
-          el("button", { class: "wp-link", onclick: () => { concepts = null; renderConcepts(); } }, "Try again"))]
-      : [el("div", { class: "wp-muted wp-concepts-basis" }, /captions/.test(d.basis) ? `From the video's ${d.basis}.` : `From the video's ${d.basis}, not what was said.`),
-        el("div", { class: "wp-concepts-list" }, ...d.concepts.map(conceptRow)),
-        d.regulated ? el("div", { class: "wp-concepts-note" },
-          d.references.length ? el("b", {}, "Study with: ") : null,
-          d.references.length ? `${d.references.join("; ")}. ` : null,
-          `${BRAND} supports study; it doesn't replace a certified instructor.`) : null,
-        el("button", { class: "wp-btn wp-btn-tonal wp-btn-block wp-concepts-test", onclick: testOnVideo }, icon("ask"), "Test me on this video")]));
-  // Under today's plan or the study session, above Up next.
-  const after = $("#wp-plan-panel") || $("#wp-study");
-  if (after?.parentElement === host) after.after(panel); else host.prepend(panel);
-  watchForEnd();
+  if (concepts.state === "ready" && !d.concepts.length) return null; // not an educational video
+  const kids = concepts.state === "loading" ? [el("div", { class: "wp-muted" }, `${BRAND} is looking at what this video covers…`)]
+    : concepts.state === "error" ? [el("div", { class: "wp-muted" }, concepts.message, " ",
+        el("button", { class: "wp-link", onclick: () => { concepts = null; renderConcepts(); } }, "Try again"))]
+    : [el("div", { class: "wp-muted wp-concepts-basis" }, /captions/.test(d.basis) ? `From the video's ${d.basis}.` : `From the video's ${d.basis}, not what was said.`),
+      el("div", { class: "wp-concepts-list" }, ...d.concepts.map(conceptRow)),
+      d.regulated ? el("div", { class: "wp-concepts-note" },
+        d.references.length ? el("b", {}, "Study with: ") : null,
+        d.references.length ? `${d.references.join("; ")}. ` : null,
+        `${BRAND} supports study; it doesn't replace a certified instructor.`) : null,
+      el("button", { class: "wp-btn wp-btn-tonal wp-btn-block wp-concepts-test", onclick: testOnVideo }, icon("ask"), "Test me on this video")];
+  return panelFold("video", "wp-concepts", "What this video covers", concepts.state === "ready" ? `${d.concepts.length} ideas` : "", kids);
 }
 
 // When the video ends (never during it), offer the test once.

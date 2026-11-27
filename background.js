@@ -44,6 +44,8 @@ async function tabState() {
     // The homepage shows at most two set-aside aims; the aims page shows everything.
     paused: paused.slice(0, 2).map(p => summary(p, "paused")), pausedCount: paused.length,
     currentVideos: status.purpose ? recentVideos(status.purpose) : [],
+    // A lesson on a plan: where it sits, for the panel beside the video.
+    lesson: status.purpose?.pathRef ? await lessonContext(status.purpose.pathRef) : null,
     // "Saved for later", newest first, for the homepage and the start of a break.
     saved: saved.slice(-12).reverse(), savedCount: saved.length };
 }

@@ -397,7 +397,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.waitForTimeout(800);
   st = await store();
   step("setting a purpose from the card plays the video", st.purpose?.text === "Learn how sourdough starters work" && st.purpose.limitMin === null && !(await p.$(".wp-player-card")));
-  step("a brief Staying on track pill on the player, with the aim", (await text(".wp-ontrack")).includes("Staying on track") && (await text(".wp-ontrack")).includes("Learning: Learn how sourdough starters work"));
+  step("no pill over the player (0.78): the panel beside the video shows the aim", !(await p.$(".wp-ontrack")));
   step("indicator shows the purpose", (await text("#wp-chip")).includes("Learn how sourdough") && !(await text("#wp-chip")).includes("null"));
   step("with a purpose: sidebar recommendations and end screens hidden", (await p.isHidden("#related")) && (await p.isHidden(".ytp-ce-element")));
   step("with a purpose: autoplay switched off", (await p.getAttribute(".ytp-autonav-toggle-button", "aria-checked")) === "false" &&
@@ -546,7 +546,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   await p.waitForTimeout(2000);
   step("a result plays without a card", !(await p.$(".wp-player-card")));
   const upnext = await text("#wp-upnext");
-  step("Up next from your search lists the other results", upnext.includes("Up next from your search") && upnext.includes("Faucet cartridge swap") && !upnext.includes("Fixing a leaky faucet"), upnext.slice(0, 120));
+  step("More from your search, folded into the panel, lists the other results", upnext.includes("More from your search") && upnext.includes("Faucet cartridge swap") && !upnext.includes("Fixing a leaky faucet"), upnext.slice(0, 120));
   await p.goto("https://www.youtube.com/watch?v=zz1&list=PLfaucet");
   await p.waitForTimeout(2000);
   step("a video in a playlist from the results plays", !(await p.$(".wp-player-card")));
@@ -943,15 +943,15 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   st = await store();
   step("picking one starts a light aim, Exploring Math, with today's picks to watch", st.purpose?.text === "Exploring Math" && st.purpose.learn === "Math" &&
     st.purpose.allowed.length >= 8, st.purpose?.text);
-  await p.waitForSelector("#wp-upnext .wp-deeper", { timeout: 8000 });
-  const ex = await text("#wp-upnext");
-  step("the sidebar: More to explore, with one quiet Go deeper line", ex.includes("More to explore") && ex.includes("Numberphile lesson 1") && ex.includes("Go deeper on this?"));
+  await p.waitForSelector("#wp-aimpanel .wp-deeper", { timeout: 8000 });
+  const ex = await text("#wp-aimpanel");
+  step("the panel: one quiet Go deeper line, and More to explore folded in", ex.includes("More to explore") && ex.includes("Numberphile lesson 1") && ex.includes("Go deeper on this?"));
   if (process.env.SHOTS) await p.screenshot({ path: `${process.env.SHOTS}/go-deeper.png` });
-  await p.click('#wp-upnext .wp-deeper button:text-is("Make it my aim")');
+  await p.click('#wp-aimpanel .wp-deeper button:text-is("Make it my aim")');
   await p.waitForTimeout(600);
   st = await store();
   step("Go deeper turns exploring into an aim, keeping the video and its time", st.purpose?.text === "3Blue1Brown lesson 1 & more" && !st.purpose.learn &&
-    st.purpose.allowed.some(v => v.id === "tbobvid1") && (await text("#wp-chip")).includes("3Blue1Brown lesson 1") && !(await p.$("#wp-upnext .wp-deeper")), st.purpose?.text);
+    st.purpose.allowed.some(v => v.id === "tbobvid1") && (await text("#wp-chip")).includes("3Blue1Brown lesson 1") && !(await p.$("#wp-aimpanel .wp-deeper")), st.purpose?.text);
   await sw.evaluate(() => serial(() => recordTick(10, { id: "tbobvid1", title: "3Blue1Brown lesson 1 & more", channel: "3Blue1Brown", t: 30, d: 600 })));
   await sw.evaluate(() => serial(() => finishPurpose("yes")));
   await sw.evaluate(() => serial(() => setSetting("learnOff", ["@numberphile"])));
