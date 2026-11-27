@@ -12,6 +12,7 @@ function closeTalk() { talkPanel?.el.remove(); talkPanel = null; }
 
 const talkCall = (state, extra = {}) => send({ type: "librarian", task: "librarian-talk",
   input: { mode: state.mode, session: state.session, thread: state.thread.map(({ role, text }) => ({ role, text })), memory: state.memory, connect: state.connect, focus: state.focus, followUp: state.followUp ? { title: state.followUp.title, what: state.followUp.what } : undefined,
+    step: state.step ? { title: state.step.title, ask: state.step.ask } : undefined,
     student: state.student?.key, studentName: state.student?.name, review: state.review || undefined,
     ...(state.close ? { part: { title: state.close.title, brief: state.close.brief }, guess: state.close.guess || undefined, guessQuestion: state.close.question || undefined } : {}), ...extra } });
 
@@ -19,7 +20,8 @@ const talkCall = (state, extra = {}) => send({ type: "librarian", task: "librari
 // nothing to talk about, no account, or the AI couldn't open (the error is in .error).
 // mode "deeper" (Aim Plus) goes one "why" further into focus: { title, brief, chain }, from an aim's page.
 // followUp: a gap { id, title, what } they've since watched something about; the first question is about it.
-async function prepareTalk({ aimId = null, connect = null, source = "menu", mode = null, focus = null, followUp = null, review = null, close = null } = {}) {
+// step: a lesson's Explain step { index, title, ask } (0.79); the conversation opens on its question.
+async function prepareTalk({ aimId = null, connect = null, source = "menu", mode = null, focus = null, followUp = null, review = null, close = null, step = null } = {}) {
   const brief = await send({ type: "plus-brief" });
   if (!brief?.account) return { error: "Sign in to talk things through with the librarian." };
   // Spaced review: one question about something explained weeks ago; no session needed.
@@ -36,14 +38,14 @@ async function prepareTalk({ aimId = null, connect = null, source = "menu", mode
   const ctx = await send({ type: "talk-session", id: aimId });
   if (!ctx || ctx.result !== "applied") return { error: ctx?.message || "Nothing to talk about yet." };
   const mapped = ctx.session.map?.parts?.some(x => x.status !== "new");
-  if (!ctx.session.videos.length && !ctx.session.searches.length && !mapped && mode !== "deeper") return { error: "Watch something first, then let's talk it through." };
+  if (!ctx.session.videos.length && !ctx.session.searches.length && !mapped && mode !== "deeper" && !step) return { error: "Watch something first, then let's talk it through." };
   const plus = brief.plus === true, remember = plus && settings.librarianMemory !== false;
   // A learning aim that's nearly there finishes by putting it together; asked for, or offered after Done.
   const synthesis = mode === "synthesis" || (source === "done" && ctx.ready);
   // Done with a guess not yet explained: end with the one-minute close about it (0.71).
   if (source === "done" && !synthesis && !mode && ctx.close) { mode = "close"; close = ctx.close; }
   const state = { aimId: ctx.id, mode: mode === "close" && close?.title ? "close" : mode === "deeper" && focus?.title ? "deeper" : synthesis ? "synthesis" : ctx.mode, focus: mode === "deeper" ? focus : null, followUp,
-    close: mode === "close" ? close : null,
+    close: mode === "close" ? close : null, step: step?.ask || step?.title ? step : null,
     session: ctx.session, thread: [], connect, plus, remember, source, done: false, busy: false, student: studentFor(ctx.id),
     memory: remember ? (await send({ type: "memory-for", id: ctx.id })) || [] : [] };
   // Aim Plus, with captions on: what was actually said in the videos watched longest.
@@ -344,6 +346,8 @@ function showTalk(state) {
     }
     if (r.done) {
       if (state.followUp?.id && state.aimId) send({ type: "aim-gaps", aimId: state.aimId, resolve: state.followUp.id });
+      // A lesson's Explain step: done once the conversation ends.
+      if (state.step && state.aimId) { await send({ type: "lesson-step", aimId: state.aimId, index: state.step.index }); applyStatus(await send({ type: "status" })); renderAimPanel(); }
       // The one-minute close: that part is done, and the open question waits for next time.
       if (state.mode === "close" && state.aimId) {
         state.next = r.next || "";

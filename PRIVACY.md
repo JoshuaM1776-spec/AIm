@@ -25,6 +25,8 @@ Aim itself makes one kind of request: when you open a video, it asks YouTube's p
 
 **Paths** (signed in): your interests and the goals behind them are kept in your browser. Drafting a path sends the interest, its goal, your level, and, when continuing, the path's unit names, the titles of lessons you've done with how they went, and gaps still open, to Aim's server and the AI; nothing of it is stored there beyond usage.
 
+**A lesson's steps:** what you did on each step of a lesson (done or skipped, and the line you wrote on how a Try went) is kept with the aim in your browser. A Read step's links, when you click one, open a search in a new tab: Wikipedia's own search, or a search of one trusted site (such as the FAA's or OpenStax) on DuckDuckGo, for the words the step names; Aim adds nothing about you. Passages from your own documents that match a Read step are found in your browser. An Explain step's conversation sends what a conversation sends (above), plus the step's question and the titles of the steps you read and tried, with your line on how it went.
+
 **Guess first, explain after:** your guess before a video is kept with the aim in your browser. The one-minute explanation afterwards sends what a conversation sends (above), plus the part you watched and your guess, to Aim's server and the AI; nothing of it is stored there beyond usage. The open question it leaves is kept in your browser.
 
 **The Weekly Challenge** (anyone, signed in or not): Aim asks its server for this week's story, sending only the date. It's the same for everyone; how you play it (your answers, choices and reasoning) is kept in your browser for the week. Signed in, the narrator's turns send this week's date, the chapter, and what you asked or chose and the reasoning you wrote (and, at the end, the record of your decisions) to Aim's server and the AI; nothing of it is stored there beyond usage.
@@ -41,7 +43,7 @@ Paying for Aim Plus happens on Stripe's pages; Aim never sees your card. Aim's s
 
 Strict mode (off unless you turn it on) keeps the reasons you give for bending a rule in this browser, with the aim they were for; they never leave it.
 
-The "Up next from your search" list, and the videos you've watched for an aim on the home screen and the aims page, show thumbnails from YouTube's image server (i.ytimg.com), the same images YouTube itself shows.
+The "More from your search" list, and the videos you've watched for an aim on the home screen and the aims page, show thumbnails from YouTube's image server (i.ytimg.com), the same images YouTube itself shows.
 
 Your use of YouTube remains subject to YouTube's and Google's own privacy policies.
 

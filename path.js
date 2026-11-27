@@ -70,7 +70,8 @@ async function render() {
       node("div", {}, node("h2", { textContent: u.title }), u.about ? node("p", { className: "about", textContent: u.about }) : null,
         node("span", { className: "count", textContent: `${lessons.filter(done).length} of ~${u.lessons} lesson${u.lessons === 1 ? "" : "s"}` })),
       lessons.length && state !== "upcoming" ? node("div", { className: "lessons" }, ...lessons.map(l => node("div", { className: `lesson ${l.status}` },
-        node("div", {}, node("b", { textContent: l.title }), node("small", { textContent: l.status === "completed" ? "Demonstrated" : l.status === "active" ? "In progress" : `${l.minutes} min · ${l.success}` })),
+        node("div", {}, node("b", { textContent: l.title }), node("small", { textContent: l.status === "completed" ? "Demonstrated" : l.status === "active" ? "In progress" : `${l.minutes} min · ${l.success}` }),
+          l.status === "completed" ? null : node("small", { className: "steps", textContent: lessonKinds(l) })),
         l.status === "completed" ? null
           : next.resume && next.lesson?.id === l.id ? btn("Continue on YouTube", "", () => resume(next.resume))
           : next.lesson?.id === l.id ? btn("Begin on YouTube", "", () => begin(l)) : null))) : null));
@@ -86,6 +87,14 @@ async function render() {
     node("ol", { className: "units" }, ...items),
     node("div", { className: "foot" }, node("a", { href: "path.html", textContent: "All your paths" }),
       btn("Remove this interest", "text", async () => { if (!confirm(`Remove ${path.interest} and its path? The aims and evidence in your library stay.`)) return; await send({ type: "path-remove", id }); location.href = "path.html"; }))].filter(Boolean));
+}
+
+// A lesson's steps by kind (0.79): "Watch · Read · Try · Explain · Show it".
+const KIND_NAMES = { watch: "Watch", read: "Read", try: "Try", explain: "Explain", show: "Show it" };
+function lessonKinds(l) {
+  const plan = l.plan || [];
+  const kinds = plan.map((s, i) => KIND_NAMES[s.do] || (s.search ? "Watch" : i === plan.length - 1 ? "Show it" : "Try"));
+  return kinds.join(" · ");
 }
 
 async function renderList(page) {

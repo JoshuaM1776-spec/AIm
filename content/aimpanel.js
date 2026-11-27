@@ -127,7 +127,8 @@ function videoRow(v, note = "") {
       note || v.channel ? el("div", { class: "wp-muted" }, note || v.channel) : null));
 }
 
-// Where this aim sits, and its steps (0.78): a lesson on a plan (its parts, then the Final Challenge),
+// Where this aim sits, and its steps (0.78): a lesson on a plan (its steps, each one way of learning,
+// 0.79; steps.js),
 // a study session (its topics), or a learning aim's map (its parts, then Put it together). The step
 // you're on is the one whose search found this video, or else the next one not yet explained.
 // Plain searches have none.
@@ -139,16 +140,22 @@ function panelPlace(p) {
       steps: st.topics.map((x, j) => ({ title: x.title, state: x === t ? "now" : !x.check ? "next" : checkLabel(x) === "Review" ? "part" : "done",
         note: x !== t && x.check ? checkLabel(x) : "", go: x === t ? null : () => goTopic(st, j) })) };
   }
+  const l = p.pathRef && status.lesson?.lessonId === p.pathRef.lessonId ? status.lesson : null;
+  const where = l ? `${l.interest} · Unit ${l.unit} · Lesson ${l.n} of about ${l.of}` : null;
+  const ls = lessonSteps(p);
+  if (ls) {
+    const now = ls.current || ls.next;
+    return { label: where, then: l?.next || "", lesson: !!l,
+      steps: ls.steps.map(s => ({ title: stepTitle(s), kind: STEP_KINDS[s.kind], state: s === now ? "now" : s.done ? "done" : "next", final: s.kind === "show",
+        note: s.skipped ? "Skipped" : "", go: s === ls.current ? null : () => openStep(p, s) })) };
+  }
   const parts = p.map?.parts || [];
   if (!parts.length) return null;
   const forThis = (p.allowed || []).find(v => v.id === currentId)?.q;
   const now = parts.find(x => x.search && x.search === forThis) || parts.find(x => x.status !== "explained") || null;
   const steps = parts.map(x => ({ title: x.title, state: x === now ? "now" : x.status === "explained" ? "done" : x.status === "new" ? "next" : "part" }));
-  const ch = p.challenge;
-  steps.push(ch ? { title: "Show it: the Final Challenge", state: ch.status === "completed" ? "done" : "next", final: true }
-    : { title: "Put it together", state: p.map?.synthesis?.verdict === "solid" ? "done" : "next", final: true });
-  const l = p.pathRef && status.lesson?.lessonId === p.pathRef.lessonId ? status.lesson : null;
-  return { label: l ? `${l.interest} · Unit ${l.unit} · Lesson ${l.n} of about ${l.of}` : null, steps, then: l?.next || "", lesson: !!l };
+  steps.push({ title: "Put it together", state: p.map?.synthesis?.verdict === "solid" ? "done" : "next", final: true });
+  return { label: where, steps, then: l?.next || "", lesson: !!l };
 }
 
 function renderAimPanel() {
@@ -164,7 +171,8 @@ function renderAimPanel() {
   const ready = parts.length > 0 && p.map?.synthesis?.verdict !== "solid" && parts.filter(x => x.status === "explained").length >= 2 && partly >= Math.ceil(parts.length * 0.6);
   const watched = new Set((p.videos || []).map(v => v.id));
   const followUp = (p.gaps || []).filter(g => !g.resolvedAt && g.videoId && (watched.has(g.videoId) || g.videoId === currentId)).pop();
-  const step = quick ? null : panelStep(p);
+  const ls = quick ? null : lessonSteps(p);
+  const step = quick ? null : ls ? (ls.next?.kind === "watch" ? { kind: "part", title: ls.next.title, search: ls.next.search, why: `Next step: ${ls.next.title}` } : null) : panelStep(p);
   const found = step ? panelNext.get(step.search) : null;
   if (step && !found) findNext(p, step);
   const pr = p.practice, field = panelAim(p)?.scenarioDomain || null;
@@ -180,7 +188,7 @@ function renderAimPanel() {
   const covers = conceptsWanted(p) && concepts?.id === currentId ? concepts : null;
   const key = [!!goalBlock, preBlock ? (preCard.done ? "pre-done" : "pre") : "", ct?.partId || "", ct?.guess ? 1 : 0, purposeIsGoal(), p.challenge?.status || "", p.id, p.text, kind, step?.search || "", found?.status || "", found?.video?.id || "", followUp?.id || "", ready, pr?.title || "", pr?.triedAt || "", field || "",
     ended, panelOpen, account.on, account.plus, currentId, c.explored, c.explained, c.applied, !!currentInfo,
-    JSON.stringify(place), st ? JSON.stringify([st.id, st.current, st.topics.map(x => [x.videos.length, x.watched.length, !!x.check])]) : "",
+    JSON.stringify(place), panelStepOpen?.aim === p.id ? panelStepOpen.i : "", st ? JSON.stringify([st.id, st.current, st.topics.map(x => [x.videos.length, x.watched.length, !!x.check])]) : "",
     lastQ || "", items.map(v => v.id).join(","), covers ? `${covers.id}:${covers.state}` : "", p.learn || ""].join("|");
   if (existing && existing.parentElement === host && host.firstElementChild === existing && existing.dataset.key === key) return;
   existing?.remove();
@@ -201,6 +209,8 @@ function renderAimPanel() {
       : ch && ready && account.on ? { text: "You've worked through the plan. Ready for the final challenge?", label: "Attempt the challenge", go: attempt }
       : followUp && account.on ? { text: `You watched something about ${followUp.title}. Try explaining it now.`, label: "Explain it now", go: () => openTalk({ followUp }) }
       : pr && !pr.triedAt ? { text: "You've seen how. The best next step is doing it.", label: `Try it: ${pr.title}`, go: () => send({ type: "open-aim", id: p.id }) }
+      : ls?.next && ls.next.kind !== "watch" && !(ct?.guess && account.on) ? { text: `Next in this lesson: ${STEP_KINDS[ls.next.kind].toLowerCase()}, ${stepTitle(ls.next)}.`,
+          label: `${STEP_KINDS[ls.next.kind]}: ${shorten(stepTitle(ls.next), 40)}`, go: () => { panelPromptGone = currentId; openStep(p, ls.next); } }
       : parts.length && ct && account.on ? { text: ct.guess ? `Before it, you guessed: “${shorten(ct.guess, 90)}”. Now explain it, in a minute.` : "Explaining it now, in a minute, is when it sticks.",
           label: "Explain it in a minute", go: () => openTalk({ mode: "close", close: ct }) }
       : kind === "explore" || (parts.length && (p.videos || []).length <= 1) || !account.on ? { text: "Keep going while you're in it.", label: "Keep learning", go: keepLearning }
@@ -230,11 +240,16 @@ function renderAimPanel() {
         ? el("div", { class: "wp-ap-none" }, `Nothing convincing came up for “${step.search}”. `, el("button", { class: "wp-link", onclick: () => { location.href = "/results?search_query=" + encodeURIComponent(step.search); } }, "Search it yourself"))
         : el("div", { class: "wp-ap-none" }, `Finding a video for: ${step.title}…`));
 
+  // A lesson's step opened from the list, else its next step when that isn't a video: its card.
+  const openI = panelStepOpen?.aim === p.id ? panelStepOpen.i : null;
+  const cardStep = !ls ? null : ls.steps.find(s => openI !== null && s.i === openI && !(s.kind === "watch" && s.search)) || (ls.next && ls.next.kind !== "watch" ? ls.next : null);
+
   // The steps, with where you are.
   const steps = place?.steps?.length ? el("ol", { class: "wp-ap-steps", "aria-label": place.study ? "Topics" : "Steps" },
     ...place.steps.slice(0, 9).map(s => el("li", { class: `wp-ap-step ${s.state}${s.final ? " final" : ""}`, "aria-current": s.state === "now" ? "step" : null },
       el("span", { class: "wp-ap-step-mark", "aria-hidden": "true" }),
-      s.go ? el("button", { class: "wp-link", onclick: s.go }, s.title) : el("span", { class: "wp-ap-step-title" }, s.title),
+      el("span", { class: "wp-ap-step-main" }, s.kind ? el("span", { class: "wp-ap-step-kind" }, s.kind) : null,
+        s.go ? el("button", { class: "wp-link", onclick: s.go }, s.title) : el("span", { class: "wp-ap-step-title" }, s.title)),
       s.note ? el("span", { class: "wp-ap-step-note" }, s.note) : null))) : null;
 
   // More: Learn, Explain, Apply; where you are; a break.
@@ -255,6 +270,7 @@ function renderAimPanel() {
       el("button", { class: "wp-link", onclick: openBreakDialog }, "Take a break"),
       el("button", { class: "wp-link", onclick: () => openPivotDialog() }, "Change aim")));
 
+  const lessonExplain = ls?.steps.find(s => s.kind === "explain" && !s.done), lessonTry = ls?.steps.find(s => s.kind === "try" && !s.done);
   const label = place?.label || (p.challenge ? (p.challenge.status === "completed" ? "Challenge complete" : "Your challenge") : quick ? "Looking for" : kind === "explore" ? "Exploring" : purposeIsGoal() ? "You're learning" : "Searching for");
   const panel = el("div", { id: "wp-aimpanel", class: "wp wp-aimpanel", "data-key": key },
     el("div", { class: "wp-ap-head" },
@@ -276,11 +292,13 @@ function renderAimPanel() {
     el("div", { class: "wp-ap-connect" }),
     st ? studySection(p) : null,
     quick && !ended ? el("button", { class: "wp-btn wp-btn-tonal wp-btn-block", onclick: doneAction(p) }, doneLabel(p)) : null,
-    ended || st ? null : upNext,
+    ended || st ? null : cardStep ? stepCard(p, cardStep, { attempt, signIn }) : upNext,
     quick ? null : el("div", { class: "wp-ap-tiles" },
-      el("button", { class: "wp-ap-tile", title: account.on ? explainLabel : "Sign in to talk it through", onclick: account.on ? explainIt : signIn }, icon("talk"), followUp && account.on ? "Follow up" : ready && account.on ? "Put together" : "Explain"),
-      el("button", { class: "wp-ap-tile", title: pr ? pr.title : field ? "Run a scenario" : "Projects and practice",
-        onclick: () => (field && !(pr && !pr.triedAt) ? send({ type: "open-scenario", aimId: p.id }) : send({ type: "open-aim", id: p.id })) }, icon("tool"), "Try it"),
+      lessonExplain ? el("button", { class: "wp-ap-tile", title: lessonExplain.title, onclick: () => openStep(p, lessonExplain) }, icon("talk"), "Explain")
+        : el("button", { class: "wp-ap-tile", title: account.on ? explainLabel : "Sign in to talk it through", onclick: account.on ? explainIt : signIn }, icon("talk"), followUp && account.on ? "Follow up" : ready && account.on ? "Put together" : "Explain"),
+      lessonTry ? el("button", { class: "wp-ap-tile", title: lessonTry.title, onclick: () => openStep(p, lessonTry) }, icon("tool"), "Try it")
+        : el("button", { class: "wp-ap-tile", title: pr ? pr.title : field ? "Run a scenario" : "Projects and practice",
+          onclick: () => (field && !(pr && !pr.triedAt) ? send({ type: "open-scenario", aimId: p.id }) : send({ type: "open-aim", id: p.id })) }, icon("tool"), "Try it"),
       el("button", { class: "wp-ap-tile", onclick: openNotesDialog }, icon("note"), "Notes")),
     covers ? conceptsSection() : null,
     st || quick ? null : panelFold("search", "wp-upnext", p.learn && !lastQ ? "More to explore" : "More from your search", lastQ ? `“${lastQ}”` : p.learn ? "Today's picks" : "",

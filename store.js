@@ -582,9 +582,21 @@ const localDay = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() +
 // conversations follow it. The last step is the Final Challenge, judged against the condition:
 // demonstrated, partly, or not enough evidence to tell. Evidence only: no scores, no badges.
 const CHALLENGE_KINDS = ["understand", "build", "investigate"];
+// A lesson's steps (0.79): each one way of learning. Older plans have no "do": a step with a search is
+// a video, and the last one without is the Final Challenge. A Read step names a trusted source to search.
+const STEP_DO = ["watch", "read", "try", "explain", "show"];
+const READ_SOURCE_IDS = ["wikipedia", "openstax", "khan", "faa", "medlineplus", "gutenberg"];
 function tidyChallengeIn(c) {
-  const plan = (Array.isArray(c?.plan) ? c.plan : []).slice(0, 4).map(s => ({ title: clip(s?.title, 60), look: clip(s?.look, 160),
-    minutes: Math.max(1, Math.min(60, Math.round(Number(s?.minutes) || 5))), search: clip(s?.search, 150), guess: clip(s?.guess, 140) })).filter(s => s.title);
+  const raw = (Array.isArray(c?.plan) ? c.plan : []).filter(s => clip(s?.title, 60)).slice(0, 6);
+  const plan = raw.map((s, i) => {
+    const search = clip(s.search, 150);
+    let d = STEP_DO.includes(s.do) ? s.do : search ? "watch" : i === raw.length - 1 ? "show" : "try";
+    if ((d === "watch" || d === "read") && !search) d = "try";
+    if (d === "show" && i !== raw.length - 1) d = "explain";
+    return { do: d, title: clip(s.title, 60), look: clip(s.look, 200), minutes: Math.max(1, Math.min(60, Math.round(Number(s.minutes) || 5))),
+      search: d === "watch" || d === "read" ? search : "", ...(d === "read" ? { source: READ_SOURCE_IDS.includes(s.source) ? s.source : "wikipedia" } : {}),
+      guess: d === "watch" ? clip(s.guess, 140) : "" };
+  }).slice(0, 5);
   const title = clip(c?.title, 100), success = clip(c?.success, 220);
   if (title.length < 6 || success.length < 10 || plan.length < 2) return null;
   return { title, success, plan, kind: CHALLENGE_KINDS.includes(c.kind) ? c.kind : "understand",
@@ -595,7 +607,7 @@ function tidyChallengeIn(c) {
 async function challengeStart(c) {
   const ch = tidyChallengeIn(c);
   if (!ch) return { result: "error", message: "That challenge is missing its goal or plan." };
-  const first = ch.plan.find(s => s.search)?.search || ch.title;
+  const first = ch.plan.find(s => s.do === "watch")?.search || ch.plan.find(s => s.search)?.search || ch.title;
   const r = await startPurpose({ text: ch.title, search: first });
   if (r.result !== "applied") return r;
   const { purpose } = await chrome.storage.local.get("purpose");
@@ -603,11 +615,25 @@ async function challengeStart(c) {
   purpose.keep = true;
   purpose.librarian = { ...(purpose.librarian || {}), kind: ch.kind === "build" ? "project" : "learn", thread: [], picks: {} };
   purpose.challenge = { ...ch, startedAt: Date.now(), status: "active", attempts: [] };
-  // The plan's learning steps are the map's parts; the last step is the Final Challenge itself.
+  // What the lesson's steps cover (watch and read) are the map's parts, to explain; the last step is
+  // the Final Challenge itself.
   const steps = ch.plan.filter(s => s.search);
   if (steps.length >= 1) purpose.map = newMap(steps.map(s => ({ title: s.title, brief: s.look, search: s.search, guess: s.guess })));
   await chrome.storage.local.set({ purpose });
   return { result: "applied", purpose, url: `https://www.youtube.com/results?search_query=${encodeURIComponent(first)}`, setAside: r.setAside };
+}
+// A lesson step done (Read, Try, Explain), with a line on how a Try went; or skipped, which isn't
+// evidence of anything and is shown as skipped. Watch steps are done by watching; Show it by the challenge.
+async function lessonStep(aimId, index, { note = "", skip = false } = {}) {
+  const d = await chrome.storage.local.get(["purpose", "paused"]);
+  const rec = [d.purpose, ...(d.paused || [])].find(r => r?.id === aimId && r.challenge);
+  const s = rec?.challenge?.plan?.[Number(index)];
+  if (!s) return { result: "error", message: "That step isn't here any more." };
+  if (skip) { if (!s.doneAt) s.skippedAt = Date.now(); }
+  else { s.doneAt = Date.now(); delete s.skippedAt; }
+  if (clip(note, 400)) s.note = clip(note, 400);
+  await chrome.storage.local.set({ purpose: d.purpose || null, paused: d.paused || [] });
+  return { result: "applied" };
 }
 // The Final Challenge's outcome, with the evidence (their answer, and what it showed).
 async function challengeResult(aimId, { outcome, answer, shown } = {}) {
@@ -1852,11 +1878,15 @@ async function talkSession(id) {
     minutes: Math.max(1, Math.round((v.sec || 0) / 60)), finished: v.d > 0 && v.t >= v.d * 0.9 }));
   const topics = (p.study?.topics || []).map(t => ({ title: t.title }));
   const map = p.map?.parts?.length ? { parts: p.map.parts.map(x => ({ title: x.title, status: x.status })) } : null;
-  const practice = p.practice ? { title: p.practice.title, tried: !!p.practice.triedAt, note: p.practice.note || "" } : null;
+  // A lesson's Try step done counts as trying it; its Read steps done are what they read.
+  const tried = (p.challenge?.plan || []).filter(s => s.do === "try" && s.doneAt).pop();
+  const practice = p.practice ? { title: p.practice.title, tried: !!p.practice.triedAt, note: p.practice.note || "" }
+    : tried ? { title: tried.title, tried: true, note: tried.note || "" } : null;
+  const read = (p.challenge?.plan || []).filter(s => s.do === "read" && s.doneAt).map(s => s.title);
   const ct = closeTarget(p);
   return { result: "applied", id: p.id, mode: p.learn ? "explore" : "focus", plan: !!p.plan, ready: mapReady(p.map), close: ct?.guess ? ct : null,
     session: { aim: p.learn ? `Exploring ${p.learn}` : p.text, minutes: Math.round((p.usedSec || 0) / 60), searches: (p.searches || []).map(x => x.q).slice(-12),
-      videos, notes: p.notes || "", kind: p.librarian?.kind || "", ...(topics.length ? { study: { topics } } : {}), ...(map ? { map } : {}),
+      videos, notes: p.notes || "", kind: p.librarian?.kind || "", ...(topics.length ? { study: { topics } } : {}), ...(map ? { map } : {}), ...(read.length ? { read } : {}),
       ...(practice ? { practice } : {}),
       ...(p.challenge ? { challenge: { title: p.challenge.title, success: p.challenge.success, kind: p.challenge.kind } } : {}) } };
 }
@@ -2312,6 +2342,13 @@ async function refIndex(id) {
   if (refCache.size > 8) refCache.delete(refCache.keys().next().value);
   refCache.set(id, index);
   return index;
+}
+// Passages from your own documents that match a lesson's Read step (0.79): the best two, no AI.
+async function refMatches(about) {
+  const refs = await refList();
+  if (!refs.length || !meaningfulWords(about).length) return { matches: [] };
+  const r = await refExcerpts(refs.map(x => x.id), about, 2600);
+  return { matches: r.passages.filter(x => x.score >= 2).slice(0, 2).map(x => ({ ref: x.ref, heading: x.heading, text: x.text })) };
 }
 async function refExcerpts(ids, about, maxChars = 12000) {
   const refs = (await refList()).filter(r => ids.includes(r.id));

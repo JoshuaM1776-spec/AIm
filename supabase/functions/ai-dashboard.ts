@@ -1413,6 +1413,8 @@ Answers and gaps:
 - A correct answer can still be shallow. Sometimes, when an answer is right but thin, ask the follow-up that tests the reasoning underneath ("Right, but why would that matter more for Rome than for Persia?"). Not every time.
 - Gaps (any message after they've replied, at most 2, often none): something they tried to explain but couldn't, or said they don't know, or got wrong. Each: title (the idea, a few words), what (one plain sentence on what they couldn't yet explain, as you'd tell them: "You explained the West's military problems, but not why the East survived"), and search (a YouTube search for a clear explanation of exactly that). Only from their replies; never a gap they didn't show.
 
+A lesson's Explain step (when EXPLAIN THIS STEP is in the request): it's one step of a short lesson. Open by asking them to explain exactly that, in a friend's words, and keep the conversation short.
+
 Following up (when FOLLOW UP ON is in the request): they've since watched something about a gap they had. Open by asking about exactly that, in a friend's words, so they can try explaining it now.
 
 A student (when STUDENT is in the request): in this conversation you speak as that student, the person explaining to you is the teacher. Ask in that student's way, in first person ("I don't get why…"), still one short specific question at a time, still following every rule above. Never pretend to be a real person; you're a practice student.
@@ -1563,6 +1565,9 @@ export async function talk(ctx: TaskCtx & { plan?: string; usage?: TalkUsage }) 
   }).filter(Boolean).slice(0, TALK_LIMITS.memory);
   const connect = free ? null : tObject(input.connect);
   const connectLine = connect?.idea ? `${tClean(connect.subject, 60)}: ${tClean(connect.idea, 160)}` : "";
+  const stepIn = tObject(input.step);
+  const stepLine = tClean(stepIn.ask, 200) || tClean(stepIn.title, 80) ? `${tClean(stepIn.title, 80)}${tClean(stepIn.ask, 200) ? `: ${tClean(stepIn.ask, 200)}` : ""}` : "";
+  const read = tList(s.read).map(x => tClean(x, 80)).filter(Boolean).slice(0, 6);
   const follow = tObject(input.followUp);
   const followLine = tClean(follow.title, 60) ? `${tClean(follow.title, 60)}${tClean(follow.what, 200) ? ` (${tClean(follow.what, 200)})` : ""}` : "";
 
@@ -1579,7 +1584,7 @@ export async function talk(ctx: TaskCtx & { plan?: string; usage?: TalkUsage }) 
   const prompt = `${studentKey ? `STUDENT: ${studentName || "A student"}, ${TALK_STUDENTS[studentKey]}\n` : ""}${reviewLine ? `REMEMBER: ${reviewLine} (explained ${tNum(review.daysAgo, 3650)} days ago)\n` : ""}MODE: ${mode === "close" ? `Close. One question, about a minute, at the end of a stretch of watching.${partLine ? `\n${partLine}` : ""}${guessLine ? `\n${guessLine}` : ""}` : mode === "review" ? "Review. A one-question check that they still remember something they explained before. Quick." : mode === "explore" ? "Explore. They were following their curiosity, not studying for anything. Light touch." : mode === "synthesis" ? "Synthesis. They've explored most of what this aim takes; now they put the whole answer together." : mode === "deeper" ? "Deeper. They chose to go deeper into one thing." : "Focus. They're working toward a specific aim. A bit more intentional."}${deeperOn ? `\nGO DEEPER ON: ${deeperOn}${tClean(focus.brief, 200) ? ` (${tClean(focus.brief, 200)})` : ""}${deeperChain.length ? `\nTHE CHAIN SO FAR: ${deeperChain.join(" → ")}` : ""}` : ""}
 THEIR AIM: ${aim}${kind ? `\nAIM KIND: ${kind}` : ""}${challengeLine ? `\n${challengeLine}` : ""}${triedLine ? `\n${triedLine}` : ""}
 TIME: about ${tNum(s.minutes, 1440)} minutes
-${searches.length ? `SEARCHES, IN ORDER: ${searches.join(" → ")}\n` : ""}${videos.length ? `VIDEOS (${withCaptions ? "with caption excerpts where shown" : "titles only; you haven't seen them"}):\n${videos.join("\n")}\n` : ""}${notes ? `THEIR NOTES: ${notes}\n` : ""}${studyTopics.length ? `STUDY TOPICS: ${studyTopics.join(" | ")}\n` : ""}${parts.length ? `YOUR UNDERSTANDING (what this aim takes, and how far they've got):\n${parts.map(x => `- ${x.title}: ${x.status}`).join("\n")}\n` : ""}${memory.length ? `THINGS THEY TOLD YOU BEFORE:\n${memory.join("\n")}\n` : ""}${connectLine ? `OPEN WITH THIS CONNECTION if it genuinely fits the session: ${connectLine}\n` : ""}${followLine ? `FOLLOW UP ON: ${followLine}\n` : ""}
+${searches.length ? `SEARCHES, IN ORDER: ${searches.join(" → ")}\n` : ""}${videos.length ? `VIDEOS (${withCaptions ? "with caption excerpts where shown" : "titles only; you haven't seen them"}):\n${videos.join("\n")}\n` : ""}${read.length ? `THEY READ: ${read.join(" | ")}\n` : ""}${notes ? `THEIR NOTES: ${notes}\n` : ""}${studyTopics.length ? `STUDY TOPICS: ${studyTopics.join(" | ")}\n` : ""}${parts.length ? `YOUR UNDERSTANDING (what this aim takes, and how far they've got):\n${parts.map(x => `- ${x.title}: ${x.status}`).join("\n")}\n` : ""}${memory.length ? `THINGS THEY TOLD YOU BEFORE:\n${memory.join("\n")}\n` : ""}${connectLine ? `OPEN WITH THIS CONNECTION if it genuinely fits the session: ${connectLine}\n` : ""}${stepLine ? `EXPLAIN THIS STEP: ${stepLine}\n` : ""}${followLine ? `FOLLOW UP ON: ${followLine}\n` : ""}
 LIMITS: at most ${max} question${max > 1 ? "s" : ""} in this conversation. You've asked ${asked}. ${mustEnd ? "This message must be a closing remark, not a question. Set done to true." : opening ? "Open with one specific question. Set done to false." : "Ask another question only if it would really help; otherwise close with a remark and set done to true."}
 ${thread.length ? `\nCONVERSATION SO FAR:\n${thread.map(m => `${m.role === "person" ? "THEM" : "YOU"}: ${m.text}`).join("\n")}\n` : ""}
 ${free ? "Return memory as an empty list." : "Return memory from their replies so far."} ${topics.length ? "Return marks for the study topics or understanding parts you've covered." : "Return marks as an empty list."} ${mode === "synthesis" ? "Return a verdict once they've answered; until then, none." : "Return verdict none."} ${mode === "review" ? "Return recalled once they've answered; until then, none." : "Return recalled none."} Return feedback lists only in a closing message after they've replied; otherwise empty lists. ${mode === "close" ? "Return next, the open question, in your closing message; until then, empty." : "Return next empty."}`;
@@ -2017,8 +2022,12 @@ ${channels.map((c, i) => `${i}. ${c}`).join("\n")}`;
 // ---------- challenge.ts ----------
 // A challenge's shape (docs/SPEC.md §4, §8, §9): a specific, achievable outcome with a success
 // condition decided up front, a short plan and, for hands-on ones, materials and safety. Each lesson on
-// a learning plan is one (path.ts drafts them); this is its schema and its tidying.
+// a learning plan is one (path.ts drafts them); this is its schema and its tidying. Each step is one
+// way of learning (0.79): watch, read, try, explain, and last, show (the Final Challenge itself).
 const CH_KINDS = ["understand", "build", "investigate"] as const;
+export const STEP_DO = ["watch", "read", "try", "explain", "show"] as const;
+// Trusted free sources a Read step can point at. Aim builds the search link; the AI never writes one.
+export const READ_SOURCES = ["wikipedia", "openstax", "khan", "faa", "medlineplus", "gutenberg"] as const;
 const CH_LEVELS = ["intro", "intermediate", "advanced"] as const;
 
 const cObject = (x: unknown): Record<string, unknown> => (x && typeof x === "object" && !Array.isArray(x) ? x as Record<string, unknown> : {});
@@ -2026,8 +2035,9 @@ const cText = (x: unknown, max: number) => (typeof x === "string" ? x.replace(/\
 const cList = (x: unknown) => (Array.isArray(x) ? x : []);
 const cOne = <T extends string>(x: unknown, list: readonly T[], d: T): T => (list.includes(x as T) ? x as T : d);
 
-const STEP = { type: "object", properties: { title: { type: "string" }, look: { type: "string" }, minutes: { type: "integer" }, search: { type: "string" }, guess: { type: "string" } },
-  required: ["title", "look", "minutes", "search", "guess"], additionalProperties: false };
+const STEP = { type: "object", properties: { do: { type: "string", enum: [...STEP_DO] }, title: { type: "string" }, look: { type: "string" }, minutes: { type: "integer" },
+    search: { type: "string" }, source: { type: "string", enum: [...READ_SOURCES, "none"] }, guess: { type: "string" } },
+  required: ["do", "title", "look", "minutes", "search", "source", "guess"], additionalProperties: false };
 export const CHALLENGE_ONE = {
   type: "object",
   properties: {
@@ -2045,11 +2055,18 @@ export function tidyChallenge(x: unknown, minutes: number) {
   const o = cObject(x), title = cText(o.title, 100), success = cText(o.success, 220);
   if (title.length < 6 || success.length < 10) return null;
   const kind = cOne(o.kind, CH_KINDS, "understand");
-  const plan = cList(o.plan).map(s => {
-    const st = cObject(s);
-    return { title: cText(st.title, 60), look: cText(st.look, 160), minutes: Math.max(1, Math.min(60, Math.round(Number(st.minutes) || 5))), search: cText(st.search, 150), guess: cText(st.guess, 140) };
-  }).filter(s => s.title).slice(0, 4);
-  if (plan.length < 2) return null;
+  const raw = cList(o.plan).map(s => cObject(s)).filter(st => cText(st.title, 60)).slice(0, 6);
+  const plan = raw.map((st, i) => {
+    const search = cText(st.search, 150);
+    // Older plans have no "do": a step with a search is a video, and the last without one is the challenge.
+    let d = cOne(st.do, STEP_DO, search ? "watch" : i === raw.length - 1 ? "show" : "try");
+    if ((d === "watch" || d === "read") && !search) d = "try"; // nothing to find without a search
+    if (d === "show" && i !== raw.length - 1) d = "explain"; // the challenge comes last
+    return { do: d, title: cText(st.title, 60), look: cText(st.look, 200), minutes: Math.max(1, Math.min(60, Math.round(Number(st.minutes) || 5))),
+      search: d === "watch" || d === "read" ? search : "", source: d === "read" ? cOne(st.source, READ_SOURCES, "wikipedia") : "",
+      guess: d === "watch" ? cText(st.guess, 140) : "" };
+  }).slice(0, 5);
+  if (plan.length < 2 || !plan.some(s => s.do === "watch" || s.do === "read")) return null;
   return {
     title, kind, success, plan,
     minutes: Math.max(5, Math.min(minutes, Math.round(Number(o.minutes) || minutes))),
@@ -2087,7 +2104,15 @@ The big picture (units): 3 to 14 units, in the order they should be learned, eac
 
 Scope: say in one sentence what this path covers (scope), and give a short label for what its progress measures (measure, under 30 characters: "Ground knowledge", "Conversational basics", "Joinery skills"). When the goal needs things YouTube can't give (a license, a certification, supervised practice, an exam, equipment, a medical), list them as outside checkpoints: each a title (under 70 characters), after which unit (its number) it fits, and a one-sentence note. Never imply Aim alone achieves such a goal. For regulated goals (flying, medicine, law, trades), set confirm to one sentence naming who to confirm requirements with ("Requirements change: confirm them with your flight instructor and the FAA."); otherwise leave confirm empty.
 
-Lessons: write exactly the next lessons asked for, in order, starting where they are. Each lesson is a session challenge: title (the question or outcome itself, under 90 characters), kind (understand, build, investigate), minutes (15 to 30), difficulty, why (one sentence), success (what they'll be able to show, in observable terms), plan (2 to 4 steps; each a title, what to look for, minutes, a YouTube search for exactly that step, and a question to guess at before watching; the last step is attempting the lesson's challenge, with no search), materials and safety for hands-on ones, and unit (the number of the unit it belongs to). Lessons stay within the units, in order; a unit's lessons together cover it.
+Lessons: write exactly the next lessons asked for, in order, starting where they are. Each lesson is a session challenge: title (the question or outcome itself, under 90 characters), kind (understand, build, investigate), minutes (15 to 30), difficulty, why (one sentence), success (what they'll be able to show, in observable terms), plan (3 to 5 steps, each one way of learning, chosen for what this lesson needs: not every step a video), materials and safety for hands-on ones, and unit (the number of the unit it belongs to). Lessons stay within the units, in order; a unit's lessons together cover it.
+
+A lesson's steps. Each has do, a title, look (what to look for, or what to do), minutes, search, source and guess:
+- watch: a video. search is a YouTube search for exactly that step; guess is a question to guess at before watching. source "none".
+- read: a short section of a trusted free text, when reading explains it better (definitions, reasoning, primary sources, anything to go slowly over). source is where to look: faa (FAA handbooks, for flying), medlineplus (health), openstax (free textbooks: science, maths, economics, history, psychology), khan (Khan Academy), gutenberg (classic books and primary sources), else wikipedia; search is the words to search that source for. Never a link or URL. guess empty.
+- try: a few problems to work, or a small hands-on task, written out in look so they can do it now. search empty, source "none", guess empty.
+- explain: saying it in their own words to a practice student; look is the one question to explain. search empty, source "none", guess empty.
+- show: the last step, and only the last: attempting the lesson's challenge against its success condition. search empty, source "none", guess empty.
+Start with something to learn from (watch or read); put try and explain after it; end with show. Keep each lesson within its minutes.
 
 Continuing a path (DONE SO FAR given): don't repeat what's demonstrated; if something was only partly shown or is listed as a gap, start with a short lesson that fixes exactly that before moving on; then continue in the units' order.
 

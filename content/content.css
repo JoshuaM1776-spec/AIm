@@ -934,6 +934,24 @@ html[dark] .wp-ap-row.wp-ap-next { border-color: var(--wp-text); box-shadow: ins
 .wp-ap-step.final .wp-ap-step-mark { border-radius: 3px; }
 .wp-ap-step .wp-link { font-size: 13px; text-align: left; color: inherit; }
 .wp-ap-step-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* A lesson's steps (0.79): each with its kind, and the card for the one to do next. */
+.wp-ap-step-main { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.wp-ap-step-main .wp-link, .wp-ap-step-main .wp-ap-step-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.wp-ap-step-kind { flex: none; font-size: 11px; line-height: 16px; font-weight: 600; letter-spacing: 0.02em; color: var(--wp-muted); min-width: 46px; }
+.wp-ap-step.now .wp-ap-step-kind { color: var(--wp-text); }
+.wp-step-box { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 12px; border: 1px solid var(--wp-card-border); background: var(--wp-raised); }
+.wp-step-head { display: flex; align-items: center; gap: 8px; font-size: 12px; line-height: 16px; }
+.wp-step-kind { font-weight: 600; color: var(--wp-text); text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px; }
+.wp-step-title { font-size: 14px; line-height: 20px; font-weight: 600; }
+.wp-step-look { margin: 0; font-size: 13px; line-height: 19px; }
+.wp-step-safety { margin: 0; font-size: 12px; line-height: 17px; color: var(--wp-error); }
+.wp-step-box a.wp-btn { display: flex; align-items: center; justify-content: center; text-decoration: none; height: 36px; color: var(--wp-text); }
+.wp-step-alt { font-size: 12px; align-self: flex-start; }
+.wp-step-docs { display: flex; flex-direction: column; gap: 4px; }
+.wp-step-docs:empty { display: none; }
+.wp-step-doc summary { cursor: pointer; font-size: 13px; line-height: 18px; }
+.wp-step-doc p { margin: 6px 0 0; font-size: 12px; line-height: 18px; color: var(--wp-muted); white-space: pre-line; max-height: 220px; overflow: auto; }
+.wp-step-note { width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--wp-search-border); background: var(--wp-base); color: var(--wp-text); font: inherit; font-size: 13px; resize: vertical; }
 .wp-ap-step-note { font-size: 12px; color: var(--wp-muted); font-weight: 400; }
 .wp-ap-then { font-size: 12px; line-height: 16px; padding: 0 2px; }
 .wp-ap-connect:empty { display: none; }

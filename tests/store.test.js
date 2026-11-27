@@ -1053,6 +1053,35 @@ test("challenges: a challenge becomes a goal whose plan is the map; the Final Ch
   assert.strictEqual((await env.run(`challengeKnown("aviation")`)).level, "intermediate", "ability follows what they've demonstrated");
 });
 
+test("lessons as steps (0.79): watch and read are the map, try and explain are marked done, and the librarian hears what was read and tried", async () => {
+  const env = fresh();
+  const ch = { title: "Why can a plane stall at any speed?", kind: "understand", minutes: 25, success: "Explain why a stall depends on angle of attack.",
+    plan: [{ do: "read", title: "On stalls", look: "Why the air separates", minutes: 8, search: "stall angle of attack", source: "faa" },
+      { do: "watch", title: "Angle of attack", look: "", minutes: 8, search: "angle of attack explained", guess: "What makes a wing stop lifting?" },
+      { do: "read", title: "Nothing to find", look: "", minutes: 3, search: "", source: "openstax" },
+      { do: "explain", title: "Why angle", look: "Why is a stall about angle, not speed?", minutes: 2 },
+      { do: "show", title: "Attempt", look: "", minutes: 3 }] };
+  const r = await env.run(`challengeStart(${JSON.stringify(ch)})`);
+  assert.strictEqual(r.url, "https://www.youtube.com/results?search_query=angle%20of%20attack%20explained", "a lesson starts on YouTube with its first video");
+  let p = env.local.purpose;
+  assert.deepStrictEqual(p.challenge.plan.map(x => x.do), ["read", "watch", "try", "explain", "show"], "a read step with nothing to search becomes a try");
+  assert.deepStrictEqual([p.challenge.plan[0].source, p.challenge.plan[0].guess], ["faa", ""]);
+  assert.deepStrictEqual(p.map.parts.map(x => x.title), ["On stalls", "Angle of attack"], "what the watch and read steps cover is the map, to explain");
+  assert.strictEqual((await env.run(`lessonStep(${JSON.stringify(p.id)}, 9)`)).result, "error");
+  await env.run(`lessonStep(${JSON.stringify(p.id)}, 0)`);
+  await env.run(`lessonStep(${JSON.stringify(p.id)}, 2, { note: "It stopped lifting past about 15 degrees." })`);
+  await env.run(`lessonStep(${JSON.stringify(p.id)}, 3, { skip: true })`);
+  p = env.local.purpose;
+  assert.ok(p.challenge.plan[0].doneAt && p.challenge.plan[2].doneAt && p.challenge.plan[2].note.startsWith("It stopped"), "done, with a line on how the try went");
+  assert.ok(p.challenge.plan[3].skippedAt && !p.challenge.plan[3].doneAt, "skipped isn't done");
+  const t = await env.run(`talkSession(null)`);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(t.session.read)), ["On stalls"], "what they read");
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(t.session.practice)), { title: "Nothing to find", tried: true, note: "It stopped lifting past about 15 degrees." }, "what they tried");
+  // An older lesson: searches are videos, and the last step is the challenge.
+  const old = await env.run(`tidyChallengeIn(${JSON.stringify({ ...ch, plan: [{ title: "Lift", search: "how wings make lift" }, { title: "Attempt", search: "" }] })})`);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(old.plan.map(x => x.do))), ["watch", "show"]);
+});
+
 test("guess first, explain after: a question before a part's video, the guess kept, the close leaves an open question for next time", async () => {
   const env = fresh();
   const ch = { title: "How can an airplane fly upside down?", kind: "investigate", minutes: 30, success: "Explain inverted lift, including angle of attack.",

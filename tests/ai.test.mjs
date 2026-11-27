@@ -1233,6 +1233,36 @@ test("talk: going deeper is Aim Plus, asks the next why about exactly that, and 
   assert.strictEqual((await call(d, { task: "librarian-talk", input: { mode: "deeper", opening: true, session: SESSION } })).status, 400, "deeper into what?");
 });
 
+test("lessons as steps (0.79): watch, read, try, explain, then show; read points at a trusted source by search, never a link", async () => {
+  const steps = [
+    { do: "watch", title: "Angle of attack", look: "What changes as the nose comes up", minutes: 8, search: "angle of attack explained", source: "none", guess: "What happens to lift as the nose rises?" },
+    { do: "read", title: "On stalls", look: "Why the airflow separates", minutes: 10, search: "stall angle of attack", source: "faa", guess: "ignored" },
+    { do: "read", title: "No search", look: "x", minutes: 5, search: "", source: "openstax", guess: "" },
+    { do: "show", title: "Too early", look: "Why does a steep angle stop the lift?", minutes: 2, search: "", source: "none", guess: "" },
+    { do: "fly", title: "Fold a paper wing", look: "Find where it stops lifting", minutes: 5, search: "", source: "none", guess: "" },
+    { do: "show", title: "Attempt the challenge", look: "", minutes: 3, search: "", source: "none", guess: "" }];
+  const reply = { title: "Fly", scope: "", measure: "", confirm: "", units: [{ title: "How a plane flies", about: "", lessons: 3 }, { title: "Weather", about: "", lessons: 3 }, { title: "Airspace", about: "", lessons: 3 }],
+    outside: [], lessons: [CH({ title: "Why can a plane stall at any speed?", unit: 1, plan: steps }), CH({ title: "How does a wing make lift?", unit: 1 })] };
+  const d = talkDeps("plus", () => ({ ok: true, model: "m", inputTokens: 30, outputTokens: 20, text: JSON.stringify(reply) }));
+  const r = await call(d, { task: "path-plan", input: { interest: "Aviation", goal: "Earn a private pilot's license" } });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  const [mixed, legacy] = r.body.lessons;
+  assert.deepStrictEqual(mixed.plan.map(x => x.do), ["watch", "read", "try", "explain", "try"], "five at most; a read with nothing to search becomes a try; show only comes last");
+  assert.deepStrictEqual([mixed.plan[1].source, mixed.plan[1].search, mixed.plan[1].guess], ["faa", "stall angle of attack", ""], "a read step names a trusted source and the words to search it for");
+  assert.ok(mixed.plan.every(x => !/https?:/.test(JSON.stringify(x))), "no links");
+  assert.deepStrictEqual(legacy.plan.map(x => x.do), ["watch", "watch", "show"], "a plan without kinds: searches are videos, and the last step is the challenge");
+  assert.match(d.calls[0].system, /- read: a short section of a trusted free text/);
+  assert.match(d.calls[0].system, /Never a link or URL/);
+  assert.match(d.calls[0].system, /end with show/);
+  // The Explain step: one step of a lesson, opening on its question; what they read is part of the session.
+  const t = talkDeps("plus", () => talkReply({}));
+  const open = await call(t, { task: "librarian-talk", input: { mode: "focus", opening: true, session: { ...SESSION, read: ["On stalls", ""] }, step: { title: "Why lift stops", ask: "Why does a steep angle stop the lift?" } } });
+  assert.strictEqual(open.status, 200, JSON.stringify(open.body));
+  assert.match(t.calls[0].prompt, /EXPLAIN THIS STEP: Why lift stops: Why does a steep angle stop the lift\?/);
+  assert.match(t.calls[0].prompt, /THEY READ: On stalls\n/);
+  assert.match(t.calls[0].system, /A lesson's Explain step/);
+});
+
 test("talk: gaps it found come back with a search, never on the opening; a follow-up opens on that gap", async () => {
   const gap = { title: "Why the East survived", what: "You explained the West's army, not why the East lasted", search: "why did the eastern roman empire survive" };
   const d = talkDeps("plus", () => talkReply({ gaps: [gap, { title: "", what: "", search: "" }] }));

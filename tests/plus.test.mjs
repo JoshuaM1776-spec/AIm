@@ -82,7 +82,11 @@ const deps = {
           outside: [{ title: "Get an FAA medical certificate", after: 2, note: "From an aviation medical examiner, before flying solo." }],
           lessons: [
             { title: "How does a wing make lift?", kind: "understand", minutes: 20, difficulty: "intro", why: "Everything else builds on it.", success: "Explain how a wing makes lift, in your own words.", materials: [], safety: "", unit: 1,
-              plan: [{ title: "Lift", look: "Air turned downward", minutes: 12, search: "how does a wing make lift", guess: "What do you think a wing does to the air?" }, { title: "Attempt", look: "", minutes: 8, search: "", guess: "" }] },
+              plan: [{ do: "watch", title: "Lift", look: "Air turned downward", minutes: 8, search: "how does a wing make lift", source: "none", guess: "What do you think a wing does to the air?" },
+                { do: "read", title: "On lift", look: "How the wing turns the air down", minutes: 6, search: "wing lift downwash", source: "faa", guess: "" },
+                { do: "try", title: "Paper wing", look: "Fold a sheet into a wing and blow across it. What moves?", minutes: 3, search: "", source: "none", guess: "" },
+                { do: "explain", title: "Why the air goes down", look: "Why does turning air down push a wing up?", minutes: 2, search: "", source: "none", guess: "" },
+                { do: "show", title: "Attempt", look: "", minutes: 3, search: "", source: "none", guess: "" }] },
             { title: "Why can a plane stall at any speed?", kind: "understand", minutes: 20, difficulty: "intro", why: "Stalls are about angle.", success: "Explain why a stall depends on angle of attack.", materials: [], safety: "", unit: 1,
               plan: [{ title: "Angle of attack", look: "", minutes: 12, search: "angle of attack explained", guess: "What makes a wing stop lifting?" }, { title: "Attempt", look: "", minutes: 8, search: "", guess: "" }] }] }
         : { title: "x", scope: "", measure: "", confirm: "", units: [], outside: [], lessons: [] }))
@@ -1004,14 +1008,18 @@ await yt.click("#wp-home .wp-pw-row:has-text('Aviation') .wp-pw-pick");
 await yt.waitForURL(/search_query=how%20does%20a%20wing%20make%20lift/);
 let pathAim = (await sw.evaluate(() => chrome.storage.local.get("purpose"))).purpose;
 step("picking it up starts the first lesson, in order, as a challenge", pathAim.text === "How does a wing make lift?" && !!pathAim.pathRef && pathAim.challenge.status === "active");
-// On the lesson's video (0.78): one panel, with the plan on it.
+// On the lesson's video (0.78): one panel, with the plan on it. A document of their own, for Read (0.79).
+const groundRef = await sw.evaluate(() => serial(() => refAdd({ name: "Ground school notes", kind: "course",
+  text: "Lift\n\nA wing makes lift by turning the air that flows past it downward. Pushing air down pushes the wing up: the downwash behind a wing is the other half of lift. The angle of attack sets how much air is turned.\n\nWeight\n\nWeight acts through the centre of gravity, and changes as fuel burns during a flight." })));
 await yt.waitForTimeout(800);
 if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/lesson-results.png` });
 await yt.goto("https://www.youtube.com/watch?v=alt2bbb");
 await yt.waitForSelector("#wp-aimpanel .wp-ap-steps", { timeout: 10000 });
 const lessonPanel = (await yt.textContent("#wp-aimpanel")).replace(/\s+/g, " ");
-step("on a lesson's video, one panel with the plan on it: where the lesson sits, its steps with the one you're on, and the lesson after",
-  lessonPanel.includes("Aviation · Unit 1 · Lesson 1 of about 5") && lessonPanel.includes("How does a wing make lift?") && lessonPanel.includes("Show it: the Final Challenge") &&
+const kinds = await yt.$$eval("#wp-aimpanel .wp-ap-step-kind", ns => ns.map(n => n.textContent));
+step("on a lesson's video, one panel with the plan on it: where the lesson sits, its steps by kind with the one you're on, and the lesson after",
+  lessonPanel.includes("Aviation · Unit 1 · Lesson 1 of about 5") && lessonPanel.includes("How does a wing make lift?") && kinds.join(",") === "Watch,Read,Try,Explain,Show it" &&
+  (await yt.textContent("#wp-aimpanel .wp-ap-step.now")).includes("Lift") && (await yt.textContent("#wp-aimpanel .wp-ap-step.final")).includes("the Final Challenge") &&
   lessonPanel.includes("Then: Why can a plane stall at any speed?") && !!(await yt.$("#wp-aimpanel .wp-ap-step.now")) &&
   (await yt.evaluate(() => [...document.querySelector("#secondary").children].filter(n => n.classList.contains("wp")).length)) === 1, lessonPanel.slice(0, 300));
 if (process.env.SHOTS) {
@@ -1020,6 +1028,46 @@ if (process.env.SHOTS) {
   await yt.waitForTimeout(1200);
   await yt.screenshot({ path: `${process.env.SHOTS}/lesson-watch.png` });
 }
+// Lessons as steps (0.79). Read: a trusted source by search, never a link the AI wrote, and their own documents.
+await yt.waitForSelector("#wp-aimpanel .wp-step-card .wp-step-doc", { timeout: 8000 });
+const readCard = (await yt.textContent("#wp-aimpanel .wp-step-card")).replace(/\s+/g, " ");
+const readLinks = await yt.$$eval("#wp-aimpanel .wp-step-card a", as => as.map(a => [a.textContent, a.href, a.target]));
+step("Read: what to look for, a search of the FAA's handbooks (Wikipedia too), and the matching passage of their own notes",
+  readCard.includes("Next step") && readCard.includes("Read") && readCard.includes("On lift") && readCard.includes("How the wing turns the air down") &&
+  readLinks[0][0] === "Find it in the FAA's handbooks" && readLinks[0][1] === "https://duckduckgo.com/?q=site%3Afaa.gov%20wing%20lift%20downwash" && readLinks[0][2] === "_blank" &&
+  readLinks[1][1] === "https://en.wikipedia.org/w/index.php?search=wing%20lift%20downwash" && readCard.includes("In your documents") && readCard.includes("Ground school notes · Lift"),
+  JSON.stringify(readLinks) + readCard.slice(0, 200));
+await yt.click("#wp-aimpanel .wp-step-card summary");
+step("a passage opens in place", (await yt.textContent("#wp-aimpanel .wp-step-doc p")).includes("downwash behind a wing"));
+await sw.evaluate(id => serial(() => refRemove(id)), groundRef.reference.id);
+if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/lesson-read.png` });
+await yt.click("#wp-aimpanel .wp-step-card button:text-is('Done reading')");
+await yt.waitForFunction(() => document.querySelector("#wp-aimpanel .wp-step-card")?.textContent.includes("Paper wing"));
+step("Done reading: the step is done, and Try is next", !!(await yt.$("#wp-aimpanel .wp-ap-step.done:has-text('On lift')")));
+// Try: a small task, with a line on how it went.
+await yt.fill("#wp-aimpanel .wp-step-note", "The paper rose when I blew over the top.");
+await yt.click("#wp-aimpanel .wp-step-card button:text-is('Done')");
+await yt.waitForFunction(() => document.querySelector("#wp-aimpanel .wp-step-card")?.textContent.includes("Why the air goes down"));
+let lessonPlan = (await sw.evaluate(() => chrome.storage.local.get("purpose"))).purpose.challenge.plan;
+step("Try: done, with how it went kept as evidence", !!lessonPlan[1].doneAt && !!lessonPlan[2].doneAt && lessonPlan[2].note === "The paper rose when I blew over the top.");
+// Explain: one step of the lesson, opening on its question; done when the conversation ends.
+srv.talk.push({ message: "Okay, why does turning air down push the wing up?", done: false, memory: [], marks: [] },
+  { message: "Right: push the air down and the air pushes the wing up.", done: true, memory: [], marks: [] });
+const beforeExplain = srv.talkPrompts.length;
+await yt.click("#wp-aimpanel .wp-step-card button:text-is('Explain it')");
+await answerBox();
+const explainPrompt = srv.talkPrompts[beforeExplain] || "";
+step("Explain: the conversation opens on the step's question, knowing what they read and tried",
+  explainPrompt.includes("EXPLAIN THIS STEP: Why the air goes down: Why does turning air down push a wing up?") && explainPrompt.includes("THEY READ: On lift") &&
+  explainPrompt.includes("THEY TRIED: Paper wing. What they said about it: The paper rose when I blew over the top."), explainPrompt.slice(0, 600));
+await yt.fill(".wp-talk-input", "Newton: the wing pushes the air down, so the air pushes the wing up.");
+await yt.press(".wp-talk-input", "Enter");
+await yt.waitForSelector(".wp-talk button:text-is('Close')");
+await yt.click(".wp-talk button:text-is('Close')");
+await yt.waitForFunction(() => document.querySelector("#wp-aimpanel .wp-step-card")?.textContent.includes("Attempt the challenge"));
+lessonPlan = (await sw.evaluate(() => chrome.storage.local.get("purpose"))).purpose.challenge.plan;
+step("then Show it: the Final Challenge is all that's left", !!lessonPlan[3].doneAt && (await yt.textContent("#wp-aimpanel .wp-step-card")).includes("The Final Challenge"));
+if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/lesson-show.png` });
 srv.talk.push({ message: "Okay: explain how a wing makes lift.", done: false, memory: [], marks: [] },
   { message: "Yes: the wing turns air down and the air pushes it up.", done: true, memory: [], marks: [], verdict: "solid", feedback: { explained: ["A wing turns air down"], uncertain: [], misconceptions: [] } });
 await yt.goto("https://www.youtube.com/#aim-put-together");

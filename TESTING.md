@@ -528,6 +528,16 @@ Needs the server redeployed and `0007_weekly.sql` run (it makes the `weekly_chal
 - [ ] **What this video covers** (Aim Plus, a learning aim) and **More from your search** are folded at the bottom; open one and it stays open for the next video.
 - [ ] Exploring: the Go deeper line sits in the panel, above the tiles; a video that connects to something you explained shows "This connects to…" there too.
 
+### 71. Lessons as steps (0.79)
+- [ ] Draft a new path (or Write my next lessons): each new lesson's steps mix ways of learning, not all videos. The path page shows them under each lesson ("Watch · Read · Try · Explain · Show it"). Older lessons still work: their searches are Watch steps and the last step is Show it.
+- [ ] On a lesson's video, the panel's steps each say their kind; the one this video is for is marked, and the Final Challenge is last.
+- [ ] **Read:** the Next step card says what to look for, with **Find it in …** (a source that fits the subject: the FAA's handbooks for flying, MedlinePlus for health, OpenStax, Khan Academy, Project Gutenberg, else Wikipedia) and **Or on Wikipedia**. Each opens a search in a new tab; no link is ever written by the AI. With a document of your own added (Settings → References) that covers it, **In your documents** shows the matching passage; it opens in place. **Done reading** moves on.
+- [ ] **Try:** the task, what you'll need and any safety note, and a box for how it went (optional). **Done** keeps that line with the aim.
+- [ ] **Explain** (signed in): opens a short conversation on the step's question, which knows what you read and tried. Closing it after it ends marks the step done. Signed out: Sign in to explain it, or Skip.
+- [ ] **Show it:** Attempt the challenge, as before. Skip on any step marks it skipped (shown as Skipped), never done.
+- [ ] Click a step in the list: a Watch step searches for its video; the others open their card. The Explain and Try it tiles open the lesson's own Explain and Try steps while those are open.
+- [ ] When a lesson's video ends with no guess to come back to, the prompt offers the next step ("Read: On stalls").
+
 ## Known issues (not regressions)
 
 - In this test environment, "opening a video in YouTube's one page plays that video" (tests/browser.test.js) sometimes fails on timing alone; it passes on a rerun and fails the same way on 0.71.
