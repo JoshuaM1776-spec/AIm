@@ -5,9 +5,14 @@
 <meta name="color-scheme" content="light dark">
 <title>Aim — Settings</title>
 <link rel="stylesheet" href="aim.css">
+<link rel="stylesheet" href="design.css">
 <style>
   /* Settings: a menu on the left (sticky on wide screens, a row on narrow ones), groups of cards on the right. */
   .card > h2 { margin-bottom: 8px; }
+  /* Your interests (0.82), under Explore's channels. */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; }
+  .chip { padding: 6px 14px; border-radius: 999px; border: 1px solid var(--card-border); background: transparent; color: var(--text); font: 500 14px/20px var(--font); cursor: pointer; }
+  .chip[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
   .settings-layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 32px; align-items: start; }
   .settings-nav { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 2px; }
   .settings-nav a { display: block; padding: 9px 14px; border-radius: 10px; color: var(--text); font-weight: 500; }
@@ -98,11 +103,15 @@
       <div class="settings-group" id="youtube">
         <h2 class="group-title">YouTube experience</h2>
   <section class="card" id="designCard">
-    <div class="setting" style="padding:0 0 8px">
-      <div class="what"><b>Your YouTube</b><span>What greets you, what happens to Shorts, and what steps aside while you watch. Change any part with a live preview.</span></div>
-      <a class="btn tonal" href="design.html" id="openDesign">Design</a>
+    <div class="cfg" id="design">
+      <header class="cfg-head">
+        <div><h2>Your YouTube</h2><p>What greets you, what happens to Shorts, and what steps aside while you watch.</p></div>
+        <div class="cfg-pills"><span class="live"><i></i>Live preview</span><span id="ba"></span></div>
+      </header>
+      <nav class="steps" id="tabs" aria-label="Stages"></nav>
+      <section id="preview" aria-label="Preview" aria-live="polite"></section>
+      <section class="panel" id="panel" aria-label="Choices"></section>
     </div>
-    <div id="designSummary"></div>
   </section>
   <section class="card" id="learn">
     <h2>Explore's channels</h2>
@@ -167,6 +176,7 @@
 <script src="nav.js"></script>
 <script src="content/topics.js"></script>
 <script src="options.js"></script>
+<script src="design.js"></script>
 <script src="options-plus.js"></script>
 </body>
 </html>

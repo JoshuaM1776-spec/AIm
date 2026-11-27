@@ -133,7 +133,9 @@ function openPlanDialog({ interest = "", goal = "" } = {}) {
   openModal(el("div", { class: "wp-dialog wp-plan-dialog", role: "dialog", "aria-modal": "true", "aria-label": "Make a learning plan" },
     el("div", { class: "wp-title" }, "Make a learning plan"),
     el("p", { class: "wp-muted" }, `${BRAND} lays out what to learn, in order, as short lessons, and starts the first one. With your syllabus, the plan follows your class.`),
-    i, g, syllabusUpload(notes, err), notes, err,
+    el("label", { class: "wp-label wp-plan-field" }, "What it's about"), i,
+    el("label", { class: "wp-label wp-plan-field" }, "The goal behind it"), g,
+    el("label", { class: "wp-label wp-plan-field" }, "Your syllabus or study guide (optional)"), syllabusUpload(notes, err), notes, err,
     el("div", { class: "wp-actions" }, el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Cancel"), start)));
   setTimeout(() => (interest ? g : i).focus(), 50);
 }

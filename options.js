@@ -20,29 +20,11 @@ async function setSetting(key, value) {
   render();
 }
 
-// The design, in words, one line per stage, each with a link straight to that stage. The switches
-// themselves live in Design your YouTube only, so there's one place to change them.
-function designSummary(S) {
-  const home = S.homeCard === false ? "YouTube's own feed" : "A clean page with your aim, and Explore";
-  const shorts = S.hideShorts === false ? "Shown" : S.learnShorts ? "Only from selected channels" : "Hidden";
-  const watching = [S.hideRecs !== false ? "recommendations hidden" : "recommendations shown",
-    S.noAutoplay !== false ? "autoplay off" : "autoplay on", S.hideFeeds !== false ? "feeds hidden" : "feeds shown",
-    S.strict ? "strict" : "asks once"].join(" · ");
-  $("designSummary").replaceChildren(...[["Home", home, "home"], ["Shorts", shorts, "shorts"], ["Watching", watching[0].toUpperCase() + watching.slice(1), "watching"]].map(([label, value, stage]) => {
-    const row = document.createElement("div"), what = document.createElement("div"), b = document.createElement("b"), v = document.createElement("span"), a = document.createElement("a");
-    row.className = "setting"; what.className = "what";
-    b.textContent = label; v.textContent = value; what.append(b, v);
-    a.href = `design.html#${stage}`; a.textContent = "Change"; a.className = "small";
-    row.append(what, a);
-    return row;
-  }));
-}
 
 async function render() {
   const st = await send({ type: "state" });
   if (!st) return;
   const S = st.settings, t = st.today || { purpose: 0, leisure: 0, other: 0 };
-  designSummary(S);
   renderMemory(S);
   $("homeschoolPreview").checked = !!st.homeschool;
   $("homeschoolResetRow").hidden = !st.homeschool;
@@ -98,9 +80,17 @@ $("homeschoolReset").onclick = async () => {
 function renderLearn(S) {
   const on = new Set(S.learnTopics || []), off = new Set(S.learnOff || []);
   const save = (key, value) => setSetting(key, value);
-  const pick = document.createElement("a");
-  pick.href = "design.html#home"; pick.textContent = on.size ? "Change your interests" : "Choose interests";
-  $("learnNote").replaceChildren(on.size ? "The channels behind your topics. Take out any you'd rather not see. " : "Pick interests, and Explore shows new videos from channels that teach them well. ", pick);
+  // Your interests, here (0.82): pick a topic, and Explore shows new videos from channels that teach it well.
+  const chips = document.createElement("div");
+  chips.className = "chips";
+  chips.setAttribute("role", "group"); chips.setAttribute("aria-label", "Your interests");
+  for (const t of LEARN_TOPICS) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip"; b.textContent = t.name; b.setAttribute("aria-pressed", String(on.has(t.id)));
+    b.onclick = async () => { await save("learnTopics", on.has(t.id) ? [...on].filter(x => x !== t.id) : [...on, t.id]); render(); };
+    chips.append(b);
+  }
+  $("learnNote").replaceChildren(on.size ? "Your interests, and the channels behind them. Take out any you'd rather not see." : "Pick interests, and Explore shows new videos from channels that teach them well.", chips);
   const box = $("learnChannels");
   box.replaceChildren();
   for (const t of LEARN_TOPICS.filter(t => on.has(t.id))) {
@@ -159,6 +149,8 @@ $("forgetAll").onclick = async () => {
 };
 
 if (location.hash === "#learn") setTimeout(() => $("learn").scrollIntoView({ block: "start" }), 200);
+// Design your YouTube, or one of its stages (#home, #shorts, #watching; design.js opens it).
+if (/^#(design|home|shorts|watching)$/.test(location.hash)) setTimeout(() => $("designCard").scrollIntoView({ block: "start" }), 200);
 if (location.hash === "#advanced") setTimeout(() => $("time").scrollIntoView({ block: "start" }), 200);
 
 // The menu on the left: groups with nothing in them stay out of it, and the one you're reading is marked.

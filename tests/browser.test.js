@@ -244,7 +244,7 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     await design.click(".seg button:text-is('Math')");
     step("only from my topics: a Quick review row in the preview", (await prev()).includes("Quick review"));
     await design.click("#next");
-    step("Watching: the watch page, with only your search's videos beside it", (await prev()).includes("Up next from your search") && !(await prev()).includes("Recommended"));
+    step("Watching: the watch page, with only your search's videos beside it", (await prev()).includes("More from your search") && !(await prev()).includes("Recommended"));
     await design.click(".opt:has-text(\"YouTube's recommendations\")");
     step("choosing recommendations puts them back in the preview", (await prev()).includes("Recommended"));
     await design.click(".opt:has-text('Only what my search found')");
@@ -261,7 +261,8 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
     let st = await store();
     step("Apply saves the design", st.settings.learnShorts === true && st.settings.hideShorts === true && st.settings.learnTopics.join() === "math" && !!st.design?.appliedAt);
     // Later: straight to a stage, and clicking the preview opens the part you clicked.
-    await design.goto(`chrome-extension://${extId}/design.html#home`);
+    await design.goto("about:blank");
+    await design.goto(`chrome-extension://${extId}/design.html#home`); // an old link: it opens Settings there
     await design.waitForSelector(".yt");
     step("afterwards, a stage opens directly (no steps)", (await design.textContent(".panel .count")) === "Home");
     await design.click('#preview [data-go="shorts"]');
@@ -1184,10 +1185,15 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   st = await store();
   step("settings save through the background", st.settings.leisureMin === 90 && st.settings.graceMin === 5 && st.settings.totalMin === 240 &&
     st.avoid["/@hideme"].action === "warn", JSON.stringify(st.settings));
-  const sum = (await opt.textContent("#designSummary")).replace(/\s+/g, " ");
-  step("settings show the design in words, each part linking to its stage, with no duplicate switches",
-    ["Home", "Shorts", "Watching", "Change"].every(t => sum.includes(t)) && (await opt.$$("#designSummary a[href^='design.html#']")).length === 3 &&
-    !(await opt.$("#hideShorts, #homeCard, #strict, #learnShorts")), sum.slice(0, 160));
+  const designText = (await opt.textContent("#designCard")).replace(/\s+/g, " ");
+  step("Settings holds Design your YouTube itself (0.82): its stages and live preview, no separate page, no duplicate switches",
+    ["Home", "Shorts", "Watching", "Live preview"].every(t => designText.includes(t)) && !!(await opt.$("#designCard .yt")) && !(await opt.$("#designSummary, a[href^='design.html']")) &&
+    !(await opt.$("#hideShorts, #homeCard, #strict, #learnShorts")), designText.slice(0, 160));
+  await opt.click("#learn .chip:text-is('Math')");
+  await opt.waitForTimeout(400);
+  step("your interests are chosen in Settings too, under Explore's channels", (await store()).settings.learnTopics.includes("math"));
+  await opt.click("#learn .chip:text-is('Math')");
+  await opt.waitForTimeout(400);
   if (process.env.SHOTS) await opt.screenshot({ path: `${process.env.SHOTS}/settings.png`, fullPage: true });
   await sw.evaluate(() => serial(() => setSetting("hideShorts", false)));
   await p.waitForTimeout(500);

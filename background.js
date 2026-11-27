@@ -183,7 +183,7 @@ const reads = {
   "targets": () => readAll().then(resumable),
   "record": () => readAll().then(learningRecord),
   "channels-page": () => channelsPage(),
-  "open-design": m => chrome.tabs.create({ url: chrome.runtime.getURL("design.html" + (/^(home|shorts|watching)$/.test(m.stage || "") ? `#${m.stage}` : "")) }).then(() => ({ result: "applied" })),
+  "open-design": m => chrome.tabs.create({ url: chrome.runtime.getURL("options.html" + (/^(home|shorts|watching)$/.test(m.stage || "") ? `#${m.stage}` : "#design")) }).then(() => ({ result: "applied" })),
   "open-path": m => chrome.tabs.create({ url: chrome.runtime.getURL(`path.html?id=${encodeURIComponent(String(m.id || ""))}`) }).then(() => ({ result: "applied" })),
   "open-channels": () => chrome.tabs.create({ url: chrome.runtime.getURL("channels.html") }).then(() => ({ result: "applied" })),
   "review-shorts": m => rankReviewShorts(m.shorts),

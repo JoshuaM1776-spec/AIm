@@ -1,10 +1,10 @@
-// Aim — Design your YouTube. A configurator instead of a settings list, laid out like a car
-// configurator: a large preview of YouTube on top that changes as you choose, one question at a time
-// underneath, three stages (Home, Shorts, Watching) along the top, then a before-and-after
-// and one Apply. The first time, it walks through the stages in order; afterwards any stage opens
-// directly (from Settings, or design.html#shorts). The preview is a sketch drawn by Aim, filled
-// with your own Learn something videos: YouTube can't be embedded in a page, and Aim doesn't copy
-// its look. Choices change nothing until Apply. Settings → More settings has the rest.
+// Aim — Design your YouTube, inside Settings (0.82: each setting in one place; the welcome asks, Settings
+// holds). Like a car configurator: the preview large on top, one question at a time underneath, the
+// stages along the top. The first time it walks through Home, Shorts and Watching, then shows the before
+// and after to apply; afterwards each stage opens directly (options.html#home, #shorts, #watching).
+// The preview is a sketch drawn by Aim, filled with your own topics' videos. Its own scope, since
+// options.js has its own helpers.
+(() => {
 
 const BRAND = chrome.runtime.getManifest().name;
 for (const n of document.querySelectorAll("[data-brand]")) n.textContent = BRAND;
@@ -149,7 +149,7 @@ function watchView(d, after) {
     node("div", { class: "ctl" }, "0:42 / 12:10", node("span", { class: `yt-toggle${autoplay ? " on" : ""}` }, "Autoplay", node("i"))));
   const next = recs
     ? node("div", { "data-go": "watching" }, node("div", { class: "yt-head" }, node("h3", {}, "Recommended")), node("div", { class: "yt-cards" }, [2, 3].map(loudCard)))
-    : node("div", { "data-go": "watching" }, node("div", { class: "yt-head" }, node("h3", {}, "Up next from your search"), node("small", {}, "Only what you searched for")),
+    : node("div", { "data-go": "watching" }, node("div", { class: "yt-head" }, node("h3", {}, "More from your search"), node("small", {}, "Only what you searched for")),
       node("div", { class: "yt-cards" }, (v.length > 1 ? v.slice(1, 3) : [{ title: "Plate tectonics, explained", channel: "A science channel" }, { title: "Inside a volcano", channel: "A geology channel" }]).map(card)));
   return node("div", { class: "yt" }, topBar(d, after), node("div", { class: "yt-body" }, rail(d, after),
     node("div", { class: "yt-main" }, player, node("div", { class: "yt-title" }, lead.title), node("div", { class: "yt-card" }, node("div", { class: "m" }, lead.channel)),
@@ -318,4 +318,5 @@ async function sendRead(msg) {
   const at = STAGES.findIndex(s => s.id === location.hash.slice(1));
   if (at >= 0) { S.stage = at; S.wizard = false; }
   draw();
+})();
 })();

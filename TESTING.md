@@ -297,7 +297,7 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] **Study sessions** and **Completed** filter the list; **Print or save as PDF** prints just the record (no buttons).
 
 ### 30. Learn something (0.42; replaced by Explore in 0.50, see 39)
-- [ ] With no topics chosen and no aim, YouTube's home page has one quiet line, **Learn something new? Choose topics** (opens Design your YouTube → Home); its × hides it for good.
+- [ ] With no topics chosen and no aim, YouTube's home page has one quiet line, **Learn something new? Choose topics** (opens Settings → Your YouTube → Home); its × hides it for good.
 - [ ] Pick Math and Engineering: the home page shows **Learn something**, six new videos (three by two) from those channels, newest first, at most two per channel, no Shorts, each labeled with its channel and topic. The first visit takes a few seconds while feeds load; after that it's instant for a day.
 - [ ] **Check every curated channel loads** (Settings lists them, each linked): a channel that never shows up has a wrong handle in content/topics.js.
 - [ ] Clicking one starts the aim "Exploring: <title>"; the watch page's sidebar says **More from your topics** with the rest of the row.
@@ -349,7 +349,7 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] Every choice changes the preview at once. Home: **A clean page with my aim** (no videos), **Videos from channels I choose** (topic picks appear under it; real thumbnails once they've loaded on YouTube), **The regular YouTube feed**. Shorts: **Hide**, **Only from selected channels** (asks for channels if none), **Show all**. Watching: the watch page, with More from your search or recommendations, and autoplay. (Time limits aren't a stage for now; they're in More settings.)
 - [ ] After applying **A clean page**, YouTube's homepage shows only What brings you here?, even with topics picked.
 - [ ] **Before** shows YouTube as it was. Nothing changes on YouTube until **Apply to YouTube** on the before-and-after; then YouTube matches the design.
-- [ ] Settings → **Design your YouTube**, and its Jump to links, open a stage directly. Clicking a part of the preview opens its stage. A change shows **Changes not applied yet**, with Undo.
+- [ ] Settings → **Your YouTube** (0.82: Design your YouTube is part of Settings) opens a stage directly from options.html#home, #shorts or #watching. Clicking a part of the preview opens its stage. A change shows **Changes not applied yet**, with Undo.
 - [ ] A student's browser connected to a family shows the design but can't change it.
 
 ### 48. References and Ways to practice (0.58)
@@ -553,6 +553,11 @@ Needs the server redeployed and `0007_weekly.sql` run (it makes the `weekly_chal
 - [ ] Continue Learning → **Add an interest** → **From a syllabus or study guide** opens the same, with what you typed.
 - [ ] A learning aim outside a plan (with a map): the panel beside the video has **Make a plan for this** under its parts.
 - [ ] Signed out, Make my plan says to sign in. A study session you already have still opens, works, and keeps its summary.
+
+### 74. Settings in one place (0.82)
+- [ ] The welcome asks; Settings holds everything. **Your YouTube** in Settings is Design your YouTube itself: its stages, the live preview, before and after, and Apply. There's no separate Design page; old links (the welcome's "Or design it with a preview", design.html#shorts) open Settings there.
+- [ ] Explore's channels in Settings has **your interests** as chips: pick one, and its channels appear under it.
+- [ ] Settings change only in Settings and the welcome, apart from choices made in the moment on YouTube (an aim's time limit, a break's length, Explore's topics).
 
 ## Known issues (not regressions)
 

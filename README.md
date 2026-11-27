@@ -89,8 +89,8 @@ On the server, `supabase/functions/ai/homeschool.ts` holds every rule (approval,
 | `aim.css` | The shared look for all of Aim's own pages (see Design) |
 | `tokens.css` | Aim's fonts and colors, from the mark (used by `aim.css` and the popup) |
 | `fonts/` | Inter and Inter Display, Latin subsets (SIL Open Font License) |
-| `design.html/js` | Design your YouTube: three stages (Home, Shorts, Watching) with a live preview drawn from your own topics' videos, click the preview to change that part, then a before-and-after and one Apply. The welcome tour invites you here; Settings links to each stage. |
-| `options.html/js` | Settings page (everything, including the finer details the designer leaves out) |
+| `design.js/css` (in Settings since 0.82; `design.html` sends old links there) | Design your YouTube: three stages (Home, Shorts, Watching) with a live preview drawn from your own topics' videos, click the preview to change that part, then a before-and-after and one Apply. The welcome offers it ("Or design it with a preview"), opening Settings there; options.html#home, #shorts or #watching opens a stage. |
+| `options.html/js` | Settings: every setting in one place (0.82). The welcome asks; Settings holds Design your YouTube (with its preview), your interests and Explore's channels, your channels, time, the librarian and Aim Plus |
 | `config.js`, `plus.js` | Aim Plus in the service worker: where the server is (empty = Free only), sign-in with an emailed code, calling Aim's AI endpoint. Only Aim's own pages can use it, never YouTube tabs. |
 | `plus.html`, `plus-home.js` | The Aim Plus page: what each Plus feature does, with a button to use it once you have Plus; the welcome page after subscribing |
 | `sync.js` | Aim Plus sync across devices, in the service worker: sends what changed in this browser, merges what changed in others (off until turned on in Settings) |
