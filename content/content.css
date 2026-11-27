@@ -954,6 +954,9 @@ html[dark] .wp-ap-row.wp-ap-next { border-color: var(--wp-text); box-shadow: ins
 .wp-step-note { width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--wp-search-border); background: var(--wp-base); color: var(--wp-text); font: inherit; font-size: 13px; resize: vertical; }
 .wp-ap-step-note { font-size: 12px; color: var(--wp-muted); font-weight: 400; }
 .wp-ap-then { font-size: 12px; line-height: 16px; padding: 0 2px; }
+.wp .wp-ap-makeplan { align-self: flex-start; font-size: 12px; padding: 0 2px; }
+.wp-plan-dialog .wp-input + .wp-input { margin-top: 8px; }
+.wp .wp-pw-syllabus { margin-left: auto; font-size: 13px; }
 .wp-ap-connect:empty { display: none; }
 .wp-ap-fold { border-top: 1px solid var(--wp-divider); padding-top: 8px; }
 .wp-ap-fold > summary { display: flex; align-items: baseline; gap: 8px; cursor: pointer; list-style: none; font-size: 14px; line-height: 20px; padding: 2px 2px 4px; }

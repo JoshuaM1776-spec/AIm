@@ -101,7 +101,7 @@ function librarianBlock(p) {
     others.length ? el("div", { class: "wp-lib-refine" },
       el("span", { class: "wp-muted" }, "Also try"),
       ...others.map(q => el("button", { class: "wp-chip", onclick: () => goSearch(q) }, q))) : null,
-    L?.kind === "learn" && account.plus && !activeStudy(p) ? el("div", { class: "wp-lib-refine" },
+    L?.kind === "learn" && account.on && !activeStudy(p) && !p.pathRef ? el("div", { class: "wp-lib-refine" },
       el("span", { class: "wp-muted" }, "Studying this?"),
       studyOffer(p),
       (p.videos || []).length ? el("button", { class: "wp-chip", onclick: () => openTalk() }, "Talk it through") : null) : null,

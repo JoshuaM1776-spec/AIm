@@ -155,7 +155,7 @@ function panelPlace(p) {
   const now = parts.find(x => x.search && x.search === forThis) || parts.find(x => x.status !== "explained") || null;
   const steps = parts.map(x => ({ title: x.title, state: x === now ? "now" : x.status === "explained" ? "done" : x.status === "new" ? "next" : "part" }));
   steps.push({ title: "Put it together", state: p.map?.synthesis?.verdict === "solid" ? "done" : "next", final: true });
-  return { label: where, steps, then: l?.next || "", lesson: !!l };
+  return { label: where, steps, then: l?.next || "", lesson: !!l, mapAim: !p.pathRef && !p.challenge };
 }
 
 function renderAimPanel() {
@@ -285,6 +285,8 @@ function renderAimPanel() {
         : el("button", { class: "wp-link", onclick: () => openPivotDialog() }, "Change")),
     steps,
     place?.then ? el("div", { class: "wp-ap-then wp-muted" }, `Then: ${place.then}`) : null,
+    // A learning aim outside a plan stays simple, and can become one (0.81).
+    place?.mapAim && account.on ? el("button", { class: "wp-link wp-ap-makeplan", onclick: () => openPlanDialog({ goal: p.text }) }, "Make a plan for this") : null,
     goalBlock,
     preBlock,
     prompt,

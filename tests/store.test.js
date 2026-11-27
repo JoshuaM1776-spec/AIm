@@ -1114,6 +1114,15 @@ test("guess first, explain after: a question before a part's video, the guess ke
   assert.ok(env.local.history.at(-1).openQuestion.q, "the open question goes into history with the aim");
 });
 
+test("a plan from your syllabus (0.81): kept with the plan, and sent whenever lessons are drafted", async () => {
+  const env = fresh();
+  const { path } = await env.run(`pathAdd({ interest: "Biology", goal: "Pass the unit 3 exam", syllabus: "Unit 3\\r\\n- glycolysis\\n- Krebs cycle  " + "x".repeat(7000) })`);
+  assert.ok(path.syllabus.startsWith("Unit 3\n- glycolysis") && path.syllabus.length === 6000, "the first 6,000 characters");
+  assert.ok((await env.run(`pathContext(${JSON.stringify(path.id)})`)).syllabus.startsWith("Unit 3"), "drafting sends it");
+  const plain = (await env.run(`pathAdd({ interest: "Aviation", goal: "Fly" })`)).path;
+  assert.ok(!("syllabus" in plain) && !("syllabus" in (await env.run(`pathContext(${JSON.stringify(plain.id)})`))), "only when there is one");
+});
+
 test("your week (0.80): time and days; the next steps laid on them from today; a missed day rolls forward; no streaks", async () => {
   const env = fresh(); // Friday 16 October 2026
   const { path } = await env.run(`pathAdd({ interest: "Aviation", goal: "Fly" })`);

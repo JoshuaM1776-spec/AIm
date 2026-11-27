@@ -82,6 +82,62 @@ function weekEditor(x, onDone) {
   return box;
 }
 
+// ---------- A plan from your syllabus (0.81) ----------
+// An interest, the goal behind it, and, if you have one, your syllabus or study guide (pasted, or read
+// from a file here in your browser). Aim drafts the plan around it and starts the first lesson. This is
+// how studying for a class works now; study sessions you already have stay readable.
+function syllabusUpload(box, err) {
+  const fileNote = el("span", { class: "wp-muted wp-study-file-note" });
+  const picker = el("input", { type: "file", accept: ".txt,.md,.docx,.pdf,text/plain", hidden: true });
+  picker.addEventListener("change", async () => {
+    const file = picker.files?.[0];
+    picker.value = "";
+    if (!file) return;
+    err.textContent = ""; fileNote.textContent = `Reading ${file.name}…`;
+    try {
+      const text = await readFileText(file);
+      box.value = text.slice(0, 6000);
+      fileNote.textContent = text.length > 6000 ? `Read ${file.name}. Only the first 6,000 characters fit; trim it to what this plan covers.` : `Read ${file.name}. Check the text below.`;
+      box.focus();
+    } catch (e) { fileNote.textContent = ""; err.textContent = e.message || "Couldn't read that file."; }
+  });
+  return el("div", { class: "wp-study-file" }, el("button", { class: "wp-btn wp-btn-tonal", onclick: () => picker.click() }, icon("book"), "Upload a file"), picker, fileNote);
+}
+
+function openPlanDialog({ interest = "", goal = "" } = {}) {
+  closeDropdown?.();
+  const i = el("input", { class: "wp-input", type: "text", value: interest, placeholder: "An interest, like biology", "aria-label": "Interest", maxlength: "60" });
+  const g = el("input", { class: "wp-input", type: "text", value: goal, placeholder: "The goal behind it, like “pass the unit 3 exam”", "aria-label": "Goal", maxlength: "160" });
+  const notes = el("textarea", { class: "wp-input", rows: "5", maxlength: "6000", "aria-label": "Syllabus or study guide",
+    placeholder: "Optional: your syllabus or study guide (paste, or upload a .docx, .pdf or .txt), so the plan follows your class." });
+  notes.addEventListener("keydown", e => e.stopPropagation());
+  const err = el("div", { class: "wp-error" });
+  const start = el("button", { class: "wp-btn wp-btn-primary" }, "Make my plan");
+  const fail = msg => { err.textContent = msg; start.disabled = false; start.textContent = "Make my plan"; };
+  start.onclick = async () => {
+    if (!account.on) return fail(`Sign in to ${BRAND}, and it drafts a plan for your goal.`);
+    if (i.value.trim().length < 2) return fail("What's it about? A word or two, like biology.");
+    if (g.value.trim().length < 3) return fail("And the goal behind it? Something you want to be able to do.");
+    start.disabled = true; start.textContent = "Drafting your plan…"; err.textContent = "";
+    const r = await send({ type: "path-add", interest: i.value, goal: g.value, syllabus: notes.value });
+    if (r?.result !== "applied") return fail(r?.message || "Couldn't add that. Try again.");
+    if (!r.path.plan && !(await draftPath(r.path.id, ""))) { const m = pw.error; pw.error = ""; return fail(m || "Couldn't draft the plan just now. Try again."); }
+    const n = await send({ type: "path-next", id: r.path.id });
+    const b = n?.resume ? await send({ type: "purpose-resume", id: n.resume }) : n?.lesson ? await send({ type: "path-lesson-begin", id: r.path.id, lessonId: n.lesson.id }) : null;
+    if (b?.result !== "applied") return fail(b?.message || "Your plan is ready. Pick it up in Continue Learning.");
+    closeModal();
+    location.href = b.url;
+  };
+  keepKeys(i, () => g.focus());
+  keepKeys(g, () => notes.focus());
+  openModal(el("div", { class: "wp-dialog wp-plan-dialog", role: "dialog", "aria-modal": "true", "aria-label": "Make a learning plan" },
+    el("div", { class: "wp-title" }, "Make a learning plan"),
+    el("p", { class: "wp-muted" }, `${BRAND} lays out what to learn, in order, as short lessons, and starts the first one. With your syllabus, the plan follows your class.`),
+    i, g, syllabusUpload(notes, err), notes, err,
+    el("div", { class: "wp-actions" }, el("button", { class: "wp-btn wp-btn-text", onclick: closeModal }, "Cancel"), start)));
+  setTimeout(() => (interest ? g : i).focus(), 50);
+}
+
 // What's left to the next checkpoint: lessons to the end of a unit, or a step outside Aim.
 const pwProgressText = pr => !pr ? "No path yet: pick it to draft one"
   : pr.next ? (pr.next.outside ? `Next checkpoint: ${pr.next.title} (outside Aim)` : `${pr.next.left} lesson${pr.next.left === 1 ? "" : "s"} to: ${pr.next.title}`) : "Every unit done";
@@ -121,7 +177,8 @@ function pathsWindow() {
     setTimeout(() => i.focus(), 30);
     return el("div", { class: "wp-pw-add" }, i, g, el("div", { class: "wp-row" },
       el("button", { class: "wp-btn wp-btn-primary", onclick: () => addInterest(i.value, g.value) }, "Add"),
-      el("button", { class: "wp-btn wp-btn-text", onclick: () => { pw.adding = false; pw.error = ""; pwRedraw(); } }, "Cancel")));
+      el("button", { class: "wp-btn wp-btn-text", onclick: () => { pw.adding = false; pw.error = ""; pwRedraw(); } }, "Cancel"),
+      el("button", { class: "wp-link wp-pw-syllabus", onclick: () => { pw.adding = false; openPlanDialog({ interest: i.value.trim(), goal: g.value.trim() }); } }, "From a syllabus or study guide")));
   })() : null;
   pwHost = el("div", { class: "wp-pw", "aria-label": "Your learning plans" },
     el("div", { class: "wp-pw-head" },

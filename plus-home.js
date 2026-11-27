@@ -42,8 +42,8 @@ function lineIcon(name) {
 function features(ctx) {
   const st = ctx.study;
   return [
-    { icon: "study", title: "Study sessions", text: "Turn a learning goal into a few topics in order, each with a clear video picked from your own searches. Upload your syllabus or study guide and the topics match your class.",
-      how: "Starts on YouTube: set a learning aim, then Organize a study session above the results.",
+    { icon: "study", title: "Plans from your syllabus", text: "Turn a class into a learning plan: add your syllabus or study guide, and its units follow your class, as short lessons in order to watch, read, try and explain.",
+      how: "On YouTube: a learning aim offers Make a plan for this above the results. Or Add an interest in Continue Learning, then From a syllabus or study guide.",
       live: st ? `Now: ${st.title}, ${st.done} of ${st.of} topics checked` : null,
       action: st ? ["Open your session", () => open("study.html")] : ["Go to YouTube", youtube] },
     { icon: "teach", title: "TeachBack", text: "Check your understanding by explaining it, the way you'd teach a friend. You get what you've shown, what to review, and a search for each gap. Not a grade.",

@@ -75,7 +75,7 @@ const deps = {
       : props.includes("showed") ? (srv.weeklyPrompts = [...(srv.weeklyPrompts || []), req.prompt], { summary: "You worked the numbers before you spent the money, and it showed.",
           showed: ["Turning a flow rate into a daily total", "Rating a pipe for its lowest point"], next: [{ topic: "Friction loss", why: "Long pipes lose pressure as water flows.", search: "friction loss in pipes explained" }] })
       : props.includes("marks") ? (srv.talkPrompts.push(req.prompt), srv.talk.shift())
-      : props.includes("units") ? (srv.pathPrompts = [...(srv.pathPrompts || []), req.prompt], (srv.pathPrompts.length === 1 ? {
+      : props.includes("units") ? (srv.pathPrompts = [...(srv.pathPrompts || []), req.prompt], (!req.prompt.includes("INTEREST: Biology") && srv.pathPrompts.filter(x => !x.includes("INTEREST: Biology")).length === 1 ? {
           title: "Earn a private pilot's license", scope: "The ground knowledge for a private pilot certificate; flying needs an instructor.", measure: "Ground knowledge",
           confirm: "Requirements change: confirm them with your flight instructor and the FAA.",
           units: [{ title: "How a plane flies", about: "Lift, weight, thrust and drag", lessons: 2 }, { title: "Weather", about: "What pilots read in the sky", lessons: 2 }, { title: "Airspace", about: "Who flies where", lessons: 1 }],
@@ -89,6 +89,10 @@ const deps = {
                 { do: "show", title: "Attempt", look: "", minutes: 3, search: "", source: "none", guess: "" }] },
             { title: "Why can a plane stall at any speed?", kind: "understand", minutes: 20, difficulty: "intro", why: "Stalls are about angle.", success: "Explain why a stall depends on angle of attack.", materials: [], safety: "", unit: 1,
               plan: [{ title: "Angle of attack", look: "", minutes: 12, search: "angle of attack explained", guess: "What makes a wing stop lifting?" }, { title: "Attempt", look: "", minutes: 8, search: "", guess: "" }] }] }
+        : req.prompt.includes("INTEREST: Biology") ? { title: "Biology 110", scope: "Unit 3, as your syllabus lists it.", measure: "Unit 3", confirm: "",
+          units: [{ title: "Cells", about: "", lessons: 1 }, { title: "Cellular respiration", about: "", lessons: 2 }, { title: "Review", about: "", lessons: 1 }], outside: [],
+          lessons: [{ title: "What does glycolysis make?", kind: "understand", minutes: 20, difficulty: "intro", why: "It starts respiration.", success: "Explain what glycolysis makes, and where.", materials: [], safety: "", unit: 2,
+            plan: [{ do: "watch", title: "Glycolysis", look: "", minutes: 10, search: "what glycolysis makes", source: "none", guess: "" }, { do: "show", title: "Attempt", look: "", minutes: 5, search: "", source: "none", guess: "" }] }] }
         : { title: "x", scope: "", measure: "", confirm: "", units: [], outside: [], lessons: [] }))
       : props.includes("first_question") ? { type: "concepts", first_question: "What does a plant actually make during photosynthesis?",
           objectives: ["Explain what photosynthesis produces", "Explain the role of light", "Explain where it happens in the cell"] }
@@ -378,17 +382,36 @@ await openLibrarian();
 await yt.fill(".wp-lib-input", "I'm struggling with cellular respiration and have an exam Friday");
 await yt.press(".wp-lib-input", "Enter");
 await yt.waitForURL(/search_query=cellular%20respiration%20explained/);
-await yt.waitForSelector("button:text-is('Organize a study session')");
-step("a learning goal offers a study session (Plus)", (await yt.textContent("#wp-results-bar")).includes("Studying this?"));
-await yt.click("button:text-is('Organize a study session')");
-await yt.setInputFiles(".wp-dialog input[type=file]", new URL("./fixtures/syllabus-chrome.pdf", import.meta.url).pathname);
-await yt.waitForFunction(() => /Glycolysis: where it happens/.test(document.querySelector(".wp-dialog textarea")?.value || ""));
-step("Upload a file: a syllabus PDF is read in the browser into the study guide box",
-  (await yt.textContent(".wp-study-file-note")).includes("Read syllabus-chrome.pdf") && (await yt.inputValue(".wp-dialog textarea")).includes("BIO 110"));
-await yt.fill(".wp-dialog textarea", "Unit 3\n- glycolysis\n- Krebs cycle");
-await yt.click(".wp-dialog button:text-is('Start')");
-await yt.waitForURL(/search_query=glycolysis%20explained/);
-step("the study guide shapes the plan", srv.studyPrompt.includes("Unit 3\n- glycolysis"));
+await yt.waitForSelector("button:text-is('Make a plan for this')");
+step("a learning goal offers a plan for it (0.81: study sessions are plans now)", (await yt.textContent("#wp-results-bar")).includes("Studying this?") &&
+  !(await yt.$("button:text-is('Organize a study session')")));
+await yt.click("button:text-is('Make a plan for this')");
+await yt.waitForSelector(".wp-plan-dialog");
+step("the goal comes from the aim", (await yt.inputValue(".wp-plan-dialog input[aria-label=Goal]")) === "Cellular respiration exam Friday");
+await yt.setInputFiles(".wp-plan-dialog input[type=file]", new URL("./fixtures/syllabus-chrome.pdf", import.meta.url).pathname);
+await yt.waitForFunction(() => /Glycolysis: where it happens/.test(document.querySelector(".wp-plan-dialog textarea")?.value || ""));
+step("Upload a file: a syllabus PDF is read in the browser into the syllabus box",
+  (await yt.textContent(".wp-plan-dialog .wp-study-file-note")).includes("Read syllabus-chrome.pdf") && (await yt.inputValue(".wp-plan-dialog textarea")).includes("BIO 110"));
+await yt.fill(".wp-plan-dialog input[aria-label=Interest]", "Biology");
+await yt.fill(".wp-plan-dialog textarea", "Unit 3\n- glycolysis\n- Krebs cycle");
+if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/plan-from-syllabus.png` });
+await yt.click(".wp-plan-dialog button:text-is('Make my plan')");
+await yt.waitForURL(/search_query=what%20glycolysis%20makes/, { timeout: 15000 });
+const bio = await sw.evaluate(() => chrome.storage.local.get(["paths", "purpose", "paused"]));
+step("Make my plan: the syllabus shapes the plan and stays with it, the first lesson starts, and the aim waits on the shelf",
+  srv.pathPrompts.at(-1).includes("THEIR SYLLABUS") && srv.pathPrompts.at(-1).includes("Unit 3\n- glycolysis") && bio.paths.some(x => x.interest === "Biology" && x.syllabus === "Unit 3\n- glycolysis\n- Krebs cycle") &&
+  bio.purpose.text === "What does glycolysis make?" && !!bio.purpose.pathRef && bio.paused.some(a => a.text === "Cellular respiration exam Friday"), srv.pathPrompts.at(-1).slice(0, 300));
+// A study session you already have keeps working, and stays readable.
+const studyUrl = await sw.evaluate(() => serial(async () => {
+  const d = await chrome.storage.local.get(["paths", "paused"]);
+  await finishPurpose("no");
+  await pathRemove(d.paths.find(x => x.interest === "Biology").id);
+  await resumePurpose(d.paused.find(a => a.text === "Cellular respiration exam Friday").id);
+  return (await startStudy({ title: "Cellular respiration", scopeNote: "", notes: "Unit 3\n- glycolysis\n- Krebs cycle",
+    topics: [{ title: "Glycolysis", brief: "Glucose is split into pyruvate in the cytoplasm.", searches: ["glycolysis explained"] },
+      { title: "Krebs cycle", brief: "Pyruvate's carbon is released as CO2 in the mitochondria.", searches: ["krebs cycle explained"] }] })).url;
+}));
+await yt.goto(studyUrl);
 await yt.waitForSelector(".wp-study-bar");
 bar = await yt.textContent("#wp-results-bar");
 step("a topic's results lead with the topic and its brief", bar.includes("Topic 1 of 2") && bar.includes("Glucose is split into pyruvate"));
@@ -610,7 +633,7 @@ let relaxState = await sw.evaluate(() => chrome.storage.local.get(["brk", "purpo
 step("a request to relax starts a break with a theme, and the aim waits", relaxState.brk?.theme?.text === "Fun biology" && relaxState.brk.durationMin === 30 &&
   relaxState.purpose?.suspended === true && (await yt.textContent("#wp-chip")).includes("Relax: Fun biology"));
 step("the librarian sees recent aims, for a vague request", srv.lastAskPrompt.includes("THEIR RECENT TARGETS:"));
-step("relaxing: no study offers, no picks to work through", !(await yt.$("button:text-is('Organize a study session')")) && (await yt.textContent("#wp-results-bar")).includes("Relaxing"));
+step("relaxing: no study offers, no picks to work through", !(await yt.$("button:text-is('Make a plan for this')")) && (await yt.textContent("#wp-results-bar")).includes("Relaxing"));
 await yt.waitForTimeout(500);
 await yt.goto("https://www.youtube.com/watch?v=alt2bbb");
 await yt.waitForSelector("#wp-theme-panel");
@@ -1002,7 +1025,7 @@ await yt.waitForFunction(() => document.querySelector("#wp-home .wp-pw")?.textCo
 const pwText = (await yt.textContent("#wp-home .wp-pw")).replace(/\s+/g, " ");
 step("+ adds an interest with its goal; Aim drafts its path, and the window shows progress to the next checkpoint",
   pwText.includes("Aviation") && pwText.includes("Earn a private pilot's license") && pwText.includes("0%") && pwText.includes("Lesson 1 · How does a wing make lift?") && pwText.includes("2 lessons to: How a plane flies") &&
-  srv.pathPrompts[0].includes("INTEREST: Aviation") && srv.pathPrompts[0].includes("GOAL: Earn a private pilot's license"), pwText.slice(0, 200));
+  srv.pathPrompts.some(x => x.includes("INTEREST: Aviation") && x.includes("GOAL: Earn a private pilot's license")), pwText.slice(0, 200));
 if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/start-a-challenge.png`, fullPage: true });
 // Your week (0.80): five hours over every day, so today always has a piece.
 await yt.click("#wp-home .wp-pw-row:has-text('Aviation') .wp-pw-week button:text-is('Set your week')");

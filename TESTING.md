@@ -187,10 +187,10 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 - [ ] **Delete account…** asks you to type DELETE; the button stays disabled until you do. After deleting: Settings shows the sign-in form, and in Supabase the user, profile, learners, assessments, turns, progress and AI usage rows are all gone.
 - [ ] Signing in again with the same email starts a fresh, empty account.
 
-### 16. Study sessions (Aim Plus)
+### 16. Study sessions (Aim Plus; since 0.81, ones you already have)
 
-- [ ] A learning request ("I'm struggling with cellular respiration and have an exam Friday") shows "Studying this? Organize a study session · Test my understanding" in the results bar. A repair request doesn't.
-- [ ] Organize a study session → paste a study guide → Start: "Planning…", then results for topic 1, headed "Topic 1 of N", with its brief. Aim's picks appear; the top ones become the topic's videos.
+- [ ] Since 0.81 a learning request offers **Make a plan for this** instead (§73). A study session you already have keeps working as below.
+- [ ] A session's results for topic 1 are headed "Topic 1 of N", with its brief. Aim's picks appear; the top ones become the topic's videos.
 - [ ] Open one: the sidebar shows the study plan instead of Up next, with Check yourself, Next topic and the topic list. After it plays a little, the topic counts it as watched.
 - [ ] Check yourself opens TeachBack with the topic and its brief filled in. After the results, the topic shows Checked or Review.
 - [ ] Next topic goes to the next topic's results; the last topic offers See summary.
@@ -284,7 +284,7 @@ From a cloud session, the environment must allow `*.youtube.com`, `*.ytimg.com`,
 ### 27. Put it to work, and a syllabus file (0.39, Plus)
 - [ ] In a study session, check a topic, then open the summary: **Put it to work** offers **Suggest a project**. It suggests one small project with steps, a time estimate and what finishing it shows, aimed at what your check said to practice; regulated subjects get a safety note.
 - [ ] **I did it** asks what you made or found out and keeps it with the session; **Suggest another** gives something different.
-- [ ] Organize a study session → **Upload a file**: a .docx, a .pdf exported from Word or Google Docs, and a .txt each fill the study guide box with their text, to check before Start. A scanned PDF says to paste the text instead. Over 6,000 characters, it says only the start fits.
+- [ ] Make a plan for this → **Upload a file**: a .docx, a .pdf exported from Word or Google Docs, and a .txt each fill the syllabus box with their text, to check before Make my plan. A scanned PDF says to paste the text instead. Over 6,000 characters, it says only the start fits.
 
 ### 28. Today, for a study session (0.40, Plus)
 - [ ] With a study session going, YouTube's home page shows **Today · <session>** in the current aim's card: how many topics are checked, **Next up** with Start (goes to that topic's search).
@@ -545,6 +545,14 @@ Needs the server redeployed and `0007_weekly.sql` run (it makes the `weekly_chal
 - [ ] The plan's page: **Your week** with the days from today and what's on each ("Lesson 3: Read, Try · Lesson 4: Watch"); **Change** edits it.
 - [ ] Skip a scheduled day: the next scheduled day starts where you left off. Nothing says you missed a day; there are no streaks.
 - [ ] Finish steps (watch the video, Done reading, …): today's piece shrinks to what's left, and the next steps move up.
+
+### 73. A plan from your syllabus (0.81)
+- [ ] A learning request ("I'm struggling with cellular respiration and have an exam Friday"), signed in: the results bar says **Studying this? Make a plan for this**. A repair request doesn't; a lesson on a plan doesn't.
+- [ ] Make a plan for this: the goal is the aim; type an interest ("Biology"), paste or upload your syllabus or study guide (optional), **Make my plan**. "Drafting your plan…", then the first lesson's search opens, and the aim you were on waits on the shelf.
+- [ ] The plan follows the syllabus: units in its order, lessons within it; an exam it names is a step outside Aim where it falls. Writing the next lessons later stays within it.
+- [ ] Continue Learning → **Add an interest** → **From a syllabus or study guide** opens the same, with what you typed.
+- [ ] A learning aim outside a plan (with a map): the panel beside the video has **Make a plan for this** under its parts.
+- [ ] Signed out, Make my plan says to sign in. A study session you already have still opens, works, and keeps its summary.
 
 ## Known issues (not regressions)
 

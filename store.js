@@ -394,14 +394,16 @@ const PATHS_MAX = 12;
 const pathId = () => `path${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 async function pathsAll() { return (await chrome.storage.local.get("paths")).paths || []; }
 async function pathsSave(paths) { await chrome.storage.local.set({ paths: paths.slice(0, PATHS_MAX) }); }
-async function pathAdd({ interest, goal = "", why = "" } = {}) {
+async function pathAdd({ interest, goal = "", why = "", syllabus = "" } = {}) {
   interest = clip(interest, 60); goal = clip(goal, 160);
+  // A plan from your syllabus or study guide (0.81): kept with the plan, in this browser.
+  syllabus = String(syllabus || "").replace(/\r/g, "").trim().slice(0, 6000);
   if (interest.length < 2) return { result: "error", message: "What are you curious about?" };
   const paths = await pathsAll();
   const same = paths.find(x => x.interest.toLowerCase() === interest.toLowerCase() && x.goal.toLowerCase() === goal.toLowerCase());
   if (same) return { result: "applied", path: same, existed: true };
   if (paths.length >= PATHS_MAX) return { result: "error", message: `Up to ${PATHS_MAX} interests. Remove one first.` };
-  const path = { id: pathId(), interest, goal, why: clip(why, 200), createdAt: Date.now(), plan: null, lessons: [] };
+  const path = { id: pathId(), interest, goal, why: clip(why, 200), createdAt: Date.now(), plan: null, lessons: [], ...(syllabus ? { syllabus } : {}) };
   await pathsSave([...paths, path]);
   return { result: "applied", path };
 }
@@ -517,7 +519,7 @@ async function pathContext(id) {
   if (!path) return null;
   const aims = [d.purpose, ...(d.paused || []), ...(d.history || [])].filter(Boolean);
   const gaps = aims.filter(a => a.pathRef?.id === id).flatMap(a => (a.gaps || []).filter(g => !g.resolvedAt).map(g => g.title));
-  return { interest: path.interest, goal: path.goal, why: path.why,
+  return { interest: path.interest, goal: path.goal, why: path.why, ...(path.syllabus ? { syllabus: path.syllabus } : {}),
     existing: path.plan ? { units: path.plan.units.map(u => ({ title: u.title, lessons: u.lessons })),
       done: path.lessons.filter(l => l.lastOutcome || l.status === "completed").map(l => ({ title: l.title, unit: l.unit, outcome: l.status === "completed" ? "demonstrated" : l.lastOutcome })),
       gaps: [...new Set(gaps)].slice(0, 6) } : null };
