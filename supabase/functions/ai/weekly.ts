@@ -1,11 +1,14 @@
 // The Weekly Challenge (0.76): one story a week, the same for everyone. Its own rules decide what
 // happens (weekly-rules.ts, the same rules the extension plays by); the AI only drafts stories for an
 // editor to check, and, while someone plays, answers from what the story's team knows, says what their
-// reasoning weighed and missed, and writes their debrief. Editors (AIM_DAILY_EDITORS) draft, check,
-// playtest and publish; everyone, signed in or not, gets the published story for their week.
+// reasoning weighed and missed, and writes their debrief. Editors (AIM_EDITORS) draft, check,
+// playtest and publish; everyone, signed in or not, gets the published story for their week. A week
+// with nothing published keeps the latest story published before it, and until anything is published
+// everyone gets the first story, built in (weekly-first.ts), so the box is never empty.
 
 import { type AiRequest, TaskError } from "./teachback.ts";
 import { wkTidy, wkWeekOf } from "./weekly-rules.ts";
+import { WEEKLY_FIRST } from "./weekly-first.ts";
 
 export interface WeeklyRow { week: string; status: "draft" | "published"; data: Record<string, unknown>; updatedAt?: string }
 export interface WeeklyStore {
@@ -26,19 +29,36 @@ const isMonday = (x: unknown): x is string => isWeekDay(x) && wkWeekOf(x) === x;
 type Ctx = { input: unknown; now: Date; weekly: WeeklyStore };
 type AiCtx = Ctx & { ai(task: string, req: AiRequest): Promise<string> };
 
-// For everyone, no account needed: this week's published story. The browser sends its own date.
-export async function weeklyCurrent(ctx: Ctx) {
+// The story for a week: published for it; else the latest published before it (carried, until a new
+// one is published); else the first story, built in. "from" says which.
+export const weeklyFirst = () => wkTidy(WEEKLY_FIRST, { forPublish: true }).story as Record<string, unknown>;
+export async function weeklyStoryFor(store: WeeklyStore | undefined, week: string) {
+  let rows: WeeklyRow[] = [];
+  if (store) {
+    try { rows = await store.list(wPlus(week, -7 * 104), week, true); }
+    catch (e) { console.error("weekly: couldn't read stories", e); } // not set up yet: the first story still plays
+  }
+  const latest = rows.filter(r => r.status === "published" && r.week <= week).sort((a, b) => (a.week < b.week ? 1 : -1))[0];
+  if (latest?.week === week) return { story: latest.data, from: "week", since: week };
+  if (latest) return { story: latest.data, from: "carried", since: latest.week };
+  return { story: weeklyFirst(), from: "first", since: "" };
+}
+
+// For everyone, no account needed: this week's story. The browser sends its own date.
+export async function weeklyCurrent(ctx: Omit<Ctx, "weekly"> & { weekly?: WeeklyStore }) {
   const day = wObj(ctx.input).day, today = wDay(ctx.now);
   if (!isWeekDay(day) || day < wPlus(today, -2) || day > wPlus(today, 1)) throw new TaskError(400, "input", "Ask for this week.");
   const week = wkWeekOf(day);
-  const [row] = await ctx.weekly.list(week, week, true);
-  return { week, story: row?.data ?? null };
+  return { week, ...(await weeklyStoryFor(ctx.weekly, week)) };
 }
 
 // ---------- editors ----------
 export async function weeklyList(ctx: Ctx) {
   const thisWeek = wkWeekOf(wDay(ctx.now));
-  return { thisWeek, weeks: await ctx.weekly.list(wPlus(thisWeek, -7), wPlus(thisWeek, 7 * 8), false) };
+  const weeks = await ctx.weekly.list(wPlus(thisWeek, -7), wPlus(thisWeek, 7 * 8), false);
+  // What everyone sees this week, for the editor: published for it, carried from an earlier week, or the first story.
+  const now = await weeklyStoryFor(ctx.weekly, thisWeek);
+  return { thisWeek, weeks, everyone: { from: now.from, since: now.since, title: String(now.story?.title || "") } };
 }
 
 // Save an editor's version. A draft can be incomplete; publishing needs everything, sources and a picture
@@ -164,8 +184,9 @@ export async function weeklyTurn(ctx: AiCtx & { editor: boolean; plan: string; u
   const limit = ctx.plan === "free" ? WEEKLY_LIMITS.turnsFree : WEEKLY_LIMITS.turnsPlus;
   if (ctx.usage && await ctx.usage.countSince("weekly-turn", new Date(ctx.now.getTime() - 864e5)) >= limit)
     throw new TaskError(429, "limit", "That's a lot of story for one day. The narrator will be back tomorrow.");
-  const [row] = await ctx.weekly.list(input.week, input.week, !(input.draft && ctx.editor));
-  const story = row?.data as { title?: string; premise?: string; chapters?: Record<string, unknown>[]; endings?: unknown[] } | undefined;
+  // An editor's playtest of a draft is that week's draft; otherwise the story everyone has that week.
+  const draft = input.draft && ctx.editor ? (await ctx.weekly.list(input.week, input.week, false))[0]?.data : null;
+  const story = (draft || (await weeklyStoryFor(ctx.weekly, input.week)).story) as { title?: string; premise?: string; chapters?: Record<string, unknown>[]; endings?: unknown[] } | undefined;
   if (!story) throw new TaskError(404, "none", "There's no challenge for that week.");
   const ch = (story.chapters || []).find(c => c.id === input.chapter) as Record<string, unknown> | undefined;
   const head = `STORY: ${story.title}. ${story.premise}`;

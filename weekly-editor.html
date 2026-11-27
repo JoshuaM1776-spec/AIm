@@ -44,6 +44,7 @@
   .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; }
   .check { flex-direction: row !important; align-items: center; color: var(--text) !important; font-size: 14px !important; }
   .hint { margin: 0; font-size: 13px; color: var(--muted); }
+  .hint.everyone { margin: 14px 0 4px; font-size: 15px; color: var(--text); }
   @media (max-width: 760px) { .grid, .grid.three, .grid.four { grid-template-columns: 1fr; } }
 </style>
 </head>
@@ -56,6 +57,7 @@
   <h1>Weekly Challenges</h1>
   <p class="lede">The story everyone gets each week, from Monday. Nothing reaches anyone until you publish it. Before publishing, check every fact and number against its sources, then playtest it: every path should be fair, and the story's rules (what each choice costs, and which ending follows) should match the facts.</p>
   <div class="row"><span class="busy" id="busy"></span></div>
+  <p class="hint everyone" id="everyone" role="status"></p>
   <p class="error" id="err"></p>
   <div class="weeks" id="weeks"></div>
 </main>

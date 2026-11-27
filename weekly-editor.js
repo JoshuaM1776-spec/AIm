@@ -49,6 +49,11 @@ async function load() {
     const r = await call("weekly-list", {});
     thisWeek = r.thisWeek;
     rows = new Map(r.weeks.map(w => [w.week, w]));
+    // What everyone sees this week (0.82.1): published for it, the latest one carried forward, or the first story.
+    const e = r.everyone;
+    $("everyone").textContent = !e ? "" : e.from === "week" ? `Everyone sees this week: ${e.title}.`
+      : e.from === "carried" ? `Nothing is published for this week, so everyone still sees ${e.title} (from the week of ${label(e.since)}). Publish one below to replace it.`
+      : `Nothing is published yet, so everyone sees Aim's first story, ${e.title}, built in. Publish one below to replace it.`;
     draw();
   } catch (e) { fail(e); }
 }

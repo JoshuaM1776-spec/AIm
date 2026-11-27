@@ -332,7 +332,7 @@ async function plusWeeklyCurrent(day) {
     body: JSON.stringify({ task: "weekly-current", input: { day } })
   });
   if (!res.ok || !data.ok) throw new PlusError(data.error?.message || "Aim's server had a problem. Try again.", res.status, data.error?.code || "");
-  return { story: data.story || null, week: data.week };
+  return { story: data.story || null, week: data.week, from: data.from || "week" };
 }
 
 // Aim Plus features Aim's pages may call. Each is a task on Aim's server, which builds the prompts.

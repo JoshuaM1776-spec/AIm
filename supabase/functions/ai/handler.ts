@@ -213,7 +213,7 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
   // This week's Weekly Challenge: the same for everyone, so no account is needed. Published ones only.
   if (PUBLIC_TASKS.has(name)) {
     try {
-      return json(200, { ok: true, ...(deps.weekly ? await weeklyCurrent({ input: body.input, now: deps.now(), weekly: deps.weekly }) : { story: null }) }, cors);
+      return json(200, { ok: true, ...(await weeklyCurrent({ input: body.input, now: deps.now(), weekly: deps.weekly })) }, cors);
     } catch (e) { if (e instanceof TaskError) return fail(e.status, e.code, e.message, cors); throw e; }
   }
 

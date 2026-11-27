@@ -228,16 +228,26 @@ function refreshThemes(force = false) {
 
 // This week's Weekly Challenge for a YouTube tab: cached for the week, asked again hourly while it isn't
 // out yet; the same story for everyone, so no account is needed. The fetch stays out of serial().
+// This week's story from Aim's server (which stands in the latest one, or the first story, when none is
+// published for the week). When the server can't be reached, or is older and has none, the first story,
+// built in, so the box is never empty. A stand-in is kept like any story, and asked about again hourly.
 async function weeklyGet(refresh = false) {
   const c = await weeklyCached();
   if (c.fresh && (c.story || !refresh)) return c;
+  const standIn = async extra => {
+    const story = c.story && c.from !== "week" ? c.story : await weeklyFirstStory();
+    const from = c.story && c.from !== "week" ? c.from : "first";
+    if (story) await serial(() => weeklyCacheSave(c.week, story, from));
+    return { ...c, ...extra, story, from, fresh: true };
+  };
   try {
     const r = await plusWeeklyCurrent(localDay());
-    if (r.unavailable) return { ...c, unavailable: true };
-    await serial(() => weeklyCacheSave(c.week, r.story));
-    return { ...c, story: r.story, fresh: true };
+    if (r.unavailable) return standIn({ unavailable: true });
+    if (!r.story) return standIn({});
+    await serial(() => weeklyCacheSave(c.week, r.story, r.from));
+    return { ...c, story: r.story, from: r.from, fresh: true };
   } catch (e) {
-    return { ...c, error: String(e.message || e) };
+    return standIn({ error: String(e.message || e) });
   }
 }
 

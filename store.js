@@ -627,16 +627,24 @@ async function weekToday(now = Date.now()) {
 // most hourly), and your playthrough (weeklyPlay: the rules' state from content/weekly-shared.js, the
 // outcome on screen, the narrator's feedback, your debrief). A new week starts fresh. An editor's
 // playtest of a draft (weeklyPlaytest) keeps its own playthrough, apart from the real one.
+// A story published for this week is kept all week; one that stands in (the latest one carried
+// forward, or the first story, built in) is checked again hourly, so a new one shows up the same day.
 async function weeklyCached() {
   const { weeklyCache, weeklyPlay } = await chrome.storage.local.get(["weeklyCache", "weeklyPlay"]);
   const week = wkWeekOf(localDay());
   const mine = weeklyCache?.week === week;
-  const fresh = mine && (weeklyCache.story || Date.now() - (weeklyCache.at || 0) < 3600e3);
-  return { week, fresh, story: mine ? weeklyCache.story || null : null, state: weeklyPlay?.week === week ? weeklyPlay : null };
+  const from = weeklyCache?.from || "week";
+  const fresh = mine && ((weeklyCache.story && from === "week") || Date.now() - (weeklyCache.at || 0) < 3600e3);
+  return { week, fresh, from, story: mine ? weeklyCache.story || null : null, state: weeklyPlay?.week === week ? weeklyPlay : null };
 }
-async function weeklyCacheSave(week, story) {
-  await chrome.storage.local.set({ weeklyCache: { week, story: story || null, at: Date.now() } });
+async function weeklyCacheSave(week, story, from = "week") {
+  await chrome.storage.local.set({ weeklyCache: { week, story: story || null, from, at: Date.now() } });
   return { result: "applied" };
+}
+// The first story, built in (weekly-sample.json): what the box shows when Aim's server can't be reached.
+async function weeklyFirstStory() {
+  try { return wkTidy(await (await fetch(chrome.runtime.getURL("weekly-sample.json"))).json(), { forPublish: true }).story || null; }
+  catch { return null; }
 }
 // The playthrough as the page has it, kept as is (it's this browser's own record), within reason.
 async function weeklyPlaySave(state, playtest = false) {

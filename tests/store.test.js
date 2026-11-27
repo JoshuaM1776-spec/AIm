@@ -1293,9 +1293,16 @@ test("the Weekly Challenge (0.76): the story's rules decide every path; this wee
   assert.ok((await env.run("weeklyCached()")).fresh, "not out yet: asked again within the hour");
   env.advance(61 * MIN);
   assert.ok(!(await env.run("weeklyCached()")).fresh, "an hour later, ask again");
+  // A story standing in (the first one, built in, or one carried from an earlier week): asked about again hourly (0.82.1).
+  await env.run(`weeklyCacheSave(${JSON.stringify(week)}, S, "first")`);
+  assert.ok((await env.run("weeklyCached()")).fresh && (await env.run("weeklyCached()")).from === "first", "a stand-in, for now");
+  env.advance(61 * MIN);
+  assert.ok(!(await env.run("weeklyCached()")).fresh, "an hour later, ask whether one's been published");
   await env.run(`weeklyCacheSave(${JSON.stringify(week)}, S)`);
   c = JSON.parse(JSON.stringify(await env.run("weeklyCached()")));
   assert.ok(c.fresh && c.story.title === "A Resilient Water System");
+  env.advance(3 * 60 * MIN);
+  assert.ok((await env.run("weeklyCached()")).fresh, "published for this week: kept all week");
   // Your playthrough: kept for the week, within reason; a new week starts fresh.
   assert.strictEqual((await env.run(`weeklyPlaySave({ week: "nope" })`)).result, "invalid");
   assert.strictEqual((await env.run(`weeklyPlaySave({ week: ${JSON.stringify(week)}, big: "x".repeat(70000) })`)).result, "too-large");

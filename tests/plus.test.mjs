@@ -789,6 +789,8 @@ await wkEd.goto(`chrome-extension://${extId}/weekly-editor.html`);
 await wkEd.waitForSelector("#weeks .week");
 step("the editor: last week, this week and the next eight, all empty", (await wkEd.$$("#weeks .week")).length === 10 &&
   (await wkEd.textContent("#weeks .week >> nth=1")).includes("This week") && (await wkEd.textContent("#weeks .week >> nth=1")).includes("Empty"));
+step("with nothing published, the editor says everyone sees Aim's first story, built in (0.82.1)",
+  (await wkEd.textContent("#everyone")) === "Nothing is published yet, so everyone sees Aim's first story, A Resilient Water System, built in. Publish one below to replace it.");
 const thisWk = wkEd.locator("#weeks .week").nth(1);
 await thisWk.locator("summary").click();
 await thisWk.locator("#theme").fill("water in the mountains");

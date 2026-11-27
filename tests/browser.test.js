@@ -316,8 +316,10 @@ const RESULTS = page(`<ytd-search><div><ytd-section-list-renderer>
   step("early hide hands over to the card", await p.evaluate(() =>
     !document.documentElement.classList.contains("wp-boot") && document.documentElement.classList.contains("wp-home")));
   const sceneImg = () => p.evaluate(() => getComputedStyle(document.querySelector("#wp-home .wp-scene-bg")).backgroundImage);
-  step("homepage (0.76): Home, Break and Library at the top, this week's challenge (on its way: none is published here), then the search and Learning plans; no Daily unless it's on",
-    (await text("#wp-home .wp-wk-title")) === "This week's challenge is on its way" &&
+  await p.waitForFunction(() => document.querySelector("#wp-home .wp-wk-title")?.textContent === "A Resilient Water System", null, { timeout: 5000 }).catch(() => {});
+  step("homepage (0.76): Home, Break and Library at the top, this week's challenge (0.82.1: with no server here, Aim's first story, built in, with its picture), then the search and Learning plans",
+    (await text("#wp-home .wp-wk-title")) === "A Resilient Water System" && (await text("#wp-home .wp-wk-card")).includes("Accept Challenge") &&
+    (await p.$eval("#wp-home .wp-wk-pic", n => n.style.backgroundImage)).includes("scenes/weekly/water-system.jpg") &&
     (await p.getAttribute("#wp-home .wp-home-input", "placeholder")) === "Search for videos, topics, or anything you want to learn…" && !card0.includes("Search YouTube") &&
     (await p.$$eval("#wp-home .wp-scene-tab", b => b.map(x => x.textContent).join())) === "Home,Break,Library" && !!(await p.$("#wp-home .wp-scene-tab.on:has-text('Home')")) &&
     (await text("#wp-home .wp-home-continue")) === "Learning plans" && !(await p.$("#wp-home .wp-home-daily")) &&

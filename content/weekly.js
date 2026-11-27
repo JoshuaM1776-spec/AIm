@@ -59,12 +59,14 @@ async function weeklyLoad() {
   const r = (await send({ type: "weekly-peek" })) || {};
   if (wk.playtest) return;
   const same = wk.story && r.story && wk.week === r.week && wkIds(wk.story) === wkIds(r.story);
-  wk = { ...wk, week: r.week || "", story: r.story || null, unavailable: !!r.unavailable,
-    state: wkLater(same ? wkFits(r.story, wk.state) : null, wkFits(r.story, r.state)) };
+  // Never blank a story this week already has while the next one is fetched.
+  const keep = !r.story && wk.story && wk.week === r.week && !wk.playtest ? wk.story : null;
+  wk = { ...wk, week: r.week || "", story: r.story || keep, unavailable: !!r.unavailable,
+    state: keep ? wk.state : wkLater(same ? wkFits(r.story, wk.state) : null, wkFits(r.story, r.state)) };
   if (!r.fresh) send({ type: "weekly-get" }).then(n => {
     if (!alive || wk.playtest) return;
     if (n?.unavailable && !wk.unavailable) { wk.unavailable = true; if (!scene.panel) renderHome(); }
-    if (n?.story && !wk.story) { wk = { ...wk, week: n.week, story: n.story, state: wkFits(n.story, n.state) }; renderHome(); }
+    if (n?.story && (!wk.story || wk.story.title !== n.story.title || wkIds(wk.story) !== wkIds(n.story))) { wk = { ...wk, week: n.week, story: n.story, state: wkFits(n.story, n.state) }; renderHome(); }
   });
 }
 // What the card shows, for renderHome's key.

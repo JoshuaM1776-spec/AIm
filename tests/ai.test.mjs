@@ -1196,6 +1196,8 @@ test("the one-file dashboard version is up to date with supabase/functions/ai", 
   assert.deepStrictEqual(all.filter(f => !FILES.includes(f)), [], "files missing from tools/bundle-ai.mjs FILES");
   const { buildRules, RULES } = await import("../tools/bundle-ai.mjs");
   assert.ok(fs.readFileSync(RULES, "utf8") === buildRules(), "weekly-rules.ts out of date: run node tools/bundle-ai.mjs");
+  const { buildFirst, FIRST } = await import("../tools/bundle-ai.mjs");
+  assert.ok(fs.readFileSync(FIRST, "utf8") === buildFirst(), "weekly-first.ts out of date: run node tools/bundle-ai.mjs");
   assert.ok(fs.readFileSync(OUT, "utf8") === build(), "out of date: run node tools/bundle-ai.mjs");
   assert.ok(fs.readFileSync(OUT_WEBHOOK, "utf8") === buildWebhook(), "webhook out of date: run node tools/bundle-ai.mjs");
   // The files are pasted together, so top-level names must not repeat across them.
@@ -1476,8 +1478,36 @@ test("the Weekly Challenge: editors save drafts as they go; publishing needs eve
   const list = await call(d, { task: "weekly-list", input: {} });
   assert.strictEqual(list.body.thisWeek, "2026-10-12");
   assert.deepStrictEqual(list.body.weeks.map(w => `${w.week}:${w.status}`), ["2026-10-12:published"]);
+  assert.strictEqual(anon.body.from, "week");
   const none = makeDeps();
-  assert.strictEqual((await call(none, { task: "weekly-current", input: { day: "2026-10-16" } }, { token: "" })).body.story, null, "not set up: nothing this week");
+  const first = await call(none, { task: "weekly-current", input: { day: "2026-10-16" } }, { token: "" });
+  assert.ok(first.body.story?.title === "A Resilient Water System" && first.body.from === "first", "not set up: the first story, built in");
+});
+
+test("the Weekly Challenge box is never empty (0.82.1): a week with nothing published keeps the latest story; before any, the first story; the narrator follows", async () => {
+  const d = weeklyDeps(() => ({ ok: true, model: "m", inputTokens: 10, outputTokens: 10, text: JSON.stringify({ answer: "The team measured 6 m of drop." }) }));
+  let r = await call(d, { task: "weekly-current", input: { day: "2026-10-16" } }, { token: "" });
+  assert.ok(r.body.week === "2026-10-12" && r.body.from === "first" && r.body.story.title === "A Resilient Water System" && r.body.story.chapters.length === 9, "nothing published yet: the first story");
+  assert.match(String(r.body.story.image), /^bundled:/, "with its own picture");
+  const ask = await call(d, { task: "weekly-turn", input: { mode: "ask", week: "2026-10-12", chapter: SAMPLE.chapters[0].id, question: "How far does the water fall?" } });
+  assert.strictEqual(ask.status, 200, JSON.stringify(ask.body));
+  assert.match(d.calls.at(-1).prompt, /STORY: A Resilient Water System/, "the narrator tells the same story");
+  await call(d, { task: "weekly-save", input: { week: "2026-10-05", status: "published", story: { ...SAMPLE, title: "The Crossing" } } });
+  await call(d, { task: "weekly-save", input: { week: "2026-09-28", status: "published", story: { ...SAMPLE, title: "Older" } } });
+  await call(d, { task: "weekly-save", input: { week: "2026-10-12", story: { ...SAMPLE, title: "Only a draft" } } });
+  r = await call(d, { task: "weekly-current", input: { day: "2026-10-16" } }, { token: "" });
+  assert.ok(r.body.from === "carried" && r.body.since === "2026-10-05" && r.body.story.title === "The Crossing", "a week without one keeps the latest published, never a draft");
+  await call(d, { task: "weekly-turn", input: { mode: "ask", week: "2026-10-12", chapter: SAMPLE.chapters[0].id, question: "How far does the water fall?" } });
+  assert.match(d.calls.at(-1).prompt, /STORY: The Crossing/);
+  const list = await call(d, { task: "weekly-list", input: {} });
+  assert.deepStrictEqual(list.body.everyone, { from: "carried", since: "2026-10-05", title: "The Crossing" }, "the editor sees what everyone gets");
+  await call(d, { task: "weekly-save", input: { week: "2026-10-12", status: "published", story: { ...SAMPLE, title: "This week's own" } } });
+  r = await call(d, { task: "weekly-current", input: { day: "2026-10-16" } }, { token: "" });
+  assert.ok(r.body.from === "week" && r.body.story.title === "This week's own");
+  // The table not set up yet (reading it fails): the first story still plays.
+  const broken = weeklyDeps(); broken.weekly.list = async () => { throw new Error("relation does not exist"); };
+  r = await call(broken, { task: "weekly-current", input: { day: "2026-10-16" } }, { token: "" });
+  assert.ok(r.status === 200 && r.body.from === "first");
 });
 
 test("the Weekly Challenge: the week's picture is stored and linked; too large or not a picture is refused", async () => {
@@ -1529,10 +1559,12 @@ test("the Weekly Challenge: the narrator answers from what the team knows, judge
   assert.match(d.calls[2].prompt, /Four tap stands \(\$1,500 each\): 3000 \(needs 6000\)/);
   const deb = await call(d, { task: "weekly-turn", input: { week: "2026-10-12", mode: "debrief", ending: "Water before the dry season", record: [{ chapter: "The drop", result: "Right: 441 kPa" }] } });
   assert.strictEqual(deb.body.next[0].search, "friction loss in pipes");
-  await call(d, { task: "weekly-save", input: { week: "2026-10-19", story: SAMPLE } });
+  await call(d, { task: "weekly-save", input: { week: "2026-10-19", story: { ...SAMPLE, title: "Draft only" } } });
   assert.strictEqual((await call(d, { task: "weekly-turn", input: { week: "2026-10-19", mode: "ask", chapter: "pipe", question: "Pressure?", draft: true } })).status, 200, "an editor playtests a draft");
-  const player = weeklyDeps(); player.weekly = d.weekly; player.config.editors = [];
-  assert.strictEqual((await call(player, { task: "weekly-turn", input: { week: "2026-10-19", mode: "ask", chapter: "pipe", question: "Pressure?", draft: true } })).status, 404, "nobody else sees a draft");
+  assert.match(d.calls.at(-1).prompt, /STORY: Draft only/);
+  const player = weeklyDeps(() => ({ ok: true, model: "m", inputTokens: 1, outputTokens: 1, text: JSON.stringify({ answer: "The team says 1.2 km." }) })); player.weekly = d.weekly; player.config.editors = [];
+  const p2 = await call(player, { task: "weekly-turn", input: { week: "2026-10-19", mode: "ask", chapter: "pipe", question: "Pressure?", draft: true } });
+  assert.ok(p2.status === 200 && !player.calls.at(-1).prompt.includes("Draft only"), "nobody else sees a draft: they get the story everyone has");
 });
 
 let failed = 0;
