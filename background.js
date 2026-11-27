@@ -46,6 +46,8 @@ async function tabState() {
     currentVideos: status.purpose ? recentVideos(status.purpose) : [],
     // A lesson on a plan: where it sits, for the panel beside the video.
     lesson: status.purpose?.pathRef ? await lessonContext(status.purpose.pathRef) : null,
+    // Today's piece of each plan with a week (0.80), for Home.
+    today: await weekToday(),
     // "Saved for later", newest first, for the homepage and the start of a break.
     saved: saved.slice(-12).reverse(), savedCount: saved.length };
 }
@@ -92,6 +94,7 @@ const writes = {
   "review-result": m => reviewResult(m.key, m.outcome),
   "talk-offered": m => talkOffered({ aimId: m.aimId, answer: m.answer }),
   "talk-marks": m => talkMarks(m.aimId, m.marks),
+  "path-week": m => pathWeekSet(String(m.id || ""), m.week || null),
   "lesson-step": m => lessonStep(String(m.aimId || ""), m.index, { note: m.note, skip: m.skip === true }),
   "talk-verdict": m => talkVerdict(m.aimId, m.verdict),
   "captions-stat": m => captionsStat(!!m.found),

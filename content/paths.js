@@ -4,7 +4,7 @@
 // path: the lesson in progress, or the next one; when the detailed lessons run out, or a new interest
 // has no plan yet, Aim drafts them first (Aim's server, signed in). See store.js → Paths.
 
-let pw = { open: false, list: null, adding: false, busy: "", error: "" };
+let pw = { open: false, list: null, adding: false, busy: "", error: "", weekFor: null };
 let pwHost = null;
 function pwRedraw() { if (pwHost?.isConnected) pwHost.replaceWith(pathsWindow()); }
 
@@ -49,6 +49,39 @@ async function addInterest(interest, goal) {
   if (account.on && !r.existed && await draftPath(r.path.id, `Drafting your path for ${interest}…`)) { pw.list = (await send({ type: "paths" })) || []; pwRedraw(); }
 }
 
+// Your week for a plan (0.80): how much time, and which days. Aim lays the next steps on them, from
+// today; a missed day rolls forward. No streaks, nothing to fall behind on.
+const WEEK_CHOICES = [[30, "30 min"], [60, "1 hour"], [120, "2 hours"], [180, "3 hours"], [300, "5 hours"]];
+const WEEK_DAYS = [[1, "Mon"], [2, "Tue"], [3, "Wed"], [4, "Thu"], [5, "Fri"], [6, "Sat"], [0, "Sun"]];
+const DOW_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const weekText = w => `${(WEEK_CHOICES.find(c => c[0] === w.minutes) || [0, `${w.minutes} min`])[1]} a week · ${WEEK_DAYS.filter(d => w.days.includes(d[0])).map(d => d[1]).join(", ")}`;
+const dayText = d => `${d.minutes} min · Lesson ${d.lesson}: ${d.kinds.join(", ")}${d.more ? ` and ${d.more === 1 ? "the next lesson" : `${d.more} more lessons`}` : ""}`;
+
+function weekEditor(x, onDone) {
+  const draft = { minutes: x.week?.minutes || 60, days: [...(x.week?.days || [1, 3, 6])] };
+  const box = el("div", { class: "wp-week-edit", onclick: e => e.stopPropagation() });
+  const draw = () => box.replaceChildren(
+    el("div", { class: "wp-label" }, `Your week for ${x.interest}`),
+    el("div", { class: "wp-week-q" }, "How much time a week?"),
+    el("div", { class: "wp-week-chips", role: "group", "aria-label": "Time a week" }, ...WEEK_CHOICES.map(([m, t]) =>
+      el("button", { class: "wp-week-chip", "aria-pressed": String(draft.minutes === m), onclick: () => { draft.minutes = m; draw(); } }, t))),
+    el("div", { class: "wp-week-q" }, "Which days?"),
+    el("div", { class: "wp-week-chips", role: "group", "aria-label": "Days" }, ...WEEK_DAYS.map(([d, t]) =>
+      el("button", { class: "wp-week-chip", "aria-pressed": String(draft.days.includes(d)),
+        onclick: () => { draft.days = draft.days.includes(d) ? draft.days.filter(y => y !== d) : [...draft.days, d]; draw(); } }, t))),
+    el("div", { class: "wp-muted wp-week-note" }, draft.days.length ? `About ${Math.max(10, Math.round(draft.minutes / draft.days.length))} min on each. A day you miss rolls forward.` : "Pick at least one day."),
+    el("div", { class: "wp-row" },
+      el("button", { class: "wp-btn wp-btn-primary", disabled: !draft.days.length, onclick: async () => {
+        const r = await send({ type: "path-week", id: x.id, week: draft });
+        if (r?.result !== "applied") return toast(r?.message || "Couldn't save that. Try again.");
+        onDone(true);
+      } }, "Save"),
+      x.week ? el("button", { class: "wp-btn wp-btn-text", onclick: async () => { await send({ type: "path-week", id: x.id, week: null }); onDone(true); } }, "No schedule") : null,
+      el("button", { class: "wp-btn wp-btn-text", onclick: () => onDone(false) }, "Cancel")));
+  draw();
+  return box;
+}
+
 // What's left to the next checkpoint: lessons to the end of a unit, or a step outside Aim.
 const pwProgressText = pr => !pr ? "No path yet: pick it to draft one"
   : pr.next ? (pr.next.outside ? `Next checkpoint: ${pr.next.title} (outside Aim)` : `${pr.next.left} lesson${pr.next.left === 1 ? "" : "s"} to: ${pr.next.title}`) : "Every unit done";
@@ -66,10 +99,19 @@ function pathsWindow() {
           el("span", { class: "wp-pw-bar", role: "progressbar", "aria-valuenow": String(pct), "aria-valuemin": "0", "aria-valuemax": "100", "aria-label": `${pct}% of the path` }, el("i", { style: `width:${pct}%` })),
           el("span", { class: "wp-cl-pct" }, x.progress ? `${pct}%` : "")),
         el("span", { class: "wp-pw-meta" }, pwProgressText(x.progress),
-          x.planned ? el("button", { class: "wp-link wp-pw-see", onclick: e => { e.stopPropagation(); send({ type: "open-path", id: x.id }); } }, "See the path") : null)),
+          x.planned ? el("button", { class: "wp-link wp-pw-see", onclick: e => { e.stopPropagation(); send({ type: "open-path", id: x.id }); } }, "See the path") : null),
+        // Your week (0.80): today's piece, or the next day with one; or set one.
+        x.planned ? el("span", { class: "wp-pw-week" },
+          x.week ? el("span", { class: x.today ? "wp-pw-today" : "wp-muted" }, x.today ? `Today · ${dayText(x.today)}` : x.next ? `Next: ${DOW_NAMES[x.next.dow]} · ${dayText(x.next)}` : weekText(x.week)) : null,
+          el("button", { class: "wp-link", onclick: e => { e.stopPropagation(); pw.weekFor = pw.weekFor === x.id ? null : x.id; pwRedraw(); } }, x.week ? "Your week" : "Set your week")) : null),
       el("button", { class: "wp-cl-play wp-pw-pick", disabled: !!pw.busy, "aria-label": `Pick up ${x.interest} where you left off`, onclick: e => { e.stopPropagation(); pickPath(x.id); } }, icon("playSolid")));
     row.addEventListener("click", () => { if (!pw.busy) pickPath(x.id); });
-    return row;
+    if (pw.weekFor !== x.id) return row;
+    return el("div", { class: "wp-pw-item" }, row, weekEditor(x, async saved => {
+      pw.weekFor = null;
+      if (saved) { pw.list = (await send({ type: "paths" })) || []; applyStatus(await send({ type: "status" })); }
+      pwRedraw();
+    }));
   });
   const add = pw.adding ? (() => {
     const i = el("input", { class: "wp-input", type: "text", placeholder: "An interest, like aviation", "aria-label": "Interest", maxlength: "60" });

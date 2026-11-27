@@ -21,6 +21,54 @@ const btn = (label, cls, onclick) => node("button", { className: `btn ${cls}`.tr
 const progressLine = pr => !pr ? "No plan yet" : [`${pr.percent}% of the path${pr.measure ? ` · ${pr.measure}` : ""}`,
   pr.next ? (pr.next.outside ? `Next checkpoint: ${pr.next.title} (outside Aim)` : `${pr.next.left} lesson${pr.next.left === 1 ? "" : "s"} to the end of: ${pr.next.title}`) : "Every unit done"];
 
+// Your week (0.80): how much time, which days, and the next steps laid on them from today. A day
+// you miss rolls forward; there are no streaks.
+const WEEK_CHOICES = [[30, "30 min"], [60, "1 hour"], [120, "2 hours"], [180, "3 hours"], [300, "5 hours"]];
+const WEEK_DAYS = [[1, "Mon"], [2, "Tue"], [3, "Wed"], [4, "Thu"], [5, "Fri"], [6, "Sat"], [0, "Sun"]];
+const DOW = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const KIND = { watch: "Watch", read: "Read", try: "Try", explain: "Explain", show: "Show it" };
+let weekEditing = false;
+// A day's steps by lesson: "Lesson 1: Read, Try · Lesson 2: Watch".
+function dayWhat(d) {
+  const by = [];
+  for (const s of d.steps) { let g = by.find(x => x.n === s.n); if (!g) by.push(g = { n: s.n, kinds: [] }); g.kinds.push(KIND[s.do] || "Watch"); }
+  return by.map(g => `Lesson ${g.n}: ${g.kinds.join(", ")}`).join(" · ");
+}
+function weekSection(path, wk) {
+  const sec = node("section", { className: "week", ariaLabel: "Your week" });
+  if (weekEditing || !path.week) {
+    const draft = { minutes: path.week?.minutes || 60, days: [...(path.week?.days || [1, 3, 6])] };
+    const draw = () => sec.replaceChildren(
+      node("h2", { textContent: "Your week" }),
+      node("p", { className: "muted", textContent: "How much time a week, and which days. Aim lays the next steps on them; a day you miss rolls forward." }),
+      node("div", { className: "chips", role: "group", ariaLabel: "Time a week" }, ...WEEK_CHOICES.map(([m, t]) =>
+        node("button", { type: "button", className: "chip", textContent: t, ariaPressed: String(draft.minutes === m), onclick: () => { draft.minutes = m; draw(); } }))),
+      node("div", { className: "chips", role: "group", ariaLabel: "Days" }, ...WEEK_DAYS.map(([d, t]) =>
+        node("button", { type: "button", className: "chip", textContent: t, ariaPressed: String(draft.days.includes(d)),
+          onclick: () => { draft.days = draft.days.includes(d) ? draft.days.filter(y => y !== d) : [...draft.days, d]; draw(); } }))),
+      node("div", { className: "row" },
+        btn("Save my week", "", async () => {
+          if (!draft.days.length) return toast("Pick at least one day.");
+          const r = await send({ type: "path-week", id, week: draft });
+          if (r?.result !== "applied") return toast(r?.message || "Couldn't save that.");
+          weekEditing = false; render();
+        }),
+        path.week ? btn("No schedule", "text", async () => { await send({ type: "path-week", id, week: null }); weekEditing = false; render(); }) : null,
+        path.week ? btn("Cancel", "text", () => { weekEditing = false; render(); }) : null));
+    draw();
+    return sec;
+  }
+  const w = path.week;
+  const line = `${WEEK_CHOICES.find(c => c[0] === w.minutes)?.[1] || `${w.minutes} min`} a week · ${WEEK_DAYS.filter(d => w.days.includes(d[0])).map(d => d[1]).join(", ")}`;
+  sec.append(node("div", { className: "week-head" }, node("h2", { textContent: "Your week" }), node("span", { className: "muted", textContent: line }), btn("Change", "text", () => { weekEditing = true; render(); })),
+    wk?.days?.length ? node("ol", { className: "days" }, ...wk.days.map(d => node("li", { className: d.today ? "today" : "" },
+      node("b", { textContent: d.today ? "Today" : DOW[d.dow] }),
+      node("span", { textContent: `${d.minutes} min` }),
+      node("span", { className: "what", textContent: dayWhat(d) }))))
+      : node("p", { className: "muted", textContent: "Nothing laid out yet: when the next lessons are written, they go on your days." }));
+  return sec;
+}
+
 async function begin(lesson) {
   const r = await send({ type: "path-lesson-begin", id, lessonId: lesson.id });
   if (!r || r.result !== "applied") return toast(r?.message || "Couldn't start that. Try again.");
@@ -47,7 +95,7 @@ async function render() {
   if (!id) return renderList(page);
   const r = await send({ type: "path-get", id });
   if (!r || r.result !== "applied") return page.replaceChildren(node("p", { className: "error", textContent: r?.message || "Couldn't load this path." }), node("a", { href: "path.html", textContent: "Your paths" }));
-  const { path, progress: pr } = r;
+  const { path, progress: pr, week: wk } = r;
   document.title = `${path.plan?.title || path.goal} · ${BRAND}`;
   const head = node("section", { className: "path-head" },
     node("div", { className: "eyebrow", textContent: path.interest }),
@@ -84,6 +132,7 @@ async function render() {
   });
   page.replaceChildren(...[head,
     next.needs === "lessons" ? node("p", {}, btn("Write my next lessons", "", () => draft("Writing your next lessons…"))) : null,
+    weekSection(path, wk),
     node("ol", { className: "units" }, ...items),
     node("div", { className: "foot" }, node("a", { href: "path.html", textContent: "All your paths" }),
       btn("Remove this interest", "text", async () => { if (!confirm(`Remove ${path.interest} and its path? The aims and evidence in your library stay.`)) return; await send({ type: "path-remove", id }); location.href = "path.html"; }))].filter(Boolean));

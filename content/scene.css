@@ -133,6 +133,17 @@ html.wp-scene-on .wp-dropdown { border: 1px solid var(--sc-edge); background: va
 .wp-cl-pct:empty { display: none; }
 .wp-scene .wp-pw-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; font-size: 13px; line-height: 18px; color: var(--sc-ink-3); }
 .wp-scene .wp-pw-see { font-size: 13px; padding: 0; }
+/* Your week (0.80): today's piece on a plan's row, and the editor under it. */
+.wp-scene .wp-pw-week { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; font-size: 13px; line-height: 18px; color: var(--sc-ink-3); }
+.wp-scene .wp-pw-week .wp-link { font-size: 13px; padding: 0; }
+.wp-scene .wp-pw-today { color: var(--sc-ink); font-weight: 600; }
+.wp-pw-item { display: flex; flex-direction: column; gap: 8px; }
+.wp-week-edit { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--sc-edge, var(--wp-card-border)); background: rgba(16, 18, 30, .5); color: var(--sc-ink, var(--wp-text)); }
+.wp-week-q { font-size: 14px; color: var(--sc-ink-2, var(--wp-text)); }
+.wp-week-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.wp .wp-week-chip { padding: 6px 14px; border-radius: 999px; border: 1px solid var(--sc-edge, var(--wp-card-border)); background: transparent; color: inherit; font: 500 14px/20px var(--sc-sans, inherit); cursor: pointer; }
+.wp .wp-week-chip[aria-pressed="true"] { border: 1.5px solid var(--sc-copper-edge, var(--wp-text)); background: linear-gradient(165deg, rgba(128, 84, 54, .6), rgba(56, 44, 46, .55)); }
+.wp-week-note { font-size: 13px; }
 .wp .wp-cl-play { display: grid; place-items: center; width: clamp(44px, 4.1vw, 64px); height: clamp(44px, 4.1vw, 64px); padding: 0; border-radius: 50%;
   border: 2px solid var(--sc-copper-edge); background: rgba(0, 0, 0, .14); color: #f7c999; cursor: pointer; transition: background .2s; }
 .wp .wp-cl-play:hover { background: rgba(244, 168, 98, .16); }

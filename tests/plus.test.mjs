@@ -1004,7 +1004,23 @@ step("+ adds an interest with its goal; Aim drafts its path, and the window show
   pwText.includes("Aviation") && pwText.includes("Earn a private pilot's license") && pwText.includes("0%") && pwText.includes("Lesson 1 · How does a wing make lift?") && pwText.includes("2 lessons to: How a plane flies") &&
   srv.pathPrompts[0].includes("INTEREST: Aviation") && srv.pathPrompts[0].includes("GOAL: Earn a private pilot's license"), pwText.slice(0, 200));
 if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/start-a-challenge.png`, fullPage: true });
-await yt.click("#wp-home .wp-pw-row:has-text('Aviation') .wp-pw-pick");
+// Your week (0.80): five hours over every day, so today always has a piece.
+await yt.click("#wp-home .wp-pw-row:has-text('Aviation') .wp-pw-week button:text-is('Set your week')");
+await yt.waitForSelector("#wp-home .wp-week-edit");
+await yt.click("#wp-home .wp-week-edit .wp-week-chip:text-is('5 hours')");
+for (const d of ["Tue", "Thu", "Fri", "Sun"]) await yt.click(`#wp-home .wp-week-edit .wp-week-chip:text-is('${d}')`);
+step("Set your week: how much time and which days, with what that means a day", (await yt.textContent("#wp-home .wp-week-edit")).includes("About 43 min on each. A day you miss rolls forward."));
+await yt.click("#wp-home .wp-week-edit button:text-is('Save')");
+await yt.waitForSelector("#wp-home .wp-pw-today");
+const todayLine = (await yt.textContent("#wp-home .wp-pw-today")).replace(/\s+/g, " ");
+step("the plan's row says today's piece: its minutes, and the lesson's steps", todayLine === "Today · 42 min · Lesson 1: Watch, Read, Try, Explain, Show it and the next lesson", todayLine);
+if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/week-row.png` });
+await yt.click("#wp-home .wp-scene-x");
+await yt.waitForSelector("#wp-home .wp-home-today");
+const todayChip = (await yt.textContent("#wp-home .wp-home-today")).replace(/\s+/g, " ").trim();
+step("Home: Continue becomes today's piece", todayChip === "Today · 42 min · Aviation, Lesson 1: Watch, Read, Try, Explain, Show it", todayChip);
+if (process.env.SHOTS) await yt.screenshot({ path: `${process.env.SHOTS}/week-home.png` });
+await yt.click("#wp-home .wp-home-today");
 await yt.waitForURL(/search_query=how%20does%20a%20wing%20make%20lift/);
 let pathAim = (await sw.evaluate(() => chrome.storage.local.get("purpose"))).purpose;
 step("picking it up starts the first lesson, in order, as a challenge", pathAim.text === "How does a wing make lift?" && !!pathAim.pathRef && pathAim.challenge.status === "active");
@@ -1089,6 +1105,8 @@ step("the path page: the goal, progress, the units in order, the lesson in progr
   planText.includes("Earn a private pilot's license") && planText.includes("20% of the path · Ground knowledge") && planText.includes("1 lesson to the end of: How a plane flies") &&
   planText.includes("How a plane flies") && planText.includes("Weather") && planText.includes("Outside Aim") && planText.includes("Get an FAA medical certificate") &&
   planText.includes("confirm them with your flight instructor and the FAA") && !!(await pathPage.$("button:text-is('Continue on YouTube')")) && !/\bnull\b/.test(planText), planText.slice(0, 300));
+step("the path page: your week, and the next steps laid on your days from today", planText.includes("Your week") && planText.includes("5 hours a week · Mon, Tue, Wed, Thu, Fri, Sat, Sun") &&
+  (await pathPage.textContent(".week .days li.today")).includes("Lesson 2: Watch, Show it"), planText.slice(planText.indexOf("Your week"), planText.indexOf("Your week") + 200));
 if (process.env.SHOTS) { await pathPage.setViewportSize({ width: 1100, height: 900 }); await pathPage.screenshot({ path: `${process.env.SHOTS}/path.png`, fullPage: true }); }
 await pathPage.close();
 await sw.evaluate(() => serial(() => finishPurpose("yes")));

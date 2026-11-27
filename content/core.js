@@ -199,6 +199,7 @@ function applyStatus(r) {
     saved: "saved" in r ? r.saved : status.saved || [], savedCount: r.savedCount ?? status.savedCount ?? 0,
     homeschool: "homeschool" in r ? r.homeschool : status.homeschool || null,
     lesson: "lesson" in r ? r.lesson : status.lesson || null,
+    today: "today" in r ? r.today : status.today || [],
     onboarding: "onboarding" in r ? r.onboarding : status.onboarding || null,
     pathways: "pathways" in r ? r.pathways : status.pathways || null,
     // A goal (an aim, on the shelf) or a session (0.67), and a goal to suggest for a session.

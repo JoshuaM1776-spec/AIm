@@ -524,16 +524,100 @@ async function pathContext(id) {
 }
 // The interests window and the path page: each path with its progress.
 async function pathsView() {
-  // The lesson you're on (or the next one), numbered, and a subject for its picture (aimSubject).
-  return (await pathsAll()).map(p => {
+  // The lesson you're on (or the next one), numbered, a subject for its picture (aimSubject), and its
+  // week (0.80): today's piece, or the next day with one.
+  const [paths, d] = await Promise.all([pathsAll(), chrome.storage.local.get(["purpose", "paused"])]);
+  const aims = [d.purpose, ...(d.paused || [])].filter(Boolean);
+  return paths.map(p => {
     const lessons = p.lessons || [], cur = lessons.find(l => l.status === "active") || lessons.find(l => l.status === "new");
+    const wk = pathWeekView(p, aims);
     return { id: p.id, interest: p.interest, goal: p.goal, planned: !!p.plan, title: p.plan?.title || p.goal, progress: p.plan ? pathProgress(p) : null,
-      subject: aimSubject({ text: `${p.interest} ${p.goal}` }).id, lesson: cur ? { n: lessons.indexOf(cur) + 1, title: cur.title } : null };
+      subject: aimSubject({ text: `${p.interest} ${p.goal}` }).id, lesson: cur ? { n: lessons.indexOf(cur) + 1, title: cur.title } : null,
+      week: p.week || null, today: wk?.today || null, next: wk?.next || null };
   });
 }
 async function pathGet(id) {
-  const path = (await pathsAll()).find(x => x.id === id);
-  return path ? { result: "applied", path, progress: path.plan ? pathProgress(path) : null } : { result: "error", message: "That interest isn't here any more." };
+  const [paths, d] = await Promise.all([pathsAll(), chrome.storage.local.get(["purpose", "paused"])]);
+  const path = paths.find(x => x.id === id);
+  return path ? { result: "applied", path, progress: path.plan ? pathProgress(path) : null, week: pathWeekView(path, [d.purpose, ...(d.paused || [])].filter(Boolean)) }
+    : { result: "error", message: "That interest isn't here any more." };
+}
+
+// ---------- Your week (0.80) ----------
+// How much time a plan gets a week, and on which days. Aim lays the plan's next steps on those days
+// starting today, every time it's asked, so a missed day simply rolls forward: nothing falls behind,
+// and there are no streaks. The steps are what's left of the lesson in progress (its state is on its
+// aim) and the lessons after it, each with the minutes its plan gave it.
+const WEEK_MINUTES = [30, 60, 120, 180, 300];
+const STEP_NAMES = { watch: "Watch", read: "Read", try: "Try", explain: "Explain", show: "Show it" };
+function weekTidy(w) {
+  const minutes = WEEK_MINUTES.includes(Number(w?.minutes)) ? Number(w.minutes) : 0;
+  const days = [...new Set((Array.isArray(w?.days) ? w.days : []).map(Number).filter(d => Number.isInteger(d) && d >= 0 && d <= 6))].sort((a, b) => a - b);
+  return minutes && days.length ? { minutes, days } : null;
+}
+async function pathWeekSet(id, week) {
+  const paths = await pathsAll();
+  const path = paths.find(x => x.id === id);
+  if (!path) return { result: "error", message: "That interest isn't here any more." };
+  const w = week ? weekTidy(week) : null;
+  if (week && !w) return { result: "error", message: "Pick how much time a week, and at least one day." };
+  if (w) path.week = w; else delete path.week;
+  await pathsSave(paths);
+  return { result: "applied", week: path.week || null };
+}
+// The steps still to do on a plan, in order.
+function pathSteps(path, aims) {
+  const out = [];
+  (path.lessons || []).forEach((l, n) => {
+    if (l.status === "completed") return;
+    const aim = l.status === "active" ? aims.find(a => a?.id === l.aimId && a.challenge) : null;
+    const plan = aim?.challenge?.plan || tidyChallengeIn(l)?.plan || [];
+    for (const s of plan) {
+      if (s.doneAt || s.skippedAt) continue;
+      // A Watch step is done once a video for it was watched (its part of the map has moved on).
+      if (aim && s.do === "watch" && aim.map?.parts?.some(x => x.search === s.search && x.status !== "new")) continue;
+      out.push({ lessonId: l.id, n: n + 1, lesson: l.title, do: s.do || "watch", title: s.title, minutes: s.minutes || 5 });
+    }
+  });
+  return out;
+}
+// The plan laid on its days, from today through the next six: each chosen day gets its share of the
+// week's minutes, and takes steps while they fit (always at least one).
+function weekLayout(week, steps, now = Date.now()) {
+  if (!week) return [];
+  const per = Math.max(10, Math.round(week.minutes / week.days.length));
+  const start = new Date(now); start.setHours(0, 0, 0, 0);
+  const out = [];
+  let k = 0;
+  for (let d = 0; d < 7 && k < steps.length; d++) {
+    const date = new Date(start); date.setDate(start.getDate() + d);
+    if (!week.days.includes(date.getDay())) continue;
+    const day = { date: todayKey(date), dow: date.getDay(), today: d === 0, minutes: 0, steps: [] };
+    while (k < steps.length && (!day.steps.length || day.minutes + steps[k].minutes <= per)) { day.minutes += steps[k].minutes; day.steps.push(steps[k++]); }
+    out.push(day);
+  }
+  return out;
+}
+// A day in a line: the lesson it starts with and what you'll do in it ("Lesson 3: Read, Try").
+function weekDay(day) {
+  if (!day?.steps.length) return null;
+  const first = day.steps[0];
+  const lessons = [...new Set(day.steps.map(s => s.lessonId))];
+  return { date: day.date, dow: day.dow, today: day.today, minutes: day.minutes, lesson: first.n, title: first.lesson,
+    kinds: [...new Set(day.steps.filter(s => s.lessonId === first.lessonId).map(s => STEP_NAMES[s.do] || "Watch"))], more: lessons.length - 1,
+    steps: day.steps.map(s => ({ n: s.n, do: s.do, title: s.title, minutes: s.minutes })) };
+}
+// For Home and the plans: today's piece of each plan with a week, else its next day.
+function pathWeekView(path, aims, now = Date.now()) {
+  if (!path.week || !path.plan) return null;
+  const days = weekLayout(path.week, pathSteps(path, aims), now).map(weekDay).filter(Boolean);
+  return { week: path.week, today: days.find(x => x.today) || null, next: days.find(x => !x.today) || null, days };
+}
+async function weekToday(now = Date.now()) {
+  const [paths, d] = await Promise.all([pathsAll(), chrome.storage.local.get(["purpose", "paused"])]);
+  const aims = [d.purpose, ...(d.paused || [])].filter(Boolean);
+  return paths.map(p => ({ p, v: pathWeekView(p, aims, now) })).filter(x => x.v?.today)
+    .map(({ p, v }) => ({ id: p.id, interest: p.interest, ...v.today }));
 }
 
 // ---------- The Weekly Challenge (0.76): one story a week, the same for everyone ----------

@@ -538,6 +538,14 @@ Needs the server redeployed and `0007_weekly.sql` run (it makes the `weekly_chal
 - [ ] Click a step in the list: a Watch step searches for its video; the others open their card. The Explain and Try it tiles open the lesson's own Explain and Try steps while those are open.
 - [ ] When a lesson's video ends with no guess to come back to, the prompt offers the next step ("Read: On stalls").
 
+### 72. Your week (0.80)
+- [ ] Continue Learning → a plan's row → **Set your week**: how much time a week (30 min to 5 hours) and which days; it says about how many minutes that is on each. **Save**.
+- [ ] The row then says today's piece ("Today · 40 min · Lesson 3: Read, Try"), or on a day off, the next day ("Next: Wed · …"). **Your week** reopens it; **No schedule** clears it.
+- [ ] Home: the Continue chip becomes **Today · 40 min · Aviation, Lesson 3: Read, Try**; tapping it picks the lesson up where you left off. With no plan due today, or while you're in the middle of another aim, it's Continue as before (the plan's row still says today's piece).
+- [ ] The plan's page: **Your week** with the days from today and what's on each ("Lesson 3: Read, Try · Lesson 4: Watch"); **Change** edits it.
+- [ ] Skip a scheduled day: the next scheduled day starts where you left off. Nothing says you missed a day; there are no streaks.
+- [ ] Finish steps (watch the video, Done reading, …): today's piece shrinks to what's left, and the next steps move up.
+
 ## Known issues (not regressions)
 
 - In this test environment, "opening a video in YouTube's one page plays that video" (tests/browser.test.js) sometimes fails on timing alone; it passes on a rerun and fails the same way on 0.71.

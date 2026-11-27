@@ -36,6 +36,20 @@
   .list { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
   .list a.card { display: block; text-decoration: none; color: inherit; }
   .foot { display: flex; justify-content: space-between; margin-top: 30px; }
+  /* Your week (0.80) */
+  .week { margin: 24px 0 0; padding: 16px 18px; border-radius: 14px; background: var(--surface); border: 1px solid var(--card-border); }
+  .week h2 { font: 500 20px/26px var(--font-serif); margin: 0; }
+  .week-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .week .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0; }
+  .week .chip { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--card-border); background: transparent; color: var(--text); font: 500 14px/20px var(--font); cursor: pointer; }
+  .week .chip[aria-pressed="true"] { background: var(--learn-soft); border-color: var(--learn); color: var(--learn); }
+  .week .row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .week .days { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .week .days li { display: grid; grid-template-columns: 96px 60px 1fr; gap: 10px; font-size: 14px; line-height: 20px; color: var(--muted); }
+  .week .days li b { color: var(--text); font-weight: 600; }
+  .week .days li.today b { color: var(--learn); }
+  .week .days .what { color: var(--text); }
+  @media (max-width: 560px) { .week .days li { grid-template-columns: 80px 1fr; } .week .days .what { grid-column: 1 / -1; } }
 </style>
 </head>
 <body>

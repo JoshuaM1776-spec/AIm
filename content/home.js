@@ -119,13 +119,19 @@ function homeMain(main, p) {
   };
   findBtn.onclick = submit;
   keepKeys(input, submit);
+  // A plan with a week (0.80): Continue becomes today's piece of it, unless you're in the middle of
+  // something else (then Continue is that, and the plan's row still says what's on today).
+  const todayPiece = (status.today || []).find(t => !p || p.pathRef?.id === t.id) || null;
   main.append(...[
     homeEnd,
     weeklyCard(),
     el("div", { class: "wp-home-under" },
       el("div", { class: "wp-home-search" }, el("span", { class: "wp-home-search-icon" }, icon("search")), input, findBtn),
-      el("button", { class: "wp-home-chip wp-home-continue", onclick: openContinue, title: p ? `Continue: ${p.text}` : "Your learning plans" },
-        icon("playRing"), el("span", {}, p ? `Continue: ${p.text}` : "Learning plans"), icon("right"))),
+      todayPiece ? el("button", { class: "wp-home-chip wp-home-continue wp-home-today", onclick: () => openContinue().then(() => pickPath(todayPiece.id)),
+          title: `Today: ${todayPiece.interest}, Lesson ${todayPiece.lesson}` },
+          icon("playRing"), el("span", {}, `Today · ${todayPiece.minutes} min · ${todayPiece.interest}, Lesson ${todayPiece.lesson}: ${todayPiece.kinds.join(", ")}`), icon("right"))
+        : el("button", { class: "wp-home-chip wp-home-continue", onclick: openContinue, title: p ? `Continue: ${p.text}` : "Your learning plans" },
+          icon("playRing"), el("span", {}, p ? `Continue: ${p.text}` : "Learning plans"), icon("right"))),
     hint,
     el("div", { class: "wp-scene-invites" }),
     themeOfferBlock()].filter(Boolean));

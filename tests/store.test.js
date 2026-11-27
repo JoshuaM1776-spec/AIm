@@ -1114,6 +1114,41 @@ test("guess first, explain after: a question before a part's video, the guess ke
   assert.ok(env.local.history.at(-1).openQuestion.q, "the open question goes into history with the aim");
 });
 
+test("your week (0.80): time and days; the next steps laid on them from today; a missed day rolls forward; no streaks", async () => {
+  const env = fresh(); // Friday 16 October 2026
+  const { path } = await env.run(`pathAdd({ interest: "Aviation", goal: "Fly" })`);
+  const lesson = t => ({ title: t, kind: "understand", minutes: 20, success: `Explain ${t.toLowerCase()} in your own words.`, unit: 1,
+    plan: [{ title: "Watch", look: "", minutes: 12, search: t.toLowerCase() }, { title: "Attempt", look: "", minutes: 8, search: "" }] });
+  await env.run(`pathPlanSave(${JSON.stringify(path.id)}, ${JSON.stringify({ title: "Fly", units: [{ title: "How a plane flies", lessons: 3 }, { title: "Weather", lessons: 2 }, { title: "Airspace", lessons: 2 }],
+    lessons: [lesson("How does a wing make lift?"), lesson("Why can a plane stall?"), lesson("How do clouds form?")] })})`);
+  const id = JSON.stringify(path.id);
+  assert.strictEqual((await env.run(`pathWeekSet(${id}, { minutes: 45, days: [1] })`)).result, "error", "a set amount of time");
+  assert.strictEqual((await env.run(`pathWeekSet(${id}, { minutes: 120, days: [] })`)).result, "error", "and at least one day");
+  await env.run(`pathWeekSet(${id}, { minutes: 120, days: [5, 1, 3, 3, 9] })`);
+  assert.deepStrictEqual(env.local.paths[0].week, { minutes: 120, days: [1, 3, 5] }, "two hours over Mon, Wed, Fri");
+  let wk = (await env.run(`pathGet(${id})`)).week;
+  assert.ok(wk.today && wk.today.minutes === 40 && wk.today.lesson === 1 && wk.today.kinds.join() === "Watch,Show it" && wk.today.more === 1,
+    "today (a Friday): about 40 minutes, lesson 1 and the start of lesson 2");
+  assert.ok(wk.next.dow === 1 && wk.next.lesson === 3, "Monday picks up where today leaves off");
+  // Saturday, with nothing done: no day is missed; everything moves to the next day.
+  env.advance(86400000);
+  wk = (await env.run(`pathGet(${id})`)).week;
+  assert.ok(!wk.today && wk.next.dow === 1 && wk.next.lesson === 1 && wk.next.minutes === 40, "a missed day rolls forward");
+  assert.strictEqual((await env.run(`weekToday()`)).length, 0, "nothing today on a day off");
+  // Monday: lesson 1 begun and its video watched; what's left of it comes first.
+  env.advance(2 * 86400000);
+  await env.run(`pathLessonBegin(${id}, "l1")`);
+  env.local.purpose.map.parts[0].status = "explored";
+  const today = await env.run(`weekToday()`);
+  assert.ok(today.length === 1 && today[0].interest === "Aviation" && today[0].lesson === 1 && today[0].kinds.join() === "Show it" && today[0].minutes === 8 + 12 + 8 + 12,
+    JSON.stringify(today));
+  const view = (await env.run(`pathsView()`))[0];
+  assert.ok(view.today && view.week.minutes === 120, "the plans list carries the week");
+  assert.ok(!JSON.stringify(env.local.paths).match(/streak|missed|behind/i), "nothing records missed days");
+  await env.run(`pathWeekSet(${id}, null)`);
+  assert.ok(!env.local.paths[0].week && !(await env.run(`pathsView()`))[0].today, "no schedule");
+});
+
 test("paths: an interest with a goal, an ordered plan, lessons as challenges, and progress by lessons demonstrated", async () => {
   const env = fresh();
   assert.strictEqual((await env.run(`pathAdd({ interest: "" })`)).result, "error");
